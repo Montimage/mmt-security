@@ -158,4 +158,16 @@ void free_a_rule( rule_t *, enum bool free_data);
 void rule_free_an_operator( rule_operator_t *, enum bool free_data);
 void rule_free_an_event( rule_event_t *, enum bool free_data);
 
+
+/**
+ * Get unique events using in a rule. An event is identified by its id.
+ *	- Input:
+ *		+ rule
+ *	- Output:
+ *		+ create and assign a map containing unique events
+ *	- Return:
+ *		+ number of unique events
+ */
+size_t get_unique_events_of_rule( const rule_t *rule, mmt_map_t **events_map );
+
 #endif /* SRC_LIB_RULE_H_ */

@@ -84,4 +84,6 @@ static inline void* mmt_mem_dup( const void *ptr, size_t size ){
 	return ret;
 }
 
+#define mmt_free_and_assign_to_null( x ) while( x != NULL ){ mmt_free( x ); x = NULL; break; }
+
 #endif /* SRC_MMT_ALLOC_H_ */

@@ -91,19 +91,21 @@ typedef struct expression_struct{
 		variable_t *variable;
 		operation_t *operation;
 	};
-	/**
-	 * Linked-list containing list of pointers point to variables using in this expression
-	 */
-	link_node_t *variables_list;
 	struct expression_struct *father;
 }expression_t;
 
 
 
 /**
- * Get a set of variables (distinguished by name) of an expression
+ * Get a set of variables (distinguished by "proto" and "att") of an expression.
+ * - Input:
+ * 	+ expr
+ * - Output:
+ * 	+ create and assign a map containing unique variables
+ * - Return:
+ * 	+ number of unique variables
  */
-size_t get_variables_inside_expression( const expression_t *expr );
+size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map );
 
 /**
  * Parse a string to get expression

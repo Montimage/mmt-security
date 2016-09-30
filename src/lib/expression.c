@@ -79,17 +79,17 @@ expression_t *expr_create_an_expression( enum expression type, void *data ){
 /** Public API */
 void expr_free_a_constant( constant_t *x, enum bool free_data){
 	if( free_data == YES )
-		mmt_free( x->data );
-	mmt_free( x );
+		mmt_free_and_assign_to_null( x->data );
+	mmt_free_and_assign_to_null( x );
 }
 
 /** Public API */
 void expr_free_a_variable( variable_t *x, enum bool free_data){
 	if( free_data == YES ){
-		mmt_free( x->proto );
-		mmt_free( x->att );
+		mmt_free_and_assign_to_null( x->proto );
+		mmt_free_and_assign_to_null( x->att );
 	}
-	mmt_free( x );
+	mmt_free_and_assign_to_null( x );
 }
 
 /** Public API */
@@ -97,7 +97,7 @@ void expr_free_an_operation( operation_t *x, enum bool free_data){
 	link_node_t *ptr, *q;
 	//free data and parameters of this operation
 	if( free_data == YES){
-		mmt_free( x->name );
+		mmt_free_and_assign_to_null( x->name );
 
 		ptr = x->params_list;
 		while( ptr != NULL ){
@@ -108,11 +108,11 @@ void expr_free_an_operation( operation_t *x, enum bool free_data){
 			expr_free_an_expression( (expression_t *) q->data, free_data );
 			q->data = NULL;
 			//free a node of linked-list
-			mmt_free( q );
+			mmt_free_and_assign_to_null( q );
 			q = NULL;
 		}
 	}
-	mmt_free( x );
+	mmt_free_and_assign_to_null( x );
 }
 
 /** Public API */
@@ -128,7 +128,7 @@ void expr_free_an_expression( expression_t *expr, enum bool free_data){
 			expr_free_an_operation( expr->operation, free_data );
 			break;
 	}
-	mmt_free( expr );
+	mmt_free_and_assign_to_null( expr );
 }
 
 /**
@@ -259,7 +259,7 @@ enum bool _parse_a_number( double **num, const char *string, size_t str_size ){
 	str  = mmt_mem_dup( temp, i );
 	*num  = mmt_malloc( sizeof( double ));
 	**num = atof( str );
-	mmt_free( str );
+	mmt_free_and_assign_to_null( str );
 
 	return index;
 }
@@ -338,12 +338,12 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 					temp = string + index; //2 dots
 					index += _parse_a_number( &num, temp, str_size - index );
 					var->ref_index = (uint8_t ) (*num);
-					mmt_free( num );
+					mmt_free_and_assign_to_null( num );
 				}else
 					var->ref_index = UNKNOWN;
 			}
 			else
-				mmt_free( str_1 );
+				mmt_free_and_assign_to_null( str_1 );
 		}
 	}
 
@@ -662,14 +662,14 @@ size_t expr_stringify_operation( char **string, const operation_t *opt ){
 		}
 		new_size += size;
 		//tmp was created in expr_stringify_expression( &tmp ...
-		mmt_free( tmp );
+		mmt_free_and_assign_to_null( tmp );
 		ptr = ptr->next;
 	};
 
 
 	//clone string
 	*string = mmt_mem_dup( root, new_size );
-	mmt_free( root );
+	mmt_free_and_assign_to_null( root );
 
 	return new_size;
 }
@@ -695,6 +695,72 @@ size_t expr_stringify_expression( char **string, const expression_t *expr){
 	}
 }
 
+/**
+ * Compare 2 variables by its "proto" and "att"
+ */
+int _compare_variable_name( const void *v1, const void *v2){
+	variable_t *x = (variable_t *)v1, *y = (variable_t *)v2;
+	int d1, d2;
+	mmt_assert( v1 != NULL && v2 != NULL, "Error: Variables are NULL" );
+	d1 = strcmp( x->proto, y->proto );
+	d2 = strcmp( x->att,   y->att );
+	if( d1 == 0 && d2 == 0 )
+		return 0;
+	else if( d1 != 0 )
+		return d1;
+	else
+		return d2;
+}
+
+size_t _get_unique_variables_of_expression( const expression_t *expr, mmt_map_t *map ){
+	size_t var_count = 0;
+	void *ptr;
+	link_node_t *p;
+
+	if( expr == NULL ) return 0;
+
+	switch( expr->type ){
+	case VARIABLE:
+		ptr = mmt_map_set_data( map, expr->variable, expr->variable, NO );
+		if( ptr == NULL )
+			var_count ++;
+		break;
+	case CONSTANT:
+		break;
+	case OPERATION:
+		p = expr->operation->params_list;
+		//get variables in parameters of the operation
+		while( p != NULL ){
+			var_count += _get_unique_variables_of_expression( (expression_t *) p->data, map );
+			p = p->next;
+		}
+		break;
+	}
+	return var_count;
+}
+
+/**
+ * Public API
+ */
+size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map ){
+	size_t var_count = 0;
+	mmt_map_t *map;
+	void *ptr;
+	*variables_map = NULL;
+	if( expr == NULL ) return 0;
+
+	map = mmt_map_init( _compare_variable_name );
+
+	var_count = _get_unique_variables_of_expression( expr, map );
+
+	//free the map being allocated
+	if( var_count == 0 )
+		mmt_map_free( map, NO );
+	else
+		*variables_map = map;
+
+	return var_count;
+}
 /**
  * public API
  */

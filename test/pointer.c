@@ -19,6 +19,14 @@ void set_null( int *p){
 	p = NULL;
 }
 
+void free_pointer( void * p ){
+	free( p );
+}
+
+void set_num( uint64_t *p){
+	*p = 10;
+}
+
 int main(){
 	char *ptr = NULL;
 	int *p = mmt_malloc( sizeof( int ));
@@ -34,8 +42,15 @@ int main(){
 
 	set_string( &ptr );
 	mmt_debug( "%s", ptr );
+
+
 	mmt_free( ptr );
 	ptr = NULL;
+
+	set_num( p );
+	mmt_debug( "%d", *p );
+
+	//free_pointer( p );
 
 	return 0;
 }

@@ -13,7 +13,7 @@ INSTALL_DIR = /opt/mmt/probe
 #set of library
 LIBS     = -ldl -lpthread -lxml2
 
-CFLAGS   = -g -O3 -Wall -DNDEBUG -Wno-unused-variable -I/usr/include/libxml2/
+CFLAGS   = -g -O0 -Wall -DNDEBUG -Wno-unused-variable -I/usr/include/libxml2/
 CLDFLAGS = -g -DNDEBUG
 
 #for debuging

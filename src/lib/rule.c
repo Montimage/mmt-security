@@ -18,23 +18,24 @@
 void rule_free_an_event( rule_event_t *event, enum bool free_data){
 	if( event == NULL ) return;
 	if( free_data ){
-		mmt_free( event->description );
+		mmt_free_and_assign_to_null( event->description );
 		expr_free_an_expression( event->expression, free_data );
 	}
-	mmt_free( event );
+	mmt_free_and_assign_to_null( event );
 }
 
 //pre-define
 void _free_rule_node( rule_node_t *node );
 void rule_free_an_operator( rule_operator_t *operator, enum bool free_data){
+
 	if( operator == NULL ) return;
 	if( free_data ){
-		mmt_free( operator->description );
-		mmt_free( operator->delay );
+		mmt_free_and_assign_to_null( operator->description );
+		mmt_free_and_assign_to_null( operator->delay );
 		_free_rule_node( operator->context );
 		_free_rule_node( operator->trigger );
 	}
-	mmt_free( operator );
+	mmt_free_and_assign_to_null( operator );
 }
 
 void _free_rule_node( rule_node_t *node ){
@@ -47,22 +48,22 @@ void _free_rule_node( rule_node_t *node ){
 	else{
 		mmt_debug("Unexpected rule_node_type: %d", node->type );
 	}
-	mmt_free( node );
+	mmt_free_and_assign_to_null( node );
 }
 
 void free_a_rule( rule_t *rule, enum bool free_data){
 	if( rule == NULL )
 		return;
 	if( free_data ){
-		mmt_free( rule->description );
-		mmt_free( rule->delay );
-		mmt_free( rule->if_satisfied);
-		mmt_free( rule->if_not_satisfied );
-		mmt_free( rule->keep_state );
+		mmt_free_and_assign_to_null( rule->description );
+		mmt_free_and_assign_to_null( rule->delay );
+		mmt_free_and_assign_to_null( rule->if_satisfied);
+		mmt_free_and_assign_to_null( rule->if_not_satisfied );
+		mmt_free_and_assign_to_null( rule->keep_state );
 		_free_rule_node( rule->context );
 		_free_rule_node( rule->trigger );
 	}
-	mmt_free( rule );
+	mmt_free_and_assign_to_null( rule );
 }
 
 /**
@@ -128,7 +129,7 @@ static rule_event_t *_parse_an_event(const xmlNode *xml_node ){
 	xmlChar *xml_attr_value;
 
 	//init default values
-	event.id          = 1;
+	event.id          = UNKNOWN;
 	event.description = NULL;
 	event.expression  = NULL;
 
@@ -149,6 +150,7 @@ static rule_event_t *_parse_an_event(const xmlNode *xml_node ){
 			//do nothing
 		}else
 			mmt_log(WARN, "Warning 13e: Unexpected attribute %s in tag event", xml_attr_name );
+
 		xmlFree( xml_attr_value );
 		xml_attr = xml_attr->next;
 	}
@@ -204,8 +206,7 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 	//go inside the node
 	xml_node = xml_node->children;
 	while( xml_node ){
-		if( xml_node->type == XML_ELEMENT_NODE && (
-				str_equal( xml_node->name, "operator" )  || str_equal( xml_node->name, "operator" ) )){
+		if( xml_node->type == XML_ELEMENT_NODE ){
 			if( operator.context == NULL )
 				operator.context = _parse_a_rule_node( xml_node );
 			else if( operator.trigger == NULL )
@@ -238,10 +239,9 @@ static rule_node_t *_parse_a_rule_node( const xmlNode *xml_node ){
 	}
 	else{
 		mmt_log(WARN, "Warning 13g: Unexpected tag %s", xml_node->name );
-		mmt_free( rule_node );
+		mmt_free_and_assign_to_null( rule_node );
 		rule_node = NULL;
 	}
-
 	return rule_node;
 }
 
@@ -252,7 +252,7 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 	xmlChar *xml_attr_value;
 
 	//init default values
-	rule.id               = 1;
+	rule.id               = UNKNOWN;
 	rule.type             = RULE_TYPE_SECURITY;
 	rule.description      = NULL;
 	rule.if_satisfied     = NULL;
@@ -313,6 +313,8 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 
 		xml_node = xml_node->next;
 	}
+	//TODO: avoid duplicate event_id
+	//TODO: avoid variable references to non-exist event
 
 	ret = mmt_mem_dup( &rule, sizeof( rule_t));
 	return ret;
@@ -370,8 +372,49 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr){
 	// Cleanup function for the XML library.
 	xmlCleanupParser();
 
+	//TODO: avoid duplicate rule_id
+
 	//copy result to a new array
 	*properties_arr = mmt_mem_dup( &array, count * sizeof( rule_t *) );
 
 	return count;
+}
+
+size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *events_map ){
+	size_t events_count = 0;
+	rule_event_t *ptr;
+	if ( node == NULL ) return 0;
+	if( node->type == RULE_EVENT ){
+
+		//if user does not set id of event ==> we assign it to an unique number
+		if( node->event->id == (uint8_t) UNKNOWN )
+			node->event->id = mmt_map_count( events_map ) + 1;
+
+		//check if event is existing in the map
+		ptr = mmt_map_set_data( events_map, &(node->event->id), node->event, YES );
+		//must not have 2 events with the same id
+		mmt_assert( ptr == NULL, "Error 13g: Duplicated events having id=%d", node->event->id );
+		return 1;
+	}else if( node->type == RULE_OPERATOR ){
+		events_count += _get_unique_events_of_rule_node( node->operator->context, events_map );
+		events_count += _get_unique_events_of_rule_node( node->operator->trigger, events_map );
+		return events_count;
+	}else
+		mmt_debug( "Unknown rule_node_t->type = %d", node->type );
+	return 0;
+}
+
+/**
+ * Public API
+ */
+size_t get_unique_events_of_rule( const rule_t *rule, mmt_map_t **events_map ){
+	size_t events_count = 0;
+	mmt_map_t *map = mmt_map_init( compare_uint8_t );
+
+	events_count += _get_unique_events_of_rule_node( rule->context, map );
+	events_count += _get_unique_events_of_rule_node( rule->trigger, map );
+	if( events_count == 0 )
+		mmt_free_and_assign_to_null( map );
+	*events_map = map;
+	return events_count;
 }

@@ -12,16 +12,37 @@
 #include "../src/lib/mmt_alloc.h"
 #include "../src/lib/rule.h"
 
+void print_variable( void *key, void *data, void *user_data ){
+	variable_t *var = (variable_t *)key;
+	mmt_debug("   - %s.%s", var->proto, var->att );
+}
+
+void print_event( void *key, void *data, void *user_data ){
+	rule_event_t *event = (rule_event_t *)data;
+	mmt_map_t *map;
+	mmt_debug(" Event %d", *(uint8_t*)key );
+	mmt_debug(" + %s", event->description );
+	mmt_debug(" + number of variables: %zu", get_unique_variables_of_expression( event->expression, &map ));
+	mmt_map_iterate( map, print_variable, NULL );
+	mmt_map_free( map, NO );
+}
+
 int main(){
 	rule_t **rule_list;
 	size_t rule_count, i;
+	mmt_map_t *map;
 	rule_count = read_rules_from_file("test/xml/properties_acdc.xml", &rule_list );
 	mmt_debug( "number of rules: %zu", rule_count );
+
 	for( i=0; i<rule_count; i++ ){
-		mmt_debug( "rule id:%d", rule_list[i]->id );
+		mmt_debug( "====rule id:%d, events count: %zu===", rule_list[i]->id, get_unique_events_of_rule( rule_list[i], & map) );
+		mmt_map_iterate(map, print_event, NULL );
 		free_a_rule( rule_list[i], YES);
+		mmt_map_free( map, NO );
 	}
-	mmt_free( rule_list );
+
+
+	mmt_free_and_assign_to_null( rule_list );
 	mmt_print_mem_info();
 	return 0;
 }

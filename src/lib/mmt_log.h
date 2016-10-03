@@ -28,8 +28,7 @@ void mmt_log( log_level_t level, const char *format, ... )
 #define mmt_halt( ... ) mmt_log( HALT, __VA_ARGS__ )
 #define mmt_assert( expr, ... ) if( !(expr) ) mmt_log( HALT, __VA_ARGS__ )
 
-#define mmt_debug(...) while(1){ printf("%s:%d ", __FILE__, __LINE__); mmt_log( DEBUG, __VA_ARGS__ ); break; }
-
+#define mmt_debug(...) do{ printf("%s:%d ", __FILE__, __LINE__); mmt_log( DEBUG, __VA_ARGS__ ); break; }while(1)
 
 
 #endif /* SRC_LOG_H_ */

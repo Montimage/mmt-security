@@ -138,7 +138,6 @@ size_t expr_stringify_variable( char **string, const variable_t *expr);
 size_t expr_stringify_expression( char **string, const expression_t *expr);
 
 
-
 constant_t *expr_create_a_constant( enum data_type type, size_t data_size, void *data );
 variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index );
 operation_t *expr_create_an_operation( char *name, enum operator operator );

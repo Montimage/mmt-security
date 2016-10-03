@@ -41,7 +41,6 @@ int main(){
 		mmt_map_free( map, NO );
 	}
 
-
 	mmt_free_and_assign_to_null( rule_list );
 	mmt_print_mem_info();
 	return 0;

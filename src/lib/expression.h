@@ -105,7 +105,7 @@ typedef struct expression_struct{
  * - Return:
  * 	+ number of unique variables
  */
-size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map );
+size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map, enum bool has_ref);
 
 /**
  * Parse a string to get expression

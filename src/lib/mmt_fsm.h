@@ -19,8 +19,8 @@
  * https://github.com/misje/stateMachine
  */
 
-#ifndef SRC_LIB_fsm_H_
-#define SRC_LIB_fsm_H_
+#ifndef SRC_LIB_FSM_H_
+#define SRC_LIB_FSM_H_
 
 
 #include "base.h"
@@ -439,4 +439,4 @@ fsm_t * fsm_clone( const fsm_t *fsm );
  *		+ the state machine to get.
  */
 size_t fsm_get_current_execution_trace( const fsm_t *fsm, const fsm_event_t **events );
-#endif /* SRC_LIB_fsm_H_ */
+#endif /* SRC_LIB_FSM_H_ */

@@ -186,9 +186,9 @@ int compare_uint8_t( const void *a, const void *b){
 
 
 void _mmt_map_node_iterate( const _mmt_map_node_t *node, void (*map_iterate_function)( void *key, void *data, void *user_data ), void *user_data ){
-	(*map_iterate_function)( node->key, node->data, user_data );
 	if( node->left != NULL )
 		_mmt_map_node_iterate( node->left, map_iterate_function, user_data );
+	(*map_iterate_function)( node->key, node->data, user_data );
 	if( node->right != NULL )
 		_mmt_map_node_iterate( node->right, map_iterate_function, user_data );
 }

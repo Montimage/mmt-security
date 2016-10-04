@@ -27,7 +27,6 @@ size_t get_variables_inside_expression( const expression_t *expr ){
 	return size;
 }
 
-
 /** Public API */
 constant_t *expr_create_a_constant( enum data_type type, size_t data_size, void *data ){
 	constant_t *cont = mmt_malloc( sizeof( constant_t ));
@@ -43,6 +42,7 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index )
 	var->proto = proto;
 	var->att   = attr;
 	var->ref_index = ref_index;
+	var->type  = UNKNOWN;
 	return var;
 }
 
@@ -341,6 +341,7 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 					mmt_free_and_assign_to_null( num );
 				}else
 					var->ref_index = UNKNOWN;
+				var->type = UNKNOWN;
 			}
 			else
 				mmt_free_and_assign_to_null( str_1 );
@@ -610,10 +611,10 @@ size_t expr_stringify_variable( char **string, const variable_t *var){
 	if( var->ref_index != (uint8_t)UNKNOWN ){
 		size += 1 + _num_digits( var->ref_index ); //1 byte for .
 		*string = mmt_malloc( size ); //mmt_malloc allocates size+1
-		snprintf(*string, size+1, "%s.%s.%d", var->proto, var->att, var->ref_index); //+1 for null character
+		snprintf(*string, size+1, "%s_%s_%d", var->proto, var->att, var->ref_index); //+1 for null character
 	}else{
 		*string = mmt_malloc( size ); //mmt_malloc allocates size+1
-		snprintf(*string, size+1, "%s.%s", var->proto, var->att ); //+1 for null character
+		snprintf(*string, size+1, "%s_%s", var->proto, var->att ); //+1 for null character
 	}
 
 	return size;
@@ -712,6 +713,23 @@ int _compare_variable_name( const void *v1, const void *v2){
 		return d2;
 }
 
+int _compare_variable_name_and_index( const void *v1, const void *v2){
+	variable_t *x = (variable_t *)v1, *y = (variable_t *)v2;
+	int d1, d2, d3;
+	mmt_assert( v1 != NULL && v2 != NULL, "Error: Variables are NULL" );
+	d1 = strcmp( x->proto, y->proto );
+	d2 = strcmp( x->att,   y->att );
+	d3 = x->ref_index - y->ref_index;
+	if( d1 == 0 && d2 == 0 && d3 == 0 )
+		return 0;
+	else if( d1 != 0 )
+		return d1;
+	else if( d2 != 0 )
+		return d2;
+	else
+		return d3;
+}
+
 size_t _get_unique_variables_of_expression( const expression_t *expr, mmt_map_t *map ){
 	size_t var_count = 0;
 	void *ptr;
@@ -742,14 +760,16 @@ size_t _get_unique_variables_of_expression( const expression_t *expr, mmt_map_t 
 /**
  * Public API
  */
-size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map ){
+size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map, enum bool has_index ){
 	size_t var_count = 0;
 	mmt_map_t *map;
 	void *ptr;
 	*variables_map = NULL;
 	if( expr == NULL ) return 0;
-
-	map = mmt_map_init( _compare_variable_name );
+	if( has_index == YES )
+		map = mmt_map_init( _compare_variable_name_and_index );
+	else
+		map = mmt_map_init( _compare_variable_name );
 
 	var_count = _get_unique_variables_of_expression( expr, map );
 

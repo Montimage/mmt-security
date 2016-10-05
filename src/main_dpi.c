@@ -23,6 +23,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "mmt_core.h"
 
 void attributes_iterator(attribute_metadata_t * attribute, uint32_t proto_id,
@@ -49,9 +50,15 @@ void protocols_iterator(uint32_t proto_id, void * args) {
 	(*proto_count) ++;
 }
 
+
 int main(int argc, char** argv) {
 	int proto_count = 0;
-	printf("/**This code is generated automatically. Do not modify it manually.*/");
+	char text[100];
+	time_t now = time(NULL);
+	struct tm *t = localtime(&now);
+	strftime(text, sizeof(text)-1, "%Y-%m%d %H:%M:%S", t);
+
+	printf("/**This code is generated automatically on %s.*/", text );
 	printf("\n#ifndef MMT_DPI_H_\n#define MMT_DPI_H_");
 	printf("\n#include <stdint.h>\n#include <stdlib.h>\n#include <string.h>");
 	printf("\nstruct dpi_attribute{\n\tuint16_t id;\n\tconst char *name;\n\tlong data_type;};");

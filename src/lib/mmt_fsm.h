@@ -26,6 +26,13 @@
 #include "base.h"
 
 /**
+ *  Finite State Machine
+ *
+ * There is no need to manipulate the members directly.
+ */
+typedef void * fsm_t;
+
+/**
  * Events trigger transitions from a state to another.
  * Event types are defined by the user.
  * Any event may optionally contain a user-defined date.
@@ -126,11 +133,11 @@ typedef struct fsm_transition_struct
     * - Input:
     *		+ condition event (data) to compare the incoming event against.
     * 	+ event the event passed to the fsm_state_struct machine.
-    *
+    *		+ fsm the fsm containing this transition
     * - Return
     * 	+ YES if the event's data fulfills the condition, otherwise NO.
     */
-   enum bool ( *guard )( void *condition, const struct fsm_event_struct *event );
+   enum bool ( *guard )( void *condition, const struct fsm_event_struct *event, const fsm_t *fsm );
    /**
     *  Function containing tasks to be performed during the transition.
     *
@@ -285,12 +292,6 @@ typedef struct fsm_state_struct{
    void ( *exit_action )( void *state_data, const fsm_event_t *event );
 }fsm_state_t;
 
-/**
- *  Finite State Machine
- *
- * There is no need to manipulate the members directly.
- */
-typedef void * fsm_t;
 
 /**
  *  Initialize the machine
@@ -439,4 +440,6 @@ fsm_t * fsm_clone( const fsm_t *fsm );
  *		+ the state machine to get.
  */
 size_t fsm_get_current_execution_trace( const fsm_t *fsm, const fsm_event_t **events );
+
+void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
 #endif /* SRC_LIB_FSM_H_ */

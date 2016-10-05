@@ -63,7 +63,7 @@ static fsm_transition_t *_get_transition( const _fsm_t *fsm, fsm_state_t *state,
 			if (!tran->guard)
 				return tran;
 			/* If transition is guarded, ensure that the condition is held: */
-			else if (tran->guard(tran->condition, event) == YES )
+			else if (tran->guard(tran->condition, event, (fsm_t *)fsm) == YES )
 				return tran;
 		}
 	}

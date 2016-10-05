@@ -30,7 +30,7 @@ size_t get_variables_inside_expression( const expression_t *expr ){
 /** Public API */
 constant_t *expr_create_a_constant( enum data_type type, size_t data_size, void *data ){
 	constant_t *cont = mmt_malloc( sizeof( constant_t ));
-	cont->type = type;
+	cont->data_type = type;
 	cont->data_size = data_size;
 	cont->data = data;
 	return cont;
@@ -42,7 +42,7 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index )
 	var->proto = proto;
 	var->att   = attr;
 	var->ref_index = ref_index;
-	var->type  = UNKNOWN;
+	var->data_type  = UNKNOWN;
 	return var;
 }
 
@@ -52,7 +52,7 @@ operation_t *expr_create_an_operation( char *name, enum operator operator ){
 	opt->name = name;
 	opt->operator = operator;
 	opt->params_list = NULL;
-	opt->data_type_id = UNKNOWN;
+	opt->data_type = UNKNOWN;
 	opt->params_size = 0;
 	return opt;
 }
@@ -341,7 +341,7 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 					mmt_free_and_assign_to_null( num );
 				}else
 					var->ref_index = UNKNOWN;
-				var->type = UNKNOWN;
+				var->data_type = UNKNOWN;
 			}
 			else
 				mmt_free_and_assign_to_null( str_1 );
@@ -578,7 +578,7 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 		return 0;
 	}
 
-	if( expr->type == NUMERIC ){
+	if( expr->data_type == NUMERIC ){
 		d = *(double *)expr->data;
 		//integer
 		if(  d- (int)d == 0 )
@@ -696,39 +696,6 @@ size_t expr_stringify_expression( char **string, const expression_t *expr){
 	}
 }
 
-/**
- * Compare 2 variables by its "proto" and "att"
- */
-int _compare_variable_name( const void *v1, const void *v2){
-	variable_t *x = (variable_t *)v1, *y = (variable_t *)v2;
-	int d1, d2;
-	mmt_assert( v1 != NULL && v2 != NULL, "Error: Variables are NULL" );
-	d1 = strcmp( x->proto, y->proto );
-	d2 = strcmp( x->att,   y->att );
-	if( d1 == 0 && d2 == 0 )
-		return 0;
-	else if( d1 != 0 )
-		return d1;
-	else
-		return d2;
-}
-
-int _compare_variable_name_and_index( const void *v1, const void *v2){
-	variable_t *x = (variable_t *)v1, *y = (variable_t *)v2;
-	int d1, d2, d3;
-	mmt_assert( v1 != NULL && v2 != NULL, "Error: Variables are NULL" );
-	d1 = strcmp( x->proto, y->proto );
-	d2 = strcmp( x->att,   y->att );
-	d3 = x->ref_index - y->ref_index;
-	if( d1 == 0 && d2 == 0 && d3 == 0 )
-		return 0;
-	else if( d1 != 0 )
-		return d1;
-	else if( d2 != 0 )
-		return d2;
-	else
-		return d3;
-}
 
 size_t _get_unique_variables_of_expression( const expression_t *expr, mmt_map_t *map ){
 	size_t var_count = 0;
@@ -767,9 +734,9 @@ size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t *
 	*variables_map = NULL;
 	if( expr == NULL ) return 0;
 	if( has_index == YES )
-		map = mmt_map_init( _compare_variable_name_and_index );
+		map = mmt_map_init( compare_variable_name_and_index );
 	else
-		map = mmt_map_init( _compare_variable_name );
+		map = mmt_map_init( compare_variable_name );
 
 	var_count = _get_unique_variables_of_expression( expr, map );
 
@@ -787,4 +754,9 @@ size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t *
 constant_t *evaluate_expression( const expression_t *expr, const constant_t **constants, size_t const_size ){
 	constant_t *ret = (constant_t *) mmt_malloc( sizeof( constant_t ));
 	return ret;
+}
+
+
+void expr_update_data_type( expression_t *expr ){
+
 }

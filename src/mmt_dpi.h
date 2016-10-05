@@ -1,4 +1,4 @@
-/**This code is generated automatically. Do not modify it manually.*/
+/**This code is generated automatically on 2016-1005 11:18:04.*/
 #ifndef MMT_DPI_H_
 #define MMT_DPI_H_
 #include <stdint.h>

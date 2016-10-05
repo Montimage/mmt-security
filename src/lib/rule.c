@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <libxml/xmlreader.h>
 
+#include "data_struct.h"
 #include "mmt_alloc.h"
 #include "rule.h"
 #include "mmt_log.h"

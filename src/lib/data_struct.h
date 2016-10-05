@@ -10,6 +10,7 @@
 #ifndef SRC_LIB_DATA_STRUCT_H_
 #define SRC_LIB_DATA_STRUCT_H_
 
+#include <string.h>
 #include "base.h"
 #include "mmt_log.h"
 
@@ -43,8 +44,6 @@ link_node_t *create_node_of_link_list( void *data );
  */
 link_node_t *append_node_to_link_list( link_node_t *entry, void *data );
 
-
-
 ////////////////////////Binary-Tree map////////////////////////////////////////////////
 /**
  * We implement a generic map on top of a binary-tree.
@@ -54,10 +53,31 @@ link_node_t *append_node_to_link_list( link_node_t *entry, void *data );
  */
 enum compare_result {CMP_LESS = -1, CMP_EQUAL = 0, CMP_GREATER = 1};
 
+static inline int compare_string( const void *a, const void *b ){
+	return strcmp( (char *)a, (char *)b );
+}
 /**
  * Integer comparison
  */
-int compare_uint8_t( const void *a, const void *b);
+/**
+ * Public API
+ */
+static inline int compare_uint8_t( const void *a, const void *b){
+	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint8_t function" );
+	return *(uint8_t *)a - *(uint8_t *)b;
+}
+
+/**
+ * Public API
+ */
+static inline int compare_uint16_t( const void *a, const void *b){
+	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint8_t function" );
+	return *(uint16_t *)a - *(uint16_t *)b;
+}
+static inline int compare_uint64_t( const void *a, const void *b){
+	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint8_t function" );
+	return *(uint64_t *)a - *(uint64_t *)b;
+}
 /**
  * Binary map structure
  */
@@ -126,8 +146,11 @@ size_t mmt_map_count( const mmt_map_t *map );
  * 		- key
  * 		- data
  * 		- user_data is the "user_data" parameter
+ * 		- is_first
+ * 		- is_last
  * 	+ user_data
  */
-void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *key, void *data, void *user_data ), void *user_data );
+void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *key, void *data, void *user_data, enum bool is_first, enum bool is_last ), void *user_data );
+
 
 #endif /* SRC_LIB_DATA_STRUCT_H_ */

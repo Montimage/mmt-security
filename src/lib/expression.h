@@ -12,7 +12,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-
+#include <string.h>
 #include "data_struct.h"
 
 enum data_type{
@@ -22,7 +22,7 @@ enum data_type{
  * Constant
  */
 typedef struct{
-	enum data_type type;
+	enum data_type data_type;
 	/**
 	 * size of the pointer *data
 	 */
@@ -34,7 +34,7 @@ typedef struct{
  * Variable
  */
 typedef struct{
-	enum data_type type;
+	enum data_type data_type;
 	//a variable: TCP.SRC or TCP.SRC.1
 	char *proto, *att;
 	uint8_t ref_index;
@@ -62,7 +62,7 @@ enum operator{
  */
 typedef struct operation_struct{
 	//type id of return data
-	uint8_t data_type_id;
+	enum data_type data_type;
 	enum operator operator;
 
 	/**
@@ -143,6 +143,7 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index )
 operation_t *expr_create_an_operation( char *name, enum operator operator );
 expression_t *expr_create_an_expression( enum expression type, void *data );
 
+void expr_update_data_type( expression_t *expr );
 /**
  * Free a constant
  */
@@ -152,4 +153,39 @@ void expr_free_an_operation( operation_t *, enum bool free_data);
 void expr_free_an_expression( expression_t *, enum bool free_data);
 
 constant_t *evaluate_expression( const expression_t *expr, const constant_t **constants, size_t const_size );
+
+
+/**
+ * Compare 2 variables by its "proto" and "att"
+ */
+static inline int compare_variable_name( const void *v1, const void *v2){
+	variable_t *x = (variable_t *)v1, *y = (variable_t *)v2;
+	int d1, d2;
+	mmt_assert( v1 != NULL && v2 != NULL, "Error: Variables are NULL" );
+	d1 = strcmp( x->proto, y->proto );
+	d2 = strcmp( x->att,   y->att );
+	if( d1 == 0 && d2 == 0 )
+		return 0;
+	else if( d1 != 0 )
+		return d1;
+	else
+		return d2;
+}
+
+static inline int compare_variable_name_and_index( const void *v1, const void *v2){
+	variable_t *x = (variable_t *)v1, *y = (variable_t *)v2;
+	int d1, d2, d3;
+	mmt_assert( v1 != NULL && v2 != NULL, "Error: Variables are NULL" );
+	d1 = strcmp( x->proto, y->proto );
+	d2 = strcmp( x->att,   y->att );
+	d3 = x->ref_index - y->ref_index;
+	if( d1 == 0 && d2 == 0 && d3 == 0 )
+		return 0;
+	else if( d1 != 0 )
+		return d1;
+	else if( d2 != 0 )
+		return d2;
+	else
+		return d3;
+}
 #endif /* SRC_LIB_EXPRESSION_H_ */

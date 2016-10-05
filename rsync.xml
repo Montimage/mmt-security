@@ -46,9 +46,9 @@
 
         <echo message="BUILD"/>
         <exec dir="." executable="ssh">
-        	<arg value="-p 2222"/>
+            <arg value="-p 2222"/>
             <arg value="${rsync.ssh.user}@${rsync.destination.host}"/>
-            <arg value="cd ${rsync.destination.dir}/mmt-security; make test.rule; valgrind --leak-check=yes ./security"/>
+            <arg value="cd ${rsync.destination.dir}/mmt-security; make test.gen_code; valgrind --leak-check=yes ./security"/>
         </exec>
     </target>
     

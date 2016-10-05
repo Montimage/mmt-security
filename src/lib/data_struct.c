@@ -176,22 +176,22 @@ void *mmt_map_get_data( const mmt_map_t *map, const void *key ){
 }
 
 
-void _mmt_map_node_iterate( const _mmt_map_node_t *node, void (*map_iterate_function)( void *_key, void *_data, void *_user_data, enum bool _is_first, enum bool _is_last ), void *user_data, enum bool *is_first, enum bool *is_last ){
+void _mmt_map_node_iterate( const _mmt_map_node_t *node, void (*map_iterate_function)( void *_key, void *_data, void *_user_data, size_t _index, size_t _total ), void *user_data, size_t *index, size_t total ){
 	if( node->left != NULL )
-		_mmt_map_node_iterate( node->left, map_iterate_function, user_data, is_first, is_last );
-	(*map_iterate_function)( node->key, node->data, user_data, *is_first, *is_last );
+		_mmt_map_node_iterate( node->left, map_iterate_function, user_data, index, total );
+	(*map_iterate_function)( node->key, node->data, user_data, *index, total );
 	//is not the first running of map_iterate_function
-	*is_first = NO;
+	(*index) ++;
 	if( node->right != NULL )
-		_mmt_map_node_iterate( node->right, map_iterate_function, user_data, is_first, is_last );
+		_mmt_map_node_iterate( node->right, map_iterate_function, user_data, index, total );
 }
 /**
  * Public API
  */
-void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *key, void *data, void *user_data, enum bool is_first, enum bool is_last ), void *user_data ){
-	enum bool is_first = YES, is_last = NO;
+void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *key, void *data, void *user_data, size_t index, size_t total ), void *user_data ){
+	size_t index = 0;
 	if( map == NULL ) return;
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
 	if( _tree->root == NULL ) return;
-	_mmt_map_node_iterate( _tree->root, map_iterate_function, user_data, &is_first, &is_last );
+	_mmt_map_node_iterate( _tree->root, map_iterate_function, user_data, &index, _tree->size );
 }

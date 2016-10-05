@@ -146,11 +146,11 @@ size_t mmt_map_count( const mmt_map_t *map );
  * 		- key
  * 		- data
  * 		- user_data is the "user_data" parameter
- * 		- is_first
- * 		- is_last
+ * 		- index
+ * 		- total
  * 	+ user_data
  */
-void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *key, void *data, void *user_data, enum bool is_first, enum bool is_last ), void *user_data );
+void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *key, void *data, void *user_data, size_t index, size_t total ), void *user_data );
 
 
 #endif /* SRC_LIB_DATA_STRUCT_H_ */

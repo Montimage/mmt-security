@@ -112,7 +112,7 @@ static enum data_type _get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
 	return STRING;
 }
 
-static void _iterate_variable( void *key, void *data, void *user_data, enum bool is_first, enum bool is_last ){
+static void _iterate_variable( void *key, void *data, void *user_data, size_t index, size_t total ){
 	char *str = NULL;
 	struct _user_data *u_data = (struct _user_data *) user_data;
 	FILE *fd  = u_data->file;
@@ -145,7 +145,7 @@ static void _iterate_variable( void *key, void *data, void *user_data, enum bool
 	mmt_free( str );
 }
 
-static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data, enum bool is_first, enum bool is_last ){
+static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data, size_t index, size_t total ){
 	char *str = NULL, *guard_fun_name, buffer[1000];
 	size_t size;
 	mmt_map_t *map;
@@ -204,9 +204,8 @@ static void _gen_fsm( FILE *fd, const rule_t *rule, mmt_map_t *variables_map ){
 	mmt_map_free( map, NO );
 }
 
-void _iterate_variables_to_print_switch( void *key, void *data, void *arg, enum bool is_first, enum bool is_last){
+void _iterate_variables_to_print_switch( void *key, void *data, void *arg, size_t index, size_t total){
 	static uint32_t last_proto_id = UNKNOWN, cur_proto_id;
-	static uint8_t index = 0;
 
 	FILE *fd = (FILE *)arg;
 	variable_t *var = (variable_t *)data;
@@ -214,20 +213,21 @@ void _iterate_variables_to_print_switch( void *key, void *data, void *arg, enum 
 	cur_proto_id  = get_protocol_id_by_name( var->proto );
 
 	if( last_proto_id != cur_proto_id ){
-		if( last_proto_id != (uint32_t)UNKNOWN )
-				fprintf(fd, "\n\t\t}//end"); //close the previous switch
-
+		if( last_proto_id != (uint32_t)UNKNOWN ){
+			fprintf(fd, "\n\t\tdefault:\n\t\t\tmmt_halt(\"Do not find attribute %%d of protocol %d in the given rules.\", att_id);", last_proto_id );
+			fprintf(fd, "\n\t\t}//end att for %d", last_proto_id ); //close the previous switch
+		}
 		_gen_comment( fd, "%s", var->proto );
 		fprintf(fd, "\tcase %d:", cur_proto_id );
 		fprintf(fd, "\n\t\tswitch ( att_id){");
 	}
-	fprintf(fd, "\n\t\tcase %d:", get_attribute_id_by_protocol_id_and_attribute_name( cur_proto_id, var->att));
-	fprintf(fd, "\n\t\t\treturn %d;", (index++));
-	if( is_first )
-		fprintf(fd, "\n\t\t}//fistr");
-	if( is_last == YES )
-		fprintf(fd, "\n\t\t}//last");
+	fprintf(fd, "\n\t\tcase %d:\t//%s", get_attribute_id_by_protocol_id_and_attribute_name( cur_proto_id, var->att), var->att );
+	fprintf(fd, "\n\t\t\treturn %zu;", index );
 
+	if( index == total-1 ){
+		fprintf(fd, "\n\t\tdefault:\n\t\t\tmmt_halt(\"Do not find attribute %%d of protocol %d in the given rules.\", att_id);", last_proto_id );
+		fprintf(fd, "\n\t\t}//last switch");
+	}
 
 	last_proto_id = cur_proto_id;
 }
@@ -240,12 +240,12 @@ void _gen_hash_fun_of_proto_att( FILE *fd, const mmt_map_t *variables_map){
 	fprintf( fd, "\n\tswitch( proto_id ){");
 
 	mmt_map_iterate( variables_map, _iterate_variables_to_print_switch, fd );
-
+	fprintf( fd, "\n\tdefault:\n\t\tmmt_halt(\"Do not find protocol %%d in the given rules.\", proto_id);");
 	fprintf( fd, "\n\t}"); //end switch
 	fprintf( fd, "\n}");//end function
 }
 
-inline void _iterate_to_free_key_and_data( void *key, void *data, void *user_data, enum bool is_first, enum bool is_last ){
+inline void _iterate_to_free_key_and_data( void *key, void *data, void *user_data, size_t index, size_t total ){
 	mmt_free( key );
 	mmt_map_free( (mmt_map_t *) data, NO );
 }

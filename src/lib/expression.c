@@ -13,8 +13,90 @@
 #include "expression.h"
 #include "mmt_alloc.h"
 #include "mmt_log.h"
+#include "mmt_dpi.h"
 
 #define MAX_STRING_SIZE 1000
+
+/*THIS COMES FROM MMT-DPI*/
+enum data_types {
+    MMT_UNDEFINED_TYPE, /**< no type constant value */
+    MMT_U8_DATA, /**< unsigned 1-byte constant value */
+    MMT_U16_DATA, /**< unsigned 2-bytes constant value */
+    MMT_U32_DATA, /**< unsigned 4-bytes constant value */
+    MMT_U64_DATA, /**< unsigned 8-bytes constant value */
+    MMT_DATA_POINTER, /**< pointer constant value (size is void *) */
+    MMT_DATA_MAC_ADDR, /**< ethernet mac address constant value */
+    MMT_DATA_IP_NET, /**< ip network address constant value */
+    MMT_DATA_IP_ADDR, /**< ip address constant value */
+    MMT_DATA_IP6_ADDR, /**< ip6 address constant value */
+    MMT_DATA_PATH, /**< protocol path constant value */
+    MMT_DATA_TIMEVAL, /**< number of seconds and microseconds constant value */
+    MMT_DATA_BUFFER, /**< binary buffer content */
+    MMT_DATA_CHAR, /**< 1 character constant value */
+    MMT_DATA_PORT, /**< tcp/udp port constant value */
+    MMT_DATA_POINT, /**< point constant value */
+    MMT_DATA_PORT_RANGE, /**< tcp/udp port range constant value */
+    MMT_DATA_DATE, /**< date constant value */
+    MMT_DATA_TIMEARG, /**< time argument constant value */
+    MMT_DATA_STRING_INDEX, /**< string index constant value (an association between a string and an integer) */
+    MMT_DATA_FLOAT, /**< float constant value */
+    MMT_DATA_LAYERID, /**< Layer ID value */
+    MMT_DATA_FILTER_STATE, /**< (filter_id, filter_state) */
+    MMT_DATA_PARENT, /**< (filter_id, filter_state) */
+    MMT_STATS, /**< pointer to MMT Protocol statistics */
+    MMT_BINARY_DATA, /**< binary constant value */
+    MMT_BINARY_VAR_DATA, /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
+    MMT_STRING_DATA, /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum BINARY_64DATA_LEN long */
+    MMT_STRING_LONG_DATA, /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum STRING_DATA_LEN long */
+    MMT_HEADER_LINE, /**< string pointer value with a variable size. The string is not necessary null terminating */
+    MMT_GENERIC_HEADER_LINE, /**< structure representing an RFC2822 header line with null terminating field and value elements. */
+    MMT_STRING_DATA_POINTER, /**< pointer constant value (size is void *). The data pointed to is of type string with null terminating character included */
+};
+
+static enum data_type _get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
+	long type = get_attribute_data_type( p_id, a_id );
+	switch( type ){
+	case MMT_U16_DATA:
+	case MMT_U32_DATA:
+	case MMT_U64_DATA:
+	case MMT_U8_DATA:
+	case MMT_DATA_PORT:
+	case MMT_DATA_CHAR:
+	case MMT_DATA_FLOAT:
+		return NUMERIC;
+
+	case MMT_DATA_MAC_ADDR:
+	case MMT_STRING_DATA:
+	case MMT_DATA_PATH:
+	case MMT_STRING_LONG_DATA:
+	case MMT_BINARY_VAR_DATA:
+	case MMT_BINARY_DATA:
+	case MMT_HEADER_LINE:
+	case MMT_DATA_TIMEVAL:
+	case MMT_DATA_IP_ADDR:
+	case MMT_DATA_IP6_ADDR:
+	case MMT_DATA_PORT_RANGE:
+	case MMT_DATA_DATE:
+	case MMT_DATA_TIMEARG:
+	case MMT_DATA_IP_NET:
+	case MMT_DATA_LAYERID:
+	case MMT_DATA_POINT:
+	case MMT_DATA_FILTER_STATE:
+	case MMT_DATA_POINTER:
+	case MMT_DATA_BUFFER:
+	case MMT_DATA_STRING_INDEX:
+	case MMT_DATA_PARENT:
+	case MMT_STATS:
+	case MMT_GENERIC_HEADER_LINE:
+	case MMT_STRING_DATA_POINTER:
+	case MMT_UNDEFINED_TYPE:
+		return STRING;
+	default:
+		mmt_assert(0, "Error 2: Type [%ld], not implemented yet, data type unknown.\n", type);
+	}
+	return STRING;
+}
+
 
 size_t str_trim( uint8_t *string, size_t size ){
 	return size;
@@ -42,7 +124,10 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index )
 	var->proto = proto;
 	var->att   = attr;
 	var->ref_index = ref_index;
-	var->data_type  = UNKNOWN;
+	var->proto_id = get_protocol_id_by_name( var->proto );
+	var->att_id   = get_attribute_id_by_protocol_id_and_attribute_name( var->proto_id, var->att );
+	var->data_type = _get_attribute_data_type( var->proto_id, var->att_id );
+
 	return var;
 }
 
@@ -307,6 +392,7 @@ size_t _parse_constant( constant_t **expr, const char *string, size_t str_size )
 size_t _parse_variable( variable_t **expr, const char *string, size_t str_size ){
 	size_t index, i = 0, j, k;
 	char *str_1 = NULL, *str_2 = NULL;
+	uint8_t ref_index = UNKNOWN;
 	char const *temp;
 	double *num = NULL;
 	variable_t *var;
@@ -320,28 +406,26 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 
 	temp = string + index;
 	index = _parse_a_name( &str_1, temp, str_size );
+	//has proto?
 	if( str_1 != NULL ){
 		//must have a dot
 		if( string[ index ] == '.' ){
 			index ++; //jump over this dot
 			temp = string + index ;
 			index += _parse_a_name( &str_2, temp,  str_size - index );
+			//has att ?
 			if( str_2 != NULL ){
-				var = mmt_malloc( sizeof( variable_t ));
-				*expr = var;
-				var->proto = str_1;
-				var->att   = str_2;
-
 				//has index ?
 				if( string[ index ] == '.' ){
 					index ++; //jump over the second dot
 					temp = string + index; //2 dots
 					index += _parse_a_number( &num, temp, str_size - index );
-					var->ref_index = (uint8_t ) (*num);
+					ref_index = (uint8_t ) (*num);
 					mmt_free_and_assign_to_null( num );
-				}else
-					var->ref_index = UNKNOWN;
-				var->data_type = UNKNOWN;
+				}
+
+				*expr = expr_create_a_variable( str_1, str_2, ref_index );
+				return index;
 			}
 			else
 				mmt_free_and_assign_to_null( str_1 );
@@ -582,16 +666,15 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 		d = *(double *)expr->data;
 		//integer
 		if(  d- (int)d == 0 )
-			sprintf(buff, "%d", (int) d);
+			size = sprintf(buff, "%d", (int) d);
 		else
-			sprintf(buff, "%.2f", d);
-		size = strlen( buff );
-		*string = mmt_mem_dup( buff, size );
-		return size;
+			size = sprintf(buff, "%.2f", d);
+
 	}else{
-		*string = mmt_mem_dup( expr->data, expr->data_size );
-		return expr->data_size;
+		size = snprintf( buff, sizeof( buff), "\"%s\"", (char *)expr->data );
 	}
+	*string = mmt_mem_dup( buff, size );
+	return size;
 }
 
 /**
@@ -620,39 +703,73 @@ size_t expr_stringify_variable( char **string, const variable_t *var){
 	return size;
 }
 
+inline enum bool _is_comparison_operator( int op ){
+	return op == NEQ || op == EQ || op == GT || op == GTE || op == LT || op == LTE;
+}
+
+inline enum bool _is_string_param( const operation_t *opt ){
+	link_node_t *ptr;
+	expression_t *expr;
+	ptr = opt->params_list;
+	while( ptr != NULL ){
+		expr = (expression_t *) ptr->data;
+		if( expr->type == VARIABLE && expr->variable->data_type != STRING )
+			return NO;
+
+		if( expr->type == CONSTANT && expr->constant->data_type != STRING )
+			return NO;
+		ptr = ptr->next;
+	}
+	return YES;
+}
+
 /**
  * Public API
  */
-size_t expr_stringify_operation( char **string, const operation_t *opt ){
+size_t expr_stringify_operation( char **string, operation_t *opt ){
 	char *tmp, *root, *str;
 	const char *delim;
 	link_node_t *ptr;
 	size_t size, delim_size = 0, new_size = 0;
+	expression_t *expr;
+
+	enum operator opt_operator;
+	char opt_name[100];
+
 
 	root = mmt_malloc( 10000 );
 	*string = root;
 
-	if( opt->operator == FUNCTION ){
-		sprintf( root, "%s(", opt->name );
-		new_size = mmt_mem_size( opt->name ) + 1; //+1 for '('
+	opt_operator = opt->operator;
+	snprintf( opt_name, sizeof( opt_name), "%s", opt->name);
+	//change comparison of string to function: "a" == "b" ==> 0 == strcmp("a", "b")
+	if( _is_comparison_operator(opt_operator) && _is_string_param ( opt ) ){
+		opt_operator = FUNCTION;
+		snprintf( opt_name, 12, "0 %s strcmp", opt->name );
+	}
+
+	if( opt_operator == FUNCTION ){
+		sprintf( root, "%s(", opt_name );
+		new_size = strlen( opt_name ) + 1; //+1 for '('
 	}else{
 		sprintf( root, "(" );
 		new_size = 1;
 	}
 
 	//delimiter
-	if( opt->operator == FUNCTION ){
+	if( opt_operator == FUNCTION ){
 		delim = ",";
 		delim_size = 1;
 	}else{
 		delim = opt->name;
-		delim_size = mmt_mem_size( delim );
+		delim_size = strlen( delim );
 	}
 
 	//parameters
 	ptr = opt->params_list;
 	while( ptr != NULL ){
-		size = expr_stringify_expression( &tmp, (expression_t *) ptr->data );
+		expr = (expression_t *) ptr->data;
+		size = expr_stringify_expression( &tmp, expr );
 		//the last parameter ==> no need delimiter but a close-bracket
 		if( ptr->next == NULL ){
 			size += 1; ////close bracket

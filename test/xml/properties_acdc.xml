@@ -12,7 +12,7 @@
     description="Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible)."
     >
     
-    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+    <operator value="OR" delay_units="s" delay_min="0+" delay_max="1">
       <event value="XXXXXXX" event_id="1" 
              description="SYN request"
              boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port == 22))"/>
@@ -20,7 +20,7 @@
              description="SYN ACK reply"
              boolean_expression="((tcp.flags == 18)&amp;&amp;((tcp.src_port == 22)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;(ip.src == ip.dst.1))))"/>
     </operator>
-    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+    <operator value="NOT" delay_units="s" delay_min="0+" delay_max="1">
       <event value="COMPUTE" event_id="3" 
              description="SYN request"
              boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))))"/>
@@ -38,7 +38,7 @@
     description="Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible)."
     >
     <!--if_satisfied="py_createstix(2_BGPOST_SSH_CONNECTION_BUT_IMMEDIATE_RESET,ip.src.5)"-->
-    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+    <operator value="AND" delay_units="s" delay_min="0+" delay_max="1">
       <event value="COMPUTE" event_id="5" 
              description="SYN request"
              boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port == 22))"/>
@@ -108,7 +108,7 @@
 
 <property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="8" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
-    <operator value="THEN" delay_units="m" delay_min="0+" delay_max="5">
+    <operator value="AND" delay_units="m" delay_min="0+" delay_max="5">
       <event value="COMPUTE" event_id="1" 
              description="An arp who was requested"
              boolean_expression="(arp.ar_op == 1)"/>

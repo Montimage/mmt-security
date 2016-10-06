@@ -24,7 +24,23 @@
 
 
 #include "base.h"
+#include "rule.h"
 
+typedef struct fsm_delay_struct{
+	/**
+	 * Defines the validity period ([time_min, time_max]) of the left branch (e.g. context).
+	 * default is 0,
+	 * - if value is < 0 then event needs to be satisfied before,
+	 * - if = 0 then in same packet,
+	 * - if > 0 then after
+	 */
+	double time_min, time_max;
+	/**
+	 * Similar to [time_min, time_max] we can de ne [counter_min, counter_max] where the unit is the number of packets analysed.
+	 * note that either delay or counter needs to be used not both
+	 */
+	int counter_min, counter_max;
+}fsm_delay_t;
 /**
  *  Finite State Machine
  *
@@ -242,6 +258,11 @@ typedef struct fsm_transition_struct
  *
  */
 typedef struct fsm_state_struct{
+	const fsm_delay_t *delay;
+	double timer;
+	uint64_t counter;
+	char *description;
+
    /**
     *  If the state has a parent state, this pointer must be non-NULL.
     */

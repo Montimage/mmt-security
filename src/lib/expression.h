@@ -37,6 +37,7 @@ typedef struct{
 	enum data_type data_type;
 	//a variable: TCP.SRC or TCP.SRC.1
 	char *proto, *att;
+	uint32_t proto_id, att_id;//those are generated from their name: tcp => 354
 	uint8_t ref_index;
 } variable_t;
 

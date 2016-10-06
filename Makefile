@@ -36,7 +36,7 @@ MAIN_SRCS := $(filter-out $(SRCDIR)/tips.c, $(MAIN_SRCS))
 MAIN_SRCS := $(filter-out $(SRCDIR)/main_dpi.c, $(MAIN_SRCS))
 MAIN_OBJS := $(patsubst %.c,%.o, $(MAIN_SRCS))
 
-MMT_DPI_HEADER = $(SRCDIR)/mmt_dpi.h
+MMT_DPI_HEADER = $(SRCDIR)/lib/mmt_dpi.h
 
 ifndef VERBOSE
 	QUIET := @

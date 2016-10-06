@@ -44,6 +44,8 @@ link_node_t *create_node_of_link_list( void *data );
  */
 link_node_t *append_node_to_link_list( link_node_t *entry, void *data );
 
+void free_link_list( link_node_t *head, enum bool free_data );
+
 ////////////////////////Binary-Tree map////////////////////////////////////////////////
 /**
  * We implement a generic map on top of a binary-tree.

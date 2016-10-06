@@ -39,7 +39,18 @@ link_node_t *append_node_to_link_list( link_node_t *head, void *data ){
 	return head;
 }
 
+void free_link_list( link_node_t *head, enum bool free_data ){
+	link_node_t *ptr;
+	while( head != NULL ){
+		if( free_data )
+			mmt_free( head->data );
+		ptr = head->next;
+		head->next = head->prev = NULL;
+		mmt_free( head );
 
+		head = ptr;
+	}
+}
 
 ///////////////////////////////////////MMT-Map////////////////////////////////////////////
 /**

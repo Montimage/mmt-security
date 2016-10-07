@@ -39,7 +39,7 @@ typedef struct fsm_delay_struct{
 	 * Similar to [time_min, time_max] we can de ne [counter_min, counter_max] where the unit is the number of packets analysed.
 	 * note that either delay or counter needs to be used not both
 	 */
-	int counter_min, counter_max;
+	uint64_t counter_min, counter_max;
 }fsm_delay_t;
 /**
  *  Finite State Machine
@@ -47,6 +47,8 @@ typedef struct fsm_delay_struct{
  * There is no need to manipulate the members directly.
  */
 typedef void * fsm_t;
+
+enum fsm_event_type {EVENT, TIMEOUT, RESET_TIMER };
 
 /**
  * Events trigger transitions from a state to another.
@@ -153,7 +155,7 @@ typedef struct fsm_transition_struct
     * - Return
     * 	+ YES if the event's data fulfills the condition, otherwise NO.
     */
-   enum bool ( *guard )( void *condition, const struct fsm_event_struct *event, const fsm_t *fsm );
+   int ( *guard )( void *condition, const struct fsm_event_struct *event, const fsm_t *fsm );
    /**
     *  Function containing tasks to be performed during the transition.
     *
@@ -258,7 +260,7 @@ typedef struct fsm_transition_struct
  *
  */
 typedef struct fsm_state_struct{
-	const fsm_delay_t *delay;
+	const fsm_delay_t delay;
 	double timer;
 	uint64_t counter;
 	char *description;

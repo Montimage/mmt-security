@@ -18,16 +18,24 @@
 #define _gen_one_line_comment( fd, format, ... ) fprintf( fd, "/** %d " format "*/", __LINE__, ##__VA_ARGS__ )
 #define _gen_code_line( fd ) fprintf( fd, "/* %d */", __LINE__ )
 #define _val( x ) (x==NULL? "NULL": x)
+#define _string( v, a,b,c, x,y,z  ) (v==NULL? a:x), (v==NULL? b:y), (v==NULL? c:z)
+
 
 struct _user_data{
 	uint16_t index;
-	FILE *file;
-	mmt_map_t *variables_map, *events_map;
+	mmt_map_t *events_map;
 };
 
-static inline uint64_t _simple_hash( uint32_t a, uint32_t b ){
-	uint64_t c = a << 31;
-	return c | b;
+static inline uint32_t _simple_hash_32( uint16_t a, uint16_t b ){
+	uint32_t val = 0;
+	val = a << 16;
+	val = val | b;
+	return val;
+}
+
+static inline void _simple_dehash_32( uint32_t val, uint16_t *a, uint16_t *b){
+	*a = val >> 16;
+	*b = (val << 16) >> 16;
 }
 
 struct _variables_struct{
@@ -40,28 +48,25 @@ struct _variables_struct{
 static void _iterate_variable( void *key, void *data, void *user_data, size_t index, size_t total ){
 	char *str = NULL;
 	struct _user_data *u_data = (struct _user_data *) user_data;
-	FILE *fd  = u_data->file;
+	FILE *fd  = (FILE *)user_data;
 	size_t size;
 	variable_t *var = (variable_t *) data;
 	uint32_t p_id, a_id;
-
-	//add variable to the list of unique variables
-	mmt_map_set_data( u_data->variables_map, var, var, NO );
 
 	size = expr_stringify_variable( &str, var );
 	if( size == 0 ) return;
 
 	_gen_code_line( fd );
-	fprintf( fd, "\n\t%s%s = ",
+	fprintf( fd, "\n\t%s%s = ((_msg_t *)",
 			((var->data_type == NUMERIC)? "double " : "const char *"),
 			str);
 
 	//TODO: when proto starts by a number
 	if( var->ref_index != (uint8_t)UNKNOWN )
-		fprintf( fd, "((report_t *)fsm_get_history( fsm, %d ))->%s_%s;",
+		fprintf( fd, "fsm_get_history( fsm, %d ))->%s_%s;",
 				var->ref_index, var->proto, var->att);
 	else
-		fprintf( fd, "((report_t *)event->data)->%s;", str );
+		fprintf( fd, "event->data)->%s;", str );
 
 	mmt_free( str );
 }
@@ -71,10 +76,10 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	size_t size;
 	mmt_map_t *map;
 	rule_event_t *event = (rule_event_t *)data;
-	struct _user_data *u_data = (struct _user_data *) user_data;
-	FILE *fd = u_data->file;
-
-	_gen_comment( fd, "Rule %d, event %d\n * %s", u_data->index, event->id, event->description );
+	FILE *fd = (FILE *)user_data;
+	uint16_t rule_id, event_id;
+	_simple_dehash_32( *(uint32_t *) key, &rule_id, &event_id );
+	_gen_comment( fd, "Rule %d, event %d\n * %s", rule_id, event_id, event->description );
 	size = expr_stringify_expression( &str, event->expression );
 	if( size == 0 ) return;
 
@@ -82,14 +87,14 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	size = get_unique_variables_of_expression( event->expression, &map, YES );
 
 	//name of function
-	size = snprintf( buffer, sizeof( buffer ) -1, "g_%d_%d", u_data->index, event->id );
+	size = snprintf( buffer, sizeof( buffer ) -1, "g_%d_%d", rule_id, event_id );
 	//do not free this as it will be used as a key in variables_map
 	guard_fun_name = mmt_mem_dup( buffer, size );
 
 	//guard function header
 	fprintf(fd, "static inline int %s( void *condition, const fsm_event_t *event, const fsm_t *fsm ){",
 			guard_fun_name );
-	mmt_map_iterate( map, _iterate_variable, u_data );
+	mmt_map_iterate( map, _iterate_variable, user_data );
 	fprintf(fd, "\n\n\treturn %s;\n}\n",  str);
 
 	mmt_free( str );
@@ -99,28 +104,36 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	mmt_free( guard_fun_name );
 }
 
+////////////////////////////////////////////////////////////////////////////////
 #define MAX_STR_BUFFER 10000
 enum _event_type{ _TIMEOUT, _EVENT };
-typedef struct _state_struct{
+/**
+ * Meta-model
+ * This structure contains information to generate fsm_state_t
+ */
+typedef struct _meta_state_struct{
 	size_t index;
 	char *description;
 	rule_delay_t *delay;
 	link_node_t *transitions;
 	char comment[MAX_STR_BUFFER];
 	char *action;
-}_state_t;
-
-typedef struct _transition_struct{
+}_meta_state_t;
+/**
+ * Meta-model
+ * This structure contains information to generate fsm_transition_t
+ */
+typedef struct _meta_transition_struct{
 	int event_type;
 	char *condition;
 	int guard_id;
 	char *action;
-	_state_t *target;
+	_meta_state_t *target;
 	const rule_event_t *attached_event;//
-}_transition_t;
+}_meta_transition_t;
 
-static inline _state_t *_create_new_state( index ){
-	_state_t *s = mmt_malloc( sizeof( _state_t ));
+static inline _meta_state_t *_create_new_state( index ){
+	_meta_state_t *s = mmt_malloc( sizeof( _meta_state_t ));
 	s->index = index;
 	s->description = NULL;
 	s->delay = NULL;
@@ -130,8 +143,8 @@ static inline _state_t *_create_new_state( index ){
 	return s;
 }
 
-static inline _transition_t *_create_new_transition( int event_type, int guard_id, _state_t *target, const rule_event_t *ev){
-	_transition_t *t = mmt_malloc( sizeof( _transition_t ));
+static inline _meta_transition_t *_create_new_transition( int event_type, int guard_id, _meta_state_t *target, const rule_event_t *ev){
+	_meta_transition_t *t = mmt_malloc( sizeof( _meta_transition_t ));
 	t->event_type = event_type;
 	t->condition  = NULL;
 	t->guard_id   = guard_id;
@@ -141,18 +154,18 @@ static inline _transition_t *_create_new_transition( int event_type, int guard_i
 	return t;
 }
 
-static inline void _gen_transition_rule( _state_t *s_init, _state_t *s_final,  _state_t *s_error,
+static inline void _gen_transition_rule( _meta_state_t *s_init, _meta_state_t *s_final,  _meta_state_t *s_error,
 		link_node_t *states_list, const  rule_node_t *rule_node, size_t *index,  const rule_t *rule);
 
 /**
  * a THEN b
  * target state of a is the source state of b
  */
-static inline void _gen_transition_then( _state_t *s_init,  _state_t *s_final,  _state_t *s_error,
+static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *s_final,  _meta_state_t *s_error,
 		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
 		size_t *index, const rule_operator_t *operator, const rule_t *rule){
 
-	_state_t *state = _create_new_state( 0 );
+	_meta_state_t *state = _create_new_state( 0 );
 	//root
 	if( operator == NULL ){
 		state->description = rule->description;
@@ -179,7 +192,7 @@ static inline void _gen_transition_then( _state_t *s_init,  _state_t *s_final,  
 /**
  * a AND b == (a THEN b) OR (b THEN a)
  */
-static inline void _gen_transition_and( _state_t *s_init,  _state_t *s_final,  _state_t *s_error,
+static inline void _gen_transition_and( _meta_state_t *s_init,  _meta_state_t *s_final,  _meta_state_t *s_error,
 		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
 		size_t *index, const rule_operator_t *operator, const rule_t *rule){
 
@@ -191,7 +204,7 @@ static inline void _gen_transition_and( _state_t *s_init,  _state_t *s_final,  _
  * a OR b
  * a and b having the same source and target states
  */
-static inline void _gen_transition_or( _state_t *s_init,  _state_t *s_final,  _state_t *s_error,
+static inline void _gen_transition_or( _meta_state_t *s_init,  _meta_state_t *s_final,  _meta_state_t *s_error,
 		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
 		size_t *index, const rule_operator_t *operator, const rule_t *rule){
 
@@ -203,11 +216,11 @@ static inline void _gen_transition_or( _state_t *s_init,  _state_t *s_final,  _s
  * a NOT b
  *
  */
-static inline void _gen_transition_not( _state_t *s_init,  _state_t *s_final,  _state_t *s_error,
+static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s_final,  _meta_state_t *s_error,
 		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
 		size_t *index, const rule_operator_t *operator, const rule_t *rule){
 
-	_state_t *state = _create_new_state( 0 );
+	_meta_state_t *state = _create_new_state( 0 );
 	//root
 	if( operator == NULL ){
 		state->description = rule->description;
@@ -231,7 +244,10 @@ static inline void _gen_transition_not( _state_t *s_init,  _state_t *s_final,  _
 	_gen_transition_rule( state, s_error, s_final, states_list, trigger, index, rule );
 }
 
-static inline void _gen_transition_rule( _state_t *s_init,  _state_t *s_final,  _state_t *s_error,
+/**
+ * Generate a fsm of a rule
+ */
+static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *s_final,  _meta_state_t *s_error,
 		link_node_t *states_list, const  rule_node_t *rule_node, size_t *index, const rule_t *rule){
 
 	rule_operator_t *opt;
@@ -259,32 +275,14 @@ static inline void _gen_transition_rule( _state_t *s_init,  _state_t *s_final,  
 		break;
 	}
 }
+////////////////////////////////////////////////////////////////////////////////
 
-static void _gen_fsm( FILE *fd, const rule_t *rule, mmt_map_t *variables_map ){
-	mmt_map_t *map;
+static void _gen_fsm_states_for_a_rule( FILE *fd, const rule_t *rule ){
 	size_t size, index;
-	struct _user_data u_data;
-	_state_t *s_init, *s_error, *s_final, *state;
-	_transition_t *tran;
+	_meta_state_t *s_init, *s_error, *s_final, *state;
+	_meta_transition_t *tran;
 	link_node_t *states_list = NULL, *p_link_node, *p_t;
 	char buffer[ MAX_STR_BUFFER ];
-
-	if( rule == NULL || fd == NULL ) return;
-	/*generate guard functions*/
-	_gen_comment( fd, "==================Rule %d====================\n * %s", rule->id, rule->description );
-
-	size = get_unique_events_of_rule( rule, &map );
-	if( size == 0 ) return;
-
-	u_data.index=rule->id;
-	u_data.file=fd;
-	u_data.variables_map = variables_map;
-
-	mmt_map_iterate(map, _iterate_event_to_gen_guards, &u_data );
-
-	/*generate fsm states*/
-	_gen_comment( fd, "States of FSM for rule %d", rule->id );
-
 
 	index = 0;
 	s_init = _create_new_state( index ++ );
@@ -306,12 +304,12 @@ static void _gen_fsm( FILE *fd, const rule_t *rule, mmt_map_t *variables_map ){
 
 	_gen_transition_then(s_init, s_final, s_error, states_list, rule->context, rule->trigger, &index, NULL, rule);
 
-
+	_gen_comment( fd, "States of FSM for rule %d", rule->id );
 	_gen_comment(fd, "Predefine list of states: init, error, final, ..." );
 	fprintf(fd, "static fsm_state_t");
 	p_link_node = states_list;
 	while( p_link_node != NULL ){
-		state = (_state_t *)p_link_node->data;
+		state = (_meta_state_t *)p_link_node->data;
 		fprintf( fd, " s_%d_%zu%c", rule->id, state->index, (p_link_node->next == NULL? ';':',') );
 
 		p_link_node = p_link_node->next;
@@ -324,31 +322,19 @@ static void _gen_fsm( FILE *fd, const rule_t *rule, mmt_map_t *variables_map ){
 	fprintf(fd, "static fsm_state_t");
 	p_link_node = states_list;
 	while( p_link_node != NULL ){
-		state = (_state_t *)p_link_node->data;
+		state = (_meta_state_t *)p_link_node->data;
 		if( strlen( state->comment ))
 			_gen_comment(fd, "%s", state->comment );
 
 		fprintf( fd, " s_%d_%zu = {", rule->id, state->index );
 		fprintf( fd, "\n\t.timer        = 0,");
 		fprintf( fd, "\n\t.counter      = 0,");
-		fprintf( fd, "\n\t.delay        = ");
-		if( state->delay )
-			fprintf( fd, "(fsm_delay_t *){.time_min = %.2f, .time_max = %.2f, .counter_min = %d, .counter_max = %d},",
-				state->delay->time_min, state->delay->time_max,
-				state->delay->counter_min, state->delay->counter_max);
-		else
-			fprintf( fd, "NULL,");
-		fprintf( fd, "\n\t.description  = ");
-		if( state->description )
-			fprintf( fd, "\"%s\",", state->description );
-		else
-			fprintf( fd, "NULL," );
+		fprintf( fd, "\n\t.delay        = {.time_min = %.2f, .time_max = %.2f, .counter_min = %d, .counter_max = %d},",
+				state->delay?state->delay->time_min:0, state->delay?state->delay->time_max:0,
+						state->delay?state->delay->counter_min:0, state->delay?state->delay->counter_max:0);
 
-		fprintf( fd, "\n\t.exit_action  = ");
-		if( state->action )
-			fprintf( fd, "exec(\"%s\"),", state->action );
-		else
-			fprintf( fd, "NULL,");
+		fprintf( fd, "\n\t.description  = %c%s%c,", _string( state->description, ' ', "NULL", ' ', '"', state->description, '"'));
+		fprintf( fd, "\n\t.exit_action  = NULL,");
 		fprintf( fd, "\n\t.entry_action = NULL,");
 
 		size = 0;
@@ -360,11 +346,12 @@ static void _gen_fsm( FILE *fd, const rule_t *rule, mmt_map_t *variables_map ){
 			p_t = state->transitions;
 			while( p_t != NULL ){
 				size ++;
-				tran = (_transition_t *)p_t->data;
+				tran = (_meta_transition_t *)p_t->data;
 				if( tran->attached_event && tran->attached_event->description )
 					fprintf( fd, "\n\t\t/** %d %s */", __LINE__, tran->attached_event->description );
+
 				sprintf( buffer, "&g_%d_%d", rule->id, tran->guard_id );
-				fprintf( fd, "\n\t\t{ %s, NULL, %s, NULL, &s_%d_%zu}%c",
+				fprintf( fd, "\n\t\t{ .event_type = %s, .condition = NULL, .guard = %s, .action = NULL, .target_state = &s_%d_%zu}%c",
 						(tran->event_type == _TIMEOUT ? "TIMEOUT" : "EVENT  "),
 						(tran->event_type == _TIMEOUT ? "NULL  "    : buffer   ),
 						rule->id, tran->target->index,
@@ -386,24 +373,28 @@ static void _gen_fsm( FILE *fd, const rule_t *rule, mmt_map_t *variables_map ){
 			rule->id, rule->id, s_init->index, rule->id, s_error->index );
 
 	free_link_list( states_list, YES );
-	mmt_map_free( map, NO );
 }
 
 void _iterate_variables_to_print_switch( void *key, void *data, void *arg, size_t index, size_t total){
-	static uint32_t last_proto_id = UNKNOWN, cur_proto_id;
+	static uint32_t last_proto_id = UNKNOWN;
 
 	FILE *fd = (FILE *)arg;
 	variable_t *var = (variable_t *)data;
 
-	cur_proto_id  = var->proto_id;
+	//first element
+	if( index == 0 ){
+		_gen_comment( fd, "HASH" );
+		fprintf( fd, "inline uint16_t hash_proto_attribute( uint32_t proto_id, uint32_t att_id){");
+		fprintf( fd, "\n\tswitch( proto_id ){");
+	}
 
-	if( last_proto_id != cur_proto_id ){
-		if( last_proto_id != (uint32_t)UNKNOWN ){
+	if( last_proto_id != var->proto_id ){
+		if( index != 0 ){
 			fprintf(fd, "\n\t\tdefault:\n\t\t\tfprintf(stderr, \"Do not find attribute %%d of protocol %d in the given rules.\", att_id);\n\t\t\texit(1);", last_proto_id );
 			fprintf(fd, "\n\t\t}//end att for %d", last_proto_id ); //close the previous switch
 		}
 		_gen_comment( fd, "%s", var->proto );
-		fprintf(fd, "\tcase %d:", cur_proto_id );
+		fprintf(fd, "\tcase %d:", var->proto_id );
 		fprintf(fd, "\n\t\tswitch ( att_id){");
 	}
 	fprintf(fd, "\n\t\tcase %d:\t//%s", var->att_id, var->att );
@@ -412,43 +403,121 @@ void _iterate_variables_to_print_switch( void *key, void *data, void *arg, size_
 	if( index == total-1 ){
 		fprintf(fd, "\n\t\tdefault:\n\t\t\tfprintf(stderr, \"Do not find attribute %%d of protocol %d in the given rules.\", att_id);\n\t\t\texit(1);", last_proto_id );
 		fprintf(fd, "\n\t\t}//last switch");
+
+		fprintf( fd, "\n\tdefault:\n\t\tfprintf(stderr, \"Do not find protocol %%d in the given rules.\", proto_id);\n\t\texit(1);");
+		fprintf( fd, "\n\t}"); //end switch
+		fprintf( fd, "\n}");//end function
 	}
 
-	last_proto_id = cur_proto_id;
+	last_proto_id = var->proto_id;
 }
+
+void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data, size_t index, size_t total ){
+	FILE *fd = (FILE *)user_data;
+	variable_t *var = (variable_t *)data;
+	//first element
+	if( index == 0 ){
+		_gen_comment( fd, "Structure to represent event data");
+		fprintf( fd, "typedef struct _msg_struct{" );
+	}
+	fprintf( fd, "\n\t %s%s_%s;",
+			(var->data_type == NUMERIC? "double ":"const char *"),
+			var->proto, var->att);
+
+	//last element
+	if( index + 1 == total )
+		fprintf( fd, "\n}_msg_t;");
+}
+
 /**
- * Generate a hash function of variables
+ * Generate general informations of rules
  */
-void _gen_hash_fun_of_proto_att( FILE *fd, const mmt_map_t *variables_map){
-	_gen_comment( fd, "HASH" );
-	fprintf( fd, "inline uint16_t hash_proto_attribute( uint32_t proto_id, uint32_t att_id){");
-	fprintf( fd, "\n\tswitch( proto_id ){");
-
-	mmt_map_iterate( variables_map, _iterate_variables_to_print_switch, fd );
-	fprintf( fd, "\n\tdefault:\n\t\tfprintf(stderr, \"Do not find protocol %%d in the given rules.\", proto_id);\n\t\texit(1);");
-	fprintf( fd, "\n\t}"); //end switch
-	fprintf( fd, "\n}");//end function
+static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t count ){
+	size_t i;
+	_gen_comment( fd, "Information of %zu rules", count );
+	fprintf( fd, "size_t get_rules_information( const rule_info_t **rules_arr ){");
+	fprintf( fd, "\n\t static const rule_info_t rules[] = (rule_info_t[]){");
+	for( i=0; i<count; i++ ){
+		fprintf( fd, "\n\t\t{");
+		fprintf( fd, "\n\t\t\t.id              = %d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t.description     = %c%s%c,",
+						_string( rules[i]->description, 'N', "UL", 'L', '"', rules[i]->description, '"') );
+		fprintf( fd, "\n\t\t\t.if_satisfied    = %c%s%c,",
+				_string( rules[i]->if_satisfied, 'N', "UL", 'L', '"', rules[i]->if_satisfied, '"') );
+		fprintf( fd, "\n\t\t\t.if_not_satisfied = %c%s%c,",
+				_string( rules[i]->if_not_satisfied, 'N', "UL", 'L', '"', rules[i]->if_not_satisfied, '"') );
+		if( i < count -1 )
+			fprintf( fd, "\n\t\t},");
+		else
+			fprintf( fd, "\n\t\t}");
+	}
+	fprintf( fd, "\n\t};\n\t*rules_arr = rules;");
+	fprintf( fd, "\n\treturn %zu;\n}", count);
 }
 
-inline void _iterate_to_free_key_and_data( void *key, void *data, void *user_data, size_t index, size_t total ){
-	mmt_free( key );
-	mmt_map_free( (mmt_map_t *) data, NO );
+
+void _iterate_events_to_get_unique( void *key, void *data, void *user_data, size_t index, size_t total ){
+	struct _user_data *_u_data = (struct _user_data *)user_data;
+	uint32_t *new_key = mmt_malloc( sizeof( uint32_t));
+	rule_event_t *ev = (rule_event_t *)data;
+	void *ret;
+	*new_key = _simple_hash_32( _u_data->index, ev->id );
+
+	ret = mmt_map_set_data( _u_data->events_map, new_key, ev, NO );
+
+	//there exists one element having the same key
+	// => its value does not override
+	// => need to free the created key
+	if( ret )
+		mmt_free( new_key );
 }
+
+void _get_unique_events( mmt_map_t *events_map, rule_t *const* rules, size_t count){
+	size_t i;
+	mmt_map_t *map;
+	struct _user_data _u_data;
+	_u_data.events_map = events_map;
+	for( i=0; i<count; i++ ){
+		_u_data.index = rules[i]->id;
+		//this will create a new map
+		get_unique_events_of_rule( rules[i], &map );
+		mmt_map_iterate( map, _iterate_events_to_get_unique, &_u_data );
+		//need to free the created map
+		mmt_map_free( map, NO );
+	}
+}
+
+void _iterate_variable_to_add_to_a_new_map( void *key, void *data, void *user_data, size_t index, size_t total ){
+	mmt_map_set_data((mmt_map_t *)user_data, data, data, NO );
+}
+void _iterate_event_to_get_unique_variables( void *key, void *data, void *user_data, size_t index, size_t total ){
+	rule_event_t *ev = (rule_event_t *)data;
+	mmt_map_t *map;
+	get_unique_variables_of_expression( ev->expression, &map, NO );
+	mmt_map_iterate( map, _iterate_variable_to_add_to_a_new_map, user_data );
+	mmt_map_free( map, NO );
+}
+
+
 /**
  * Public API
  */
 int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 	char *str_ptr;
-	size_t i;
+	size_t i, size;
 	/**
-	 * a set of variables using in each guard function
-	 * <fun_name, map>
+	 * a set of events
+	 * <rule_id-event_id, map>
 	 */
-	mmt_map_t *events_map = mmt_map_init( &compare_string );
+	mmt_map_t *events_map = mmt_map_init( &compare_uint32_t );
+	/**
+	 * a set of unique variables
+	 * <variable,variable>
+	 */
 	mmt_map_t *variables_map =  mmt_map_init( &compare_variable_name );
 
+	//open file for writing
 	FILE *fd = fopen(file_name, "w");
-
 	mmt_assert (fd != NULL, "Error 11a: Cannot open file %s for writing", file_name );
 
 	str_ptr = get_current_date_time_string( "%Y-%m-%d %H:%M:%S" );
@@ -456,16 +525,31 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 	mmt_free( str_ptr );
 
 	//include
-	fprintf( fd, "#include <string.h>\n#include \"base.h\"\n#include \"mmt_fsm.h\"\n");
+	fprintf( fd, "#include <string.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include \"gen_fsm_header.h\"\n#include \"mmt_fsm.h\"\n");
+
+	//information of rules
+	_gen_rule_information( fd, rules, count );
+
+	_get_unique_events( events_map, rules, count);
+	mmt_map_iterate( events_map, _iterate_event_to_get_unique_variables, variables_map );
+
+	//define a struct
+	_gen_comment(fd, "Define the structure using in guard functions");
+	mmt_map_iterate(variables_map, _iterate_variables_to_gen_structure, fd);
+
+	mmt_map_iterate(variables_map, _iterate_variables_to_print_switch, fd );
+
+	mmt_map_iterate(events_map, _iterate_event_to_gen_guards, fd);
 
 	for( i=0; i<count; i++ )
-		_gen_fsm( fd, rules[i], variables_map );
+		_gen_fsm_states_for_a_rule( fd, rules[i] );
 
-	_gen_hash_fun_of_proto_att( fd, variables_map );
+
 
 	fclose(fd);
 
-	mmt_map_iterate( events_map, _iterate_to_free_key_and_data, NULL );
+	//free key
+	mmt_map_iterate( events_map, (void *)mmt_free, NULL );
 	mmt_map_free( events_map, NO );
 
 	mmt_map_free( variables_map, NO );

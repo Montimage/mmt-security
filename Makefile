@@ -44,6 +44,8 @@ endif
 
 MAIN_DPI = gen_dpi_header
 
+MAIN_GEN_SEC_LIB = gen_rules_lib
+
 all: $(MMT_DPI_HEADER) $(LIB_OBJS) $(MAIN_OBJS)
 	@echo "[COMPILE] $(OUTPUT)"
 	$(QUIET) $(CC) -o $(OUTPUT) $(CLDFLAGS)  $^ $(LIBS)
@@ -55,12 +57,14 @@ test.%: $(MMT_DPI_HEADER) $(LIB_OBJS) test/%.o
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -o $(OUTPUT) $(CLDFLAGS)  $^ $(LIBS)
 
-src/mmt_dpi.h gen_dpi:
+gen_lib: $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_rules_lib.o
+	@echo "[COMPILE] $(MAIN_GEN_SEC_LIB)"
+	$(QUIET) $(CC) -o $(MAIN_GEN_SEC_LIB) $(CLDFLAGS) $^ $(LIBS)
+	
+gen_dpi src/lib/mmt_dpi.h:
 	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_DPI) $(SRCDIR)/main_dpi.c -lmmt_core -ldl
 	@echo "Generate list of protocols and their attributes"	
 	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
-	
-: gen_dpi
-	
+
 clean:
-	$(QUIET) $(RM) $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI)
+	$(QUIET) $(RM) $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI) $(MAIN_GEN_SEC_LIB)

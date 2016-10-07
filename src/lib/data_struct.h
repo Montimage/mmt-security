@@ -65,19 +65,19 @@ static inline int compare_string( const void *a, const void *b ){
  * Public API
  */
 static inline int compare_uint8_t( const void *a, const void *b){
-	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint8_t function" );
+	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint8_t function %s:%d", __FILE__, __LINE__ );
 	return *(uint8_t *)a - *(uint8_t *)b;
 }
-
-/**
- * Public API
- */
 static inline int compare_uint16_t( const void *a, const void *b){
-	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint8_t function" );
+	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint16_t function %s:%d", __FILE__, __LINE__ );
 	return *(uint16_t *)a - *(uint16_t *)b;
 }
+static inline int compare_uint32_t( const void *a, const void *b){
+	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint32_t function %s:%d", __FILE__, __LINE__ );
+	return *(uint32_t *)a - *(uint32_t *)b;
+}
 static inline int compare_uint64_t( const void *a, const void *b){
-	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint8_t function" );
+	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint64_t function %s:%d", __FILE__, __LINE__ );
 	return *(uint64_t *)a - *(uint64_t *)b;
 }
 /**

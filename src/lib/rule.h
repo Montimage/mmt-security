@@ -98,7 +98,7 @@ typedef struct rule_struct{
 	 * Identifier of the property
 	 * should go from 1 to n where n is the total number of properties in the XML
 	 */
-	uint8_t id;
+	uint16_t id;
 	/**
 	 * Indicates that the property specifies a potential attack (or abnormal behavior)
 	 * or that the property specifies a security rule that needs to be respected.

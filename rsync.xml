@@ -48,7 +48,7 @@
         <exec dir="." executable="ssh">
             <arg value="-p 2222"/>
             <arg value="${rsync.ssh.user}@${rsync.destination.host}"/>
-            <arg value="cd ${rsync.destination.dir}/mmt-security; make test.gen_code; valgrind --leak-check=yes ./security"/>
+            <arg value="cd ${rsync.destination.dir}/mmt-security; make gen_plugin; valgrind --leak-check=yes ./gen_plugin ./lib_fsm.so ./test/xml/properties_acdc.xml"/>
         </exec>
     </target>
     

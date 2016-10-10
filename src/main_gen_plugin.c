@@ -16,20 +16,22 @@
 int main( int argc, char** argv ){
 	rule_t **rule_list;
 	size_t rule_count, i;
+	const char *tmp_code_file = "/tmp/fsm.c";
 
-	if( argc != 3 )
-		mmt_error( "Usage: %s lib_file.so property_file.xml", argv[0] );
+	mmt_assert( argc == 3, "Usage: %s lib_file.so property_file.xml", argv[0] );
 
 	rule_count = read_rules_from_file( argv[2], &rule_list );
 
-	mmt_info( "Number of rules: %zu", rule_count );
 
-	generate_fsm( "/tmp/fsm.c", rule_list, rule_count );
+	generate_fsm( tmp_code_file, rule_list, rule_count );
 
+	compile_gen_code(argv[1], tmp_code_file );
+
+	mmt_info( "Encoded %zu rules from %s to %s", rule_count, argv[2], argv[1] );
 	for( i=0; i<rule_count; i++ ){
 		free_a_rule( rule_list[i], YES);
 	}
 
-	mmt_free_and_assign_to_null( rule_list );
+	mmt_free( rule_list );
 	return 0;
 }

@@ -48,7 +48,13 @@ typedef struct fsm_delay_struct{
  */
 typedef void * fsm_t;
 
-enum fsm_event_type {EVENT, TIMEOUT, RESET_TIMER };
+enum fsm_event_type {FSM_EVENT, FSM_EVENT_TIMEOUT, FSM_EVENT_RESET_TIMER };
+
+enum fsm_action_type {
+	FSM_ACTION_DO_NOTHING,
+	FSM_ACTION_CREATE_INSTANCE,
+	FSM_ACTION_RESET_TIMER
+};
 
 /**
  * Events trigger transitions from a state to another.
@@ -266,15 +272,6 @@ typedef struct fsm_state_struct{
 	char *description;
 
    /**
-    *  If the state has a parent state, this pointer must be non-NULL.
-    */
-   struct fsm_state_struct *parent_state;
-   /**
-    * If this state is a parent state, this pointer may point to a
-    * 	child state that serves as an entry point.
-    */
-   struct fsm_state_struct *entry_state;
-   /**
     *  An array of outgoing transitions of the state.
     */
    struct fsm_transition_struct *transitions;
@@ -300,7 +297,7 @@ typedef struct fsm_state_struct{
     * 	+ state_data the statet's #data will be passed.
     * 	+ event the event that triggered the transition will be passed.
     */
-   void ( *entry_action )( void *state_data, const fsm_event_t *event );
+   int entry_action;
    /**
     *  This function is called whenever the state is being left. May be NULL.
     *
@@ -312,7 +309,7 @@ typedef struct fsm_state_struct{
     * 	+ state_data the state's #data will be passed.
     * 	+ event the event that triggered a transition will be passed.
     */
-   void ( *exit_action )( void *state_data, const fsm_event_t *event );
+   int exit_action;
 }fsm_state_t;
 
 
@@ -333,7 +330,7 @@ typedef struct fsm_state_struct{
  * 	+ error_state pointer to a state that acts a final state and notifies
  * 		the system/user that an error has occurred.
  */
-fsm_t *fsm_init( fsm_state_t *init_state, fsm_state_t *error_state );
+fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final );
 
 /**
  * Reset the machine to #init_state and #error_state as being initialized.
@@ -415,7 +412,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm_struct, const fsm_event
  *	- Return:
  *		+ a pointer to the current state, otherwise, NULL if fsm is NULL.
  */
-fsm_state_t *fsm_get_current_state( const fsm_t *fsm );
+const fsm_state_t *fsm_get_current_state( const fsm_t *fsm );
 
 /**
  *  Get the previous state
@@ -426,7 +423,7 @@ fsm_state_t *fsm_get_current_state( const fsm_t *fsm );
  * 	+ the previous state, otherwise, NULL if #fsm is NULL
  * 		or if there has not yet been any transitions.
  */
-fsm_state_t *fsm_get_previous_state( const fsm_t *fsm );
+const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm );
 
 /**
  *  Check if the state machine has stopped
@@ -465,4 +462,8 @@ fsm_t * fsm_clone( const fsm_t *fsm );
 size_t fsm_get_current_execution_trace( const fsm_t *fsm, const fsm_event_t **events );
 
 void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
+
+void fsm_create_new_instance( void *event_data, const fsm_event_t *event, const fsm_t *fsm);
+void fsm_run_command(  const char *command, const fsm_t *fsm);
+
 #endif /* SRC_LIB_FSM_H_ */

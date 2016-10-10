@@ -8,7 +8,8 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include "../src/lib/gen_fsm_header.h"
+
+#include "../src/lib/plugin_header.h"
 
 int main(void){
 	const rule_info_t *rules_arr;

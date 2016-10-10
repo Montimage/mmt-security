@@ -206,3 +206,12 @@ void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *
 	if( _tree->root == NULL ) return;
 	_mmt_map_node_iterate( _tree->root, map_iterate_function, user_data, &index, _tree->size );
 }
+
+
+static void _iterate_to_assign_to_array( void *key, void *data, void *user_data, size_t index, size_t count){
+	//user_data[ index ] = data;
+}
+size_t mmt_map_get_data_array( const mmt_map_t *map, void **array){
+	array = mmt_malloc( mmt_map_count(map) );
+	mmt_map_iterate(map, _iterate_to_assign_to_array, array );
+}

@@ -9,13 +9,14 @@
 #include "mmt_utils.h"
 #include "data_struct.h"
 #include "expression.h"
+#include "mmt_fsm.h"
 #include "mmt_log.h"
 #include "mmt_alloc.h"
 
 
 #define STR_BUFFER_SIZE 10000
 #define _gen_comment( fd, format, ... ) fprintf( fd, "\n/** %d\n * " format "\n */\n", __LINE__, ##__VA_ARGS__ )
-#define _gen_one_line_comment( fd, format, ... ) fprintf( fd, "/** %d " format "*/", __LINE__, ##__VA_ARGS__ )
+#define _gen_comment_line( fd, format, ... ) fprintf( fd, "/** %d " format "*/", __LINE__, ##__VA_ARGS__ )
 #define _gen_code_line( fd ) fprintf( fd, "/* %d */", __LINE__ )
 #define _val( x ) (x==NULL? "NULL": x)
 #define _string( v, a,b,c, x,y,z  ) (v==NULL? a:x), (v==NULL? b:y), (v==NULL? c:z)
@@ -44,10 +45,8 @@ struct _variables_struct{
 };
 
 
-
 static void _iterate_variable( void *key, void *data, void *user_data, size_t index, size_t total ){
 	char *str = NULL;
-	struct _user_data *u_data = (struct _user_data *) user_data;
 	FILE *fd  = (FILE *)user_data;
 	size_t size;
 	variable_t *var = (variable_t *) data;
@@ -78,6 +77,7 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	rule_event_t *event = (rule_event_t *)data;
 	FILE *fd = (FILE *)user_data;
 	uint16_t rule_id, event_id;
+	//key is in form: rule_id-event_id
 	_simple_dehash_32( *(uint32_t *) key, &rule_id, &event_id );
 	_gen_comment( fd, "Rule %d, event %d\n * %s", rule_id, event_id, event->description );
 	size = expr_stringify_expression( &str, event->expression );
@@ -106,7 +106,6 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 
 ////////////////////////////////////////////////////////////////////////////////
 #define MAX_STR_BUFFER 10000
-enum _event_type{ _TIMEOUT, _EVENT };
 /**
  * Meta-model
  * This structure contains information to generate fsm_state_t
@@ -117,7 +116,8 @@ typedef struct _meta_state_struct{
 	rule_delay_t *delay;
 	link_node_t *transitions;
 	char comment[MAX_STR_BUFFER];
-	char *action;
+	int entry_action;
+	int exit_action;
 }_meta_state_t;
 /**
  * Meta-model
@@ -130,20 +130,22 @@ typedef struct _meta_transition_struct{
 	char *action;
 	_meta_state_t *target;
 	const rule_event_t *attached_event;//
+	char comment[MAX_STR_BUFFER];
 }_meta_transition_t;
 
 static inline _meta_state_t *_create_new_state( index ){
 	_meta_state_t *s = mmt_malloc( sizeof( _meta_state_t ));
-	s->index = index;
-	s->description = NULL;
-	s->delay = NULL;
-	s->transitions = NULL;
-	s->action = NULL;
-	s->comment[0] = '\0';
+	s->index        = index;
+	s->description  = NULL;
+	s->delay        = NULL;
+	s->transitions  = NULL;
+	s->entry_action = FSM_ACTION_DO_NOTHING;
+	s->exit_action  = FSM_ACTION_DO_NOTHING;
+	s->comment[0]   = '\0';
 	return s;
 }
 
-static inline _meta_transition_t *_create_new_transition( int event_type, int guard_id, _meta_state_t *target, const rule_event_t *ev){
+static inline _meta_transition_t *_create_new_transition( int event_type, int guard_id, _meta_state_t *target, const rule_event_t *ev, const char *comment){
 	_meta_transition_t *t = mmt_malloc( sizeof( _meta_transition_t ));
 	t->event_type = event_type;
 	t->condition  = NULL;
@@ -151,6 +153,10 @@ static inline _meta_transition_t *_create_new_transition( int event_type, int gu
 	t->action     = NULL;
 	t->target     = target;
 	t->attached_event = ev;
+	if( comment != NULL )
+		snprintf(t->comment, STR_BUFFER_SIZE, "%s", comment);
+	else
+		t->comment[0] = '\0';
 	return t;
 }
 
@@ -178,7 +184,7 @@ static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *
 
 	//add timeout transition
 	state->transitions = append_node_to_link_list( state->transitions,
-			_create_new_transition( _TIMEOUT, 0, s_final, NULL));
+			_create_new_transition( FSM_EVENT_TIMEOUT, 0, s_final, NULL, NULL));
 
 	//gen for context
 	_gen_transition_rule( s_init, state, s_error, states_list, context, index, rule );
@@ -187,6 +193,12 @@ static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *
 	states_list  = append_node_to_link_list( states_list, state );
 	//gen for trigger
 	_gen_transition_rule( state, s_final, s_error, states_list, trigger, index, rule );
+	//create a new loop-itself
+	if( context->type == RULE_EVENT ){
+		state->exit_action = FSM_ACTION_CREATE_INSTANCE;
+		state->transitions = append_node_to_link_list( state->transitions,
+				_create_new_transition( FSM_EVENT, context->event->id, state, NULL, "Loop to create a new instance"));
+	}
 }
 
 /**
@@ -231,9 +243,10 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 		state->delay       = operator->delay;
 	}
 
+
 	//add timeout transition
 	state->transitions = append_node_to_link_list( state->transitions,
-			_create_new_transition( _TIMEOUT, 0, s_final, NULL));
+			_create_new_transition( FSM_EVENT_TIMEOUT, 0, s_final, NULL, NULL));
 
 	//gen for context
 	_gen_transition_rule( s_init, state, s_error, states_list, context, index, rule );
@@ -242,6 +255,13 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 	states_list  = append_node_to_link_list( states_list, state );
 	//gen for trigger
 	_gen_transition_rule( state, s_error, s_final, states_list, trigger, index, rule );
+
+	//create a new loop-itself
+	if( context->type == RULE_EVENT ){
+		state->exit_action = FSM_ACTION_CREATE_INSTANCE;
+		state->transitions = append_node_to_link_list( state->transitions,
+				_create_new_transition( FSM_EVENT, context->event->id, state, NULL, "Loop to create a new instance"));
+	}
 }
 
 /**
@@ -255,7 +275,7 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 	if( rule_node->type == RULE_EVENT ){
 
 		s_init->transitions = append_node_to_link_list( s_init->transitions,
-				_create_new_transition(_EVENT, rule_node->event->id, s_final, rule_node->event ));
+				_create_new_transition(FSM_EVENT, rule_node->event->id, s_final, rule_node->event, NULL ));
 		return;
 	}
 
@@ -293,10 +313,10 @@ static void _gen_fsm_states_for_a_rule( FILE *fd, const rule_t *rule ){
 	s_init->description = rule->description;
 
 	sprintf(s_final->comment, "final state");
-	s_final->action = rule->if_satisfied;
+	//s_final->entry_action = rule->if_satisfied;
 
 	sprintf( s_error->comment, "timeout/error state");
-	s_error->action = rule->if_not_satisfied;
+	//s_error->entry_action = rule->if_not_satisfied;
 
 	states_list = append_node_to_link_list(states_list, s_init );
 	states_list = append_node_to_link_list(states_list, s_error );
@@ -334,8 +354,8 @@ static void _gen_fsm_states_for_a_rule( FILE *fd, const rule_t *rule ){
 						state->delay?state->delay->counter_min:0, state->delay?state->delay->counter_max:0);
 
 		fprintf( fd, "\n\t.description  = %c%s%c,", _string( state->description, ' ', "NULL", ' ', '"', state->description, '"'));
-		fprintf( fd, "\n\t.exit_action  = NULL,");
-		fprintf( fd, "\n\t.entry_action = NULL,");
+		fprintf( fd, "\n\t.entry_action = %d,", state->entry_action );
+		fprintf( fd, "\n\t.exit_action  = %d,", state->exit_action  );
 
 		size = 0;
 		//print list of outgoing transitions of this state
@@ -349,12 +369,13 @@ static void _gen_fsm_states_for_a_rule( FILE *fd, const rule_t *rule ){
 				tran = (_meta_transition_t *)p_t->data;
 				if( tran->attached_event && tran->attached_event->description )
 					fprintf( fd, "\n\t\t/** %d %s */", __LINE__, tran->attached_event->description );
-
+				if( tran->comment[0] != '\0' )
+					fprintf( fd, "\n\t\t/** %d %s */", __LINE__, tran->comment );
 				sprintf( buffer, "&g_%d_%d", rule->id, tran->guard_id );
-				fprintf( fd, "\n\t\t{ .event_type = %s, .condition = NULL, .guard = %s, .action = NULL, .target_state = &s_%d_%zu}%c",
-						(tran->event_type == _TIMEOUT ? "TIMEOUT" : "EVENT  "),
-						(tran->event_type == _TIMEOUT ? "NULL  "    : buffer   ),
-						rule->id, tran->target->index,
+				fprintf( fd, "\n\t\t{ .event_type = %d, .condition = NULL, .guard = %s, .action = NULL, .target_state = &s_%d_%zu}%c",
+						tran->event_type,
+						(tran->event_type == FSM_EVENT_TIMEOUT ? "NULL  "  : buffer   ), //guard
+						rule->id, tran->target->index, //target_state
 						(p_t->next == NULL?' ':',')
 				);
 				p_t = p_t->next;
@@ -368,9 +389,13 @@ static void _gen_fsm_states_for_a_rule( FILE *fd, const rule_t *rule ){
 		fprintf( fd, "\n}%c", (p_link_node->next == NULL? ';':',') );
 		p_link_node = p_link_node->next;
 	}
-	_gen_comment( fd, "Create a new FSM");
-	fprintf( fd, "inline fsm_t * new_fsm_%d(){ return fsm_init( &s_%d_%zu, &s_%d_%zu );}\n",
-			rule->id, rule->id, s_init->index, rule->id, s_error->index );
+
+	_gen_comment(fd, "Create a new FSM for this rule");
+	fprintf( fd, "fsm_t * mmt_sec_create_new_fsm_%d(){", rule->id);
+	fprintf( fd, "\n\t\treturn fsm_init( &s_%d_0, &s_%d_1, &s_%d_2 );//init, error, final",
+			rule->id, rule->id, rule->id );
+	fprintf( fd, "\n}//end function");
+
 
 	free_link_list( states_list, YES );
 }
@@ -425,17 +450,69 @@ void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data
 			var->proto, var->att);
 
 	//last element
-	if( index + 1 == total )
+	if( index + 1 == total ){
+		fprintf( fd, "\n\t uint64_t timestamp;//timestamp");
+		fprintf( fd, "\n\t uint64_t counter;//index of packet");
 		fprintf( fd, "\n}_msg_t;");
+	}
 }
 
+void _iterate_variables_to_convert_to_structure( void *key, void *data, void *user_data, size_t index, size_t total ){
+	FILE *fd = (FILE *)user_data;
+	variable_t *var = (variable_t *)data;
+	static uint32_t old_proto_id = -1;
+	//first element
+	if( index == 0 ){
+		_gen_comment( fd, "Structure to represent event data");
+		fprintf( fd, "void *mmt_sec_convert_message_to_event( const message_t *msg){" );
+		fprintf( fd, "\n\tif( msg == NULL ) return NULL;" );
+		fprintf( fd, "\n\t_msg_t *new_msg = mmt_malloc( sizeof( _msg_t ));" );
+		fprintf( fd, "\n\tsize_t i;" );
+		fprintf( fd, "\n\tnew_msg->timestamp = msg->timestamp;" );
+		fprintf( fd, "\n\tnew_msg->counter = msg->counter;" );
+		fprintf( fd, "\n\tfor( i=0; i<msg->elements_count; i++){" );
+
+		fprintf( fd, "\n\t\tswitch( msg->elements[i]->proto_id ){" );
+		_gen_comment_line( fd, "For each protocol");
+	}
+	if( old_proto_id != var->proto_id ){
+		//not the first element
+		if( index != 0 ){
+			fprintf( fd, "\n\t\t\t}//end switch of att_id %d", __LINE__);
+			fprintf( fd, "\n\t\t\tbreak;");
+		}
+		fprintf( fd, "\n\t\tcase %d:// %s", var->proto_id, var->proto );
+		fprintf( fd, "\n\t\t\tswitch( msg->elements[i]->att_id ){" );
+	}
+
+	//content of switch
+	fprintf( fd, "\n\t\t\tcase %d:// %s", var->att_id, var->att );
+	if( var->data_type == NUMERIC )
+		fprintf( fd, "\n\t\t\t\tnew_msg->%s_%s = *(double *)msg->elements[i]->data;",
+			var->proto, var->att);
+	else
+		fprintf( fd, "\n\t\t\t\tnew_msg->%s_%s = mmt_mem_retain( msg->elements[i]->data );",
+			var->proto, var->att);
+	fprintf( fd, "\n\t\t\t\tbreak;");
+
+	//last element
+	if( index + 1 == total ){
+		fprintf( fd, "\n\t\t\t}//end switch of att_id %d", __LINE__);
+		fprintf( fd, "\n\t\t}//end switch");
+		fprintf( fd, "\n\t}//end for");
+		fprintf( fd, "\n\treturn new_msg;");
+		fprintf( fd, "\n}//end function");
+	}
+
+	old_proto_id = var->proto_id;
+}
 /**
  * Generate general informations of rules
  */
 static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t count ){
 	size_t i;
 	_gen_comment( fd, "Information of %zu rules", count );
-	fprintf( fd, "size_t get_rules_information( const rule_info_t **rules_arr ){");
+	fprintf( fd, "size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){");
 	fprintf( fd, "\n\t static const rule_info_t rules[] = (rule_info_t[]){");
 	for( i=0; i<count; i++ ){
 		fprintf( fd, "\n\t\t{");
@@ -446,6 +523,8 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 				_string( rules[i]->if_satisfied, 'N', "UL", 'L', '"', rules[i]->if_satisfied, '"') );
 		fprintf( fd, "\n\t\t\t.if_not_satisfied = %c%s%c,",
 				_string( rules[i]->if_not_satisfied, 'N', "UL", 'L', '"', rules[i]->if_not_satisfied, '"') );
+		fprintf( fd, "\n\t\t\t.create_instance  = &mmt_sec_create_new_fsm_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t.hash_message     = NULL,//&hash_message_%d", rules[i]->id );
 		if( i < count -1 )
 			fprintf( fd, "\n\t\t},");
 		else
@@ -498,6 +577,22 @@ void _iterate_event_to_get_unique_variables( void *key, void *data, void *user_d
 	mmt_map_free( map, NO );
 }
 
+void gen_fun_to_create_fsm( FILE *fd, rule_t *const *rules, size_t count){
+	size_t i;
+	_gen_comment( fd, "Create a new FSM");
+	fprintf( fd, "fsm_t * mmt_sec_create_new_fsm( uint32_t rule_id ){");
+	fprintf( fd, "\n\tswitch( rule_id ){");
+	for( i=0; i<count; i++ ){
+		fprintf( fd, "\n\tcase %d:", rules[i]->id );
+		fprintf( fd, "\n\t\treturn fsm_init( &s_%d_0, &s_%d_1, &s_%d_2 );//init, error, final",
+				rules[i]->id, rules[i]->id, rules[i]->id );
+	}
+	fprintf( fd, "\n\tdefault:");
+	fprintf( fd, "\n\t\tfprintf(stderr, \"Do not find rule having id = %%d\", rule_id);");
+	fprintf( fd, "\n\t\texit(1);");
+	fprintf( fd, "\n\t}//end switch");
+	fprintf( fd, "\n}//end function");
+}
 
 /**
  * Public API
@@ -525,10 +620,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 	mmt_free( str_ptr );
 
 	//include
-	fprintf( fd, "#include <string.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include \"gen_fsm_header.h\"\n#include \"mmt_fsm.h\"\n");
-
-	//information of rules
-	_gen_rule_information( fd, rules, count );
+	fprintf( fd, "#include <string.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include \"plugin_header.h\"\n#include \"mmt_fsm.h\"\n#include \"mmt_alloc.h\"\n");
 
 	_get_unique_events( events_map, rules, count);
 	mmt_map_iterate( events_map, _iterate_event_to_get_unique_variables, variables_map );
@@ -536,7 +628,10 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 	//define a struct
 	_gen_comment(fd, "Define the structure using in guard functions");
 	mmt_map_iterate(variables_map, _iterate_variables_to_gen_structure, fd);
+	//convert from a message_t to a structure generated above
+	mmt_map_iterate(variables_map, _iterate_variables_to_convert_to_structure, fd);
 
+	//a hash function
 	mmt_map_iterate(variables_map, _iterate_variables_to_print_switch, fd );
 
 	mmt_map_iterate(events_map, _iterate_event_to_gen_guards, fd);
@@ -544,7 +639,10 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 	for( i=0; i<count; i++ )
 		_gen_fsm_states_for_a_rule( fd, rules[i] );
 
+	gen_fun_to_create_fsm( fd, rules, count );
 
+	//information of rules
+	_gen_rule_information( fd, rules, count );
 
 	fclose(fd);
 
@@ -559,6 +657,6 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 
 int compile_gen_code( const char *lib_file, const char *code_file ){
 	char cmd_str[ 10000 ];
-	sprintf( cmd_str, "/usr/bin/gcc -shared %s -o %s", code_file, lib_file );
+	sprintf( cmd_str, "/usr/bin/gcc -fPIC -shared %s -o %s -I /home/mmt/mmt-security/src/lib", code_file, lib_file );
 	return system ( cmd_str );
 }

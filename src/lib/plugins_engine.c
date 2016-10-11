@@ -21,14 +21,16 @@ static int load_filter( const struct dirent *entry ){
 	return( ext && !strcmp( ext, ".so" ));
 }
 
-size_t load_plugins( const rule_info_t **plugins_arr ){
-	size_t size, i, index;
+size_t load_plugins( const rule_info_t ***ret_array ){
+	size_t size, i, j, index;
 	char path[ 256 ];
 	struct dirent **entries, *entry;
 	int plugins_path=0;
 	mmt_map_t *plugins_set = NULL;
-	uint32_t *key;
-	const rule_info_t *plugins[ MAX_PLUGIN_COUNT ];
+	const uint32_t* key;
+
+	rule_info_t const *  plugins_array[ MAX_PLUGIN_COUNT ];
+	rule_info_t const ** tmp_array;
 	int n;
 
 	n = scandir( PLUGINS_REPOSITORY, &entries, load_filter, alphasort );
@@ -47,38 +49,51 @@ size_t load_plugins( const rule_info_t **plugins_arr ){
 	for( i = 0 ; i < n ; ++i ) {
 		entry = entries[i];
 		(void)snprintf( path, 256, "%s/%s",plugins_path==0?PLUGINS_REPOSITORY:PLUGINS_REPOSITORY_OPT,entry->d_name );
-		// printf("Loading plugins from: %s \n",path);
-		size = load_plugin( plugins_arr, path );
-		//add to plugins_set
-		for( i=0; i<size; i++ ){
-			key = mmt_malloc( sizeof( uint32_t));
-			*key = plugins_arr[i]->id;
+
+		//load plugin
+		size = load_plugin( &tmp_array, path );
+
+		//add rule to array only if it has not been done before to avoid duplicate
+		for( j=0; j<size && index < MAX_PLUGIN_COUNT; j++ ){
+
+			key = &(tmp_array[ j ]->id);
 			//no key exist before?
-			if( mmt_map_set_data( plugins_set, key, NULL, NO ) == NULL){
-				plugins[ index ++ ] = plugins_arr[ i ];
+			if( mmt_map_set_data( plugins_set, (void *)key, (void *)tmp_array[j], NO ) == NULL){
+				plugins_array[ index ++ ] = tmp_array[ j ];
 			}else{
-				mmt_debug( "Duplicate rules'id %d", *key);
-				mmt_free( key );
+				mmt_info( "Rule %d in file %s uses an existing id", *key, path);
 			}
 		}
 		free( entry );
-		*plugins_arr = mmt_mem_dup( plugins, index * sizeof( rule_info_t*) );
+		mmt_free( tmp_array );
 	}
 	free( entries );
 
+	//free the map
+	mmt_map_free( plugins_set, NO );
 
+	*ret_array = mmt_mem_dup( plugins_array, sizeof( rule_info_t* ) * index);
 
-	return size;
+	return index;
 }
 
-size_t load_plugin( const rule_info_t **plugins_arr, const char *plugin_path_name ){
-	void *lib = dlopen ( plugin_path_name, RTLD_LAZY );
+size_t load_plugin( rule_info_t const *** plugins_arr, const char *plugin_path_name ){
+	void* lib = dlopen ( plugin_path_name, RTLD_LAZY );
+	rule_info_t const* tmp_array;
+	rule_info_t const** ret_array;
+	size_t size, i;
 	mmt_assert( lib != NULL, "Cannot open library: %s.\n%s", plugin_path_name, dlerror() );
 
 	size_t ( *fn ) ( const rule_info_t ** ) = dlsym ( lib, "mmt_sec_get_plugin_info" );
 	mmt_assert( fn != NULL, "Cannot find function: mmt_sec_get_plugin_info");
 
-	return fn( plugins_arr );
+	size = fn( &tmp_array );
+	ret_array = mmt_malloc( sizeof( rule_info_t *) * size );
+	for( i=0; i<size; i++ )
+		ret_array[i] = & (tmp_array[i]);
+
+	*plugins_arr = ret_array;
+	return size;
 }
 
 void close_plugins() {

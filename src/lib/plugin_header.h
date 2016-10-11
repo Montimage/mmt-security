@@ -36,14 +36,14 @@ typedef struct message_struct{
  * Information of a rule in generated lib
  */
 typedef struct rule_info_struct{
-	size_t id;
+	uint32_t id;
 	char *description;
 	char *if_satisfied;
 	char *if_not_satisfied;
 
-	void* (*create_instance)( void );
-	void* (*process_message)( const message_t *);
-	void* (*hash_message)( const message_t *);
+	void* (* create_instance )();
+	void* (* convert_message )( const message_t *);
+	void* (* hash_message    )( const message_t *, uint32_t *transition_index );
 }rule_info_t;
 
 /**

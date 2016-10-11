@@ -57,7 +57,7 @@ all: $(MMT_DPI_HEADER) $(LIB_OBJS) $(MAIN_OBJS)
 	
 test.%: $(MMT_DPI_HEADER) $(LIB_OBJS) test/%.o
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -o $(OUTPUT) $(CLDFLAGS)  $^ $(LIBS)
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(OUTPUT) $(CLDFLAGS)  $^ $(LIBS)
 
 gen_plugin: $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
 	@echo "[COMPILE] $(MAIN_GEN_PLUGIN)"

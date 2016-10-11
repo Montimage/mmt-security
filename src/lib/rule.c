@@ -271,7 +271,7 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 
 		//for each attribute
 		if( str_equal( xml_attr_name, "property_id" ) )
-			rule.id = (uint8_t) atoi( (const char*) xml_attr_value );
+			rule.id = (uint16_t) atoi( (const char*) xml_attr_value );
 		else if( str_equal( xml_attr_name, "type_property" ) ){
 			if( str_equal( xml_attr_value, "ATTACK" ) )
 				rule.type = RULE_TYPE_ATTACK;
@@ -388,7 +388,7 @@ size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *even
 	if( node->type == RULE_EVENT ){
 
 		//if user does not set id of event ==> we assign it to an unique number
-		if( node->event->id == (uint8_t) UNKNOWN )
+		if( node->event->id == (uint16_t) UNKNOWN )
 			node->event->id = mmt_map_count( events_map ) + 1;
 
 		//check if event is existing in the map

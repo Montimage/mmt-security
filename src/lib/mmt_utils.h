@@ -38,7 +38,6 @@ static inline char* get_current_date_time_string( const char *template ){
 	time_t now = time(NULL);
 	struct tm *t = localtime(&now);
 
-
 	strftime(text, sizeof(text)-1, template, t);
 	return mmt_mem_dup( text, strlen( text ));
 }

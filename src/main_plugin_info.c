@@ -15,19 +15,30 @@
 #include "lib/plugins_engine.h"
 
 int main( int argc, char** argv ){
-	const rule_info_t *rules_arr;
+	const rule_info_t **rules_arr;
 	size_t i, n;
 
-	mmt_assert( argc == 2, "Usage: %s lib_file.so", argv[0] );
+	mmt_assert( argc <= 2, "Usage: %s [lib_file.so]", argv[0] );
+	//load plugins from default folder:
+	// - /opt/mmt/security/plugins
+	// - ./plugins
+	if( argc == 1)
+		n = load_plugins( &rules_arr );
+	else
+		n = load_plugin( &rules_arr, argv[1] );
 
-	n = load_plugin( &rules_arr, argv[1] );
-	printf("There are %zu rules in file %s", n, argv[1] );
+	printf("Found %zu rule%s", n, n<=1? ".": "s." );
+
 	for( i=0; i<n; i++ ){
-		printf("\n%zu - Rule id: %zu", (i+1), rules_arr[i].id );
-		printf("\n\t- description     : %s",  rules_arr[i].description );
-		printf("\n\t- if_satisfied    : %s",  rules_arr[i].if_satisfied );
-		printf("\n\t- if_not_satisfied: %s",  rules_arr[i].if_not_satisfied );
+		printf("\n%zu - Rule id: %d", (i+1), rules_arr[i]->id );
+		printf("\n\t- description     : %s",  rules_arr[i]->description );
+		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
+		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
+		printf("\n\t- create_instance : %p",  rules_arr[i]->create_instance );
+		printf("\n\t- convert_message : %p",  rules_arr[i]->convert_message );
+		printf("\n\t- hash_message    : %p",  rules_arr[i]->hash_message );
 	}
 	printf("\n");
+	mmt_free( rules_arr );
 	return 0;
 }

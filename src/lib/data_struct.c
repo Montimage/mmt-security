@@ -150,7 +150,7 @@ void* _mmt_map_set_data( int (*fun)(const void*, const void*), _mmt_map_node_t *
  */
 void* mmt_map_set_data( mmt_map_t *map, void *key, void *data, enum bool override_if_exist ){
 	void *ptr;
-	if( map == NULL || key == NULL || data == NULL ) return NULL;
+	if( map == NULL || key == NULL ) return NULL;
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
 	ptr = _mmt_map_set_data( _tree->compare_function, &(_tree->root), key, data, override_if_exist );
 	//successfully inserted ==> increase number of nodes
@@ -212,6 +212,8 @@ static void _iterate_to_assign_to_array( void *key, void *data, void *user_data,
 	//user_data[ index ] = data;
 }
 size_t mmt_map_get_data_array( const mmt_map_t *map, void **array){
-	array = mmt_malloc( mmt_map_count(map) );
+	size_t size = mmt_map_count(map);
+	array = mmt_malloc( size );
 	mmt_map_iterate(map, _iterate_to_assign_to_array, array );
+	return size;
 }

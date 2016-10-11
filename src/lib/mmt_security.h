@@ -15,7 +15,7 @@
  * init mmt-security engine:
  * - load plugins (encoded rules)
  */
-void mmt_sec_init();
+size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array );
 
 typedef void *mmt_sec_handler_t;
 
@@ -32,8 +32,8 @@ typedef void (*mmt_sec_callback)(
 /**
  * Register some rules to validate
  */
-mmt_sec_handler_t *mmt_sec_register_rules(
-		const size_t *rules_id,
+mmt_sec_handler_t *mmt_sec_register(
+		const rule_info_t **rules_arr,
 		size_t rules_count,
 		mmt_sec_callback callback,
 		void *user_data);

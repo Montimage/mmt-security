@@ -92,7 +92,7 @@ static enum data_type _get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
 	case MMT_UNDEFINED_TYPE:
 		return STRING;
 	default:
-		mmt_assert(0, "Error 2: Type [%ld], not implemented yet, data type unknown.\n", type);
+		return UNKNOWN; //mmt_assert(0, "Error 2: Type [%ld], not implemented yet, data type unknown.\n", type);
 	}
 	return STRING;
 }
@@ -127,6 +127,8 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index )
 	var->proto_id = get_protocol_id_by_name( var->proto );
 	var->att_id   = get_attribute_id_by_protocol_id_and_attribute_name( var->proto_id, var->att );
 	var->data_type = _get_attribute_data_type( var->proto_id, var->att_id );
+
+	mmt_assert( var->data_type != UNKNOWN, "Error 2: Data type for %s.%s has not implemented yet.", proto, attr);
 
 	return var;
 }

@@ -14,7 +14,7 @@
 #include "expression.h"
 
 typedef struct rule_event_struct{
-	uint8_t id;	//identifier of event
+	uint16_t id;	//identifier of event
 	char* description;
 	expression_t* expression;
 }rule_event_t;

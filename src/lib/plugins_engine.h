@@ -10,16 +10,22 @@
 
 
 #define PLUGINS_REPOSITORY "plugins"
-#define PLUGINS_REPOSITORY_OPT "/opt/mmt/sec/plugins"
+#define PLUGINS_REPOSITORY_OPT "/opt/mmt/security/plugins"
 #include "plugin_header.h"
 
 /**
  * Loads all the plugins.
- * @return positive value on success, 0 on failure.
+ * - Return
+ * 	+ number of loaded rules
  */
-size_t load_plugins( const rule_info_t **plugins_arr );
+size_t load_plugins( rule_info_t const *** plugins_arr );
 
-size_t load_plugin( const rule_info_t **plugins_arr, const char *plugin_path_name );
+/**
+ * Loads one plugin.
+ * - Return
+ * 	+ number of loaded rules
+ */
+size_t load_plugin( rule_info_t const ***plugins_arr, const char *plugin_path_name );
 /**
  * Closes all loaded plugins. This function MUST only be used when the protocols corresponding
  * to the loaded plugins have been retrieved. Normally this function is used when closing the

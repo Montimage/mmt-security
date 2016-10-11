@@ -55,6 +55,7 @@ static void _go_to_error_state( _fsm_t *fsm, const fsm_event_t * event) {
 	//_exec_action( )
 }
 
+
 static fsm_transition_t *_get_transition( const _fsm_t *fsm, const fsm_state_t *state,
 		const fsm_event_t * event) {
 	size_t i;
@@ -62,7 +63,7 @@ static fsm_transition_t *_get_transition( const _fsm_t *fsm, const fsm_state_t *
 
 	for (i = 0; i < state->transitions_count; ++i) {
 		tran = &state->transitions[i];
-
+mmt_debug( "trans %zu", i);
 		/* A transition for the given event has been found: */
 		if (tran->event_type == event->type) {
 			if (!tran->guard)
@@ -250,6 +251,7 @@ size_t fsm_get_current_execution_trace( const fsm_t *fsm, const fsm_event_t **ev
 
 
 void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
+	mmt_debug("Get history %d", event_id );
 	return NULL;
 }
 

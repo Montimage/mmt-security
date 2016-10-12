@@ -12,7 +12,7 @@
     description="Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible)."
     >
     
-    <operator value="OR" delay_units="s" delay_min="0+" delay_max="1">
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
       <event value="XXXXXXX" event_id="1" 
              description="SYN request"
              boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port == 22))"/>

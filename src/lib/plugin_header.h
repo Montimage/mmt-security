@@ -43,6 +43,9 @@ typedef struct rule_info_struct{
 
 	void* (* create_instance )();
 	void* (* convert_message )( const message_t *);
+	/**
+	 * - Return _msg_t_x
+	 */
 	void* (* hash_message    )( const message_t *, uint32_t *transition_index );
 }rule_info_t;
 

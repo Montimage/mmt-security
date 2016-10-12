@@ -41,4 +41,16 @@ static inline char* get_current_date_time_string( const char *template ){
 	strftime(text, sizeof(text)-1, template, t);
 	return mmt_mem_dup( text, strlen( text ));
 }
+
+static inline uint32_t simple_hash_32( uint16_t a, uint16_t b ){
+	uint32_t val = 0;
+	val = a << 16;
+	val = val | b;
+	return val;
+}
+
+static inline void simple_dehash_32( uint32_t val, uint16_t *a, uint16_t *b){
+	*a = val >> 16;
+	*b = (val << 16) >> 16;
+}
 #endif /* SRC_LIB_MMT_UTILS_H_ */

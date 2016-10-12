@@ -9,8 +9,8 @@
 #define SRC_LIB_PLUGIN_ENGINE_H_
 
 
-#define PLUGINS_REPOSITORY "plugins"
-#define PLUGINS_REPOSITORY_OPT "/opt/mmt/security/plugins"
+#define PLUGINS_REPOSITORY "rules"
+#define PLUGINS_REPOSITORY_OPT "/opt/mmt/security/rules"
 #include "plugin_header.h"
 
 /**

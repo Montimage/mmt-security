@@ -55,8 +55,8 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 
 	for( i=0; i<_handler->rules_count; i++ )
 		fsm_free( _handler->fsm_array[i] );
-	mmt_free( _handler->fsm_array );
 
+	mmt_free( _handler->fsm_array );
 	mmt_free( _handler );
 }
 
@@ -67,15 +67,23 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	_mmt_sec_handler_t *_handler;
 	size_t i;
 	enum fsm_handle_event_value val;
+
 	fsm_event_t event = { .type = FSM_EVENT, .data = NULL };
 
 	mmt_assert( handler != NULL, "Need to register before processing");
 	_handler = (_mmt_sec_handler_t *)handler;
 	if( _handler->rules_count == 0 ) return;
 
-	event.data = (void *)message;
+
 	for( i=0; i<_handler->rules_count; i++){
+		mmt_debug( "VERIFYING RULE %d", _handler->rules_array[i]->id );
+		event.data = _handler->rules_array[i]->convert_message( message );
 		val = fsm_handle_event( _handler->fsm_array[i], &event );
+		if( val == FSM_STATE_CHANGED )
+			mmt_debug( "FSM_STATE_CHANGED" );
+		else if( val == FSM_NO_STATE_CHANGE )
+			mmt_debug( "FSM_NO_STATE_CHANGE" );
+		mmt_free( event.data );
 		mmt_debug( "Ret = %d", val );
 	}
 }

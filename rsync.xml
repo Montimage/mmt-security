@@ -43,12 +43,12 @@
             <!-- remote host and directory destination for rsync -->
             <arg value="${rsync.ssh.user}@${rsync.destination.host}:${rsync.destination.dir}"/>
         </exec>
-
+    	
         <echo message="BUILD"/>
         <exec dir="." executable="ssh">
             <arg value="-p 2222"/>
             <arg value="${rsync.ssh.user}@${rsync.destination.host}"/>
-            <arg value="cd ${rsync.destination.dir}/mmt-security; make gen_plugin; valgrind --leak-check=yes ./gen_plugin ./lib_fsm.so ./test/xml/properties_acdc.xml"/>
+            <arg value="cd ${rsync.destination.dir}/mmt-security; make test.sec; valgrind --leak-check=yes ./security"/>
         </exec>
     </target>
     

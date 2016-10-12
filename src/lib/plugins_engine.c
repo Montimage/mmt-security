@@ -20,8 +20,17 @@ static int load_filter( const struct dirent *entry ){
 	char *ext = strrchr( entry->d_name, '.' );
 	return( ext && !strcmp( ext, ".so" ));
 }
-
 size_t load_plugins( const rule_info_t ***ret_array ){
+	const rule_info_t *tmp_array, **array;
+	size_t size, i;
+	size = mmt_sec_get_plugin_info( &tmp_array );
+	array = mmt_malloc( size * sizeof( void * ));
+	for( i=0; i<size; i++ )
+		array[i] = & tmp_array[i];
+	*ret_array = array;
+	return size;
+}
+size_t _load_plugins( const rule_info_t ***ret_array ){
 	size_t size, i, j, index;
 	char path[ 256 ];
 	struct dirent **entries, *entry;

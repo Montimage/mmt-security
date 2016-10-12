@@ -15,7 +15,7 @@
 
 
 #define STR_BUFFER_SIZE 10000
-#define _gen_comment( fd, format, ... ) fprintf( fd, "\n/** %d\n * " format "\n */\n", __LINE__, ##__VA_ARGS__ )
+#define _gen_comment( fd, format, ... ) fprintf( fd, "\n /** %d\n  * " format "\n  */\n ", __LINE__, ##__VA_ARGS__ )
 #define _gen_comment_line( fd, format, ... ) fprintf( fd, "/** %d " format "*/", __LINE__, ##__VA_ARGS__ )
 #define _gen_code_line( fd ) fprintf( fd, "/* %d */", __LINE__ )
 #define _val( x ) (x==NULL? "NULL": x)
@@ -28,17 +28,6 @@ struct _user_data{
 	FILE *file;
 };
 
-static inline uint32_t _simple_hash_32( uint16_t a, uint16_t b ){
-	uint32_t val = 0;
-	val = a << 16;
-	val = val | b;
-	return val;
-}
-
-static inline void _simple_dehash_32( uint32_t val, uint16_t *a, uint16_t *b){
-	*a = val >> 16;
-	*b = (val << 16) >> 16;
-}
 
 struct _variables_struct{
 	char *proto, *att;
@@ -56,27 +45,33 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	variable_t *var = (variable_t *) data;
 	uint32_t p_id, a_id;
 
+	//init for the first element
 	size = expr_stringify_variable( &str, var );
 	if( size == 0 ) return;
 
+	if( var->ref_index != (uint8_t)UNKNOWN ){
+		fprintf(fd, "\n\t his_data = (_msg_t_%d *)fsm_get_history( fsm, %d);", rule_id, var->ref_index );
+		//TODO: not need to check ?
+		fprintf(fd, "\n\t if( his_data == NULL ) return 0;");
+	}
+
 	_gen_code_line( fd );
-	fprintf( fd, "\n\t%s%s = ((_msg_t_%d *)",
-			((var->data_type == NUMERIC)? "double " : "const char *"),
-			str, rule_id);
-
 	//TODO: when proto starts by a number
-	if( var->ref_index != (uint8_t)UNKNOWN )
-		fprintf( fd, "fsm_get_history( fsm, %d ))->%s_%s;",
-				var->ref_index, var->proto, var->att);
-	else
-		fprintf( fd, "event->data)->%s;", str );
+	fprintf( fd, "\n\t %s%s = %s->%s_%s;",
+			((var->data_type == NUMERIC)? "double " : "const char *"),
+			str,
+			( var->ref_index == (uint8_t)UNKNOWN )? "ev_data" : "his_data",
+			var->proto, var->att
+	);
 
-	//TODO: not need to check ?
-	//if( var->data_type != NUMERIC )
-		fprintf( fd, "\n\tif( %s == NULL ) return 0;", str );
+
+	//TODO: not need to check before validate the guard's boolean expression ?
+	if( var->data_type == STRING )
+		fprintf(fd, "\n\t if( %s == NULL ) return 0;", str);
 
 	mmt_free( str );
 }
+
 
 static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data, size_t index, size_t total ){
 	char *str = NULL, *guard_fun_name, buffer[1000];
@@ -88,7 +83,7 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	uint32_t rule_id  = _u_data->index;
 	uint16_t event_id = event->id;
 
-	_gen_comment( fd, "Rule %d, event %d\n * %s", rule_id, event_id, event->description );
+	_gen_comment( fd, "Rule %d, event %d\n  * %s", rule_id, event_id, event->description );
 	size = expr_stringify_expression( &str, event->expression );
 	if( size == 0 ) return;
 
@@ -103,8 +98,12 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	//guard function header
 	fprintf(fd, "static inline int %s( void *condition, const fsm_event_t *event, const fsm_t *fsm ){",
 			guard_fun_name );
+	fprintf(fd, "\n\t if( event->data == NULL ) return 0;" );
+	fprintf(fd, "\n\t const _msg_t_%d *ev_data, *his_data;", rule_id);
+	fprintf(fd, "\n\t ev_data = (_msg_t_%d *)event->data;", rule_id);
+
 	mmt_map_iterate( map, _iterate_variable, user_data );
-	fprintf(fd, "\n\n\treturn %s;\n}\n",  str);
+	fprintf(fd, "\n\n\t return %s;\n }\n ",  str);
 
 	mmt_free( str );
 	//add events to list events
@@ -358,32 +357,32 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 			_gen_comment(fd, "%s", state->comment );
 
 		fprintf( fd, " s_%d_%zu = {", rule_id, state->index );
-		fprintf( fd, "\n\t.timer        = 0,");
-		fprintf( fd, "\n\t.counter      = 0,");
-		fprintf( fd, "\n\t.delay        = {.time_min = %.2f, .time_max = %.2f, .counter_min = %d, .counter_max = %d},",
+		fprintf( fd, "\n\t .timer        = 0,");
+		fprintf( fd, "\n\t .counter      = 0,");
+		fprintf( fd, "\n\t .delay        = {.time_min = %.2f, .time_max = %.2f, .counter_min = %d, .counter_max = %d},",
 				state->delay?state->delay->time_min:0, state->delay?state->delay->time_max:0,
 						state->delay?state->delay->counter_min:0, state->delay?state->delay->counter_max:0);
 
-		fprintf( fd, "\n\t.description  = %c%s%c,", _string( state->description, ' ', "NULL", ' ', '"', state->description, '"'));
-		fprintf( fd, "\n\t.entry_action = %d,", state->entry_action );
-		fprintf( fd, "\n\t.exit_action  = %d,", state->exit_action  );
+		fprintf( fd, "\n\t .description  = %c%s%c,", _string( state->description, ' ', "NULL", ' ', '"', state->description, '"'));
+		fprintf( fd, "\n\t .entry_action = %d,", state->entry_action );
+		fprintf( fd, "\n\t .exit_action  = %d,", state->exit_action  );
 
 		size = 0;
 		//print list of outgoing transitions of this state
 		if( state->transitions == NULL ){
-			fprintf( fd, "\n\t.transitions  = NULL,");
+			fprintf( fd, "\n\t .transitions  = NULL,");
 		}else{
-			fprintf( fd, "\n\t.transitions  = (fsm_transition_t[]){");
+			fprintf( fd, "\n\t .transitions  = (fsm_transition_t[]){");
 			p_t = state->transitions;
 			while( p_t != NULL ){
 				size ++;
 				tran = (_meta_transition_t *)p_t->data;
 				if( tran->attached_event && tran->attached_event->description )
-					fprintf( fd, "\n\t\t/** %d %s */", __LINE__, tran->attached_event->description );
+					fprintf( fd, "\n\t\t /** %d %s */", __LINE__, tran->attached_event->description );
 				if( tran->comment[0] != '\0' )
-					fprintf( fd, "\n\t\t/** %d %s */", __LINE__, tran->comment );
+					fprintf( fd, "\n\t\t /** %d %s */", __LINE__, tran->comment );
 				sprintf( buffer, "&g_%d_%d", rule_id, tran->guard_id );
-				fprintf( fd, "\n\t\t{ .event_type = %d, .condition = NULL, .guard = %s, .action = NULL, .target_state = &s_%d_%zu}%c",
+				fprintf( fd, "\n\t\t { .event_type = %d, .condition = NULL, .guard = %s, .action = NULL, .target_state = &s_%d_%zu}%c",
 						tran->event_type,
 						(tran->event_type == FSM_EVENT_TIMEOUT ? "NULL  "  : buffer   ), //guard
 						rule_id, tran->target->index, //target_state
@@ -391,13 +390,13 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 				);
 				p_t = p_t->next;
 			}
-			fprintf( fd, "\n\t},");
+			fprintf( fd, "\n\t },");
 			free_link_list( state->transitions, YES );
 		}
 
-		fprintf( fd, "\n\t.transitions_count = %zu", size );
+		fprintf( fd, "\n\t .transitions_count = %zu", size );
 
-		fprintf( fd, "\n}%c", (p_link_node->next == NULL? ';':',') );
+		fprintf( fd, "\n }%c", (p_link_node->next == NULL? ';':',') );
 		p_link_node = p_link_node->next;
 	}
 
@@ -414,9 +413,9 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 
 	_gen_comment(fd, "Create a new FSM for this rule");
 	fprintf( fd, "void *mmt_sec_create_new_fsm_%d(){", rule->id);
-	fprintf( fd, "\n\t\treturn fsm_init( &s_%d_0, &s_%d_1, &s_%d_2 );//init, error, final",
+	fprintf( fd, "\n\t\t return fsm_init( &s_%d_0, &s_%d_1, &s_%d_2 );//init, error, final",
 			rule->id, rule->id, rule->id );
-	fprintf( fd, "\n}//end function");
+	fprintf( fd, "\n }//end function");
 
 
 	free_link_list( states_list, YES );
@@ -434,30 +433,34 @@ void _iterate_variables_to_print_switch( void *key, void *data, void *user_data,
 	if( index == 0 ){
 		last_proto_id = -1; //reset the static variable
 		_gen_comment( fd, "Public API" );
-		fprintf( fd, "void* mmt_sec_hash_message_%d( uint32_t proto_id, uint32_t att_id){", rule_id);
-		fprintf( fd, "\n\tswitch( proto_id ){");
+		fprintf( fd, "void* mmt_sec_hash_message_%d( const message_t *msg, uint32_t *tran_index){", rule_id);
+		fprintf( fd, "\n\t _msg_t_%d *ev = mmt_malloc( sizeof( _msg_t_%d ));", rule_id, rule_id );
+		fprintf( fd, "\n\t size_t i;\t message_element_t *e;");
+		fprintf( fd, "\n\t for( i=0; i<msg->elements_count; i++){");
+		fprintf( fd, "\n\t\t e = msg->elements[i];");
+		fprintf( fd, "\n\t switch( e->proto_id ){");
 	}
 
 	if( last_proto_id != var->proto_id ){
 		if( index != 0 ){
-			fprintf(fd, "\n\t\tdefault:\n\t\t\tfprintf(stderr, \"Do not find attribute %%d of protocol %d in the given rules.\", att_id);\n\t\t\texit(1);", last_proto_id );
-			fprintf(fd, "\n\t\t}//end att for %d", last_proto_id ); //close the previous switch
+			//fprintf(fd, "\n\t\t   default:\n\t\t\t  fprintf(stderr, \"Do not find attribute %%d of protocol %d in the given rules.\", att_id);\n\t\t\t  exit(1);", last_proto_id );
+			fprintf(fd, "\n\t\t }//end att for %d", last_proto_id ); //close the previous switch
 		}
 		_gen_comment( fd, "%s", var->proto );
-		fprintf(fd, "\tcase %d:", var->proto_id );
-		fprintf(fd, "\n\t\tswitch ( att_id){");
+		fprintf(fd, "\t case %d:", var->proto_id );
+		fprintf(fd, "\n\t\t switch ( e->att_id){");
 	}
 
-	fprintf(fd, "\n\t\tcase %d:\t//%s", var->att_id, var->att );
-	fprintf(fd, "\n\t\t\treturn NULL;//%zu;", index );
+	fprintf(fd, "\n\t\t case %d:\t //%s", var->att_id, var->att );
+	fprintf(fd, "\n\t\t\t return NULL;//%zu;", index );
 
 	if( index == total-1 ){
-		fprintf(fd, "\n\t\tdefault:\n\t\t\tfprintf(stderr, \"Do not find attribute %%d of protocol %d in the given rules.\", att_id);\n\t\t\texit(1);", last_proto_id );
-		fprintf(fd, "\n\t\t}//last switch");
+		//fprintf(fd, "\n\t\t default:\n\t\t\t fprintf(stderr, \"Do not find attribute %%d of protocol %d in the given rules.\", att_id);\n\t\t\t exit(1);", last_proto_id );
+		fprintf(fd, "\n\t\t }//last switch");
 
-		fprintf( fd, "\n\tdefault:\n\t\tfprintf(stderr, \"Do not find protocol %%d in the given rules.\", proto_id);\n\t\texit(1);");
-		fprintf( fd, "\n\t}"); //end switch
-		fprintf( fd, "\n}");//end function
+		//fprintf( fd, "\n\t default:\n\t\t fprintf(stderr, \"Do not find protocol %%d in the given rules.\", proto_id);\n\t\t exit(1);");
+		fprintf( fd, "\n\t }}"); //end switch
+		fprintf( fd, "\n return NULL; }");//end function
 	}
 
 	last_proto_id = var->proto_id;
@@ -472,15 +475,38 @@ void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data
 		_gen_comment( fd, "Structure to represent event data");
 		fprintf( fd, "typedef struct _msg_struct_%d{", _u_data->index );
 	}
-	fprintf( fd, "\n\t %s%s_%s;",
+	fprintf( fd, "\n\t  %s%s_%s;",
 			(var->data_type == NUMERIC? "double ":"const char *"),
 			var->proto, var->att);
 
 	//last element
 	if( index + 1 == total ){
-		fprintf( fd, "\n\t uint64_t timestamp;//timestamp");
-		fprintf( fd, "\n\t uint64_t counter;//index of packet");
-		fprintf( fd, "\n}_msg_t_%d;", _u_data->index );
+		fprintf( fd, "\n\t  uint64_t timestamp;//timestamp");
+		fprintf( fd, "\n\t  uint64_t counter;//index of packet");
+		fprintf( fd, "\n }_msg_t_%d;", _u_data->index );
+	}
+}
+
+void _iterate_variables_to_init_structure( void *key, void *data, void *user_data, size_t index, size_t total ){
+	struct _user_data *_u_data = (struct _user_data *)user_data;
+	FILE *fd = _u_data->file;
+	variable_t *var = (variable_t *)data;
+	uint32_t rule_id = _u_data->index;
+	//first element
+	if( index == 0 ){
+		_gen_comment( fd, "Create an instance of _msg_t_%d", rule_id);
+		fprintf( fd, "static inline _msg_t_%d* _allocate_msg_t_%d(){", rule_id, rule_id );
+		fprintf( fd, "\n\t _msg_t_%d *m = mmt_malloc( sizeof( _msg_t_%d ));", rule_id, rule_id );
+	}
+	fprintf( fd, "\n\t m->%s_%s = %s;",
+			var->proto, var->att,
+			(var->data_type == NUMERIC? "0 ":"NULL"));
+
+	//last element
+	if( index + 1 == total ){
+		fprintf( fd, "\n\t m->timestamp = 0;//timestamp");
+		fprintf( fd, "\n\t m->counter   = 0;//index of packet");
+		fprintf( fd, "\n\t return m; \n }" );
 	}
 }
 
@@ -496,14 +522,14 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 		old_proto_id = -1; //init
 		_gen_comment( fd, "Public API" );
 		fprintf( fd, "void *mmt_sec_convert_message_to_event_%d( const message_t *msg){", rule_id );
-		fprintf( fd, "\n\tif( msg == NULL ) return NULL;" );
-		fprintf( fd, "\n\t_msg_t_%d *new_msg = mmt_malloc( sizeof( _msg_t_%d ));", rule_id, rule_id );
-		fprintf( fd, "\n\tsize_t i;" );
-		fprintf( fd, "\n\tnew_msg->timestamp = msg->timestamp;" );
-		fprintf( fd, "\n\tnew_msg->counter = msg->counter;" );
-		fprintf( fd, "\n\tfor( i=0; i<msg->elements_count; i++){" );
+		fprintf( fd, "\n\t if( msg == NULL ) return NULL;" );
+		fprintf( fd, "\n\t _msg_t_%d *new_msg = _allocate_msg_t_%d( sizeof( _msg_t_%d ));", rule_id, rule_id, rule_id );
+		fprintf( fd, "\n\t size_t i;" );
+		fprintf( fd, "\n\t new_msg->timestamp = msg->timestamp;" );
+		fprintf( fd, "\n\t new_msg->counter = msg->counter;" );
+		fprintf( fd, "\n\t for( i=0; i<msg->elements_count; i++){" );
 
-		fprintf( fd, "\n\t\tswitch( msg->elements[i]->proto_id ){" );
+		fprintf( fd, "\n\t\t switch( msg->elements[i]->proto_id ){" );
 		_gen_comment_line( fd, "For each protocol");
 	}
 
@@ -511,30 +537,30 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 	if( old_proto_id != var->proto_id ){
 		//not the first element
 		if( index != 0 ){
-			fprintf( fd, "\n\t\t\t}//end switch of att_id %d", __LINE__);
-			fprintf( fd, "\n\t\t\tbreak;");
+			fprintf( fd, "\n\t\t\t }//end switch of att_id %d", __LINE__);
+			fprintf( fd, "\n\t\t\t break;");
 		}
-		fprintf( fd, "\n\t\tcase %d:// protocol %s", var->proto_id, var->proto );
-		fprintf( fd, "\n\t\t\tswitch( msg->elements[i]->att_id ){" );
+		fprintf( fd, "\n\t\t case %d:// protocol %s", var->proto_id, var->proto );
+		fprintf( fd, "\n\t\t\t switch( msg->elements[i]->att_id ){" );
 	}
 
 	//content of switch
-	fprintf( fd, "\n\t\t\tcase %d:// attribute %s", var->att_id, var->att );
+	fprintf( fd, "\n\t\t\t case %d:// attribute %s", var->att_id, var->att );
 	if( var->data_type == NUMERIC )
-		fprintf( fd, "\n\t\t\t\tnew_msg->%s_%s = *(double *)msg->elements[i]->data;",
+		fprintf( fd, "\n\t\t\t\t new_msg->%s_%s = *(double *)msg->elements[i]->data;",
 			var->proto, var->att);
 	else
-		fprintf( fd, "\n\t\t\t\tnew_msg->%s_%s = mmt_mem_retain( msg->elements[i]->data );",
+		fprintf( fd, "\n\t\t\t\t new_msg->%s_%s = mmt_mem_retain( msg->elements[i]->data );",
 			var->proto, var->att);
-	fprintf( fd, "\n\t\t\t\tbreak;");
+	fprintf( fd, "\n\t\t\t\t break;");
 
 	//last element
 	if( index + 1 == total ){
-		fprintf( fd, "\n\t\t\t}//end switch of att_id %d", __LINE__);
-		fprintf( fd, "\n\t\t}//end switch");
-		fprintf( fd, "\n\t}//end for");
-		fprintf( fd, "\n\treturn (void *)new_msg; //%d", __LINE__);
-		fprintf( fd, "\n}//end function");
+		fprintf( fd, "\n\t\t\t }//end switch of att_id %d", __LINE__);
+		fprintf( fd, "\n\t\t }//end switch");
+		fprintf( fd, "\n\t }//end for");
+		fprintf( fd, "\n\t return (void *)new_msg; //%d", __LINE__);
+		fprintf( fd, "\n }//end function");
 	}
 
 	old_proto_id = var->proto_id;
@@ -545,30 +571,30 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t count ){
 	size_t i;
 
-	fprintf(fd, "\n\n//======================================GENERAL======================================");
+	fprintf(fd, "\n\n //======================================GENERAL======================================");
 	_gen_comment( fd, "Information of %zu rules", count );
 	fprintf( fd, "size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){");
-	fprintf( fd, "\n\t static const rule_info_t rules[] = (rule_info_t[]){");
+	fprintf( fd, "\n\t  static const rule_info_t rules[] = (rule_info_t[]){");
 	for( i=0; i<count; i++ ){
-		fprintf( fd, "\n\t\t{");
-		fprintf( fd, "\n\t\t\t.id               = %d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t.description      = %c%s%c,",
+		fprintf( fd, "\n\t\t {");
+		fprintf( fd, "\n\t\t\t .id               = %d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .description      = %c%s%c,",
 						_string( rules[i]->description, 'N', "UL", 'L', '"', rules[i]->description, '"') );
-		fprintf( fd, "\n\t\t\t.if_satisfied     = %c%s%c,",
+		fprintf( fd, "\n\t\t\t .if_satisfied     = %c%s%c,",
 				_string( rules[i]->if_satisfied, 'N', "UL", 'L', '"', rules[i]->if_satisfied, '"') );
-		fprintf( fd, "\n\t\t\t.if_not_satisfied = %c%s%c,",
+		fprintf( fd, "\n\t\t\t .if_not_satisfied = %c%s%c,",
 				_string( rules[i]->if_not_satisfied, 'N', "UL", 'L', '"', rules[i]->if_not_satisfied, '"') );
-		fprintf( fd, "\n\t\t\t.create_instance  = &mmt_sec_create_new_fsm_%d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t.hash_message     = NULL,//&mmt_sec_hash_message_%d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t.convert_message  = &mmt_sec_convert_message_to_event_%d", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .create_instance  = &mmt_sec_create_new_fsm_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .hash_message     = NULL,//&mmt_sec_hash_message_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .convert_message  = &mmt_sec_convert_message_to_event_%d", rules[i]->id );
 
 		if( i < count -1 )
-			fprintf( fd, "\n\t\t},");
+			fprintf( fd, "\n\t\t },");
 		else
-			fprintf( fd, "\n\t\t}");
+			fprintf( fd, "\n\t\t }");
 	}
-	fprintf( fd, "\n\t};\n\t*rules_arr = rules;");
-	fprintf( fd, "\n\treturn %zu;\n}", count);
+	fprintf( fd, "\n\t };\n\t *rules_arr = rules;");
+	fprintf( fd, "\n\t return %zu;\n }", count);
 }
 
 
@@ -604,12 +630,14 @@ static void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 	if( size == 0 ) return;
 
 
-	fprintf(fd, "\n\n//======================================RULE %d======================================", rule->id );
+	fprintf(fd, "\n\n //======================================RULE %d======================================", rule->id );
 
 	mmt_map_iterate( events_map, _iterate_event_to_get_unique_variables, variables_map );
 
 	//define a structure using in guard functions
 	mmt_map_iterate(variables_map, _iterate_variables_to_gen_structure, &_u_data );
+
+	mmt_map_iterate(variables_map, _iterate_variables_to_init_structure, &_u_data );
 	//convert from a message_t to a structure generated above
 	mmt_map_iterate(variables_map, _iterate_variables_to_convert_to_structure, &_u_data );
 
@@ -640,7 +668,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 	mmt_free( str_ptr );
 
 	//include
-	fprintf( fd, "#include <string.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include \"plugin_header.h\"\n#include \"mmt_fsm.h\"\n#include \"mmt_alloc.h\"\n");
+	fprintf( fd, "#include <string.h>\n #include <stdio.h>\n #include <stdlib.h>\n #include \"plugin_header.h\"\n #include \"mmt_fsm.h\"\n #include \"mmt_alloc.h\"\n ");
 
 	for( i=0; i<count; i++ )
 		_gen_fsm_for_a_rule( fd, rules[i] );

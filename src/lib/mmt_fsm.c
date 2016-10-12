@@ -60,16 +60,16 @@ static fsm_transition_t *_get_transition( const _fsm_t *fsm, const fsm_state_t *
 		const fsm_event_t * event) {
 	size_t i;
 	fsm_transition_t *tran = NULL;
-
+mmt_debug( "state %s", state->description );
 	for (i = 0; i < state->transitions_count; ++i) {
 		tran = &state->transitions[i];
-mmt_debug( "trans %zu", i);
+mmt_debug( " - trans %zu", i );
 		/* A transition for the given event has been found: */
 		if (tran->event_type == event->type) {
 			if (!tran->guard)
 				return tran;
 			/* If transition is guarded, ensure that the condition is held: */
-			else if (tran->guard(tran->condition, event, (fsm_t *)fsm) == YES )
+			else if (tran->guard(tran->condition, event, (fsm_t *)fsm) )
 				return tran;
 		}
 	}
@@ -152,6 +152,10 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, const fsm_event_t *eve
 	state = _fsm->current_state;
 	do {
 		tran = _get_transition(_fsm, state, event);
+
+		//no transitions are satisfied
+		if( tran == NULL )
+			return FSM_NO_STATE_CHANGE;
 
 		/* A transition must have a next _state defined. If the user has not
 		 * defined the next _state, go to error _state: */

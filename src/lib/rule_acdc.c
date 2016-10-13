@@ -1,6 +1,6 @@
 
- /** 667
-  * This file is generated automatically on 2016-10-12 17:48:03
+ /** 668
+  * This file is generated automatically on 2016-10-13 12:41:37
   */
  #include <string.h>
  #include <stdio.h>
@@ -11,7 +11,7 @@
  
 
  //======================================RULE 1======================================
- /** 475
+ /** 476
   * Structure to represent event data
   */
  typedef struct _msg_struct_1{
@@ -23,7 +23,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_1;
- /** 497
+ /** 498
   * Create an instance of _msg_t_1
   */
  static inline _msg_t_1* _allocate_msg_t_1(){
@@ -37,7 +37,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 523
+ /** 524
   * Public API
   */
  void *mmt_sec_convert_message_to_event_1( const message_t *msg){
@@ -46,9 +46,8 @@
 	 size_t i;
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
-mmt_debug( "VERIFY %zu elements", msg->elements_count );
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 533 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 534 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -57,27 +56,25 @@ mmt_debug( "VERIFY %zu elements", msg->elements_count );
 			 case 12:// attribute src
 				 new_msg->ip_src = mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 540
+			 }//end switch of att_id 541
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
 			 case 2:// attribute dest_port
 				 new_msg->tcp_dest_port = *(double *)msg->elements[i]->data;
-mmt_debug("=====tcp_dest_port: %.2f", new_msg->tcp_flags );
 				 break;
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = *(double *)msg->elements[i]->data;
-mmt_debug("=====tcp_flags: %.2f", new_msg->tcp_flags );
 				 break;
 			 case 1:// attribute src_port
 				 new_msg->tcp_src_port = *(double *)msg->elements[i]->data;
 				 break;
-			 }//end switch of att_id 559
+			 }//end switch of att_id 560
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //562
+	 return (void *)new_msg; //563
  }//end function
- /** 435
+ /** 436
   * Public API
   */
  void* mmt_sec_hash_message_1( const message_t *msg, uint32_t *tran_index){
@@ -86,7 +83,7 @@ mmt_debug("=====tcp_flags: %.2f", new_msg->tcp_flags );
 	 for( i=0; i<msg->elements_count; i++){
 		 e = msg->elements[i];
 	 switch( e->proto_id ){
- /** 449
+ /** 450
   * ip
   */
  	 case 178:
@@ -96,7 +93,7 @@ mmt_debug("=====tcp_flags: %.2f", new_msg->tcp_flags );
 		 case 12:	 //src
 			 return NULL;//1;
 		 }//end att for 178
- /** 449
+ /** 450
   * tcp
   */
  	 case 354:
@@ -114,14 +111,12 @@ mmt_debug("=====tcp_flags: %.2f", new_msg->tcp_flags );
   * Rule 1, event 1
   * SYN request
   */
- static inline int g_1_1( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_1_1( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_1 *ev_data, *his_data;
 	 ev_data = (_msg_t_1 *)event->data;/* 58 */
 	 double tcp_dest_port = ev_data->tcp_dest_port;/* 58 */
 	 double tcp_flags = ev_data->tcp_flags;
-
-printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 
 	 return ((tcp_flags == 2) && (tcp_dest_port == 22));
  }
@@ -130,7 +125,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 1, event 2
   * SYN ACK reply
   */
- static inline int g_1_2( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_1_2( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_1 *ev_data, *his_data;
 	 ev_data = (_msg_t_1 *)event->data;
@@ -156,7 +151,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 1, event 3
   * SYN request
   */
- static inline int g_1_3( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_1_3( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_1 *ev_data, *his_data;
 	 ev_data = (_msg_t_1 *)event->data;
@@ -182,7 +177,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 1, event 4
   * SYN ACK reply
   */
- static inline int g_1_4( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_1_4( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_1 *ev_data, *his_data;
 	 ev_data = (_msg_t_1 *)event->data;
@@ -204,19 +199,19 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 return ((tcp_flags == 18) && ((tcp_src_port == 22) && (0 == strcmp(ip_dst , ip_src_1) && 0 == strcmp(ip_src , ip_dst_1))));
  }
  
- /** 337
+ /** 338
   * States of FSM for rule 1
   */
  
- /** 338
+ /** 339
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_1_0, s_1_1, s_1_2, s_1_3, s_1_4, s_1_5;
- /** 351
+ /** 352
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 357
+ /** 358
   * initial state
   */
   s_1_0 = {
@@ -224,15 +219,17 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).",
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 381 SYN request */
-		 { .event_type = 0, .condition = NULL, .guard = &g_1_1, .action = NULL, .target_state = &s_1_3} 
+		 /** 382 SYN request */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_1_1, .target_state = &s_1_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 357
+ /** 358
   * timeout/error state
   */
   s_1_1 = {
@@ -240,12 +237,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * final state
   */
   s_1_2 = {
@@ -253,8 +251,9 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  }, s_1_3 = {
@@ -262,18 +261,21 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 1,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_1_4},
-		 /** 381 SYN ACK reply */
-		 { .event_type = 0, .condition = NULL, .guard = &g_1_2, .action = NULL, .target_state = &s_1_4},
-		 /** 383 Loop to create a new instance */
-		 { .event_type = 0, .condition = NULL, .guard = &g_1_1, .action = NULL, .target_state = &s_1_3} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_1_4},
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_1_2, .target_state = &s_1_4},
+		 /** 384 A real event will fire this loop to create a new instance */
+		 { .event_type = 0, .guard = &g_1_1, .target_state = &s_1_3} 
 	 },
 	 .transitions_count = 3
  },
- /** 357
+ /** 358
   * root node
   */
   s_1_4 = {
@@ -281,12 +283,15 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).",
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_1_2},
-		 /** 381 SYN request */
-		 { .event_type = 0, .condition = NULL, .guard = &g_1_3, .action = NULL, .target_state = &s_1_5} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_1_2},
+		 /** 382 SYN request */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_1_3, .target_state = &s_1_5} 
 	 },
 	 .transitions_count = 2
  }, s_1_5 = {
@@ -294,22 +299,25 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 1,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_1_1},
-		 /** 381 SYN ACK reply */
-		 { .event_type = 0, .condition = NULL, .guard = &g_1_4, .action = NULL, .target_state = &s_1_2},
-		 /** 383 Loop to create a new instance */
-		 { .event_type = 0, .condition = NULL, .guard = &g_1_3, .action = NULL, .target_state = &s_1_5} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_1_1},
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_1_4, .target_state = &s_1_2},
+		 /** 384 A real event will fire this loop to create a new instance */
+		 { .event_type = 0, .guard = &g_1_3, .target_state = &s_1_5} 
 	 },
 	 .transitions_count = 3
  };
- /** 404
+ /** 405
   * Array to quickly access to a state by index
   */
  static fsm_state_t* s_1[6] = {&s_1_0, &s_1_1, &s_1_2, &s_1_3, &s_1_4, &s_1_5};
- /** 414
+ /** 415
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_1(){
@@ -317,7 +325,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
  }//end function
 
  //======================================RULE 2======================================
- /** 475
+ /** 476
   * Structure to represent event data
   */
  typedef struct _msg_struct_2{
@@ -329,7 +337,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_2;
- /** 497
+ /** 498
   * Create an instance of _msg_t_2
   */
  static inline _msg_t_2* _allocate_msg_t_2(){
@@ -343,7 +351,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 523
+ /** 524
   * Public API
   */
  void *mmt_sec_convert_message_to_event_2( const message_t *msg){
@@ -353,7 +361,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 533 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 534 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -362,7 +370,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 			 case 12:// attribute src
 				 new_msg->ip_src = mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 540
+			 }//end switch of att_id 541
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
@@ -375,12 +383,12 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 			 case 1:// attribute src_port
 				 new_msg->tcp_src_port = *(double *)msg->elements[i]->data;
 				 break;
-			 }//end switch of att_id 559
+			 }//end switch of att_id 560
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //562
+	 return (void *)new_msg; //563
  }//end function
- /** 435
+ /** 436
   * Public API
   */
  void* mmt_sec_hash_message_2( const message_t *msg, uint32_t *tran_index){
@@ -389,7 +397,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 for( i=0; i<msg->elements_count; i++){
 		 e = msg->elements[i];
 	 switch( e->proto_id ){
- /** 449
+ /** 450
   * ip
   */
  	 case 178:
@@ -399,7 +407,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 		 case 12:	 //src
 			 return NULL;//1;
 		 }//end att for 178
- /** 449
+ /** 450
   * tcp
   */
  	 case 354:
@@ -417,7 +425,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 2, event 5
   * SYN request
   */
- static inline int g_2_5( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_2_5( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_2 *ev_data, *his_data;
 	 ev_data = (_msg_t_2 *)event->data;/* 58 */
@@ -431,7 +439,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 2, event 6
   * SYN ACK reply
   */
- static inline int g_2_6( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_2_6( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_2 *ev_data, *his_data;
 	 ev_data = (_msg_t_2 *)event->data;
@@ -457,7 +465,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 2, event 7
   * RST reset
   */
- static inline int g_2_7( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_2_7( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_2 *ev_data, *his_data;
 	 ev_data = (_msg_t_2 *)event->data;
@@ -479,19 +487,19 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 return ((tcp_flags == 4) && ((tcp_dest_port == 22) && (0 == strcmp(ip_dst , ip_dst_5) && 0 == strcmp(ip_src , ip_src_5))));
  }
  
- /** 337
+ /** 338
   * States of FSM for rule 2
   */
  
- /** 338
+ /** 339
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_2_0, s_2_1, s_2_2, s_2_3, s_2_4, s_2_5;
- /** 351
+ /** 352
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 357
+ /** 358
   * initial state
   */
   s_2_0 = {
@@ -499,17 +507,20 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).",
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 381 SYN request */
-		 { .event_type = 0, .condition = NULL, .guard = &g_2_5, .action = NULL, .target_state = &s_2_3},
-		 /** 381 SYN ACK reply */
-		 { .event_type = 0, .condition = NULL, .guard = &g_2_6, .action = NULL, .target_state = &s_2_4} 
+		 /** 382 SYN request */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_2_5, .target_state = &s_2_3},
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_2_6, .target_state = &s_2_4} 
 	 },
 	 .transitions_count = 2
  },
- /** 357
+ /** 358
   * timeout/error state
   */
   s_2_1 = {
@@ -517,12 +528,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * final state
   */
   s_2_2 = {
@@ -530,8 +542,9 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  }, s_2_3 = {
@@ -539,14 +552,17 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 1,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_2_5},
-		 /** 381 SYN ACK reply */
-		 { .event_type = 0, .condition = NULL, .guard = &g_2_6, .action = NULL, .target_state = &s_2_5},
-		 /** 383 Loop to create a new instance */
-		 { .event_type = 0, .condition = NULL, .guard = &g_2_5, .action = NULL, .target_state = &s_2_3} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_2_5},
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_2_6, .target_state = &s_2_5},
+		 /** 384 A real event will fire this loop to create a new instance */
+		 { .event_type = 0, .guard = &g_2_5, .target_state = &s_2_3} 
 	 },
 	 .transitions_count = 3
  }, s_2_4 = {
@@ -554,18 +570,21 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 1,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_2_5},
-		 /** 381 SYN request */
-		 { .event_type = 0, .condition = NULL, .guard = &g_2_5, .action = NULL, .target_state = &s_2_5},
-		 /** 383 Loop to create a new instance */
-		 { .event_type = 0, .condition = NULL, .guard = &g_2_6, .action = NULL, .target_state = &s_2_4} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_2_5},
+		 /** 382 SYN request */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_2_5, .target_state = &s_2_5},
+		 /** 384 A real event will fire this loop to create a new instance */
+		 { .event_type = 0, .guard = &g_2_6, .target_state = &s_2_4} 
 	 },
 	 .transitions_count = 3
  },
- /** 357
+ /** 358
   * root node
   */
   s_2_5 = {
@@ -573,20 +592,23 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 244.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).",
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_2_2},
-		 /** 381 RST reset */
-		 { .event_type = 0, .condition = NULL, .guard = &g_2_7, .action = NULL, .target_state = &s_2_2} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_2_2},
+		 /** 382 RST reset */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_2_7, .target_state = &s_2_2} 
 	 },
 	 .transitions_count = 2
  };
- /** 404
+ /** 405
   * Array to quickly access to a state by index
   */
  static fsm_state_t* s_2[6] = {&s_2_0, &s_2_1, &s_2_2, &s_2_3, &s_2_4, &s_2_5};
- /** 414
+ /** 415
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_2(){
@@ -594,7 +616,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
  }//end function
 
  //======================================RULE 3======================================
- /** 475
+ /** 476
   * Structure to represent event data
   */
  typedef struct _msg_struct_3{
@@ -605,7 +627,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_3;
- /** 497
+ /** 498
   * Create an instance of _msg_t_3
   */
  static inline _msg_t_3* _allocate_msg_t_3(){
@@ -618,7 +640,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 523
+ /** 524
   * Public API
   */
  void *mmt_sec_convert_message_to_event_3( const message_t *msg){
@@ -628,7 +650,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 533 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 534 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -637,7 +659,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 			 case 12:// attribute src
 				 new_msg->ip_src = mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 540
+			 }//end switch of att_id 541
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
@@ -647,12 +669,12 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = *(double *)msg->elements[i]->data;
 				 break;
-			 }//end switch of att_id 559
+			 }//end switch of att_id 560
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //562
+	 return (void *)new_msg; //563
  }//end function
- /** 435
+ /** 436
   * Public API
   */
  void* mmt_sec_hash_message_3( const message_t *msg, uint32_t *tran_index){
@@ -661,7 +683,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 for( i=0; i<msg->elements_count; i++){
 		 e = msg->elements[i];
 	 switch( e->proto_id ){
- /** 449
+ /** 450
   * ip
   */
  	 case 178:
@@ -671,7 +693,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 		 case 12:	 //src
 			 return NULL;//1;
 		 }//end att for 178
- /** 449
+ /** 450
   * tcp
   */
  	 case 354:
@@ -687,7 +709,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 3, event 8
   * SYN request
   */
- static inline int g_3_8( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_3_8( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_3 *ev_data, *his_data;
 	 ev_data = (_msg_t_3 *)event->data;/* 58 */
@@ -701,7 +723,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 3, event 9
   * SYN ACK reply
   */
- static inline int g_3_9( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_3_9( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_3 *ev_data, *his_data;
 	 ev_data = (_msg_t_3 *)event->data;
@@ -716,19 +738,19 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 return ((tcp_flags == 18) && 0 == strcmp(ip_src , ip_dst_8));
  }
  
- /** 337
+ /** 338
   * States of FSM for rule 3
   */
  
- /** 338
+ /** 339
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_3_0, s_3_1, s_3_2, s_3_3;
- /** 351
+ /** 352
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 357
+ /** 358
   * initial state
   */
   s_3_0 = {
@@ -736,15 +758,17 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "TCP SYN requests on microsoft-ds port 445 with SYN ACK.",
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 381 SYN request */
-		 { .event_type = 0, .condition = NULL, .guard = &g_3_8, .action = NULL, .target_state = &s_3_3} 
+		 /** 382 SYN request */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_3_8, .target_state = &s_3_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 357
+ /** 358
   * timeout/error state
   */
   s_3_1 = {
@@ -752,12 +776,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * final state
   */
   s_3_2 = {
@@ -765,12 +790,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * root node
   */
   s_3_3 = {
@@ -778,22 +804,25 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 6.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "TCP SYN requests on microsoft-ds port 445 with SYN ACK.",
-	 .entry_action = 0,
-	 .exit_action  = 1,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_3_2},
-		 /** 381 SYN ACK reply */
-		 { .event_type = 0, .condition = NULL, .guard = &g_3_9, .action = NULL, .target_state = &s_3_2},
-		 /** 383 Loop to create a new instance */
-		 { .event_type = 0, .condition = NULL, .guard = &g_3_8, .action = NULL, .target_state = &s_3_3} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_3_2},
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_3_9, .target_state = &s_3_2},
+		 /** 384 A real event will fire this loop to create a new instance */
+		 { .event_type = 0, .guard = &g_3_8, .target_state = &s_3_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 404
+ /** 405
   * Array to quickly access to a state by index
   */
  static fsm_state_t* s_3[4] = {&s_3_0, &s_3_1, &s_3_2, &s_3_3};
- /** 414
+ /** 415
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_3(){
@@ -801,7 +830,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
  }//end function
 
  //======================================RULE 4======================================
- /** 475
+ /** 476
   * Structure to represent event data
   */
  typedef struct _msg_struct_4{
@@ -811,7 +840,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_4;
- /** 497
+ /** 498
   * Create an instance of _msg_t_4
   */
  static inline _msg_t_4* _allocate_msg_t_4(){
@@ -823,7 +852,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 523
+ /** 524
   * Public API
   */
  void *mmt_sec_convert_message_to_event_4( const message_t *msg){
@@ -833,7 +862,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 533 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 534 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -842,19 +871,19 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 			 case 12:// attribute src
 				 new_msg->ip_src = mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 540
+			 }//end switch of att_id 541
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = *(double *)msg->elements[i]->data;
 				 break;
-			 }//end switch of att_id 559
+			 }//end switch of att_id 560
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //562
+	 return (void *)new_msg; //563
  }//end function
- /** 435
+ /** 436
   * Public API
   */
  void* mmt_sec_hash_message_4( const message_t *msg, uint32_t *tran_index){
@@ -863,7 +892,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 for( i=0; i<msg->elements_count; i++){
 		 e = msg->elements[i];
 	 switch( e->proto_id ){
- /** 449
+ /** 450
   * ip
   */
  	 case 178:
@@ -873,7 +902,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 		 case 12:	 //src
 			 return NULL;//1;
 		 }//end att for 178
- /** 449
+ /** 450
   * tcp
   */
  	 case 354:
@@ -887,7 +916,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 4, event 12
   * SYN request
   */
- static inline int g_4_12( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_4_12( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_4 *ev_data, *his_data;
 	 ev_data = (_msg_t_4 *)event->data;/* 58 */
@@ -900,7 +929,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 4, event 13
   * SYN request
   */
- static inline int g_4_13( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_4_13( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_4 *ev_data, *his_data;
 	 ev_data = (_msg_t_4 *)event->data;
@@ -921,19 +950,19 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 return ((tcp_flags == 2) && (0 != strcmp(ip_dst , ip_dst_12) && 0 == strcmp(ip_src , ip_src_12)));
  }
  
- /** 337
+ /** 338
   * States of FSM for rule 4
   */
  
- /** 338
+ /** 339
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_4_0, s_4_1, s_4_2, s_4_3;
- /** 351
+ /** 352
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 357
+ /** 358
   * initial state
   */
   s_4_0 = {
@@ -941,15 +970,17 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "Two successive TCP SYN requests but with different destnation addresses.",
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 381 SYN request */
-		 { .event_type = 0, .condition = NULL, .guard = &g_4_12, .action = NULL, .target_state = &s_4_3} 
+		 /** 382 SYN request */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_4_12, .target_state = &s_4_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 357
+ /** 358
   * timeout/error state
   */
   s_4_1 = {
@@ -957,12 +988,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * final state
   */
   s_4_2 = {
@@ -970,12 +1002,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * root node
   */
   s_4_3 = {
@@ -983,22 +1016,25 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "Two successive TCP SYN requests but with different destnation addresses.",
-	 .entry_action = 0,
-	 .exit_action  = 1,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_4_2},
-		 /** 381 SYN request */
-		 { .event_type = 0, .condition = NULL, .guard = &g_4_13, .action = NULL, .target_state = &s_4_2},
-		 /** 383 Loop to create a new instance */
-		 { .event_type = 0, .condition = NULL, .guard = &g_4_12, .action = NULL, .target_state = &s_4_3} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_4_2},
+		 /** 382 SYN request */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_4_13, .target_state = &s_4_2},
+		 /** 384 A real event will fire this loop to create a new instance */
+		 { .event_type = 0, .guard = &g_4_12, .target_state = &s_4_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 404
+ /** 405
   * Array to quickly access to a state by index
   */
  static fsm_state_t* s_4[4] = {&s_4_0, &s_4_1, &s_4_2, &s_4_3};
- /** 414
+ /** 415
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_4(){
@@ -1006,7 +1042,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
  }//end function
 
  //======================================RULE 5======================================
- /** 475
+ /** 476
   * Structure to represent event data
   */
  typedef struct _msg_struct_5{
@@ -1016,7 +1052,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_5;
- /** 497
+ /** 498
   * Create an instance of _msg_t_5
   */
  static inline _msg_t_5* _allocate_msg_t_5(){
@@ -1028,7 +1064,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 523
+ /** 524
   * Public API
   */
  void *mmt_sec_convert_message_to_event_5( const message_t *msg){
@@ -1038,7 +1074,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 533 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 534 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -1047,19 +1083,19 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 			 case 12:// attribute src
 				 new_msg->ip_src = mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 540
+			 }//end switch of att_id 541
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = *(double *)msg->elements[i]->data;
 				 break;
-			 }//end switch of att_id 559
+			 }//end switch of att_id 560
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //562
+	 return (void *)new_msg; //563
  }//end function
- /** 435
+ /** 436
   * Public API
   */
  void* mmt_sec_hash_message_5( const message_t *msg, uint32_t *tran_index){
@@ -1068,7 +1104,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 for( i=0; i<msg->elements_count; i++){
 		 e = msg->elements[i];
 	 switch( e->proto_id ){
- /** 449
+ /** 450
   * ip
   */
  	 case 178:
@@ -1078,7 +1114,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 		 case 12:	 //src
 			 return NULL;//1;
 		 }//end att for 178
- /** 449
+ /** 450
   * tcp
   */
  	 case 354:
@@ -1092,7 +1128,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 5, event 10
   * SYN request
   */
- static inline int g_5_10( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_5_10( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_5 *ev_data, *his_data;
 	 ev_data = (_msg_t_5 *)event->data;/* 58 */
@@ -1105,7 +1141,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 5, event 11
   * SYN ACK replyyyyyy
   */
- static inline int g_5_11( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_5_11( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_5 *ev_data, *his_data;
 	 ev_data = (_msg_t_5 *)event->data;
@@ -1120,19 +1156,19 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 return ((tcp_flags == 18) && 0 == strcmp(ip_src , ip_dst_10));
  }
  
- /** 337
+ /** 338
   * States of FSM for rule 5
   */
  
- /** 338
+ /** 339
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_5_0, s_5_1, s_5_2, s_5_3;
- /** 351
+ /** 352
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 357
+ /** 358
   * initial state
   */
   s_5_0 = {
@@ -1140,15 +1176,17 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "TCP SYN requests with SYN ACK.",
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 381 SYN request */
-		 { .event_type = 0, .condition = NULL, .guard = &g_5_10, .action = NULL, .target_state = &s_5_3} 
+		 /** 382 SYN request */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_5_10, .target_state = &s_5_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 357
+ /** 358
   * timeout/error state
   */
   s_5_1 = {
@@ -1156,12 +1194,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * final state
   */
   s_5_2 = {
@@ -1169,12 +1208,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * root node
   */
   s_5_3 = {
@@ -1182,22 +1222,25 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "TCP SYN requests with SYN ACK.",
-	 .entry_action = 0,
-	 .exit_action  = 1,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_5_2},
-		 /** 381 SYN ACK replyyyyyy */
-		 { .event_type = 0, .condition = NULL, .guard = &g_5_11, .action = NULL, .target_state = &s_5_2},
-		 /** 383 Loop to create a new instance */
-		 { .event_type = 0, .condition = NULL, .guard = &g_5_10, .action = NULL, .target_state = &s_5_3} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_5_2},
+		 /** 382 SYN ACK replyyyyyy */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_5_11, .target_state = &s_5_2},
+		 /** 384 A real event will fire this loop to create a new instance */
+		 { .event_type = 0, .guard = &g_5_10, .target_state = &s_5_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 404
+ /** 405
   * Array to quickly access to a state by index
   */
  static fsm_state_t* s_5[4] = {&s_5_0, &s_5_1, &s_5_2, &s_5_3};
- /** 414
+ /** 415
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_5(){
@@ -1205,7 +1248,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
  }//end function
 
  //======================================RULE 6======================================
- /** 475
+ /** 476
   * Structure to represent event data
   */
  typedef struct _msg_struct_6{
@@ -1214,7 +1257,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_6;
- /** 497
+ /** 498
   * Create an instance of _msg_t_6
   */
  static inline _msg_t_6* _allocate_msg_t_6(){
@@ -1225,7 +1268,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 523
+ /** 524
   * Public API
   */
  void *mmt_sec_convert_message_to_event_6( const message_t *msg){
@@ -1235,7 +1278,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 533 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 534 For each protocol*/
 		 case 153:// protocol http
 			 switch( msg->elements[i]->att_id ){
 			 case 1:// attribute method
@@ -1244,12 +1287,12 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 			 case 7:// attribute user_agent
 				 new_msg->http_user_agent = mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 559
+			 }//end switch of att_id 560
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //562
+	 return (void *)new_msg; //563
  }//end function
- /** 435
+ /** 436
   * Public API
   */
  void* mmt_sec_hash_message_6( const message_t *msg, uint32_t *tran_index){
@@ -1258,7 +1301,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 for( i=0; i<msg->elements_count; i++){
 		 e = msg->elements[i];
 	 switch( e->proto_id ){
- /** 449
+ /** 450
   * http
   */
  	 case 153:
@@ -1274,7 +1317,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 6, event 1
   * Having GET request
   */
- static inline int g_6_1( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_6_1( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_6 *ev_data, *his_data;
 	 ev_data = (_msg_t_6 *)event->data;/* 58 */
@@ -1288,7 +1331,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
   * Rule 6, event 2
   * Must have User-Agent
   */
- static inline int g_6_2( void *condition, const fsm_event_t *event, const fsm_t *fsm ){
+ static inline int g_6_2( const fsm_event_t *event, const fsm_t *fsm ){
 	 if( event->data == NULL ) return 0;
 	 const _msg_t_6 *ev_data, *his_data;
 	 ev_data = (_msg_t_6 *)event->data;/* 58 */
@@ -1298,19 +1341,19 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 return 0 != strcmp(http_user_agent , "phantom");
  }
  
- /** 337
+ /** 338
   * States of FSM for rule 6
   */
  
- /** 338
+ /** 339
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_6_0, s_6_1, s_6_2, s_6_3;
- /** 351
+ /** 352
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 357
+ /** 358
   * initial state
   */
   s_6_0 = {
@@ -1318,15 +1361,17 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "Get request from ghost",
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 381 Having GET request */
-		 { .event_type = 0, .condition = NULL, .guard = &g_6_1, .action = NULL, .target_state = &s_6_3} 
+		 /** 382 Having GET request */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_6_1, .target_state = &s_6_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 357
+ /** 358
   * timeout/error state
   */
   s_6_1 = {
@@ -1334,12 +1379,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * final state
   */
   s_6_2 = {
@@ -1347,12 +1393,13 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
-	 .entry_action = 0,
-	 .exit_action  = 0,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .data         = NULL,
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 357
+ /** 358
   * root node
   */
   s_6_3 = {
@@ -1360,22 +1407,25 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
 	 .counter      = 0,
 	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
 	 .description  = "Get request from ghost",
-	 .entry_action = 0,
-	 .exit_action  = 1,
+	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 { .event_type = 1, .condition = NULL, .guard = NULL  , .action = NULL, .target_state = &s_6_2},
-		 /** 381 Must have User-Agent */
-		 { .event_type = 0, .condition = NULL, .guard = &g_6_2, .action = NULL, .target_state = &s_6_2},
-		 /** 383 Loop to create a new instance */
-		 { .event_type = 0, .condition = NULL, .guard = &g_6_1, .action = NULL, .target_state = &s_6_3} 
+		 /** 384 Timeout event will fire this transition */
+		 { .event_type = 1, .guard = NULL  , .target_state = &s_6_2},
+		 /** 382 Must have User-Agent */
+		 /** 384 A real event */
+		 { .event_type = 0, .guard = &g_6_2, .target_state = &s_6_2},
+		 /** 384 A real event will fire this loop to create a new instance */
+		 { .event_type = 0, .guard = &g_6_1, .target_state = &s_6_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 404
+ /** 405
   * Array to quickly access to a state by index
   */
  static fsm_state_t* s_6[4] = {&s_6_0, &s_6_1, &s_6_2, &s_6_3};
- /** 414
+ /** 415
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_6(){
@@ -1383,7 +1433,7 @@ printf("GUARD======== %.2f, %.2f", tcp_flags, tcp_dest_port );
  }//end function
 
  //======================================GENERAL======================================
- /** 575
+ /** 576
   * Information of 6 rules
   */
  size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){

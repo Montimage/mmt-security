@@ -96,7 +96,7 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	guard_fun_name = mmt_mem_dup( buffer, size );
 
 	//guard function header
-	fprintf(fd, "static inline int %s( void *condition, const fsm_event_t *event, const fsm_t *fsm ){",
+	fprintf(fd, "static inline int %s( const fsm_event_t *event, const fsm_t *fsm ){",
 			guard_fun_name );
 	fprintf(fd, "\n\t if( event->data == NULL ) return 0;" );
 	fprintf(fd, "\n\t const _msg_t_%d *ev_data, *his_data;", rule_id);
@@ -133,9 +133,7 @@ typedef struct _meta_state_struct{
  */
 typedef struct _meta_transition_struct{
 	int event_type;
-	char *condition;
 	int guard_id;
-	char *action;
 	_meta_state_t *target;
 	const rule_event_t *attached_event;//
 	char comment[MAX_STR_BUFFER];
@@ -156,9 +154,7 @@ static inline _meta_state_t *_create_new_state( index ){
 static inline _meta_transition_t *_create_new_transition( int event_type, int guard_id, _meta_state_t *target, const rule_event_t *ev, const char *comment){
 	_meta_transition_t *t = mmt_malloc( sizeof( _meta_transition_t ));
 	t->event_type = event_type;
-	t->condition  = NULL;
 	t->guard_id   = guard_id;
-	t->action     = NULL;
 	t->target     = target;
 	t->attached_event = ev;
 	if( comment != NULL )
@@ -178,34 +174,33 @@ static inline void _gen_transition_rule( _meta_state_t *s_init, _meta_state_t *s
 static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *s_final,  _meta_state_t *s_error,
 		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
 		size_t *index, const rule_operator_t *operator, const rule_t *rule){
-
-	_meta_state_t *state = _create_new_state( 0 );
+	_meta_state_t *new_state = _create_new_state( 0 );
 	//root
 	if( operator == NULL ){
-		state->description = rule->description;
-		state->delay       = rule->delay;
-		snprintf(state->comment, MAX_STR_BUFFER, "root node");
+		new_state->description = rule->description;
+		new_state->delay       = rule->delay;
+		snprintf(new_state->comment, MAX_STR_BUFFER, "root node");
 	}else{
-		state->description = operator->description;
-		state->delay       = operator->delay;
+		new_state->description = operator->description;
+		new_state->delay       = operator->delay;
 	}
 
 	//add timeout transition
-	state->transitions = append_node_to_link_list( state->transitions,
-			_create_new_transition( FSM_EVENT_TIMEOUT, 0, s_final, NULL, NULL));
+	new_state->transitions = append_node_to_link_list( new_state->transitions,
+			_create_new_transition( FSM_EVENT_TIMEOUT, 0, s_final, NULL, "Timeout event will fire this transition"));
 
 	//gen for context
-	_gen_transition_rule( s_init, state, s_error, states_list, context, index, rule );
+	_gen_transition_rule( s_init, new_state, s_error, states_list, context, index, rule );
 	//increase index
-	state->index = (*index)++;
-	states_list  = append_node_to_link_list( states_list, state );
+	new_state->index = (*index)++;
+	states_list  = append_node_to_link_list( states_list, new_state );
 	//gen for trigger
-	_gen_transition_rule( state, s_final, s_error, states_list, trigger, index, rule );
+	_gen_transition_rule( new_state, s_final, s_error, states_list, trigger, index, rule );
 	//create a new loop-itself
 	if( context->type == RULE_EVENT ){
-		state->exit_action = FSM_ACTION_CREATE_INSTANCE;
-		state->transitions = append_node_to_link_list( state->transitions,
-				_create_new_transition( FSM_EVENT, context->event->id, state, NULL, "Loop to create a new instance"));
+		new_state->exit_action = FSM_ACTION_CREATE_INSTANCE;
+		new_state->transitions = append_node_to_link_list( new_state->transitions,
+				_create_new_transition( FSM_EVENT, context->event->id, new_state, NULL, "A real event will fire this loop to create a new instance"));
 	}
 }
 
@@ -254,7 +249,7 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 
 	//add timeout transition
 	state->transitions = append_node_to_link_list( state->transitions,
-			_create_new_transition( FSM_EVENT_TIMEOUT, 0, s_final, NULL, NULL));
+			_create_new_transition( FSM_EVENT_TIMEOUT, 0, s_final, NULL, "Timeout event will fire this transition"));
 
 	//gen for context
 	_gen_transition_rule( s_init, state, s_error, states_list, context, index, rule );
@@ -268,7 +263,7 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 	if( context->type == RULE_EVENT ){
 		state->exit_action = FSM_ACTION_CREATE_INSTANCE;
 		state->transitions = append_node_to_link_list( state->transitions,
-				_create_new_transition( FSM_EVENT, context->event->id, state, NULL, "Loop to create a new instance"));
+				_create_new_transition( FSM_EVENT, context->event->id, state, NULL, "A real event will fire this loop to create a new instance"));
 	}
 }
 
@@ -283,7 +278,7 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 	if( rule_node->type == RULE_EVENT ){
 
 		s_init->transitions = append_node_to_link_list( s_init->transitions,
-				_create_new_transition(FSM_EVENT, rule_node->event->id, s_final, rule_node->event, NULL ));
+				_create_new_transition(FSM_EVENT, rule_node->event->id, s_final, rule_node->event, "A real event" ));
 		return;
 	}
 
@@ -313,6 +308,12 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 	char buffer[ MAX_STR_BUFFER ];
 
 	uint32_t rule_id = rule->id;
+
+	static const char *fsm_action_string[] = {
+			"FSM_ACTION_DO_NOTHING",
+			"FSM_ACTION_CREATE_INSTANCE",
+			"FSM_ACTION_RESET_TIMER"
+	};
 
 	states_count = 0;
 	s_init = _create_new_state( states_count ++ );
@@ -364,9 +365,9 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 						state->delay?state->delay->counter_min:0, state->delay?state->delay->counter_max:0);
 
 		fprintf( fd, "\n\t .description  = %c%s%c,", _string( state->description, ' ', "NULL", ' ', '"', state->description, '"'));
-		fprintf( fd, "\n\t .entry_action = %d,", state->entry_action );
-		fprintf( fd, "\n\t .exit_action  = %d,", state->exit_action  );
-
+		fprintf( fd, "\n\t .entry_action = %d, //%s", state->entry_action, fsm_action_string[ state->entry_action ] );
+		fprintf( fd, "\n\t .exit_action  = %d, //%s", state->exit_action,  fsm_action_string[ state->exit_action ] );
+		fprintf( fd, "\n\t .data         = NULL,");
 		size = 0;
 		//print list of outgoing transitions of this state
 		if( state->transitions == NULL ){
@@ -382,7 +383,7 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 				if( tran->comment[0] != '\0' )
 					fprintf( fd, "\n\t\t /** %d %s */", __LINE__, tran->comment );
 				sprintf( buffer, "&g_%d_%d", rule_id, tran->guard_id );
-				fprintf( fd, "\n\t\t { .event_type = %d, .condition = NULL, .guard = %s, .action = NULL, .target_state = &s_%d_%zu}%c",
+				fprintf( fd, "\n\t\t { .event_type = %d, .guard = %s, .target_state = &s_%d_%zu}%c",
 						tran->event_type,
 						(tran->event_type == FSM_EVENT_TIMEOUT ? "NULL  "  : buffer   ), //guard
 						rule_id, tran->target->index, //target_state

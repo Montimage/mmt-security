@@ -23,10 +23,10 @@ typedef void *mmt_sec_handler_t;
  * A function to be called when a rule is validated
  */
 typedef void (*mmt_sec_callback)(
-		uint32_t rule_id,				//id of rule
-		struct timeval timestamp,  //moment the rule is validated
+		uint32_t rule_id,		//id of rule
+		uint64_t timestamp,  //moment the rule is validated
 
-		void *user_data				//#user-data being given in mmt_sec_register_rules
+		void *user_data		//#user-data being given in mmt_sec_register_rules
 		);
 
 /**

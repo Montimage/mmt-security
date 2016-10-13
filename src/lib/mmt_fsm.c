@@ -8,7 +8,7 @@
 #include "mmt_fsm.h"
 #include "mmt_alloc.h"
 #include "data_struct.h"
-#define MAX_TRACE_SIZE 1000
+
 /**
  * Detailed definition of FSM
  */
@@ -38,21 +38,37 @@ typedef struct fsm_struct{
    /**
     * Trace of running FSM
     */
-   const fsm_event_t *execution_trace[ MAX_TRACE_SIZE ];
-   size_t trace_count;
+   mmt_map_t *execution_trace; //map: <event_id : event_data>
 }_fsm_t;
 
-static void _exec_action( enum fsm_action_type type, fsm_event_t *event, fsm_state_t *state, fsm_t *fsm ){
+/**
+ * Execute an entry
+ */
+void _exec_action( enum bool entry, const fsm_event_t *event, fsm_state_t *state, _fsm_t *fsm ){
+	enum fsm_action_type action_type;
+	if( entry == YES )
+		action_type = state->entry_action;
+	else
+		action_type = state->exit_action;
 
+	switch( action_type ){
+		case FSM_ACTION_CREATE_INSTANCE:
+			mmt_debug(" CREATE new INSTANCE ");
+			break;
+		case FSM_ACTION_RESET_TIMER:
+			mmt_debug( "RESET TIMER ");
+			break;
+		default:
+			mmt_debug("Not good when calling this function with action_type = %d", action_type );
+	}
 }
 
 static void _go_to_error_state( _fsm_t *fsm, const fsm_event_t * event) {
 	fsm->previous_state = fsm->current_state;
 	fsm->current_state  = fsm->error_state;
 
-	//if (fsm->current_state && fsm->current_state->entry_action)
-	//	fsm->current_state->entry_action( fsm->current_state->data, event, (fsm_t *)fsm);
-	//_exec_action( )
+	if (fsm->current_state && fsm->current_state->entry_action != FSM_ACTION_DO_NOTHING )
+		_exec_action( YES, event, fsm->current_state, fsm );
 }
 
 
@@ -69,7 +85,7 @@ mmt_debug( " - trans %zu", i );
 			if (!tran->guard)
 				return tran;
 			/* If transition is guarded, ensure that the condition is held: */
-			else if (tran->guard(tran->condition, event, (fsm_t *)fsm) )
+			else if (tran->guard( event, (fsm_t *)fsm) )
 				return tran;
 		}
 	}
@@ -78,8 +94,8 @@ mmt_debug( " - trans %zu", i );
 	return NULL;
 }
 
-static void _add_event_to_execution_trace( _fsm_t *fsm, const fsm_event_t *event ){
-	fsm->execution_trace[ fsm->trace_count ++ ] = event;
+void fsm_update_execution_trace( _fsm_t *fsm, const void *data ){
+
 }
 
 /**
@@ -92,7 +108,8 @@ fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state
 	fsm->current_state  = initial_state;
 	fsm->previous_state = NULL;
 	fsm->error_state    = error_state;
-	fsm->trace_count     = 0;
+
+	fsm->execution_trace = mmt_map_init( compare_uint16_t );
 	return (fsm_t *) fsm;
 }
 
@@ -107,7 +124,9 @@ void fsm_reset( fsm_t *fsm ){
 	//reset the current state to the initial one
 	_fsm->current_state  = _fsm->init_state;
 	_fsm->previous_state = NULL;
-	_fsm->trace_count     = 0;
+
+	mmt_map_free( _fsm->execution_trace, NO );
+	_fsm->execution_trace = mmt_map_init( compare_uint16_t );
 }
 
 
@@ -119,13 +138,11 @@ fsm_t *fsm_clone( const fsm_t *fsm ) {
 
 	_fsm_t *new_fsm = mmt_malloc( sizeof( _fsm_t ));
 
-	new_fsm->init_state     = _fsm->init_state;
-	new_fsm->current_state  = _fsm->current_state;
-	new_fsm->previous_state = _fsm->previous_state;
-	new_fsm->error_state    = _fsm->error_state;
-	new_fsm->trace_count     = _fsm->trace_count;
-	for( i=0; i<new_fsm->trace_count; i++ )
-		new_fsm->execution_trace[ i ] = _fsm->execution_trace[ i ];
+	new_fsm->init_state      = _fsm->init_state;
+	new_fsm->current_state   = _fsm->current_state;
+	new_fsm->previous_state  = _fsm->previous_state;
+	new_fsm->error_state     = _fsm->error_state;
+	new_fsm->execution_trace = mmt_map_clone( _fsm->execution_trace );
 	return (fsm_t *) new_fsm;
 }
 
@@ -167,20 +184,14 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, const fsm_event_t *eve
 		state = tran->target_state;
 
 		/* Run exit action only if the current state is left
-		 * (only if it does not return to itself) */
-		//if (state != _fsm->current_state && _fsm->current_state->exit_action)
-		//	_fsm->current_state->exit_action( _fsm->current_state->data, event, fsm);
-
-		/* Run transition action (if any) */
-		if (tran->action)
-			tran->action(_fsm->current_state->data,	event, state->data);
+		 * (even if it returns to itself) */
+		if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING )
+			_exec_action( NO, event, _fsm->current_state, _fsm );
 
 		/* Call the new _state's entry action if it has any
-		 * (only if state does not return to itself) */
-		//if (state != _fsm->current_state && state->entry_action)
-		//	state->entry_action( state->data, event, fsm);
-
-		_add_event_to_execution_trace( _fsm, event );
+		 * (even if state returns to itself) */
+		if ( state->entry_action != FSM_ACTION_DO_NOTHING )
+			_exec_action( YES, event, state, _fsm );
 
 		// Update the states in FSM
 		_fsm->previous_state = _fsm->current_state;
@@ -234,6 +245,12 @@ enum bool fsm_is_stopped( const fsm_t *fsm) {
  * Public API
  */
 void fsm_free( fsm_t *fsm ){
+	_fsm_t *_fsm;
+	if ( fsm == NULL ) return;
+
+	_fsm = (_fsm_t *)fsm;
+
+	mmt_map_free( _fsm->execution_trace, NO );
 	mmt_free( fsm );
 }
 
@@ -241,22 +258,23 @@ void fsm_free( fsm_t *fsm ){
 /**
  * Public API
  */
-size_t fsm_get_current_execution_trace( const fsm_t *fsm, const fsm_event_t **events ){
+mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm ){
 	_fsm_t *_fsm;
-	const fsm_event_t *ev;
-	if (!fsm) return YES;
+	if ( fsm == NULL ) return NULL;
 
 	_fsm = (_fsm_t *)fsm;
-	ev = _fsm->execution_trace[0];
-	*events = ev;
-
-	return _fsm->trace_count;
+	return( _fsm->execution_trace );
 }
 
 
 void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
+	_fsm_t *_fsm;
+	if ( fsm == NULL ) return NULL;
+
 	mmt_debug("Get history %d", event_id );
-	return NULL;
+
+	_fsm = (_fsm_t *)fsm;
+	return mmt_map_get_data( _fsm->execution_trace, &event_id );
 }
 
 void fsm_create_new_instance( void *event_data, const fsm_event_t *event, const fsm_t *fsm){

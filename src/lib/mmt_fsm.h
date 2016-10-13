@@ -137,15 +137,6 @@ typedef struct fsm_transition_struct
    /**  The event that will trigger this transition. */
    int event_type;
    /**
-    *  Condition that event must fulfill
-    *
-    * This variable will be passed to the #guard (if #guard is non-NULL) and
-    * may be used as a condition that the incoming event's data must fulfill in
-    * order for the transition to be performed. By using this variable, the
-    * number of #guard functions can be minimized by making them more general.
-    */
-   void *condition;
-   /**
     *  Check if data passed with event fulfills a condition.
     *
     * A transition may be conditional. If so, this function, if non-NULL, will
@@ -161,21 +152,7 @@ typedef struct fsm_transition_struct
     * - Return
     * 	+ YES if the event's data fulfills the condition, otherwise NO.
     */
-   int ( *guard )( void *condition, const struct fsm_event_struct *event, const fsm_t *fsm );
-   /**
-    *  Function containing tasks to be performed during the transition.
-    *
-    * The transition may optionally do some work in this function before
-    * entering the next state. May be NULL.
-    *
-    * - Input:
-    *		+ current_state_data the leaving state's #data
-    *		+ event the event passed to the machine.
-    *		+ new_state_data the new state's (the #entry_state of any (chain of) parent states,
-    *			not the parent state itself) #data
-    */
-   void ( *action )( void *current_state_data, const struct fsm_event_struct *event,
-         void *target_state_data );
+   int ( *guard )( const struct fsm_event_struct *event, const fsm_t *fsm );
    /**
     *  The next state
     *
@@ -280,8 +257,7 @@ typedef struct fsm_state_struct{
     */
    size_t transitions_count;
    /**
-    *  Data that will be available for the fsm_state_struct in its #entry_action and
-    * #exit_action, and in any "transition action"
+    *  Data that will be available in its #entry_action and #exit_action
     */
    void *data;
    /**
@@ -459,7 +435,7 @@ fsm_t * fsm_clone( const fsm_t *fsm );
  * - Input:
  *		+ the state machine to get.
  */
-size_t fsm_get_current_execution_trace( const fsm_t *fsm, const fsm_event_t **events );
+mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm );
 
 void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
 

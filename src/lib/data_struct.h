@@ -154,6 +154,12 @@ size_t mmt_map_count( const mmt_map_t *map );
  */
 void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *key, void *data, void *user_data, size_t index, size_t total ), void *user_data );
 
+/**
+ * Clone a map
+ * - Note: this function does not clone #key and #data of each node in the map
+ */
+mmt_map_t* mmt_map_clone( const mmt_map_t *map );
+
 size_t mmt_map_get_data_array( const mmt_map_t *map, void **array);
 
 #endif /* SRC_LIB_DATA_STRUCT_H_ */

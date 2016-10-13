@@ -204,8 +204,29 @@ void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *
 	if( map == NULL ) return;
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
 	if( _tree->root == NULL ) return;
+
 	_mmt_map_node_iterate( _tree->root, map_iterate_function, user_data, &index, _tree->size );
 }
+
+void _iterate_to_clone_map( void *key, void *data, void *user_data, size_t index, size_t total){
+	mmt_map_set_data( (mmt_map_t *) user_data, key, data, NO );
+}
+
+/**
+ * Public API
+ */
+mmt_map_t* mmt_map_clone( const mmt_map_t *map ){
+	if( map == NULL ) return NULL;
+	_mmt_map_t *_tree = (_mmt_map_t*) map;
+	mmt_map_t *new_map;
+
+	new_map = mmt_map_init( _tree->compare_function );
+	//clone map
+	mmt_map_iterate( map, _iterate_to_clone_map, new_map );
+
+	return new_map;
+}
+
 
 
 static void _iterate_to_assign_to_array( void *key, void *data, void *user_data, size_t index, size_t count){

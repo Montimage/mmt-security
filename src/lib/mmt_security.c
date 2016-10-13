@@ -67,6 +67,8 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	_mmt_sec_handler_t *_handler;
 	size_t i;
 	enum fsm_handle_event_value val;
+	fsm_t *fsm;
+	const rule_info_t *rule;
 
 	fsm_event_t event = { .type = FSM_EVENT, .data = NULL };
 
@@ -74,16 +76,38 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	_handler = (_mmt_sec_handler_t *)handler;
 	if( _handler->rules_count == 0 ) return;
 
-
 	for( i=0; i<_handler->rules_count; i++){
+		fsm  = _handler->fsm_array[i];
+		rule = _handler->rules_array[i];
+
 		mmt_debug( "VERIFYING RULE %d", _handler->rules_array[i]->id );
-		event.data = _handler->rules_array[i]->convert_message( message );
-		val = fsm_handle_event( _handler->fsm_array[i], &event );
-		if( val == FSM_STATE_CHANGED )
+		event.data = rule->convert_message( message );
+		val = fsm_handle_event( fsm, &event );
+
+		switch( val ){
+		//the transition fired
+		case FSM_STATE_CHANGED:
 			mmt_debug( "FSM_STATE_CHANGED" );
-		else if( val == FSM_NO_STATE_CHANGE )
+			break;
+		//the transition cannot fire
+		case FSM_NO_STATE_CHANGE:
 			mmt_debug( "FSM_NO_STATE_CHANGE" );
+			break;
+		//the rue is validated
+		case FSM_FINAL_STATE_REACHED:
+			_handler->callback( rule->id, 1, _handler->user_data_for_callback );
+			break;
+		//the rule is not validated
+		case FSM_ERROR_STATE_REACHED:
+			break;
+		default: //avoid warning of compiler
+			break;
+		}
+
 		mmt_free( event.data );
 		mmt_debug( "Ret = %d", val );
+		break;
 	}
 }
+
+

@@ -10,6 +10,7 @@
 #include "mmt_log.h"
 #include "mmt_fsm.h"
 #include "plugins_engine.h"
+#include "rule_verif_engine.h"
 
 size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
 	return load_plugins( rules_array );
@@ -22,8 +23,7 @@ typedef struct _mmt_sec_handler_struct{
 	mmt_sec_callback callback;
 	//a parameter will give to the #callback
 	void *user_data_for_callback;
-
-	fsm_t **fsm_array;
+	rule_engine_t **engines;
 }_mmt_sec_handler_t;
 
 /**
@@ -39,11 +39,13 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 	handler->callback = callback;
 	handler->user_data_for_callback = user_data;
 	//one fsm for one rule
-	handler->fsm_array = mmt_malloc( sizeof( void *) * rules_count );
-	for( i=0; i<rules_count; i++ )
-		handler->fsm_array[i] = rules_array[i]->create_instance();
+	handler->engines = mmt_malloc( sizeof( void *) * rules_count );
+	for( i=0; i<rules_count; i++ ){
+		handler->engines[i] = rule_engine_init( rules_array[i], 1000 );
+	}
 	return (mmt_sec_handler_t *)handler;
 }
+
 
 /**
  * Public API
@@ -53,10 +55,12 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	if( handler == NULL ) return;
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
 
-	for( i=0; i<_handler->rules_count; i++ )
-		fsm_free( _handler->fsm_array[i] );
+	//free data elements of _handler
+	for( i=0; i<_handler->rules_count; i++ ){
+		rule_engine_free( _handler->engines[i] );
+	}
 
-	mmt_free( _handler->fsm_array );
+	mmt_free( _handler->engines );
 	mmt_free( _handler );
 }
 
@@ -66,48 +70,14 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message ){
 	_mmt_sec_handler_t *_handler;
 	size_t i;
-	enum fsm_handle_event_value val;
-	fsm_t *fsm;
-	const rule_info_t *rule;
-
-	fsm_event_t event = { .type = FSM_EVENT, .data = NULL };
 
 	mmt_assert( handler != NULL, "Need to register before processing");
 	_handler = (_mmt_sec_handler_t *)handler;
 	if( _handler->rules_count == 0 ) return;
 
+	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
-		fsm  = _handler->fsm_array[i];
-		rule = _handler->rules_array[i];
-
-		mmt_debug( "VERIFYING RULE %d", _handler->rules_array[i]->id );
-		event.data = rule->convert_message( message );
-		val = fsm_handle_event( fsm, &event );
-
-		switch( val ){
-		//the transition fired
-		case FSM_STATE_CHANGED:
-			mmt_debug( "FSM_STATE_CHANGED" );
-			break;
-		//the transition cannot fire
-		case FSM_NO_STATE_CHANGE:
-			mmt_debug( "FSM_NO_STATE_CHANGE" );
-			break;
-		//the rue is validated
-		case FSM_FINAL_STATE_REACHED:
-			_handler->callback( rule->id, 1, _handler->user_data_for_callback );
-			break;
-		//the rule is not validated
-		case FSM_ERROR_STATE_REACHED:
-			break;
-		default: //avoid warning of compiler
-			break;
-		}
-
-		mmt_free( event.data );
-		mmt_debug( "Ret = %d", val );
-		break;
+		rule_engine_process( _handler->engines[i], message );
+		//break;
 	}
 }
-
-

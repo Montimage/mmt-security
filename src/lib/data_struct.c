@@ -39,6 +39,22 @@ link_node_t *append_node_to_link_list( link_node_t *head, void *data ){
 	return head;
 }
 
+/** Public API */
+link_node_t *insert_node_to_link_list( link_node_t *head, void *data ){
+	link_node_t *new_node, *ptr;
+
+	new_node = create_node_of_link_list( data );
+
+	if( head == NULL )
+		return new_node;
+
+	//insert to head
+	new_node->next = head;
+	head->prev     = new_node;
+
+	return new_node;
+}
+
 void free_link_list( link_node_t *head, enum bool free_data ){
 	link_node_t *ptr;
 	while( head != NULL ){
@@ -52,6 +68,18 @@ void free_link_list( link_node_t *head, enum bool free_data ){
 	}
 }
 
+void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) ){
+	link_node_t *ptr;
+	while( head != NULL ){
+		if( free_fn )
+			free_fn( head->data );
+		ptr = head->next;
+		head->next = head->prev = NULL;
+		mmt_free( head );
+
+		head = ptr;
+	}
+}
 ///////////////////////////////////////MMT-Map////////////////////////////////////////////
 /**
  * Implement a map by a binary-tree

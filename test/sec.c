@@ -42,12 +42,15 @@ int main( int argc, char **argv ){
 	size = mmt_sec_get_rules_info( &rules_array );
 	handler = mmt_sec_register( rules_array, size, callback, NULL );
 
+
 	size = sizeof( messages ) / sizeof( message_t );
 	mmt_debug( "Testing %zu messages ... ", size );
 
+	//for each message
 	for( i=0; i<size; i++ ){
 		messages[i].elements_count = 4; //sizeof( elements[i] ) / sizeof( message_element_t* );
 		messages[i].elements = mmt_malloc( sizeof( void *) * messages[i].elements_count );
+		//for each message
 		for( j=0; j<messages[i].elements_count; j++ )
 			messages[i].elements[j] = &elements[i][j];
 

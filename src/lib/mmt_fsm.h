@@ -25,6 +25,7 @@
 
 #include "base.h"
 #include "rule.h"
+#include "mmt_alloc.h"
 
 typedef struct fsm_delay_struct{
 	/**
@@ -48,7 +49,7 @@ typedef struct fsm_delay_struct{
  */
 typedef void * fsm_t;
 
-enum fsm_event_type {FSM_EVENT, FSM_EVENT_TIMEOUT, FSM_EVENT_RESET_TIMER };
+#define FSM_EVENT_TYPE_TIMEOUT 0
 
 enum fsm_action_type {
 	FSM_ACTION_DO_NOTHING,
@@ -64,7 +65,7 @@ enum fsm_action_type {
  */
 typedef struct fsm_event_struct{
    /** Type of event. Defined by user. */
-   int type;
+   uint32_t type;
    /**
     * Event payload.
     *
@@ -135,7 +136,7 @@ struct fsm_state_struct;
 typedef struct fsm_transition_struct
 {
    /**  The event that will trigger this transition. */
-   int event_type;
+   uint32_t event_type;
    /**
     *  Check if data passed with event fulfills a condition.
     *
@@ -441,5 +442,13 @@ void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
 
 void fsm_create_new_instance( void *event_data, const fsm_event_t *event, const fsm_t *fsm);
 void fsm_run_command(  const char *command, const fsm_t *fsm);
+
+
+static inline void fsm_free_event( fsm_event_t *event, enum bool free_data ){
+	if( event == NULL ) return;
+	if( free_data == YES )
+		mmt_free_and_assign_to_null( event->data );
+	mmt_free( event );
+}
 
 #endif /* SRC_LIB_FSM_H_ */

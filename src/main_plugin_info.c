@@ -31,6 +31,7 @@ int main( int argc, char** argv ){
 
 	for( i=0; i<n; i++ ){
 		printf("\n%zu - Rule id: %d", (i+1), rules_arr[i]->id );
+		printf("\n\t- events_count    : %d",  rules_arr[i]->events_count );
 		printf("\n\t- description     : %s",  rules_arr[i]->description );
 		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
 		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );

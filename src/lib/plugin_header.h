@@ -37,16 +37,20 @@ typedef struct message_struct{
  */
 typedef struct rule_info_struct{
 	uint32_t id;
+	uint8_t events_count;
 	char *description;
 	char *if_satisfied;
 	char *if_not_satisfied;
 
+	//return a FSM instance
 	void* (* create_instance )();
+	//return a struct using by guard of FSM above, e.g., _msg_t_1
 	void* (* convert_message )( const message_t *);
 	/**
-	 * - Return _msg_t_x
+	 * - Return:
+	 * 	+ An array (size #events_count) of number.
 	 */
-	void* (* hash_message    )( const message_t *, uint32_t *transition_index );
+	const void* (* hash_message )( const void * );
 }rule_info_t;
 
 /**

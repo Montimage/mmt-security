@@ -44,7 +44,7 @@ typedef struct fsm_struct{
 /**
  * Execute an entry
  */
-void _exec_action( enum bool entry, const fsm_event_t *event, fsm_state_t *state, _fsm_t *fsm ){
+void _exec_action( enum bool entry, const fsm_event_t *event, const fsm_state_t *state, _fsm_t *fsm ){
 	enum fsm_action_type action_type;
 	if( entry == YES )
 		action_type = state->entry_action;
@@ -94,9 +94,6 @@ mmt_debug( " - trans %zu", i );
 	return NULL;
 }
 
-void fsm_update_execution_trace( _fsm_t *fsm, const void *data ){
-
-}
 
 /**
  * Public API
@@ -174,8 +171,8 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, const fsm_event_t *eve
 		if( tran == NULL )
 			return FSM_NO_STATE_CHANGE;
 
-		/* A transition must have a next _state defined. If the user has not
-		 * defined the next _state, go to error _state: */
+		/* A transition must have a next _state defined
+		 * If the user has not defined the next _state, go to error _state: */
 		if (!tran->target_state) {
 			_go_to_error_state(_fsm, event);
 			return FSM_ERROR_STATE_REACHED;
@@ -183,7 +180,10 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, const fsm_event_t *eve
 
 		state = tran->target_state;
 
-		/* Run exit action only if the current state is left
+		//add event to execution trace
+		mmt_map_set_data( _fsm->execution_trace, (void *) &event->type, (void *)event->data, YES );
+
+		/* Run exit action
 		 * (even if it returns to itself) */
 		if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING )
 			_exec_action( NO, event, _fsm->current_state, _fsm );

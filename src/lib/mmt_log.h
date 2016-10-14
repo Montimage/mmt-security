@@ -25,13 +25,12 @@ typedef enum {
 void mmt_log( log_level_t level, const char *format, ... )
 	__attribute__((format (printf, 2, 3)));
 
-#define mmt_info( ... ) mmt_log( INFO, __VA_ARGS__ )
+#define mmt_info( ... )  mmt_log( INFO, __VA_ARGS__ )
 #define mmt_error( ... ) mmt_log( ERROR, __VA_ARGS__ )
-#define mmt_halt( ... ) mmt_log( HALT, __VA_ARGS__ )
+#define mmt_halt( ... )  mmt_log( HALT, __VA_ARGS__ )
 
-#define mmt_assert( expr, ... ) if( !(expr) ) mmt_log( HALT, __VA_ARGS__ )
+#define mmt_assert( expr, ... ) while( !(expr) ){ mmt_log( HALT, __VA_ARGS__ ); break; }
 
 #define mmt_debug(...) do{ printf("%s:%d ", __FILE__, __LINE__); mmt_log( DEBUG, __VA_ARGS__ ); break; }while(1)
-
 
 #endif /* SRC_LOG_H_ */

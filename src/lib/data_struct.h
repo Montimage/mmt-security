@@ -43,9 +43,11 @@ link_node_t *create_node_of_link_list( void *data );
  * 		If entry is NULL then the function will return the new node being created
  */
 link_node_t *append_node_to_link_list( link_node_t *entry, void *data );
+link_node_t *insert_node_to_link_list( link_node_t *entry, void *data );
 
 void free_link_list( link_node_t *head, enum bool free_data );
 
+void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) );
 ////////////////////////Binary-Tree map////////////////////////////////////////////////
 /**
  * We implement a generic map on top of a binary-tree.

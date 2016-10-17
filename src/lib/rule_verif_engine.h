@@ -13,11 +13,17 @@
 
 typedef void rule_engine_t;
 
+enum rule_engine_result {
+	RULE_ENGINE_RESULT_ERROR = -1,
+	RULE_ENGINE_RESULT_UNKNOWN = 0,
+	RULE_ENGINE_RESULT_VALIDATE = 1
+};
+
 //max number of events in a rule
 //max number of instances of a rule at any moment
 rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instances_count );
 
-void rule_engine_process( rule_engine_t *engine, const message_t *message );
+enum rule_engine_result rule_engine_process( rule_engine_t *engine, const message_t *message );
 
 void rule_engine_free( rule_engine_t *engine );
 #endif /* SRC_LIB_RULE_VERIF_ENGINE_H_ */

@@ -31,8 +31,11 @@ static message_t messages[] = ( message_t[]){
 	{.counter = 3, .timestamp = 0, .elements_count = 0, .elements = NULL }
 };
 
-void callback( ){
-
+void callback( uint32_t rule_id,		//id of rule
+		uint64_t timestamp,  //moment the rule is validated
+		uint32_t counter,
+		const mmt_map_t *trace,
+		void *user_data ){
 }
 
 int main( int argc, char **argv ){
@@ -55,10 +58,11 @@ int main( int argc, char **argv ){
 			messages[i].elements[j] = &elements[i][j];
 
 		mmt_sec_process( handler, &messages[i] );
-
-		mmt_free( messages[i].elements );
 	}
 
+	for( i=0; i<size; i++ ){
+		mmt_free( messages[i].elements );
+	}
 	mmt_sec_unregister( handler );
 	mmt_free( rules_array );
 	return 0;

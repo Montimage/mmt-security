@@ -35,6 +35,7 @@ typedef struct fsm_struct{
     */
    const fsm_state_t *init_state;
 
+   uint16_t id;
    /**
     * Trace of running FSM
     */
@@ -72,40 +73,17 @@ static void _go_to_error_state( _fsm_t *fsm, const fsm_event_t * event) {
 }
 
 
-static fsm_transition_t *_get_transition( const _fsm_t *fsm, const fsm_state_t *state,
-		const fsm_event_t * event) {
-	size_t i;
-	fsm_transition_t *tran = NULL;
-mmt_debug( "state %s", state->description );
-	for (i = 0; i < state->transitions_count; ++i) {
-		tran = &state->transitions[i];
-mmt_debug( " - trans %zu", i );
-		/* A transition for the given event has been found: */
-		if (tran->event_type == event->type) {
-			if (!tran->guard)
-				return tran;
-			/* If transition is guarded, ensure that the condition is held: */
-			else if (tran->guard( event, (fsm_t *)fsm) )
-				return tran;
-		}
-	}
-
-	/* No transitions found for given event for given _state: */
-	return NULL;
-}
-
-
 /**
  * Public API
  */
 fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state, const fsm_state_t *final) {
 	_fsm_t *fsm = mmt_malloc( sizeof( _fsm_t ));
 
-	fsm->init_state     = initial_state;
-	fsm->current_state  = initial_state;
-	fsm->previous_state = NULL;
-	fsm->error_state    = error_state;
-
+	fsm->init_state      = initial_state;
+	fsm->current_state   = initial_state;
+	fsm->previous_state  = NULL;
+	fsm->error_state     = error_state;
+	fsm->id              = 0;
 	fsm->execution_trace = mmt_map_init( compare_uint16_t );
 	return (fsm_t *) fsm;
 }
@@ -134,7 +112,7 @@ fsm_t *fsm_clone( const fsm_t *fsm ) {
 	_fsm = (_fsm_t *)fsm;
 
 	_fsm_t *new_fsm = mmt_malloc( sizeof( _fsm_t ));
-
+	new_fsm->id              = _fsm->id;
 	new_fsm->init_state      = _fsm->init_state;
 	new_fsm->current_state   = _fsm->current_state;
 	new_fsm->previous_state  = _fsm->previous_state;
@@ -147,78 +125,82 @@ fsm_t *fsm_clone( const fsm_t *fsm ) {
 /**
  * Public API
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, const fsm_event_t *event) {
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, void *event_data) {
 	fsm_transition_t *tran = NULL;
 	const fsm_state_t *state = NULL;
 	_fsm_t *_fsm = NULL;
-	if (!fsm || !event)
+
+	if (!fsm )
 		return FSM_ERR_ARG;
 
 	_fsm = (_fsm_t *)fsm;
 	if (!_fsm->current_state) {
-		_go_to_error_state(_fsm, event);
+		//_go_to_error_state(_fsm, event);
 		return FSM_ERROR_STATE_REACHED;
 	}
 	//no outgoing transitions
 	if (!_fsm->current_state->transitions_count )
 		return FSM_NO_STATE_CHANGE;
+	if( _fsm->current_state->transitions_count <= transition_index )
+		return FSM_ERR_ARG;
 
 	state = _fsm->current_state;
-	do {
-		tran = _get_transition(_fsm, state, event);
 
-		//no transitions are satisfied
-		if( tran == NULL )
-			return FSM_NO_STATE_CHANGE;
+	tran = &_fsm->current_state->transitions[ transition_index ];// _get_transition(_fsm, state, event);
 
-		/* A transition must have a next _state defined
-		 * If the user has not defined the next _state, go to error _state: */
-		if (!tran->target_state) {
-			_go_to_error_state(_fsm, event);
-			return FSM_ERROR_STATE_REACHED;
-		}
+	//no transitions are satisfied
+	if( tran == NULL )
+		return FSM_NO_STATE_CHANGE;
 
-		state = tran->target_state;
+	/* If transition is guarded, ensure that the condition is held: */
+	if (tran->guard != NULL && tran->guard( event_data, (fsm_t *)fsm)  == NO )
+		return FSM_NO_STATE_CHANGE;
 
-		//add event to execution trace
-		mmt_map_set_data( _fsm->execution_trace, (void *) &event->type, (void *)event->data, YES );
-
-		/* Run exit action
-		 * (even if it returns to itself) */
-		if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING )
-			_exec_action( NO, event, _fsm->current_state, _fsm );
-
-		/* Call the new _state's entry action if it has any
-		 * (even if state returns to itself) */
-		if ( state->entry_action != FSM_ACTION_DO_NOTHING )
-			_exec_action( YES, event, state, _fsm );
-
-		// Update the states in FSM
-		_fsm->previous_state = _fsm->current_state;
-		_fsm->current_state = state;
-
-		/* If the state returned to itself */
-		if (_fsm->current_state == _fsm->previous_state)
-			return FSM_STATE_LOOP_SELF;
-
-		if (_fsm->current_state == _fsm->error_state)
-			return FSM_ERROR_STATE_REACHED;
-
-		/* If the target state is a final one, notify user that the machine has stopped */
-		if (!_fsm->current_state->transitions_count)
-			return FSM_FINAL_STATE_REACHED;
-
-		return FSM_STATE_CHANGED;
+	/* A transition must have a next _state defined
+	 * If the user has not defined the next _state, go to error _state: */
+	if (!tran->target_state) {
+		//_go_to_error_state(_fsm, event);
+		return FSM_ERROR_STATE_REACHED;
 	}
-	while (state);
 
-	return FSM_NO_STATE_CHANGE;
+	state = tran->target_state;
+
+	//add event to execution trace
+	mmt_map_set_data( _fsm->execution_trace, (void *) &tran->event_type, (void *)event_data, YES );
+
+	/* Run exit action
+	 * (even if it returns to itself) */
+	//if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING )
+	//	_exec_action( NO, event_data, _fsm->current_state, _fsm );
+
+	/* Call the new _state's entry action if it has any
+	 * (even if state returns to itself) */
+	//if ( state->entry_action != FSM_ACTION_DO_NOTHING )
+	//	_exec_action( YES, event, state, _fsm );
+
+	// Update the states in FSM
+	_fsm->previous_state = _fsm->current_state;
+	_fsm->current_state = state;
+
+	/* If the state returned to itself */
+	if (_fsm->current_state == _fsm->previous_state)
+		return FSM_STATE_LOOP_SELF;
+
+	if (_fsm->current_state == _fsm->error_state)
+		return FSM_ERROR_STATE_REACHED;
+
+	/* If the target state is a final one, notify user that the machine has stopped */
+	if (!_fsm->current_state->transitions_count)
+		return FSM_FINAL_STATE_REACHED;
+
+	return FSM_STATE_CHANGED;
+
 }
 
 /**
  * Public API
  */
-const fsm_state_t *fsm_current_state( const fsm_t *fsm) {
+const fsm_state_t *fsm_get_current_state( const fsm_t *fsm) {
 	if (!fsm) return NULL;
 
 	return ((_fsm_t *)fsm)->current_state;
@@ -227,7 +209,7 @@ const fsm_state_t *fsm_current_state( const fsm_t *fsm) {
 /**
  * Public API
  */
-const fsm_state_t *fsm_previous_state( const fsm_t *fsm) {
+const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm) {
 	if (!fsm) return NULL;
 
 	return ((_fsm_t *)fsm)->previous_state;
@@ -269,14 +251,30 @@ mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm ){
 
 void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
 	_fsm_t *_fsm;
+	void *data;
 	if ( fsm == NULL ) return NULL;
 
-	mmt_debug("Get history %d", event_id );
-
 	_fsm = (_fsm_t *)fsm;
-	return mmt_map_get_data( _fsm->execution_trace, &event_id );
+	data = mmt_map_get_data( _fsm->execution_trace, &event_id );
+	mmt_debug("Get history %d: %s", event_id, data == NULL? "NUL": "not NULL" );
+	return data;
 }
 
 void fsm_create_new_instance( void *event_data, const fsm_event_t *event, const fsm_t *fsm){
 
+}
+
+
+uint16_t fsm_get_id( const fsm_t *fsm ){
+	_fsm_t *_fsm;
+	if ( fsm == NULL ) return -1;
+	_fsm = (_fsm_t *)fsm;
+	return _fsm->id;
+}
+
+void fsm_set_id( fsm_t *fsm, uint16_t id ){
+	_fsm_t *_fsm;
+	if ( fsm == NULL ) return;
+	_fsm = (_fsm_t *)fsm;
+	_fsm->id = id;
 }

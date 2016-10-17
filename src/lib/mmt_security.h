@@ -10,6 +10,8 @@
 
 #include "plugin_header.h"
 #include "base.h"
+#include "data_struct.h"
+#include "mmt_dpi.h"
 
 /**
  * init mmt-security engine:
@@ -25,7 +27,8 @@ typedef void *mmt_sec_handler_t;
 typedef void (*mmt_sec_callback)(
 		uint32_t rule_id,		//id of rule
 		uint64_t timestamp,  //moment the rule is validated
-
+		uint32_t counter,
+		const mmt_map_t *trace,
 		void *user_data		//#user-data being given in mmt_sec_register_rules
 		);
 
@@ -46,4 +49,5 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler );
 
 void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message );
 
+char* convert_execution_trace_to_json_string( const mmt_map_t *trace );
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

@@ -101,12 +101,10 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	guard_fun_name = mmt_mem_dup( buffer, size );
 
 	//guard function header
-	fprintf(fd, "static inline int %s( const fsm_event_t *event, const fsm_t *fsm ){",
+	fprintf(fd, "static inline int %s( const void *event_data, const fsm_t *fsm ){",
 			guard_fun_name );
-	fprintf(fd, "\n\t if( event->data == NULL ) return 0;" );
-	fprintf(fd, "\n\t const _msg_t_%d *ev_data, *his_data;", rule_id);
-	fprintf(fd, "\n\t ev_data = (_msg_t_%d *)event->data;", rule_id);
-
+	fprintf(fd, "\n\t if( event_data == NULL ) return 0;" );
+	fprintf(fd, "\n\t const _msg_t_%d *his_data, *ev_data = (_msg_t_%d *) event_data;", rule_id, rule_id);
 	mmt_map_iterate( map, _iterate_variable, user_data );
 	fprintf(fd, "\n\n\t return %s;\n }\n ",  str);
 

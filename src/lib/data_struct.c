@@ -80,6 +80,34 @@ void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) ){
 		head = ptr;
 	}
 }
+
+
+link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
+	link_node_t *ptr = head;
+	while( ptr != NULL && ptr->data != data )
+		ptr = ptr->next;
+	//not found any node having this #data
+	if( ptr == NULL )
+		return head;
+
+	if( ptr == head ){
+		head = head->next;
+		if( head != NULL )
+			head->prev = NULL;
+		//free this node
+		mmt_free( ptr );
+		return head;
+	}
+	//ptr is not null && ptr->pre is not null as ptr != head
+	ptr->prev->next = ptr->next;
+
+	if( ptr->next != NULL )
+		ptr->next->prev = ptr->prev;
+	//free this node
+	mmt_free( ptr );
+
+	return head;
+}
 ///////////////////////////////////////MMT-Map////////////////////////////////////////////
 /**
  * Implement a map by a binary-tree

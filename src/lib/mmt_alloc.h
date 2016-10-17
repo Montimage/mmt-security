@@ -66,8 +66,6 @@ void mmt_print_mem_info();
  */
 size_t mmt_mem_size( const void *ptr );
 
-void* mmt_mem_cat( const void **ptr, size_t count );
-
 /**
  * Duplicate a memory
  * - Input:
@@ -83,6 +81,8 @@ static inline void* mmt_mem_dup( const void *ptr, size_t size ){
 	memcpy( ret, ptr, size );
 	return ret;
 }
+
+void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 );
 
 static inline void *mmt_mem_retain( void *ptr ){
 	return ptr;

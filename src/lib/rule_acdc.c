@@ -1,6 +1,6 @@
 
- /** 679
-  * This file is generated automatically on 2016-10-14 15:58:07
+ /** 677
+  * This file is generated automatically on 2016-10-17 15:00:13
   */
  #include <string.h>
  #include <stdio.h>
@@ -13,7 +13,7 @@
  //======================================RULE 1======================================
  #define EVENTS_COUNT_1 4
 
- /** 488
+ /** 486
   * Structure to represent event data
   */
  typedef struct _msg_struct_1{
@@ -25,7 +25,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_1;
- /** 510
+ /** 508
   * Create an instance of _msg_t_1
   */
  static inline _msg_t_1* _allocate_msg_t_1(){
@@ -39,7 +39,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 534
+ /** 532
   * Public API
   */
  void *mmt_sec_convert_message_to_event_1( const message_t *msg){
@@ -49,7 +49,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 544 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -58,7 +58,7 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 551
+			 }//end switch of att_id 549
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
@@ -71,18 +71,18 @@
 			 case 1:// attribute src_port
 				 new_msg->tcp_src_port = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 568
+			 }//end switch of att_id 566
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //571
+	 return (void *)new_msg; //569
  }//end function
- /** 453
+ /** 451
   * Public API
   */
  const void* mmt_sec_hash_message_1( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_1 ];
 	 size_t i;	 _msg_t_1 *msg = (_msg_t_1 *) data;
-	 for( i=0; i<EVENTS_COUNT_1; i++) hash_table[i] = 0;/** 459 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_1; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 1;
@@ -98,10 +98,9 @@
   * Rule 1, event 1
   * SYN request
   */
- static inline int g_1_1( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_1 *ev_data, *his_data;
-	 ev_data = (_msg_t_1 *)event->data;
+ static inline int g_1_1( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_1 *his_data, *ev_data = (_msg_t_1 *) event_data;
 	 if( ev_data->tcp_dest_port == NULL ) return 0;/* 62 */
 	 double tcp_dest_port = *( ev_data->tcp_dest_port );
 	 if( ev_data->tcp_flags == NULL ) return 0;/* 62 */
@@ -114,10 +113,9 @@
   * Rule 1, event 2
   * SYN ACK reply
   */
- static inline int g_1_2( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_1 *ev_data, *his_data;
-	 ev_data = (_msg_t_1 *)event->data;
+ static inline int g_1_2( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_1 *his_data, *ev_data = (_msg_t_1 *) event_data;
 	 his_data = (_msg_t_1 *)fsm_get_history( fsm, 1);
 	 if( his_data == NULL ) return 0;
 	 if( his_data->ip_dst == NULL ) return 0;/* 62 */
@@ -142,10 +140,9 @@
   * Rule 1, event 3
   * SYN request
   */
- static inline int g_1_3( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_1 *ev_data, *his_data;
-	 ev_data = (_msg_t_1 *)event->data;
+ static inline int g_1_3( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_1 *his_data, *ev_data = (_msg_t_1 *) event_data;
 	 his_data = (_msg_t_1 *)fsm_get_history( fsm, 1);
 	 if( his_data == NULL ) return 0;
 	 if( his_data->ip_dst == NULL ) return 0;/* 62 */
@@ -170,10 +167,9 @@
   * Rule 1, event 4
   * SYN ACK reply
   */
- static inline int g_1_4( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_1 *ev_data, *his_data;
-	 ev_data = (_msg_t_1 *)event->data;
+ static inline int g_1_4( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_1 *his_data, *ev_data = (_msg_t_1 *) event_data;
 	 his_data = (_msg_t_1 *)fsm_get_history( fsm, 1);
 	 if( his_data == NULL ) return 0;
 	 if( his_data->ip_dst == NULL ) return 0;/* 62 */
@@ -194,19 +190,19 @@
 	 return ((tcp_flags == 18) && ((tcp_src_port == 22) && (0 == strcmp(ip_dst , ip_src_1) && 0 == strcmp(ip_src , ip_dst_1))));
  }
  
- /** 342
+ /** 340
   * States of FSM for rule 1
   */
  
- /** 343
+ /** 341
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_1_0, s_1_1, s_1_2, s_1_3, s_1_4, s_1_5;
- /** 356
+ /** 354
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 362
+ /** 360
   * initial state
   */
   s_1_0 = {
@@ -218,13 +214,13 @@
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 SYN request */
-		 /** 388 A real event */
+		 /** 384 SYN request */
+		 /** 386 A real event */
 		 { .event_type = 1, .guard = &g_1_1, .target_state = &s_1_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 362
+ /** 360
   * timeout/error state
   */
   s_1_1 = {
@@ -238,7 +234,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * final state
   */
   s_1_2 = {
@@ -260,17 +256,17 @@
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_1_4},
-		 /** 386 SYN ACK reply */
-		 /** 388 A real event */
+		 /** 384 SYN ACK reply */
+		 /** 386 A real event */
 		 { .event_type = 2, .guard = &g_1_2, .target_state = &s_1_4},
-		 /** 388 A real event will fire this loop to create a new instance */
+		 /** 386 A real event will fire this loop to create a new instance */
 		 { .event_type = 1, .guard = &g_1_1, .target_state = &s_1_3} 
 	 },
 	 .transitions_count = 3
  },
- /** 362
+ /** 360
   * root node
   */
   s_1_4 = {
@@ -282,10 +278,10 @@
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_1_2},
-		 /** 386 SYN request */
-		 /** 388 A real event */
+		 /** 384 SYN request */
+		 /** 386 A real event */
 		 { .event_type = 3, .guard = &g_1_3, .target_state = &s_1_5} 
 	 },
 	 .transitions_count = 2
@@ -298,17 +294,17 @@
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_1_1},
-		 /** 386 SYN ACK reply */
-		 /** 388 A real event */
+		 /** 384 SYN ACK reply */
+		 /** 386 A real event */
 		 { .event_type = 4, .guard = &g_1_4, .target_state = &s_1_2},
-		 /** 388 A real event will fire this loop to create a new instance */
+		 /** 386 A real event will fire this loop to create a new instance */
 		 { .event_type = 3, .guard = &g_1_3, .target_state = &s_1_5} 
 	 },
 	 .transitions_count = 3
  };
- /** 421
+ /** 419
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_1(){
@@ -318,7 +314,7 @@
  //======================================RULE 2======================================
  #define EVENTS_COUNT_2 3
 
- /** 488
+ /** 486
   * Structure to represent event data
   */
  typedef struct _msg_struct_2{
@@ -330,7 +326,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_2;
- /** 510
+ /** 508
   * Create an instance of _msg_t_2
   */
  static inline _msg_t_2* _allocate_msg_t_2(){
@@ -344,7 +340,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 534
+ /** 532
   * Public API
   */
  void *mmt_sec_convert_message_to_event_2( const message_t *msg){
@@ -354,7 +350,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 544 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -363,7 +359,7 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 551
+			 }//end switch of att_id 549
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
@@ -376,18 +372,18 @@
 			 case 1:// attribute src_port
 				 new_msg->tcp_src_port = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 568
+			 }//end switch of att_id 566
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //571
+	 return (void *)new_msg; //569
  }//end function
- /** 453
+ /** 451
   * Public API
   */
  const void* mmt_sec_hash_message_2( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_2 ];
 	 size_t i;	 _msg_t_2 *msg = (_msg_t_2 *) data;
-	 for( i=0; i<EVENTS_COUNT_2; i++) hash_table[i] = 0;/** 459 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_2; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 5;
@@ -401,10 +397,9 @@
   * Rule 2, event 5
   * SYN request
   */
- static inline int g_2_5( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_2 *ev_data, *his_data;
-	 ev_data = (_msg_t_2 *)event->data;
+ static inline int g_2_5( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_2 *his_data, *ev_data = (_msg_t_2 *) event_data;
 	 if( ev_data->tcp_dest_port == NULL ) return 0;/* 62 */
 	 double tcp_dest_port = *( ev_data->tcp_dest_port );
 	 if( ev_data->tcp_flags == NULL ) return 0;/* 62 */
@@ -417,10 +412,9 @@
   * Rule 2, event 6
   * SYN ACK reply
   */
- static inline int g_2_6( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_2 *ev_data, *his_data;
-	 ev_data = (_msg_t_2 *)event->data;
+ static inline int g_2_6( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_2 *his_data, *ev_data = (_msg_t_2 *) event_data;
 	 his_data = (_msg_t_2 *)fsm_get_history( fsm, 5);
 	 if( his_data == NULL ) return 0;
 	 if( his_data->ip_dst == NULL ) return 0;/* 62 */
@@ -445,10 +439,9 @@
   * Rule 2, event 7
   * RST reset
   */
- static inline int g_2_7( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_2 *ev_data, *his_data;
-	 ev_data = (_msg_t_2 *)event->data;
+ static inline int g_2_7( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_2 *his_data, *ev_data = (_msg_t_2 *) event_data;
 	 his_data = (_msg_t_2 *)fsm_get_history( fsm, 5);
 	 if( his_data == NULL ) return 0;
 	 if( his_data->ip_dst == NULL ) return 0;/* 62 */
@@ -469,19 +462,19 @@
 	 return ((tcp_flags == 4) && ((tcp_dest_port == 22) && (0 == strcmp(ip_dst , ip_dst_5) && 0 == strcmp(ip_src , ip_src_5))));
  }
  
- /** 342
+ /** 340
   * States of FSM for rule 2
   */
  
- /** 343
+ /** 341
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_2_0, s_2_1, s_2_2, s_2_3, s_2_4, s_2_5;
- /** 356
+ /** 354
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 362
+ /** 360
   * initial state
   */
   s_2_0 = {
@@ -493,16 +486,16 @@
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 SYN request */
-		 /** 388 A real event */
+		 /** 384 SYN request */
+		 /** 386 A real event */
 		 { .event_type = 5, .guard = &g_2_5, .target_state = &s_2_3},
-		 /** 386 SYN ACK reply */
-		 /** 388 A real event */
+		 /** 384 SYN ACK reply */
+		 /** 386 A real event */
 		 { .event_type = 6, .guard = &g_2_6, .target_state = &s_2_4} 
 	 },
 	 .transitions_count = 2
  },
- /** 362
+ /** 360
   * timeout/error state
   */
   s_2_1 = {
@@ -516,7 +509,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * final state
   */
   s_2_2 = {
@@ -538,12 +531,12 @@
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_2_5},
-		 /** 386 SYN ACK reply */
-		 /** 388 A real event */
+		 /** 384 SYN ACK reply */
+		 /** 386 A real event */
 		 { .event_type = 6, .guard = &g_2_6, .target_state = &s_2_5},
-		 /** 388 A real event will fire this loop to create a new instance */
+		 /** 386 A real event will fire this loop to create a new instance */
 		 { .event_type = 5, .guard = &g_2_5, .target_state = &s_2_3} 
 	 },
 	 .transitions_count = 3
@@ -556,17 +549,17 @@
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_2_5},
-		 /** 386 SYN request */
-		 /** 388 A real event */
+		 /** 384 SYN request */
+		 /** 386 A real event */
 		 { .event_type = 5, .guard = &g_2_5, .target_state = &s_2_5},
-		 /** 388 A real event will fire this loop to create a new instance */
+		 /** 386 A real event will fire this loop to create a new instance */
 		 { .event_type = 6, .guard = &g_2_6, .target_state = &s_2_4} 
 	 },
 	 .transitions_count = 3
  },
- /** 362
+ /** 360
   * root node
   */
   s_2_5 = {
@@ -578,15 +571,15 @@
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_2_2},
-		 /** 386 RST reset */
-		 /** 388 A real event */
+		 /** 384 RST reset */
+		 /** 386 A real event */
 		 { .event_type = 7, .guard = &g_2_7, .target_state = &s_2_2} 
 	 },
 	 .transitions_count = 2
  };
- /** 421
+ /** 419
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_2(){
@@ -596,7 +589,7 @@
  //======================================RULE 3======================================
  #define EVENTS_COUNT_3 2
 
- /** 488
+ /** 486
   * Structure to represent event data
   */
  typedef struct _msg_struct_3{
@@ -607,7 +600,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_3;
- /** 510
+ /** 508
   * Create an instance of _msg_t_3
   */
  static inline _msg_t_3* _allocate_msg_t_3(){
@@ -620,7 +613,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 534
+ /** 532
   * Public API
   */
  void *mmt_sec_convert_message_to_event_3( const message_t *msg){
@@ -630,7 +623,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 544 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -639,7 +632,7 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 551
+			 }//end switch of att_id 549
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
@@ -649,18 +642,18 @@
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 568
+			 }//end switch of att_id 566
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //571
+	 return (void *)new_msg; //569
  }//end function
- /** 453
+ /** 451
   * Public API
   */
  const void* mmt_sec_hash_message_3( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_3 ];
 	 size_t i;	 _msg_t_3 *msg = (_msg_t_3 *) data;
-	 for( i=0; i<EVENTS_COUNT_3; i++) hash_table[i] = 0;/** 459 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_3; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 8;
@@ -672,10 +665,9 @@
   * Rule 3, event 8
   * SYN request
   */
- static inline int g_3_8( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_3 *ev_data, *his_data;
-	 ev_data = (_msg_t_3 *)event->data;
+ static inline int g_3_8( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_3 *his_data, *ev_data = (_msg_t_3 *) event_data;
 	 if( ev_data->tcp_dest_port == NULL ) return 0;/* 62 */
 	 double tcp_dest_port = *( ev_data->tcp_dest_port );
 	 if( ev_data->tcp_flags == NULL ) return 0;/* 62 */
@@ -688,10 +680,9 @@
   * Rule 3, event 9
   * SYN ACK reply
   */
- static inline int g_3_9( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_3 *ev_data, *his_data;
-	 ev_data = (_msg_t_3 *)event->data;
+ static inline int g_3_9( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_3 *his_data, *ev_data = (_msg_t_3 *) event_data;
 	 his_data = (_msg_t_3 *)fsm_get_history( fsm, 8);
 	 if( his_data == NULL ) return 0;
 	 if( his_data->ip_dst == NULL ) return 0;/* 62 */
@@ -704,19 +695,19 @@
 	 return ((tcp_flags == 18) && 0 == strcmp(ip_src , ip_dst_8));
  }
  
- /** 342
+ /** 340
   * States of FSM for rule 3
   */
  
- /** 343
+ /** 341
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_3_0, s_3_1, s_3_2, s_3_3;
- /** 356
+ /** 354
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 362
+ /** 360
   * initial state
   */
   s_3_0 = {
@@ -728,13 +719,13 @@
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 SYN request */
-		 /** 388 A real event */
+		 /** 384 SYN request */
+		 /** 386 A real event */
 		 { .event_type = 8, .guard = &g_3_8, .target_state = &s_3_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 362
+ /** 360
   * timeout/error state
   */
   s_3_1 = {
@@ -748,7 +739,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * final state
   */
   s_3_2 = {
@@ -762,7 +753,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * root node
   */
   s_3_3 = {
@@ -774,17 +765,17 @@
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_3_2},
-		 /** 386 SYN ACK reply */
-		 /** 388 A real event */
+		 /** 384 SYN ACK reply */
+		 /** 386 A real event */
 		 { .event_type = 9, .guard = &g_3_9, .target_state = &s_3_2},
-		 /** 388 A real event will fire this loop to create a new instance */
+		 /** 386 A real event will fire this loop to create a new instance */
 		 { .event_type = 8, .guard = &g_3_8, .target_state = &s_3_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 421
+ /** 419
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_3(){
@@ -794,7 +785,7 @@
  //======================================RULE 4======================================
  #define EVENTS_COUNT_4 2
 
- /** 488
+ /** 486
   * Structure to represent event data
   */
  typedef struct _msg_struct_4{
@@ -804,7 +795,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_4;
- /** 510
+ /** 508
   * Create an instance of _msg_t_4
   */
  static inline _msg_t_4* _allocate_msg_t_4(){
@@ -816,7 +807,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 534
+ /** 532
   * Public API
   */
  void *mmt_sec_convert_message_to_event_4( const message_t *msg){
@@ -826,7 +817,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 544 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -835,25 +826,25 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 551
+			 }//end switch of att_id 549
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 568
+			 }//end switch of att_id 566
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //571
+	 return (void *)new_msg; //569
  }//end function
- /** 453
+ /** 451
   * Public API
   */
  const void* mmt_sec_hash_message_4( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_4 ];
 	 size_t i;	 _msg_t_4 *msg = (_msg_t_4 *) data;
-	 for( i=0; i<EVENTS_COUNT_4; i++) hash_table[i] = 0;/** 459 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_4; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 12;
@@ -865,10 +856,9 @@
   * Rule 4, event 12
   * SYN request
   */
- static inline int g_4_12( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_4 *ev_data, *his_data;
-	 ev_data = (_msg_t_4 *)event->data;
+ static inline int g_4_12( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_4 *his_data, *ev_data = (_msg_t_4 *) event_data;
 	 if( ev_data->tcp_flags == NULL ) return 0;/* 62 */
 	 double tcp_flags = *( ev_data->tcp_flags );
 
@@ -879,10 +869,9 @@
   * Rule 4, event 13
   * SYN request
   */
- static inline int g_4_13( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_4 *ev_data, *his_data;
-	 ev_data = (_msg_t_4 *)event->data;
+ static inline int g_4_13( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_4 *his_data, *ev_data = (_msg_t_4 *) event_data;
 	 his_data = (_msg_t_4 *)fsm_get_history( fsm, 12);
 	 if( his_data == NULL ) return 0;
 	 if( his_data->ip_dst == NULL ) return 0;/* 62 */
@@ -901,19 +890,19 @@
 	 return ((tcp_flags == 2) && (0 != strcmp(ip_dst , ip_dst_12) && 0 == strcmp(ip_src , ip_src_12)));
  }
  
- /** 342
+ /** 340
   * States of FSM for rule 4
   */
  
- /** 343
+ /** 341
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_4_0, s_4_1, s_4_2, s_4_3;
- /** 356
+ /** 354
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 362
+ /** 360
   * initial state
   */
   s_4_0 = {
@@ -925,13 +914,13 @@
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 SYN request */
-		 /** 388 A real event */
+		 /** 384 SYN request */
+		 /** 386 A real event */
 		 { .event_type = 12, .guard = &g_4_12, .target_state = &s_4_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 362
+ /** 360
   * timeout/error state
   */
   s_4_1 = {
@@ -945,7 +934,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * final state
   */
   s_4_2 = {
@@ -959,7 +948,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * root node
   */
   s_4_3 = {
@@ -971,17 +960,17 @@
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_4_2},
-		 /** 386 SYN request */
-		 /** 388 A real event */
+		 /** 384 SYN request */
+		 /** 386 A real event */
 		 { .event_type = 13, .guard = &g_4_13, .target_state = &s_4_2},
-		 /** 388 A real event will fire this loop to create a new instance */
+		 /** 386 A real event will fire this loop to create a new instance */
 		 { .event_type = 12, .guard = &g_4_12, .target_state = &s_4_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 421
+ /** 419
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_4(){
@@ -991,7 +980,7 @@
  //======================================RULE 5======================================
  #define EVENTS_COUNT_5 2
 
- /** 488
+ /** 486
   * Structure to represent event data
   */
  typedef struct _msg_struct_5{
@@ -1001,7 +990,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_5;
- /** 510
+ /** 508
   * Create an instance of _msg_t_5
   */
  static inline _msg_t_5* _allocate_msg_t_5(){
@@ -1013,7 +1002,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 534
+ /** 532
   * Public API
   */
  void *mmt_sec_convert_message_to_event_5( const message_t *msg){
@@ -1023,7 +1012,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 544 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -1032,25 +1021,25 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 551
+			 }//end switch of att_id 549
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 568
+			 }//end switch of att_id 566
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //571
+	 return (void *)new_msg; //569
  }//end function
- /** 453
+ /** 451
   * Public API
   */
  const void* mmt_sec_hash_message_5( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_5 ];
 	 size_t i;	 _msg_t_5 *msg = (_msg_t_5 *) data;
-	 for( i=0; i<EVENTS_COUNT_5; i++) hash_table[i] = 0;/** 459 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_5; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 10;
@@ -1062,10 +1051,9 @@
   * Rule 5, event 10
   * SYN request
   */
- static inline int g_5_10( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_5 *ev_data, *his_data;
-	 ev_data = (_msg_t_5 *)event->data;
+ static inline int g_5_10( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_5 *his_data, *ev_data = (_msg_t_5 *) event_data;
 	 if( ev_data->tcp_flags == NULL ) return 0;/* 62 */
 	 double tcp_flags = *( ev_data->tcp_flags );
 
@@ -1076,10 +1064,9 @@
   * Rule 5, event 11
   * SYN ACK replyyyyyy
   */
- static inline int g_5_11( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_5 *ev_data, *his_data;
-	 ev_data = (_msg_t_5 *)event->data;
+ static inline int g_5_11( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_5 *his_data, *ev_data = (_msg_t_5 *) event_data;
 	 his_data = (_msg_t_5 *)fsm_get_history( fsm, 10);
 	 if( his_data == NULL ) return 0;
 	 if( his_data->ip_dst == NULL ) return 0;/* 62 */
@@ -1092,19 +1079,19 @@
 	 return ((tcp_flags == 18) && 0 == strcmp(ip_src , ip_dst_10));
  }
  
- /** 342
+ /** 340
   * States of FSM for rule 5
   */
  
- /** 343
+ /** 341
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_5_0, s_5_1, s_5_2, s_5_3;
- /** 356
+ /** 354
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 362
+ /** 360
   * initial state
   */
   s_5_0 = {
@@ -1116,13 +1103,13 @@
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 SYN request */
-		 /** 388 A real event */
+		 /** 384 SYN request */
+		 /** 386 A real event */
 		 { .event_type = 10, .guard = &g_5_10, .target_state = &s_5_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 362
+ /** 360
   * timeout/error state
   */
   s_5_1 = {
@@ -1136,7 +1123,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * final state
   */
   s_5_2 = {
@@ -1150,7 +1137,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * root node
   */
   s_5_3 = {
@@ -1162,17 +1149,17 @@
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_5_2},
-		 /** 386 SYN ACK replyyyyyy */
-		 /** 388 A real event */
+		 /** 384 SYN ACK replyyyyyy */
+		 /** 386 A real event */
 		 { .event_type = 11, .guard = &g_5_11, .target_state = &s_5_2},
-		 /** 388 A real event will fire this loop to create a new instance */
+		 /** 386 A real event will fire this loop to create a new instance */
 		 { .event_type = 10, .guard = &g_5_10, .target_state = &s_5_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 421
+ /** 419
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_5(){
@@ -1182,7 +1169,7 @@
  //======================================RULE 6======================================
  #define EVENTS_COUNT_6 2
 
- /** 488
+ /** 486
   * Structure to represent event data
   */
  typedef struct _msg_struct_6{
@@ -1191,7 +1178,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_6;
- /** 510
+ /** 508
   * Create an instance of _msg_t_6
   */
  static inline _msg_t_6* _allocate_msg_t_6(){
@@ -1202,7 +1189,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 534
+ /** 532
   * Public API
   */
  void *mmt_sec_convert_message_to_event_6( const message_t *msg){
@@ -1212,7 +1199,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 544 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
 		 case 153:// protocol http
 			 switch( msg->elements[i]->att_id ){
 			 case 1:// attribute method
@@ -1221,18 +1208,18 @@
 			 case 7:// attribute user_agent
 				 new_msg->http_user_agent = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 568
+			 }//end switch of att_id 566
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //571
+	 return (void *)new_msg; //569
  }//end function
- /** 453
+ /** 451
   * Public API
   */
  const void* mmt_sec_hash_message_6( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_6 ];
 	 size_t i;	 _msg_t_6 *msg = (_msg_t_6 *) data;
-	 for( i=0; i<EVENTS_COUNT_6; i++) hash_table[i] = 0;/** 459 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_6; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->http_method != NULL )
 		 hash_table[ 0 ] = 1;
@@ -1244,10 +1231,9 @@
   * Rule 6, event 1
   * Having GET request
   */
- static inline int g_6_1( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_6 *ev_data, *his_data;
-	 ev_data = (_msg_t_6 *)event->data;
+ static inline int g_6_1( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_6 *his_data, *ev_data = (_msg_t_6 *) event_data;
 	 if( ev_data->http_method == NULL ) return 0;/* 62 */
 	 const char *http_method =  ev_data->http_method ;
 
@@ -1258,29 +1244,28 @@
   * Rule 6, event 2
   * Must have User-Agent
   */
- static inline int g_6_2( const fsm_event_t *event, const fsm_t *fsm ){
-	 if( event->data == NULL ) return 0;
-	 const _msg_t_6 *ev_data, *his_data;
-	 ev_data = (_msg_t_6 *)event->data;
+ static inline int g_6_2( const void *event_data, const fsm_t *fsm ){
+	 if( event_data == NULL ) return 0;
+	 const _msg_t_6 *his_data, *ev_data = (_msg_t_6 *) event_data;
 	 if( ev_data->http_user_agent == NULL ) return 0;/* 62 */
 	 const char *http_user_agent =  ev_data->http_user_agent ;
 
 	 return 0 != strcmp(http_user_agent , "phantom");
  }
  
- /** 342
+ /** 340
   * States of FSM for rule 6
   */
  
- /** 343
+ /** 341
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_6_0, s_6_1, s_6_2, s_6_3;
- /** 356
+ /** 354
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 362
+ /** 360
   * initial state
   */
   s_6_0 = {
@@ -1292,13 +1277,13 @@
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Having GET request */
-		 /** 388 A real event */
+		 /** 384 Having GET request */
+		 /** 386 A real event */
 		 { .event_type = 1, .guard = &g_6_1, .target_state = &s_6_3} 
 	 },
 	 .transitions_count = 1
  },
- /** 362
+ /** 360
   * timeout/error state
   */
   s_6_1 = {
@@ -1312,7 +1297,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * final state
   */
   s_6_2 = {
@@ -1326,7 +1311,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 362
+ /** 360
   * root node
   */
   s_6_3 = {
@@ -1338,17 +1323,17 @@
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 388 Timeout event will fire this transition */
+		 /** 386 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_6_2},
-		 /** 386 Must have User-Agent */
-		 /** 388 A real event */
+		 /** 384 Must have User-Agent */
+		 /** 386 A real event */
 		 { .event_type = 2, .guard = &g_6_2, .target_state = &s_6_2},
-		 /** 388 A real event will fire this loop to create a new instance */
+		 /** 386 A real event will fire this loop to create a new instance */
 		 { .event_type = 1, .guard = &g_6_1, .target_state = &s_6_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 421
+ /** 419
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_6(){
@@ -1356,7 +1341,7 @@
  }//end function
 
  //======================================GENERAL======================================
- /** 584
+ /** 582
   * Information of 6 rules
   */
  size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){

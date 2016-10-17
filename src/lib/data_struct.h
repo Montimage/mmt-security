@@ -45,9 +45,19 @@ link_node_t *create_node_of_link_list( void *data );
 link_node_t *append_node_to_link_list( link_node_t *entry, void *data );
 link_node_t *insert_node_to_link_list( link_node_t *entry, void *data );
 
-void free_link_list( link_node_t *head, enum bool free_data );
+link_node_t *remove_node_from_link_list( link_node_t *entry, const void *data );
 
+void free_link_list( link_node_t *head, enum bool free_data );
 void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) );
+
+static inline size_t count_node_from_link_list( const link_node_t *entry ){
+	size_t size = 0;
+	while( entry != NULL ){
+		size ++;
+		entry = entry->next;
+	}
+	return size;
+}
 ////////////////////////Binary-Tree map////////////////////////////////////////////////
 /**
  * We implement a generic map on top of a binary-tree.
@@ -81,6 +91,18 @@ static inline int compare_uint32_t( const void *a, const void *b){
 static inline int compare_uint64_t( const void *a, const void *b){
 	mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint64_t function %s:%d", __FILE__, __LINE__ );
 	return *(uint64_t *)a - *(uint64_t *)b;
+}
+
+/**
+ * Compare two pointer addresses
+ */
+static inline int compare_pointer( const void *a, const void *b ){
+	if( a == b )
+		return 0;
+	else if( a > b )
+		return 1;
+	else
+		return -1;
 }
 /**
  * Binary map structure

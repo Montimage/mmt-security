@@ -82,4 +82,13 @@ size_t mmt_mem_size( const void *x ){
    return *((size_t*) x0);
 }
 
-
+void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 ){
+	size_t s1, s2;
+	void *ret;
+	s1 = mmt_mem_size( ptr_1 );
+	s2 = mmt_mem_size( ptr_2 );
+	ret = mmt_malloc( s1 + s2 );
+	memcpy( ret, ptr_1, s1 );
+	memcpy( ret + s2, ptr_2, s2 );
+	return ret;
+}

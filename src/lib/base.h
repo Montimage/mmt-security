@@ -12,6 +12,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>//for uint64_t
 
 #define UNKNOWN -1
 enum bool{ NO = 0, YES = 1};

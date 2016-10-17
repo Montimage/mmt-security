@@ -65,7 +65,7 @@ enum fsm_action_type {
  */
 typedef struct fsm_event_struct{
    /** Type of event. Defined by user. */
-   uint32_t type;
+   uint16_t type;
    /**
     * Event payload.
     *
@@ -153,7 +153,7 @@ typedef struct fsm_transition_struct
     * - Return
     * 	+ YES if the event's data fulfills the condition, otherwise NO.
     */
-   int ( *guard )( const struct fsm_event_struct *event, const fsm_t *fsm );
+   int ( *guard )( const void *event_data, const fsm_t *fsm );
    /**
     *  The next state
     *
@@ -379,7 +379,9 @@ enum fsm_handle_event_value{
  *	- Return:
  * 	+ fsm_handle_event_value
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm_struct, const fsm_event_t *event );
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, void *event_data);
+
+enum fsm_handle_event_value fsm_fire_transition( fsm_t *fsm_struct, size_t tran_index, const void *event_data );
 
 /**
  *  Get the current state
@@ -430,6 +432,10 @@ void fsm_free( fsm_t *fsm );
  */
 fsm_t * fsm_clone( const fsm_t *fsm );
 
+uint16_t fsm_get_id( const fsm_t *fsm );
+
+void fsm_set_id( fsm_t *fsm, uint16_t id );
+
 /**
  * Get the current execution trace of the machine
  *
@@ -442,6 +448,7 @@ void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
 
 void fsm_create_new_instance( void *event_data, const fsm_event_t *event, const fsm_t *fsm);
 void fsm_run_command(  const char *command, const fsm_t *fsm);
+
 
 
 static inline void fsm_free_event( fsm_event_t *event, enum bool free_data ){

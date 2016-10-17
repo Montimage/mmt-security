@@ -81,3 +81,22 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 		//break;
 	}
 }
+
+#define MAX_STRING_SIZE 2000
+
+static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t index, size_t total){
+	char *string = (char *) u_data;
+	size_t size, i;
+	size = sprintf( string, "{event_id : %d", *(uint16_t *) key );
+	string += size;
+	sprintf( string, "}" );
+}
+
+char* convert_execution_trace_to_json_string( const mmt_map_t *trace ){
+	char buffer[ MAX_STRING_SIZE ];
+	size_t index = 0;
+
+	mmt_map_iterate( trace, _iterate_to_get_string, &buffer[ index ] );
+
+	return (char *) mmt_mem_dup( buffer, index );
+}

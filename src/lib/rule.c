@@ -67,6 +67,34 @@ void free_a_rule( rule_t *rule, enum bool free_data){
 	mmt_free_and_assign_to_null( rule );
 }
 
+static inline void _update_delay_to_micro_second( rule_delay_t *delay ){
+	switch( delay->time_unit ){
+	case YEAR:
+		delay->time_max *= 360;
+		delay->time_min *= 360;
+	case MONTH:
+		delay->time_max *= 30;
+		delay->time_min *= 30;
+	case DAY:
+		delay->time_max *= 24;
+		delay->time_min *= 24;
+	case HOUR:
+		delay->time_max *= 60;
+		delay->time_min *= 60;
+	case MINUTE:
+		delay->time_max *= 60;
+		delay->time_min *= 60;
+	case SECOND:
+		delay->time_max *= 1000;
+		delay->time_min *= 1000;
+	case MILI_SECOND:
+		delay->time_max *= 1000;
+		delay->time_min *= 1000;
+	case MICRO_SECOND:
+		return;
+	}
+}
+
 /**
  * Create and init values for a delay struct
  */
@@ -120,6 +148,7 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 		xml_attr = xml_attr->next;
 	}
 
+	_update_delay_to_micro_second( delay );
 	return delay;
 }
 

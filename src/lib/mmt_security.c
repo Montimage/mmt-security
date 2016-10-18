@@ -11,6 +11,10 @@
 #include "mmt_fsm.h"
 #include "plugins_engine.h"
 #include "rule_verif_engine.h"
+#include "expression.h"
+#include "rule.h"
+
+#define MAX_INSTANCE_COUNT 1000
 
 size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
 	return load_plugins( rules_array );
@@ -41,7 +45,7 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 	//one fsm for one rule
 	handler->engines = mmt_malloc( sizeof( void *) * rules_count );
 	for( i=0; i<rules_count; i++ ){
-		handler->engines[i] = rule_engine_init( rules_array[i], 1000 );
+		handler->engines[i] = rule_engine_init( rules_array[i], MAX_INSTANCE_COUNT );
 	}
 	return (mmt_sec_handler_t *)handler;
 }
@@ -64,20 +68,64 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	mmt_free( _handler );
 }
 
+enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
+	switch ( rule_type ) {
+	case RULE_TYPE_TEST:
+	case RULE_TYPE_SECURITY:
+		switch( result ){
+		case RULE_ENGINE_RESULT_ERROR:
+			return VERDICT_RESPECTED;
+		case RULE_ENGINE_RESULT_VALIDATE:
+			return VERDICT_NOT_RESPECTED;
+		default:
+			return VERDICT_UNKNOWN;
+		}
+		break;
+	case RULE_TYPE_ATTACK:
+	case RULE_TYPE_EVASION:
+		switch( result ){
+		case RULE_ENGINE_RESULT_ERROR:
+			return VERDICT_NOT_DETECTED;
+		case RULE_ENGINE_RESULT_VALIDATE:
+			return VERDICT_DETECTED;
+		default:
+			return VERDICT_UNKNOWN;
+		}
+		break;
+	default:
+		mmt_halt("Error 22: Property type should be a security rule or an attack.\n");
+	}//end of switch
+	return VERDICT_UNKNOWN;
+}
+
 /**
  * Public API
  */
 void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message ){
 	_mmt_sec_handler_t *_handler;
 	size_t i;
-
+	enum rule_engine_result ret;
+	const mmt_map_t *execution_trace;
 	mmt_assert( handler != NULL, "Need to register before processing");
 	_handler = (_mmt_sec_handler_t *)handler;
 	if( _handler->rules_count == 0 ) return;
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
-		rule_engine_process( _handler->engines[i], message );
+		ret = rule_engine_process( _handler->engines[i], message );
+
+		//find a validated/invalid trace
+		if( ret == RULE_ENGINE_RESULT_VALIDATE || ret == RULE_ENGINE_RESULT_ERROR ){
+			execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
+			_handler->callback(
+					_handler->rules_array[i],
+					_get_verdict( _handler->rules_array[i]->type_id, ret ),
+					message->timestamp,
+					message->counter,
+					execution_trace,
+					_handler->user_data_for_callback );
+		}
+
 		//break;
 	}
 }
@@ -87,16 +135,48 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t index, size_t total){
 	char *string = (char *) u_data;
 	size_t size, i;
-	size = sprintf( string, "{event_id : %d", *(uint16_t *) key );
+	const message_t *msg = (message_t *)data;
+	const message_element_t *me;
+	char *tmp;
+	constant_t expr_const;
+
+	string += strlen( string );
+	size = sprintf( string, "%s\"event_%d\": {\"timestamp\": %"PRIu64".%d, \"counter\": %"PRIu32", \"attributes\":[",
+			index == 0 ? "{": " ,",
+			*(uint16_t *) key,
+			msg->timestamp / 1000000, //timestamp: second
+			(int)(msg->timestamp % 1000000), //timestamp: microsecond
+			msg->counter );
+	//go into detail of a message
+	for( i=0; i<msg->elements_count; i++ ){
+		me = msg->elements[i];
+
+		//convert me->data to string
+		expr_const.data      = me->data;
+		//data_types of mmt-dpi
+		expr_const.data_type = get_attribute_data_type( me->proto_id, me->att_id );
+		//data_type of mmt-security contains only either a NUMERIC or a STRING
+		expr_const.data_type = convert_data_type( expr_const.data_type );
+		(void) expr_stringify_constant( &tmp, &expr_const );
+
+		string += size;
+		size = sprintf( string, "%s{\"%s.%s\": %s}",
+				(i != 0? ", ":""),
+				get_protocol_name_by_id( me->proto_id ),
+				get_attribute_name_by_protocol_id_and_attribute_id( me->proto_id, me->att_id ),
+				tmp);
+		mmt_free( tmp );
+	}
 	string += size;
-	sprintf( string, "}" );
+	sprintf( string, "]}%s", //end attributes, end event_
+			index == total-1? "}": ""  );
 }
 
 char* convert_execution_trace_to_json_string( const mmt_map_t *trace ){
 	char buffer[ MAX_STRING_SIZE ];
-	size_t index = 0;
+	buffer[0] = '\0';
 
-	mmt_map_iterate( trace, _iterate_to_get_string, &buffer[ index ] );
+	mmt_map_iterate( trace, _iterate_to_get_string, buffer);
 
-	return (char *) mmt_mem_dup( buffer, index );
+	return (char *) mmt_mem_dup( buffer, strlen( buffer) );
 }

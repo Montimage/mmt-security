@@ -92,6 +92,9 @@ typedef struct rule_operator_struct{
 	rule_node_t *trigger;
 } rule_operator_t;
 
+static const char *rule_type_string[] = {
+		"attack", "security", "evasion", "test"
+};
 
 typedef struct rule_struct{
 	/**

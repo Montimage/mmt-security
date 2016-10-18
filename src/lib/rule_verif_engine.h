@@ -26,4 +26,8 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 enum rule_engine_result rule_engine_process( rule_engine_t *engine, const message_t *message );
 
 void rule_engine_free( rule_engine_t *engine );
+
+
+const mmt_map_t* rule_engine_get_valide_trace( const rule_engine_t *_engine );
+
 #endif /* SRC_LIB_RULE_VERIF_ENGINE_H_ */

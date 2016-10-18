@@ -22,7 +22,6 @@ int main( int argc, char** argv ){
 
 	rule_count = read_rules_from_file( argv[2], &rule_list );
 
-
 	generate_fsm( tmp_code_file, rule_list, rule_count );
 
 	compile_gen_code(argv[1], tmp_code_file );

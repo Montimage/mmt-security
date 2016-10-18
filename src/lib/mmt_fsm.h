@@ -30,12 +30,13 @@
 typedef struct fsm_delay_struct{
 	/**
 	 * Defines the validity period ([time_min, time_max]) of the left branch (e.g. context).
+	 * Unit: micro-second.
 	 * default is 0,
 	 * - if value is < 0 then event needs to be satisfied before,
 	 * - if = 0 then in same packet,
 	 * - if > 0 then after
 	 */
-	double time_min, time_max;
+	uint64_t time_min, time_max;
 	/**
 	 * Similar to [time_min, time_max] we can de ne [counter_min, counter_max] where the unit is the number of packets analysed.
 	 * note that either delay or counter needs to be used not both
@@ -245,14 +246,13 @@ typedef struct fsm_transition_struct
  */
 typedef struct fsm_state_struct{
 	const fsm_delay_t delay;
-	double timer;
-	uint64_t counter;
+
 	char *description;
 
    /**
     *  An array of outgoing transitions of the state.
     */
-   struct fsm_transition_struct *transitions;
+   const struct fsm_transition_struct *transitions;
    /**
     *  Number of outgoing transitions in the #transitions array above.
     */
@@ -379,9 +379,7 @@ enum fsm_handle_event_value{
  *	- Return:
  * 	+ fsm_handle_event_value
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, void *event_data);
-
-enum fsm_handle_event_value fsm_fire_transition( fsm_t *fsm_struct, size_t tran_index, const void *event_data );
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, void *event_data, fsm_t **new_fsm );
 
 /**
  *  Get the current state
@@ -446,10 +444,7 @@ mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm );
 
 void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
 
-void fsm_create_new_instance( void *event_data, const fsm_event_t *event, const fsm_t *fsm);
-void fsm_run_command(  const char *command, const fsm_t *fsm);
-
-
+void fsm_get_timer_and_counter( const fsm_t *fsm, uint64_t *timer, uint64_t *counter );
 
 static inline void fsm_free_event( fsm_event_t *event, enum bool free_data ){
 	if( event == NULL ) return;

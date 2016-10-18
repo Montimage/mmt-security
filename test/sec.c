@@ -27,15 +27,19 @@ message_element_t *elements[2] = {
 };
 
 static message_t messages[] = ( message_t[]){
-	{.counter = 1, .timestamp = 0, .elements_count = 0, .elements = NULL },
-	{.counter = 3, .timestamp = 0, .elements_count = 0, .elements = NULL }
+	{.counter = 1, .timestamp = 1452523000158154, .elements_count = 0, .elements = NULL },
+	{.counter = 3, .timestamp = 1452524000158154, .elements_count = 0, .elements = NULL }
 };
 
-void callback( uint32_t rule_id,		//id of rule
+void callback( const rule_info_t *rule,		//id of rule
+		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
 		uint32_t counter,
 		const mmt_map_t *trace,
 		void *user_data ){
+	char *string = convert_execution_trace_to_json_string( trace );
+	mmt_debug( "Rule %"PRIu32": %s: %s \n%s\n %s", rule->id, rule->type_string, verdict_type_string[verdict], rule->description, string );
+	mmt_free( string );
 }
 
 int main( int argc, char **argv ){
@@ -44,7 +48,6 @@ int main( int argc, char **argv ){
 	mmt_sec_handler_t *handler;
 	size = mmt_sec_get_rules_info( &rules_array );
 	handler = mmt_sec_register( rules_array, size, callback, NULL );
-
 
 	size = sizeof( messages ) / sizeof( message_t );
 	mmt_debug( "Testing %zu messages ... ", size );

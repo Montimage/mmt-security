@@ -16,7 +16,7 @@
 
 int main( int argc, char** argv ){
 	const rule_info_t **rules_arr;
-	size_t i, n;
+	size_t i, j, n;
 
 	mmt_assert( argc <= 2, "Usage: %s [lib_file.so]", argv[0] );
 	//load plugins from default folder:
@@ -31,7 +31,15 @@ int main( int argc, char** argv ){
 
 	for( i=0; i<n; i++ ){
 		printf("\n%zu - Rule id: %d", (i+1), rules_arr[i]->id );
+		printf("\n\t- type            : %s",  rules_arr[i]->type_string );
 		printf("\n\t- events_count    : %d",  rules_arr[i]->events_count );
+		printf("\n\t- variables_count : %zu",  rules_arr[i]->proto_atts_count );
+		printf("\n\t- variables       : " );
+		for( j=0; j<rules_arr[i]->proto_atts_count; j++ )
+			printf( "%s%s.%s",
+					j==0? "":", ",
+					rules_arr[i]->proto_atts[j].proto, rules_arr[i]->proto_atts[j].att);
+
 		printf("\n\t- description     : %s",  rules_arr[i]->description );
 		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
 		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );

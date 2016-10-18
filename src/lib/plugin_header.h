@@ -31,26 +31,37 @@ typedef struct message_struct{
 	message_element_t **elements;
 }message_t;
 
+typedef struct proto_attribute_struct{
+	const char *proto;
+	const char *att;
+}proto_attribute_t;
 
 /**
  * Information of a rule in generated lib
  */
 typedef struct rule_info_struct{
 	uint32_t id;
+	int type_id;
+	const char *type_string; //"attack", "security", "test", "evasion"
 	uint8_t events_count;
-	char *description;
-	char *if_satisfied;
-	char *if_not_satisfied;
-
+	const char *description;
+	const char *if_satisfied;
+	const char *if_not_satisfied;
+	/**
+	 * Size of #proto_atts
+	 */
+	size_t proto_atts_count;
+	const proto_attribute_t *proto_atts;
 	//return a FSM instance
 	void* (* create_instance )();
+
 	//return a struct using by guard of FSM above, e.g., _msg_t_1
-	void* (* convert_message )( const message_t *);
+	void* (* convert_message )( const message_t * message);
 	/**
 	 * - Return:
 	 * 	+ An array (size #events_count) of number.
 	 */
-	const void* (* hash_message )( const void * );
+	const void* (* hash_message )( const void *data );
 }rule_info_t;
 
 /**

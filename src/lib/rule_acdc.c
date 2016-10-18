@@ -1,6 +1,6 @@
 
- /** 677
-  * This file is generated automatically on 2016-10-17 15:00:13
+ /** 693
+  * This file is generated automatically on 2016-10-18 15:34:37
   */
  #include <string.h>
  #include <stdio.h>
@@ -13,7 +13,11 @@
  //======================================RULE 1======================================
  #define EVENTS_COUNT_1 4
 
- /** 486
+ #define PROTO_ATTS_COUNT_1 5
+
+ static proto_attribute_t proto_atts_1[ PROTO_ATTS_COUNT_1 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "dest_port"}, {.proto = "tcp", .att = "flags"}, {.proto = "tcp", .att = "src_port"}};
+
+ /** 484
   * Structure to represent event data
   */
  typedef struct _msg_struct_1{
@@ -25,7 +29,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_1;
- /** 508
+ /** 517
   * Create an instance of _msg_t_1
   */
  static inline _msg_t_1* _allocate_msg_t_1(){
@@ -39,7 +43,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 532
+ /** 541
   * Public API
   */
  void *mmt_sec_convert_message_to_event_1( const message_t *msg){
@@ -49,7 +53,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -58,7 +62,7 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 549
+			 }//end switch of att_id 558
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
@@ -71,18 +75,18 @@
 			 case 1:// attribute src_port
 				 new_msg->tcp_src_port = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 566
+			 }//end switch of att_id 575
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //569
+	 return (void *)new_msg; //578
  }//end function
- /** 451
+ /** 449
   * Public API
   */
  const void* mmt_sec_hash_message_1( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_1 ];
 	 size_t i;	 _msg_t_1 *msg = (_msg_t_1 *) data;
-	 for( i=0; i<EVENTS_COUNT_1; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_1; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 1;
@@ -206,16 +210,14 @@
   * initial state
   */
   s_1_0 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  = "Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 384 SYN request */
-		 /** 386 A real event */
+		 /** 382 SYN request */
+		 /** 384 A real event */
 		 { .event_type = 1, .guard = &g_1_1, .target_state = &s_1_3} 
 	 },
 	 .transitions_count = 1
@@ -224,9 +226,7 @@
   * timeout/error state
   */
   s_1_1 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -238,9 +238,7 @@
   * final state
   */
   s_1_2 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -248,20 +246,18 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  }, s_1_3 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 1000000, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_1_4},
-		 /** 384 SYN ACK reply */
-		 /** 386 A real event */
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
 		 { .event_type = 2, .guard = &g_1_2, .target_state = &s_1_4},
-		 /** 386 A real event will fire this loop to create a new instance */
+		 /** 384 A real event will fire this loop to create a new instance */
 		 { .event_type = 1, .guard = &g_1_1, .target_state = &s_1_3} 
 	 },
 	 .transitions_count = 3
@@ -270,41 +266,37 @@
   * root node
   */
   s_1_4 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 60000000, .counter_min = 0, .counter_max = 0},
 	 .description  = "Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_1_2},
-		 /** 384 SYN request */
-		 /** 386 A real event */
+		 /** 382 SYN request */
+		 /** 384 A real event */
 		 { .event_type = 3, .guard = &g_1_3, .target_state = &s_1_5} 
 	 },
 	 .transitions_count = 2
  }, s_1_5 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 1000000, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_1_1},
-		 /** 384 SYN ACK reply */
-		 /** 386 A real event */
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
 		 { .event_type = 4, .guard = &g_1_4, .target_state = &s_1_2},
-		 /** 386 A real event will fire this loop to create a new instance */
+		 /** 384 A real event will fire this loop to create a new instance */
 		 { .event_type = 3, .guard = &g_1_3, .target_state = &s_1_5} 
 	 },
 	 .transitions_count = 3
  };
- /** 419
+ /** 417
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_1(){
@@ -314,7 +306,11 @@
  //======================================RULE 2======================================
  #define EVENTS_COUNT_2 3
 
- /** 486
+ #define PROTO_ATTS_COUNT_2 5
+
+ static proto_attribute_t proto_atts_2[ PROTO_ATTS_COUNT_2 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "dest_port"}, {.proto = "tcp", .att = "flags"}, {.proto = "tcp", .att = "src_port"}};
+
+ /** 484
   * Structure to represent event data
   */
  typedef struct _msg_struct_2{
@@ -326,7 +322,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_2;
- /** 508
+ /** 517
   * Create an instance of _msg_t_2
   */
  static inline _msg_t_2* _allocate_msg_t_2(){
@@ -340,7 +336,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 532
+ /** 541
   * Public API
   */
  void *mmt_sec_convert_message_to_event_2( const message_t *msg){
@@ -350,7 +346,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -359,7 +355,7 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 549
+			 }//end switch of att_id 558
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
@@ -372,18 +368,18 @@
 			 case 1:// attribute src_port
 				 new_msg->tcp_src_port = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 566
+			 }//end switch of att_id 575
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //569
+	 return (void *)new_msg; //578
  }//end function
- /** 451
+ /** 449
   * Public API
   */
  const void* mmt_sec_hash_message_2( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_2 ];
 	 size_t i;	 _msg_t_2 *msg = (_msg_t_2 *) data;
-	 for( i=0; i<EVENTS_COUNT_2; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_2; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 5;
@@ -478,19 +474,17 @@
   * initial state
   */
   s_2_0 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  = "Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 384 SYN request */
-		 /** 386 A real event */
+		 /** 382 SYN request */
+		 /** 384 A real event */
 		 { .event_type = 5, .guard = &g_2_5, .target_state = &s_2_3},
-		 /** 384 SYN ACK reply */
-		 /** 386 A real event */
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
 		 { .event_type = 6, .guard = &g_2_6, .target_state = &s_2_4} 
 	 },
 	 .transitions_count = 2
@@ -499,9 +493,7 @@
   * timeout/error state
   */
   s_2_1 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -513,9 +505,7 @@
   * final state
   */
   s_2_2 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -523,38 +513,34 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  }, s_2_3 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 1000000, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_2_5},
-		 /** 384 SYN ACK reply */
-		 /** 386 A real event */
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
 		 { .event_type = 6, .guard = &g_2_6, .target_state = &s_2_5},
-		 /** 386 A real event will fire this loop to create a new instance */
+		 /** 384 A real event will fire this loop to create a new instance */
 		 { .event_type = 5, .guard = &g_2_5, .target_state = &s_2_3} 
 	 },
 	 .transitions_count = 3
  }, s_2_4 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 1000000, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_2_5},
-		 /** 384 SYN request */
-		 /** 386 A real event */
+		 /** 382 SYN request */
+		 /** 384 A real event */
 		 { .event_type = 5, .guard = &g_2_5, .target_state = &s_2_5},
-		 /** 386 A real event will fire this loop to create a new instance */
+		 /** 384 A real event will fire this loop to create a new instance */
 		 { .event_type = 6, .guard = &g_2_6, .target_state = &s_2_4} 
 	 },
 	 .transitions_count = 3
@@ -563,23 +549,21 @@
   * root node
   */
   s_2_5 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 244.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 244000, .counter_min = 0, .counter_max = 0},
 	 .description  = "Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_2_2},
-		 /** 384 RST reset */
-		 /** 386 A real event */
+		 /** 382 RST reset */
+		 /** 384 A real event */
 		 { .event_type = 7, .guard = &g_2_7, .target_state = &s_2_2} 
 	 },
 	 .transitions_count = 2
  };
- /** 419
+ /** 417
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_2(){
@@ -589,7 +573,11 @@
  //======================================RULE 3======================================
  #define EVENTS_COUNT_3 2
 
- /** 486
+ #define PROTO_ATTS_COUNT_3 4
+
+ static proto_attribute_t proto_atts_3[ PROTO_ATTS_COUNT_3 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "dest_port"}, {.proto = "tcp", .att = "flags"}};
+
+ /** 484
   * Structure to represent event data
   */
  typedef struct _msg_struct_3{
@@ -600,7 +588,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_3;
- /** 508
+ /** 517
   * Create an instance of _msg_t_3
   */
  static inline _msg_t_3* _allocate_msg_t_3(){
@@ -613,7 +601,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 532
+ /** 541
   * Public API
   */
  void *mmt_sec_convert_message_to_event_3( const message_t *msg){
@@ -623,7 +611,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -632,7 +620,7 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 549
+			 }//end switch of att_id 558
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
@@ -642,18 +630,18 @@
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 566
+			 }//end switch of att_id 575
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //569
+	 return (void *)new_msg; //578
  }//end function
- /** 451
+ /** 449
   * Public API
   */
  const void* mmt_sec_hash_message_3( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_3 ];
 	 size_t i;	 _msg_t_3 *msg = (_msg_t_3 *) data;
-	 for( i=0; i<EVENTS_COUNT_3; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_3; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 8;
@@ -711,16 +699,14 @@
   * initial state
   */
   s_3_0 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  = "TCP SYN requests on microsoft-ds port 445 with SYN ACK.",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 384 SYN request */
-		 /** 386 A real event */
+		 /** 382 SYN request */
+		 /** 384 A real event */
 		 { .event_type = 8, .guard = &g_3_8, .target_state = &s_3_3} 
 	 },
 	 .transitions_count = 1
@@ -729,9 +715,7 @@
   * timeout/error state
   */
   s_3_1 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -743,9 +727,7 @@
   * final state
   */
   s_3_2 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -757,25 +739,23 @@
   * root node
   */
   s_3_3 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 6.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 6000000, .counter_min = 0, .counter_max = 0},
 	 .description  = "TCP SYN requests on microsoft-ds port 445 with SYN ACK.",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_3_2},
-		 /** 384 SYN ACK reply */
-		 /** 386 A real event */
+		 /** 382 SYN ACK reply */
+		 /** 384 A real event */
 		 { .event_type = 9, .guard = &g_3_9, .target_state = &s_3_2},
-		 /** 386 A real event will fire this loop to create a new instance */
+		 /** 384 A real event will fire this loop to create a new instance */
 		 { .event_type = 8, .guard = &g_3_8, .target_state = &s_3_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 419
+ /** 417
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_3(){
@@ -785,7 +765,11 @@
  //======================================RULE 4======================================
  #define EVENTS_COUNT_4 2
 
- /** 486
+ #define PROTO_ATTS_COUNT_4 3
+
+ static proto_attribute_t proto_atts_4[ PROTO_ATTS_COUNT_4 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "flags"}};
+
+ /** 484
   * Structure to represent event data
   */
  typedef struct _msg_struct_4{
@@ -795,7 +779,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_4;
- /** 508
+ /** 517
   * Create an instance of _msg_t_4
   */
  static inline _msg_t_4* _allocate_msg_t_4(){
@@ -807,7 +791,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 532
+ /** 541
   * Public API
   */
  void *mmt_sec_convert_message_to_event_4( const message_t *msg){
@@ -817,7 +801,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -826,25 +810,25 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 549
+			 }//end switch of att_id 558
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 566
+			 }//end switch of att_id 575
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //569
+	 return (void *)new_msg; //578
  }//end function
- /** 451
+ /** 449
   * Public API
   */
  const void* mmt_sec_hash_message_4( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_4 ];
 	 size_t i;	 _msg_t_4 *msg = (_msg_t_4 *) data;
-	 for( i=0; i<EVENTS_COUNT_4; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_4; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 12;
@@ -906,16 +890,14 @@
   * initial state
   */
   s_4_0 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  = "Two successive TCP SYN requests but with different destnation addresses.",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 384 SYN request */
-		 /** 386 A real event */
+		 /** 382 SYN request */
+		 /** 384 A real event */
 		 { .event_type = 12, .guard = &g_4_12, .target_state = &s_4_3} 
 	 },
 	 .transitions_count = 1
@@ -924,9 +906,7 @@
   * timeout/error state
   */
   s_4_1 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -938,9 +918,7 @@
   * final state
   */
   s_4_2 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -952,25 +930,23 @@
   * root node
   */
   s_4_3 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 1000000, .counter_min = 0, .counter_max = 0},
 	 .description  = "Two successive TCP SYN requests but with different destnation addresses.",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_4_2},
-		 /** 384 SYN request */
-		 /** 386 A real event */
+		 /** 382 SYN request */
+		 /** 384 A real event */
 		 { .event_type = 13, .guard = &g_4_13, .target_state = &s_4_2},
-		 /** 386 A real event will fire this loop to create a new instance */
+		 /** 384 A real event will fire this loop to create a new instance */
 		 { .event_type = 12, .guard = &g_4_12, .target_state = &s_4_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 419
+ /** 417
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_4(){
@@ -980,7 +956,11 @@
  //======================================RULE 5======================================
  #define EVENTS_COUNT_5 2
 
- /** 486
+ #define PROTO_ATTS_COUNT_5 3
+
+ static proto_attribute_t proto_atts_5[ PROTO_ATTS_COUNT_5 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "flags"}};
+
+ /** 484
   * Structure to represent event data
   */
  typedef struct _msg_struct_5{
@@ -990,7 +970,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_5;
- /** 508
+ /** 517
   * Create an instance of _msg_t_5
   */
  static inline _msg_t_5* _allocate_msg_t_5(){
@@ -1002,7 +982,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 532
+ /** 541
   * Public API
   */
  void *mmt_sec_convert_message_to_event_5( const message_t *msg){
@@ -1012,7 +992,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
 		 case 178:// protocol ip
 			 switch( msg->elements[i]->att_id ){
 			 case 13:// attribute dst
@@ -1021,25 +1001,25 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 549
+			 }//end switch of att_id 558
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i]->att_id ){
 			 case 6:// attribute flags
 				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 566
+			 }//end switch of att_id 575
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //569
+	 return (void *)new_msg; //578
  }//end function
- /** 451
+ /** 449
   * Public API
   */
  const void* mmt_sec_hash_message_5( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_5 ];
 	 size_t i;	 _msg_t_5 *msg = (_msg_t_5 *) data;
-	 for( i=0; i<EVENTS_COUNT_5; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_5; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 10;
@@ -1095,16 +1075,14 @@
   * initial state
   */
   s_5_0 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  = "TCP SYN requests with SYN ACK.",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 384 SYN request */
-		 /** 386 A real event */
+		 /** 382 SYN request */
+		 /** 384 A real event */
 		 { .event_type = 10, .guard = &g_5_10, .target_state = &s_5_3} 
 	 },
 	 .transitions_count = 1
@@ -1113,9 +1091,7 @@
   * timeout/error state
   */
   s_5_1 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -1127,9 +1103,7 @@
   * final state
   */
   s_5_2 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -1141,25 +1115,23 @@
   * root node
   */
   s_5_3 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 60000000, .counter_min = 0, .counter_max = 0},
 	 .description  = "TCP SYN requests with SYN ACK.",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_5_2},
-		 /** 384 SYN ACK replyyyyyy */
-		 /** 386 A real event */
+		 /** 382 SYN ACK replyyyyyy */
+		 /** 384 A real event */
 		 { .event_type = 11, .guard = &g_5_11, .target_state = &s_5_2},
-		 /** 386 A real event will fire this loop to create a new instance */
+		 /** 384 A real event will fire this loop to create a new instance */
 		 { .event_type = 10, .guard = &g_5_10, .target_state = &s_5_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 419
+ /** 417
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_5(){
@@ -1169,7 +1141,11 @@
  //======================================RULE 6======================================
  #define EVENTS_COUNT_6 2
 
- /** 486
+ #define PROTO_ATTS_COUNT_6 2
+
+ static proto_attribute_t proto_atts_6[ PROTO_ATTS_COUNT_6 ] = {{.proto = "http", .att = "method"}, {.proto = "http", .att = "user_agent"}};
+
+ /** 484
   * Structure to represent event data
   */
  typedef struct _msg_struct_6{
@@ -1178,7 +1154,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_6;
- /** 508
+ /** 517
   * Create an instance of _msg_t_6
   */
  static inline _msg_t_6* _allocate_msg_t_6(){
@@ -1189,7 +1165,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 532
+ /** 541
   * Public API
   */
  void *mmt_sec_convert_message_to_event_6( const message_t *msg){
@@ -1199,7 +1175,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 542 For each protocol*/
+		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
 		 case 153:// protocol http
 			 switch( msg->elements[i]->att_id ){
 			 case 1:// attribute method
@@ -1208,18 +1184,18 @@
 			 case 7:// attribute user_agent
 				 new_msg->http_user_agent = (char *) mmt_mem_retain( msg->elements[i]->data );
 				 break;
-			 }//end switch of att_id 566
+			 }//end switch of att_id 575
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //569
+	 return (void *)new_msg; //578
  }//end function
- /** 451
+ /** 449
   * Public API
   */
  const void* mmt_sec_hash_message_6( const void *data ){
 	 static uint8_t hash_table[ EVENTS_COUNT_6 ];
 	 size_t i;	 _msg_t_6 *msg = (_msg_t_6 *) data;
-	 for( i=0; i<EVENTS_COUNT_6; i++) hash_table[i] = 0;/** 457 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_6; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return (void *) hash_table;
 	 if( msg->http_method != NULL )
 		 hash_table[ 0 ] = 1;
@@ -1269,16 +1245,14 @@
   * initial state
   */
   s_6_0 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  = "Get request from ghost",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 384 Having GET request */
-		 /** 386 A real event */
+		 /** 382 Having GET request */
+		 /** 384 A real event */
 		 { .event_type = 1, .guard = &g_6_1, .target_state = &s_6_3} 
 	 },
 	 .transitions_count = 1
@@ -1287,9 +1261,7 @@
   * timeout/error state
   */
   s_6_1 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -1301,9 +1273,7 @@
   * final state
   */
   s_6_2 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 0.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
@@ -1315,25 +1285,23 @@
   * root node
   */
   s_6_3 = {
-	 .timer        = 0,
-	 .counter      = 0,
-	 .delay        = {.time_min = 0.00, .time_max = 1.00, .counter_min = 0, .counter_max = 0},
+	 .delay        = {.time_min = 0, .time_max = 60000000, .counter_min = 0, .counter_max = 0},
 	 .description  = "Get request from ghost",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 386 Timeout event will fire this transition */
+		 /** 384 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .target_state = &s_6_2},
-		 /** 384 Must have User-Agent */
-		 /** 386 A real event */
+		 /** 382 Must have User-Agent */
+		 /** 384 A real event */
 		 { .event_type = 2, .guard = &g_6_2, .target_state = &s_6_2},
-		 /** 386 A real event will fire this loop to create a new instance */
+		 /** 384 A real event will fire this loop to create a new instance */
 		 { .event_type = 1, .guard = &g_6_1, .target_state = &s_6_3} 
 	 },
 	 .transitions_count = 3
  };
- /** 419
+ /** 417
   * Create a new FSM for this rule
   */
  void *mmt_sec_create_new_fsm_6(){
@@ -1341,14 +1309,18 @@
  }//end function
 
  //======================================GENERAL======================================
- /** 582
+ /** 591
   * Information of 6 rules
   */
  size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){
 	  static const rule_info_t rules[] = (rule_info_t[]){
 		 {
 			 .id               = 1,
+			 .type_id          = 0,
+			 .type_string      = "attack",
 			 .events_count     = EVENTS_COUNT_1,
+			 .proto_atts_count = PROTO_ATTS_COUNT_1,
+			 .proto_atts       = proto_atts_1,
 			 .description      = "Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,
@@ -1358,7 +1330,11 @@
 		 },
 		 {
 			 .id               = 2,
+			 .type_id          = 0,
+			 .type_string      = "attack",
 			 .events_count     = EVENTS_COUNT_2,
+			 .proto_atts_count = PROTO_ATTS_COUNT_2,
+			 .proto_atts       = proto_atts_2,
 			 .description      = "Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,
@@ -1368,7 +1344,11 @@
 		 },
 		 {
 			 .id               = 3,
+			 .type_id          = 0,
+			 .type_string      = "attack",
 			 .events_count     = EVENTS_COUNT_3,
+			 .proto_atts_count = PROTO_ATTS_COUNT_3,
+			 .proto_atts       = proto_atts_3,
 			 .description      = "TCP SYN requests on microsoft-ds port 445 with SYN ACK.",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,
@@ -1378,7 +1358,11 @@
 		 },
 		 {
 			 .id               = 4,
+			 .type_id          = 0,
+			 .type_string      = "attack",
 			 .events_count     = EVENTS_COUNT_4,
+			 .proto_atts_count = PROTO_ATTS_COUNT_4,
+			 .proto_atts       = proto_atts_4,
 			 .description      = "Two successive TCP SYN requests but with different destnation addresses.",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,
@@ -1388,7 +1372,11 @@
 		 },
 		 {
 			 .id               = 5,
+			 .type_id          = 1,
+			 .type_string      = "security",
 			 .events_count     = EVENTS_COUNT_5,
+			 .proto_atts_count = PROTO_ATTS_COUNT_5,
+			 .proto_atts       = proto_atts_5,
 			 .description      = "TCP SYN requests with SYN ACK.",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = "py_createstix(4_TCP_SYN_request_without_SYN_ACK_could_be_a_spoofed_address, ip.src.10)",
@@ -1398,7 +1386,11 @@
 		 },
 		 {
 			 .id               = 6,
+			 .type_id          = 1,
+			 .type_string      = "security",
 			 .events_count     = EVENTS_COUNT_6,
+			 .proto_atts_count = PROTO_ATTS_COUNT_6,
+			 .proto_atts       = proto_atts_6,
 			 .description      = "Get request from ghost",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,

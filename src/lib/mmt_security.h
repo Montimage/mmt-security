@@ -21,11 +21,15 @@ size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array );
 
 typedef void *mmt_sec_handler_t;
 
+enum verdict_type {VERDICT_DETECTED, VERDICT_NOT_DETECTED, VERDICT_RESPECTED, VERDICT_NOT_RESPECTED, VERDICT_UNKNOWN};
+static const char* verdict_type_string[] = {"detected", "not_detected", "respected", "not_respected", "unknown"};
+
 /**
  * A function to be called when a rule is validated
  */
 typedef void (*mmt_sec_callback)(
-		uint32_t rule_id,		//id of rule
+		const rule_info_t *rule,		//rule being verified
+		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
 		uint32_t counter,
 		const mmt_map_t *trace,
@@ -41,7 +45,6 @@ mmt_sec_handler_t *mmt_sec_register(
 		mmt_sec_callback callback,
 		void *user_data);
 
-
 /**
  * Unregister, free
  */
@@ -50,4 +53,5 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler );
 void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message );
 
 char* convert_execution_trace_to_json_string( const mmt_map_t *trace );
+
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

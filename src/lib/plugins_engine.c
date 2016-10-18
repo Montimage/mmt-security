@@ -20,7 +20,7 @@ static int load_filter( const struct dirent *entry ){
 	char *ext = strrchr( entry->d_name, '.' );
 	return( ext && !strcmp( ext, ".so" ));
 }
-size_t load_plugins( const rule_info_t ***ret_array ){
+size_t _load_plugins( const rule_info_t ***ret_array ){
 	const rule_info_t *tmp_array, **array;
 	size_t size, i;
 	size = mmt_sec_get_plugin_info( &tmp_array );
@@ -30,7 +30,8 @@ size_t load_plugins( const rule_info_t ***ret_array ){
 	*ret_array = array;
 	return size;
 }
-size_t _load_plugins( const rule_info_t ***ret_array ){
+
+size_t load_plugins( const rule_info_t ***ret_array ){
 	size_t size, i, j, index;
 	char path[ 256 ];
 	struct dirent **entries, *entry;
@@ -57,7 +58,9 @@ size_t _load_plugins( const rule_info_t ***ret_array ){
 	index = 0;
 	for( i = 0 ; i < n ; ++i ) {
 		entry = entries[i];
-		(void)snprintf( path, 256, "%s/%s",plugins_path==0?PLUGINS_REPOSITORY:PLUGINS_REPOSITORY_OPT,entry->d_name );
+		(void)snprintf( path, 256, "%s/%s",
+						plugins_path==0 ? PLUGINS_REPOSITORY : PLUGINS_REPOSITORY_OPT,
+						entry->d_name );
 
 		//load plugin
 		size = load_plugin( &tmp_array, path );

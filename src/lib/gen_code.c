@@ -360,9 +360,7 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 			_gen_comment(fd, "%s", state->comment );
 
 		fprintf( fd, " s_%d_%zu = {", rule_id, state->index );
-		fprintf( fd, "\n\t .timer        = 0,");
-		fprintf( fd, "\n\t .counter      = 0,");
-		fprintf( fd, "\n\t .delay        = {.time_min = %.2f, .time_max = %.2f, .counter_min = %d, .counter_max = %d},",
+		fprintf( fd, "\n\t .delay        = {.time_min = %.0f, .time_max = %.0f, .counter_min = %d, .counter_max = %d},",
 				state->delay?state->delay->time_min:0, state->delay?state->delay->time_max:0,
 						state->delay?state->delay->counter_min:0, state->delay?state->delay->counter_max:0);
 
@@ -498,6 +496,17 @@ void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data
 	}
 }
 
+void _iterate_variables_to_gen_array_proto_att( void *key, void *data, void *user_data, size_t index, size_t total ){
+	FILE *fd = (FILE *)user_data;
+	variable_t *var = (variable_t *)data;
+
+	fprintf( fd, "%c{.proto = \"%s\", .att = \"%s\"}%s",
+			index == 0 ? '{':' ',
+			var->proto, var->att,
+			index == total-1? "};\n": ","
+			);
+}
+
 void _iterate_variables_to_init_structure( void *key, void *data, void *user_data, size_t index, size_t total ){
 	struct _user_data *_u_data = (struct _user_data *)user_data;
 	FILE *fd = _u_data->file;
@@ -585,7 +594,11 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 	for( i=0; i<count; i++ ){
 		fprintf( fd, "\n\t\t {");
 		fprintf( fd, "\n\t\t\t .id               = %d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .type_id          = %d,", rules[i]->type );
+		fprintf( fd, "\n\t\t\t .type_string      = \"%s\",", rule_type_string[ rules[i]->type ] );
 		fprintf( fd, "\n\t\t\t .events_count     = EVENTS_COUNT_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .proto_atts_count = PROTO_ATTS_COUNT_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .proto_atts       = proto_atts_%d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .description      = %c%s%c,",
 						_string( rules[i]->description, 'N', "UL", 'L', '"', rules[i]->description, '"') );
 		fprintf( fd, "\n\t\t\t .if_satisfied     = %c%s%c,",
@@ -638,11 +651,14 @@ static void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 	size = get_unique_events_of_rule( rule, &events_map );
 	if( size == 0 ) return;
 
+	mmt_map_iterate( events_map, _iterate_event_to_get_unique_variables, variables_map );
 
 	fprintf( fd, "\n\n //======================================RULE %d======================================", rule->id );
 	fprintf( fd, "\n #define EVENTS_COUNT_%d %zu\n", rule->id, mmt_map_count( events_map ) );
+	fprintf( fd, "\n #define PROTO_ATTS_COUNT_%d %zu\n", rule->id, mmt_map_count( variables_map ) );
+	fprintf( fd, "\n static proto_attribute_t proto_atts_%d[ PROTO_ATTS_COUNT_%d ] = ", rule->id, rule->id );
+	mmt_map_iterate(variables_map, _iterate_variables_to_gen_array_proto_att, fd );
 
-	mmt_map_iterate( events_map, _iterate_event_to_get_unique_variables, variables_map );
 
 	//define a structure using in guard functions
 	mmt_map_iterate(variables_map, _iterate_variables_to_gen_structure, &_u_data );

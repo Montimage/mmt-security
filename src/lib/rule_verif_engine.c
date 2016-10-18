@@ -22,14 +22,11 @@ typedef struct _rule_engine_struct{
 	//cache of data using by (fsm) events
 	mmt_map_t *events_data_cache;
 
-	fsm_t *valid_fsm;
+	mmt_map_t *valid_execution_trace;
 
-	//for passing parameter of map_iterate
-	void *user_data;
 }_rule_engine_t;
 
-
-typedef struct _fsm_index_struct{
+typedef struct _fsm_tran_index_struct{
 	size_t index;
 	fsm_t *fsm;
 }_fsm_tran_index_t ;
@@ -44,7 +41,7 @@ static inline _fsm_tran_index_t* _create_fsm_tran_index_t( size_t index, fsm_t *
 static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm ){
 	size_t i;
 	uint16_t event_id;
-	fsm_transition_t *tran;
+	const fsm_transition_t *tran;
 	const fsm_state_t *state = fsm_get_current_state( fsm );
 
 	mmt_assert( _engine->max_events_count >= state->transitions_count,
@@ -94,7 +91,7 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 
 	_engine->events_data_cache = mmt_map_init( compare_pointer );
 
-	_engine->valid_fsm = NULL;
+	_engine->valid_execution_trace = NULL;
 	return (rule_engine_t *) _engine;
 }
 
@@ -122,38 +119,76 @@ void rule_engine_free( rule_engine_t *engine ){
 	mmt_free( _engine->fsm_by_expecting_event_id );
 	mmt_free( _engine->fsm_by_instance_id );
 
+	mmt_map_free( _engine->valid_execution_trace, NO );
 	mmt_free( _engine );
 }
 
+const mmt_map_t* rule_engine_get_valide_trace( const rule_engine_t *engine ){
+	_rule_engine_t *_engine = ( _rule_engine_t *)engine;
+	return _engine->valid_execution_trace;
+}
 
 static void _iterate_to_update_event( void *key, void *data, void *u_data, size_t index, size_t total){
 	_rule_engine_t *_engine = ( _rule_engine_t *)u_data;
 	message_t *msg =  mmt_map_get_data( _engine->events_data_cache, data );
 	if( msg == NULL )
 		return;
-	mmt_map_set_data( (mmt_map_t *)_engine->user_data, key, (void *)msg, YES );
+	mmt_map_set_data( _engine->valid_execution_trace, key, (void *)msg, YES );
 }
 
-mmt_map_t* get_execution_trace( _rule_engine_t *_engine ){
-	mmt_map_t *map = fsm_get_execution_trace( _engine->valid_fsm );
-	mmt_map_t *new_map = mmt_map_init( compare_uint16_t );
-	_engine->user_data = new_map;
+void _store_valide_trace( _rule_engine_t *_engine, const fsm_t *fsm ){
+	//free the old trace
+	mmt_map_free( _engine->valid_execution_trace, NO );
+
+	//create a new map storing the execution trace of #fsm
+	mmt_map_t *map = fsm_get_execution_trace( fsm );
+	_engine->valid_execution_trace = mmt_map_init( compare_uint16_t );
 	mmt_map_iterate( map, _iterate_to_update_event, _engine );
-	return new_map;
 }
 
-
-static void _print_message_t( void *key, void *data, void *u_data, size_t index, size_t total){
+static inline void _reset_engine_for_fsm( _rule_engine_t *_engine, uint16_t fsm_id ){
 	size_t i;
-	mmt_assert( data != NULL, "Error: data cannot be null, %s:%d", __FILE__, __LINE__ );
-	message_t *msg = (message_t *) data;
-	uint16_t id    = *(uint16_t *) key;
-	mmt_debug( "- message %d, counter = %"PRIu32", timer = %"PRIu64, id, msg->counter, msg->timestamp );
-	for( i=0; i<msg->elements_count; i++)
-		if( msg->elements[i] != NULL ){
-			mmt_debug( "   %d_%d", msg->elements[i]->proto_id, msg->elements[i]->att_id );
-		}else
-			mmt_debug( "   NULL");
+	link_node_t *node, *ptr;
+	_fsm_tran_index_t *fsm_ind;
+	//remove all fsm having #fsm_id from the list #fsm_by_expecting_event_id
+	for( i=0; i<_engine->max_events_count; i++ ){
+		node = _engine->fsm_by_expecting_event_id[ i ];
+		while( node != NULL ){
+			ptr = node->next;
+			fsm_ind = (_fsm_tran_index_t *) node->data;
+
+			//found a node containing fsm having id = #fsm_id
+			if( fsm_get_id( fsm_ind->fsm ) == fsm_id ){
+
+				//head
+				if( node == _engine->fsm_by_expecting_event_id[ i ] ){
+					if( ptr != NULL ) ptr->prev = NULL;
+					_engine->fsm_by_expecting_event_id[ i ] = ptr;
+				}else{
+					node->prev->next = ptr;
+					if( ptr != NULL )
+						ptr->prev = node->prev;
+				}
+				mmt_free( fsm_ind );
+				mmt_free( node );
+			}
+			node = ptr;
+		}
+	}
+
+	//remove all fsm having id == #fsm_id and free them
+	free_link_list_and_data( _engine->fsm_by_instance_id[ fsm_id ], (void *)fsm_free );
+	//put it to be available for the other
+	_engine->fsm_by_instance_id[ fsm_id ] = NULL;
+}
+
+static inline uint16_t _find_an_available_id( _rule_engine_t *_engine ){
+	size_t i;
+	for( i=0; i<_engine->max_instances_count; i++ )
+		if( _engine->fsm_by_instance_id[ i ] == NULL )
+			return i;
+	//not enough
+	return 0;
 }
 
 enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_id, void *event_data, _rule_engine_t *_engine ){
@@ -162,13 +197,30 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 	//the transition has index = #node->tran_index
 	enum fsm_handle_event_value val;
 	mmt_map_t *trace_map;
+	fsm_t *new_fsm = NULL;
+	uint16_t new_fsm_id = 0;
 
-	val = fsm_handle_event( fsm, fsm_ind->index, event_data );
 	mmt_debug( "  transition to verify: %zu", fsm_ind->index );
+	val = fsm_handle_event( fsm, fsm_ind->index, event_data, &new_fsm );
+
+	//if the execution of the transition having index = fsm_ind->index creates a new fsm
+	if( new_fsm != NULL ){
+		//if the new_fsm
+		if( fsm == _engine->fsm_bootstrap ){
+			new_fsm_id = _find_an_available_id( _engine );
+			fsm_set_id( new_fsm, new_fsm_id );
+		}else
+			new_fsm_id = fsm_get_id( new_fsm );
+
+		//add the new_fsm to lists
+		_set_expecting_events_id( _engine, new_fsm );
+		//add the new_fsm to the list of fsm(s) having the same id
+		_engine->fsm_by_instance_id[ new_fsm_id  ] = insert_node_to_link_list( _engine->fsm_by_instance_id[ new_fsm_id ], new_fsm );
+	}
 
 	switch( val ){
 	case FSM_STATE_CHANGED:
-		mmt_debug( "FSM_STATE_CHANGED" );
+		//mmt_debug( "FSM_STATE_CHANGED" );
 
 		//remove from old list
 		_engine->fsm_by_expecting_event_id[ event_id ] =
@@ -181,26 +233,27 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 
 		//the transition cannot fire
 	case FSM_NO_STATE_CHANGE:
-		mmt_debug( "FSM_NO_STATE_CHANGE" );
+		//mmt_debug( "FSM_NO_STATE_CHANGE" );
 		break;
 
 		//the rue is validated
 	case FSM_FINAL_STATE_REACHED:
-		mmt_debug( "FSM_FINAL_STATE_REACHED" );
-		_engine->valid_fsm = fsm;
-		trace_map = get_execution_trace( _engine );
-		mmt_map_iterate( trace_map, _print_message_t, NULL );
-		mmt_map_free( trace_map, NO );
-
+		//mmt_debug( "FSM_FINAL_STATE_REACHED" );
+		_store_valide_trace( _engine, fsm );
+		//remove all fsm having the same id
+		_reset_engine_for_fsm( _engine, fsm_get_id( fsm ) );
 		return RULE_ENGINE_RESULT_VALIDATE;
 		break;
 		//the rule is not validated
 	case FSM_ERROR_STATE_REACHED:
-		mmt_debug( "FSM_ERROR_STATE_REACHED" );
-
+		//mmt_debug( "FSM_ERROR_STATE_REACHED" );
+		_store_valide_trace( _engine, fsm );
+		//remove all fsm having the same id
+		_reset_engine_for_fsm( _engine, fsm_get_id( fsm ) );
 		return RULE_ENGINE_RESULT_ERROR;
 		break;
 	case FSM_ERR_ARG:
+		//TODO: reset
 		mmt_debug( "FSM_ERR_ARG" );
 		break;
 	default:
@@ -224,6 +277,7 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, const messag
 	enum bool has_event = NO;
 	link_node_t *node;
 	_fsm_tran_index_t *fsm_ind;
+	enum rule_engine_result ret;
 	//insert #message pointer to head of #data;
 
 	mmt_debug( "===Verify Rule %d===", _engine->rule_info->id );
@@ -232,6 +286,8 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, const messag
 		event_id = hash[i];
 		//this event does not fire
 		if(  event_id == 0) continue;
+
+		has_event = YES;
 
 		mmt_debug( "Event to verify: %d", event_id );
 		event_id = event_id % _engine->max_events_count;
@@ -244,10 +300,13 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, const messag
 			node = node->next;
 			//put this after node = node->next
 			// because #node can be freed in the function #_fire_transition
-			_fire_transition( fsm_ind, event_id, data, _engine );
+			ret = _fire_transition( fsm_ind, event_id, data, _engine );
+			if( ret == RULE_ENGINE_RESULT_VALIDATE || ret == RULE_ENGINE_RESULT_ERROR ){
+				//add the message to the cache
+				mmt_map_set_data( _engine->events_data_cache, data, (void *)message, YES );
+				return ret;
+			}
 		}
-
-		has_event = YES;
 	}
 
 	//data was not handled by any instance

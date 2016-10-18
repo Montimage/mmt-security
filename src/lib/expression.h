@@ -31,6 +31,12 @@ typedef struct{
 } constant_t;
 
 /**
+ * Convert from data types from MMT_DPI to #data_type that is
+ * either a NUMERIC or a STRING
+ */
+enum data_type convert_data_type( int mmt_dpi_data_type );
+
+/**
  * Variable
  */
 typedef struct{

@@ -42,11 +42,13 @@ ifndef VERBOSE
 	QUIET := @
 endif
 
-MAIN_DPI = gen_dpi_header
+MAIN_DPI = gen_dpi
 
 MAIN_GEN_PLUGIN = gen_plugin
 
 MAIN_PLUGIN_INFO = plugin_info
+
+MAIN_STAND_ALONE = mmt_sec_standalone
 
 all: $(MMT_DPI_HEADER) $(LIB_OBJS) $(MAIN_OBJS)
 	@echo "[COMPILE] $(OUTPUT)"
@@ -64,9 +66,13 @@ gen_plugin: $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
 	$(QUIET) $(CC) -o $(MAIN_GEN_PLUGIN) $(CLDFLAGS) $^ $(LIBS)
 	
 gen_dpi src/lib/mmt_dpi.h:
-	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_DPI) $(SRCDIR)/main_dpi.c -lmmt_core -ldl
+	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -lmmt_core -ldl
 	@echo "Generate list of protocols and their attributes"	
 	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
+
+standalone: $(LIB_OBJS)
+	@echo "[COMPILE] $@"
+	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c -lmmt_core -ldl
 
 plugin_info: $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"

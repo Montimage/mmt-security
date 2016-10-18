@@ -17,49 +17,15 @@
 
 #define MAX_STRING_SIZE 1000
 
-/*THIS COMES FROM MMT-DPI*/
-enum data_types {
-    MMT_UNDEFINED_TYPE, /**< no type constant value */
-    MMT_U8_DATA, /**< unsigned 1-byte constant value */
-    MMT_U16_DATA, /**< unsigned 2-bytes constant value */
-    MMT_U32_DATA, /**< unsigned 4-bytes constant value */
-    MMT_U64_DATA, /**< unsigned 8-bytes constant value */
-    MMT_DATA_POINTER, /**< pointer constant value (size is void *) */
-    MMT_DATA_MAC_ADDR, /**< ethernet mac address constant value */
-    MMT_DATA_IP_NET, /**< ip network address constant value */
-    MMT_DATA_IP_ADDR, /**< ip address constant value */
-    MMT_DATA_IP6_ADDR, /**< ip6 address constant value */
-    MMT_DATA_PATH, /**< protocol path constant value */
-    MMT_DATA_TIMEVAL, /**< number of seconds and microseconds constant value */
-    MMT_DATA_BUFFER, /**< binary buffer content */
-    MMT_DATA_CHAR, /**< 1 character constant value */
-    MMT_DATA_PORT, /**< tcp/udp port constant value */
-    MMT_DATA_POINT, /**< point constant value */
-    MMT_DATA_PORT_RANGE, /**< tcp/udp port range constant value */
-    MMT_DATA_DATE, /**< date constant value */
-    MMT_DATA_TIMEARG, /**< time argument constant value */
-    MMT_DATA_STRING_INDEX, /**< string index constant value (an association between a string and an integer) */
-    MMT_DATA_FLOAT, /**< float constant value */
-    MMT_DATA_LAYERID, /**< Layer ID value */
-    MMT_DATA_FILTER_STATE, /**< (filter_id, filter_state) */
-    MMT_DATA_PARENT, /**< (filter_id, filter_state) */
-    MMT_STATS, /**< pointer to MMT Protocol statistics */
-    MMT_BINARY_DATA, /**< binary constant value */
-    MMT_BINARY_VAR_DATA, /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
-    MMT_STRING_DATA, /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum BINARY_64DATA_LEN long */
-    MMT_STRING_LONG_DATA, /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum STRING_DATA_LEN long */
-    MMT_HEADER_LINE, /**< string pointer value with a variable size. The string is not necessary null terminating */
-    MMT_GENERIC_HEADER_LINE, /**< structure representing an RFC2822 header line with null terminating field and value elements. */
-    MMT_STRING_DATA_POINTER, /**< pointer constant value (size is void *). The data pointed to is of type string with null terminating character included */
-};
-
-static enum data_type _get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
-	long type = get_attribute_data_type( p_id, a_id );
+/**
+ * Convert from MMT_DPI_DATA_TYPE to MMT_SEC_DATA_TYPE that is either a STRING or a NUMERIC
+ */
+inline enum data_type convert_data_type( int type ){
 	switch( type ){
+	case MMT_U8_DATA:
 	case MMT_U16_DATA:
 	case MMT_U32_DATA:
 	case MMT_U64_DATA:
-	case MMT_U8_DATA:
 	case MMT_DATA_PORT:
 	case MMT_DATA_CHAR:
 	case MMT_DATA_FLOAT:
@@ -92,11 +58,15 @@ static enum data_type _get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
 	case MMT_UNDEFINED_TYPE:
 		return STRING;
 	default:
-		return UNKNOWN; //mmt_assert(0, "Error 2: Type [%ld], not implemented yet, data type unknown.\n", type);
+		return UNKNOWN;
 	}
 	return STRING;
 }
 
+static inline enum data_type _get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
+	long type = get_attribute_data_type( p_id, a_id );
+	return convert_data_type( type );
+}
 
 size_t str_trim( uint8_t *string, size_t size ){
 	return size;
@@ -658,7 +628,7 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 	char buff[10];
 	size_t size;
 	double d;
-
+	enum data_type type;
 	if( expr == NULL ){
 		string = NULL;
 		return 0;

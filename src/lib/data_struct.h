@@ -47,7 +47,7 @@ link_node_t *insert_node_to_link_list( link_node_t *entry, void *data );
 
 link_node_t *remove_node_from_link_list( link_node_t *entry, const void *data );
 
-void free_link_list( link_node_t *head, enum bool free_data );
+void free_link_list( link_node_t *head, bool free_data );
 void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) );
 
 static inline size_t count_node_from_link_list( const link_node_t *entry ){
@@ -143,7 +143,7 @@ mmt_map_t *mmt_map_init( int (*fun)(const void*, const void*) );
  * 		- free the parameter "key"
  * 		- free the return pointer
  */
-void * mmt_map_set_data( mmt_map_t *map, void *key, void *data, enum bool override_if_exist );
+void * mmt_map_set_data( mmt_map_t *map, void *key, void *data, bool override_if_exist );
 /**
  * Get data of a key
  * - Input:
@@ -157,7 +157,7 @@ void *mmt_map_get_data( const mmt_map_t *map, const void *key );
 /**
  * free the map and its keys-data
  */
-void mmt_map_free( mmt_map_t *map, enum bool free_data );
+void mmt_map_free( mmt_map_t *map, bool free_data );
 
 /**
  * Get number of elements in the map

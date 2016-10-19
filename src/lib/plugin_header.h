@@ -15,6 +15,14 @@
 #include <string.h>
 #include <sys/time.h>
 
+typedef struct proto_attribute_struct{
+	const char *proto;
+	const char *att;
+	uint32_t proto_id;
+	uint32_t att_id;
+	int data_type;
+}proto_attribute_t;
+
 /**
  *
  */
@@ -25,16 +33,13 @@ typedef struct message_element_struct{
 }message_element_t;
 
 typedef struct message_struct{
-	uint32_t counter;
+	uint64_t counter;
 	uint64_t timestamp;
 	size_t elements_count;
-	message_element_t **elements;
+	message_element_t *elements;
 }message_t;
 
-typedef struct proto_attribute_struct{
-	const char *proto;
-	const char *att;
-}proto_attribute_t;
+
 
 /**
  * Information of a rule in generated lib
@@ -61,7 +66,7 @@ typedef struct rule_info_struct{
 	 * - Return:
 	 * 	+ An array (size #events_count) of number.
 	 */
-	const void* (* hash_message )( const void *data );
+	const uint16_t* (* hash_message )( const void *data );
 }rule_info_t;
 
 /**

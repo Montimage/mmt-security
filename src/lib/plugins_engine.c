@@ -20,18 +20,20 @@ static int load_filter( const struct dirent *entry ){
 	char *ext = strrchr( entry->d_name, '.' );
 	return( ext && !strcmp( ext, ".so" ));
 }
-size_t _load_plugins( const rule_info_t ***ret_array ){
+size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	const rule_info_t *tmp_array, **array;
-	size_t size, i;
+	size_t size = 0, i;
+
 	size = mmt_sec_get_plugin_info( &tmp_array );
 	array = mmt_malloc( size * sizeof( void * ));
 	for( i=0; i<size; i++ )
 		array[i] = & tmp_array[i];
 	*ret_array = array;
+
 	return size;
 }
 
-size_t load_plugins( const rule_info_t ***ret_array ){
+size_t _load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	size_t size, i, j, index;
 	char path[ 256 ];
 	struct dirent **entries, *entry;
@@ -43,14 +45,14 @@ size_t load_plugins( const rule_info_t ***ret_array ){
 	rule_info_t const ** tmp_array;
 	int n;
 
-	n = scandir( PLUGINS_REPOSITORY, &entries, load_filter, alphasort );
+	n = scandir( MMT_SEC_PLUGINS_REPOSITORY, &entries, load_filter, alphasort );
 	if( n < 0 ) {
 		/* can't read PLUGINS_REPOSITORY -> just ignore and return success
 		 * (the directory may not exist or may be inaccessible, that's ok)
 		 * note: no entries were allocated at this point, no need for free().
 		 */
 		plugins_path=1;
-		n = scandir( PLUGINS_REPOSITORY_OPT, &entries, load_filter, alphasort );
+		n = scandir( MMT_SEC_PLUGINS_REPOSITORY_OPT, &entries, load_filter, alphasort );
 		if (n<0)	return 0;
 	}
 
@@ -59,11 +61,11 @@ size_t load_plugins( const rule_info_t ***ret_array ){
 	for( i = 0 ; i < n ; ++i ) {
 		entry = entries[i];
 		(void)snprintf( path, 256, "%s/%s",
-						plugins_path==0 ? PLUGINS_REPOSITORY : PLUGINS_REPOSITORY_OPT,
+						plugins_path==0 ? MMT_SEC_PLUGINS_REPOSITORY : MMT_SEC_PLUGINS_REPOSITORY_OPT,
 						entry->d_name );
 
 		//load plugin
-		size = load_plugin( &tmp_array, path );
+		size = load_mmt_sec_rule( &tmp_array, path );
 
 		//add rule to array only if it has not been done before to avoid duplicate
 		for( j=0; j<size && index < MAX_PLUGIN_COUNT; j++ ){
@@ -89,7 +91,7 @@ size_t load_plugins( const rule_info_t ***ret_array ){
 	return index;
 }
 
-size_t load_plugin( rule_info_t const *** plugins_arr, const char *plugin_path_name ){
+size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_path_name ){
 	void* lib = dlopen ( plugin_path_name, RTLD_LAZY );
 	rule_info_t const* tmp_array;
 	rule_info_t const** ret_array;

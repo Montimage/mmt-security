@@ -412,7 +412,7 @@ const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm );
  *			otherwise, false if #fsm is NULL or if the current state is not a
  * final state.
  */
-enum bool fsm_is_stopped( const fsm_t *fsm );
+bool fsm_is_stopped( const fsm_t *fsm );
 
 /**
  * Free the machine created by #fsm_init function
@@ -446,7 +446,7 @@ void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
 
 void fsm_get_timer_and_counter( const fsm_t *fsm, uint64_t *timer, uint64_t *counter );
 
-static inline void fsm_free_event( fsm_event_t *event, enum bool free_data ){
+static inline void fsm_free_event( fsm_event_t *event, bool free_data ){
 	if( event == NULL ) return;
 	if( free_data == YES )
 		mmt_free_and_assign_to_null( event->data );

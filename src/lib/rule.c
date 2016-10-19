@@ -16,7 +16,7 @@
 
 #define str_equal(X,Y) xmlStrcmp( X, (const xmlChar*)Y) == 0
 
-void rule_free_an_event( rule_event_t *event, enum bool free_data){
+void rule_free_an_event( rule_event_t *event, bool free_data){
 	if( event == NULL ) return;
 	if( free_data ){
 		mmt_free_and_assign_to_null( event->description );
@@ -27,7 +27,7 @@ void rule_free_an_event( rule_event_t *event, enum bool free_data){
 
 //pre-define
 void _free_rule_node( rule_node_t *node );
-void rule_free_an_operator( rule_operator_t *operator, enum bool free_data){
+void rule_free_an_operator( rule_operator_t *operator, bool free_data){
 
 	if( operator == NULL ) return;
 	if( free_data ){
@@ -52,7 +52,7 @@ void _free_rule_node( rule_node_t *node ){
 	mmt_free_and_assign_to_null( node );
 }
 
-void free_a_rule( rule_t *rule, enum bool free_data){
+void free_a_rule( rule_t *rule, bool free_data){
 	if( rule == NULL )
 		return;
 	if( free_data ){

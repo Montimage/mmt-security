@@ -59,7 +59,7 @@ static void entry_action( void *stateData, const fsm_event_t *event );
 static void exit_action( void *stateData,  const fsm_event_t *event );
 static void trans_action( void *oldStateData, const fsm_event_t *event,
       void *newStateData );
-static enum bool guard( void *condition, const fsm_event_t *event );
+static bool guard( void *condition, const fsm_event_t *event );
 
 static fsm_state_t s1, s2, s3, s4, s5, s6, s9, s10, s11, sE;
 
@@ -290,7 +290,7 @@ static void trans_action(void *oldStateData, const fsm_event_t *event,
 	}
 }
 
-static enum bool guard(void *condition, const fsm_event_t *event) {
+static bool guard(void *condition, const fsm_event_t *event) {
 	struct event_payload_struct *eventData =
 			(struct event_payload_struct *) event->data;
 

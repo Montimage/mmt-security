@@ -52,6 +52,15 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler );
 
 void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message );
 
+size_t mmt_sec_get_rules(  const mmt_sec_handler_t *handler,  const rule_info_t ***rules_array );
+
+size_t mmt_sec_get_unique_protocol_attributes( const mmt_sec_handler_t *handler, const proto_attribute_t ***proto_atts_array );
+
 char* convert_execution_trace_to_json_string( const mmt_map_t *trace );
+
+static inline uint64_t mmt_sec_encode_timeval( const struct timeval *t ){
+	uint64_t val = t->tv_sec * 1000000 + t->tv_usec;
+	return val;
+}
 
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

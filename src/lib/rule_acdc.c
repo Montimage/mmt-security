@@ -1,6 +1,6 @@
 
- /** 693
-  * This file is generated automatically on 2016-10-18 15:34:37
+ /** 695
+  * This file is generated automatically on 2016-10-19 16:55:50
   */
  #include <string.h>
  #include <stdio.h>
@@ -15,7 +15,7 @@
 
  #define PROTO_ATTS_COUNT_1 5
 
- static proto_attribute_t proto_atts_1[ PROTO_ATTS_COUNT_1 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "dest_port"}, {.proto = "tcp", .att = "flags"}, {.proto = "tcp", .att = "src_port"}};
+ static proto_attribute_t proto_atts_1[ PROTO_ATTS_COUNT_1 ] = {{.proto = "ip", .proto_id = 178, .att = "dst", .att_id = 13, .data_type = 1}, {.proto = "ip", .proto_id = 178, .att = "src", .att_id = 12, .data_type = 1}, {.proto = "tcp", .proto_id = 354, .att = "dest_port", .att_id = 2, .data_type = 0}, {.proto = "tcp", .proto_id = 354, .att = "flags", .att_id = 6, .data_type = 0}, {.proto = "tcp", .proto_id = 354, .att = "src_port", .att_id = 1, .data_type = 0}};
 
  /** 484
   * Structure to represent event data
@@ -29,7 +29,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_1;
- /** 517
+ /** 519
   * Create an instance of _msg_t_1
   */
  static inline _msg_t_1* _allocate_msg_t_1(){
@@ -43,51 +43,51 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 541
+ /** 543
   * Public API
   */
- void *mmt_sec_convert_message_to_event_1( const message_t *msg){
+ static void *convert_message_to_event_1( const message_t *msg){
 	 if( msg == NULL ) return NULL;
 	 _msg_t_1 *new_msg = _allocate_msg_t_1( sizeof( _msg_t_1 ));
 	 size_t i;
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
+		 switch( msg->elements[i].proto_id ){/** 553 For each protocol*/
 		 case 178:// protocol ip
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 13:// attribute dst
-				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 12:// attribute src
-				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 558
+			 }//end switch of att_id 560
 			 break;
 		 case 354:// protocol tcp
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 2:// attribute dest_port
-				 new_msg->tcp_dest_port = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_dest_port = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 6:// attribute flags
-				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 1:// attribute src_port
-				 new_msg->tcp_src_port = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_src_port = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 575
+			 }//end switch of att_id 577
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //578
+	 return (void *)new_msg; //580
  }//end function
  /** 449
   * Public API
   */
- const void* mmt_sec_hash_message_1( const void *data ){
-	 static uint8_t hash_table[ EVENTS_COUNT_1 ];
+ static const uint16_t* hash_message_1( const void *data ){
+	 static uint16_t hash_table[ EVENTS_COUNT_1 ];
 	 size_t i;	 _msg_t_1 *msg = (_msg_t_1 *) data;
 	 for( i=0; i<EVENTS_COUNT_1; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
-	 if( msg == NULL ) return (void *) hash_table;
+	 if( msg == NULL ) return hash_table;
 	 if( msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 1;
 	 if( msg->ip_dst != NULL && msg->ip_src != NULL && msg->tcp_flags != NULL && msg->tcp_src_port != NULL )
@@ -96,7 +96,7 @@
 		 hash_table[ 2 ] = 3;
 	 if( msg->ip_dst != NULL && msg->ip_src != NULL && msg->tcp_flags != NULL && msg->tcp_src_port != NULL )
 		 hash_table[ 3 ] = 4;
-	 return (void *)hash_table;
+	 return hash_table;
  }
  /** 91
   * Rule 1, event 1
@@ -299,7 +299,7 @@
  /** 417
   * Create a new FSM for this rule
   */
- void *mmt_sec_create_new_fsm_1(){
+ static void *create_new_fsm_1(){
 		 return fsm_init( &s_1_0, &s_1_1, &s_1_2 );//init, error, final
  }//end function
 
@@ -308,7 +308,7 @@
 
  #define PROTO_ATTS_COUNT_2 5
 
- static proto_attribute_t proto_atts_2[ PROTO_ATTS_COUNT_2 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "dest_port"}, {.proto = "tcp", .att = "flags"}, {.proto = "tcp", .att = "src_port"}};
+ static proto_attribute_t proto_atts_2[ PROTO_ATTS_COUNT_2 ] = {{.proto = "ip", .proto_id = 178, .att = "dst", .att_id = 13, .data_type = 1}, {.proto = "ip", .proto_id = 178, .att = "src", .att_id = 12, .data_type = 1}, {.proto = "tcp", .proto_id = 354, .att = "dest_port", .att_id = 2, .data_type = 0}, {.proto = "tcp", .proto_id = 354, .att = "flags", .att_id = 6, .data_type = 0}, {.proto = "tcp", .proto_id = 354, .att = "src_port", .att_id = 1, .data_type = 0}};
 
  /** 484
   * Structure to represent event data
@@ -322,7 +322,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_2;
- /** 517
+ /** 519
   * Create an instance of _msg_t_2
   */
  static inline _msg_t_2* _allocate_msg_t_2(){
@@ -336,58 +336,58 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 541
+ /** 543
   * Public API
   */
- void *mmt_sec_convert_message_to_event_2( const message_t *msg){
+ static void *convert_message_to_event_2( const message_t *msg){
 	 if( msg == NULL ) return NULL;
 	 _msg_t_2 *new_msg = _allocate_msg_t_2( sizeof( _msg_t_2 ));
 	 size_t i;
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
+		 switch( msg->elements[i].proto_id ){/** 553 For each protocol*/
 		 case 178:// protocol ip
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 13:// attribute dst
-				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 12:// attribute src
-				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 558
+			 }//end switch of att_id 560
 			 break;
 		 case 354:// protocol tcp
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 2:// attribute dest_port
-				 new_msg->tcp_dest_port = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_dest_port = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 6:// attribute flags
-				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 1:// attribute src_port
-				 new_msg->tcp_src_port = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_src_port = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 575
+			 }//end switch of att_id 577
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //578
+	 return (void *)new_msg; //580
  }//end function
  /** 449
   * Public API
   */
- const void* mmt_sec_hash_message_2( const void *data ){
-	 static uint8_t hash_table[ EVENTS_COUNT_2 ];
+ static const uint16_t* hash_message_2( const void *data ){
+	 static uint16_t hash_table[ EVENTS_COUNT_2 ];
 	 size_t i;	 _msg_t_2 *msg = (_msg_t_2 *) data;
 	 for( i=0; i<EVENTS_COUNT_2; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
-	 if( msg == NULL ) return (void *) hash_table;
+	 if( msg == NULL ) return hash_table;
 	 if( msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 5;
 	 if( msg->ip_dst != NULL && msg->ip_src != NULL && msg->tcp_flags != NULL && msg->tcp_src_port != NULL )
 		 hash_table[ 1 ] = 6;
 	 if( msg->ip_dst != NULL && msg->ip_src != NULL && msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 2 ] = 7;
-	 return (void *)hash_table;
+	 return hash_table;
  }
  /** 91
   * Rule 2, event 5
@@ -566,7 +566,7 @@
  /** 417
   * Create a new FSM for this rule
   */
- void *mmt_sec_create_new_fsm_2(){
+ static void *create_new_fsm_2(){
 		 return fsm_init( &s_2_0, &s_2_1, &s_2_2 );//init, error, final
  }//end function
 
@@ -575,7 +575,7 @@
 
  #define PROTO_ATTS_COUNT_3 4
 
- static proto_attribute_t proto_atts_3[ PROTO_ATTS_COUNT_3 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "dest_port"}, {.proto = "tcp", .att = "flags"}};
+ static proto_attribute_t proto_atts_3[ PROTO_ATTS_COUNT_3 ] = {{.proto = "ip", .proto_id = 178, .att = "dst", .att_id = 13, .data_type = 1}, {.proto = "ip", .proto_id = 178, .att = "src", .att_id = 12, .data_type = 1}, {.proto = "tcp", .proto_id = 354, .att = "dest_port", .att_id = 2, .data_type = 0}, {.proto = "tcp", .proto_id = 354, .att = "flags", .att_id = 6, .data_type = 0}};
 
  /** 484
   * Structure to represent event data
@@ -588,7 +588,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_3;
- /** 517
+ /** 519
   * Create an instance of _msg_t_3
   */
  static inline _msg_t_3* _allocate_msg_t_3(){
@@ -601,53 +601,53 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 541
+ /** 543
   * Public API
   */
- void *mmt_sec_convert_message_to_event_3( const message_t *msg){
+ static void *convert_message_to_event_3( const message_t *msg){
 	 if( msg == NULL ) return NULL;
 	 _msg_t_3 *new_msg = _allocate_msg_t_3( sizeof( _msg_t_3 ));
 	 size_t i;
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
+		 switch( msg->elements[i].proto_id ){/** 553 For each protocol*/
 		 case 178:// protocol ip
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 13:// attribute dst
-				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 12:// attribute src
-				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 558
+			 }//end switch of att_id 560
 			 break;
 		 case 354:// protocol tcp
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 2:// attribute dest_port
-				 new_msg->tcp_dest_port = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_dest_port = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 6:// attribute flags
-				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 575
+			 }//end switch of att_id 577
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //578
+	 return (void *)new_msg; //580
  }//end function
  /** 449
   * Public API
   */
- const void* mmt_sec_hash_message_3( const void *data ){
-	 static uint8_t hash_table[ EVENTS_COUNT_3 ];
+ static const uint16_t* hash_message_3( const void *data ){
+	 static uint16_t hash_table[ EVENTS_COUNT_3 ];
 	 size_t i;	 _msg_t_3 *msg = (_msg_t_3 *) data;
 	 for( i=0; i<EVENTS_COUNT_3; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
-	 if( msg == NULL ) return (void *) hash_table;
+	 if( msg == NULL ) return hash_table;
 	 if( msg->tcp_dest_port != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 8;
 	 if( msg->ip_dst != NULL && msg->ip_src != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 1 ] = 9;
-	 return (void *)hash_table;
+	 return hash_table;
  }
  /** 91
   * Rule 3, event 8
@@ -758,7 +758,7 @@
  /** 417
   * Create a new FSM for this rule
   */
- void *mmt_sec_create_new_fsm_3(){
+ static void *create_new_fsm_3(){
 		 return fsm_init( &s_3_0, &s_3_1, &s_3_2 );//init, error, final
  }//end function
 
@@ -767,7 +767,7 @@
 
  #define PROTO_ATTS_COUNT_4 3
 
- static proto_attribute_t proto_atts_4[ PROTO_ATTS_COUNT_4 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "flags"}};
+ static proto_attribute_t proto_atts_4[ PROTO_ATTS_COUNT_4 ] = {{.proto = "ip", .proto_id = 178, .att = "dst", .att_id = 13, .data_type = 1}, {.proto = "ip", .proto_id = 178, .att = "src", .att_id = 12, .data_type = 1}, {.proto = "tcp", .proto_id = 354, .att = "flags", .att_id = 6, .data_type = 0}};
 
  /** 484
   * Structure to represent event data
@@ -779,7 +779,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_4;
- /** 517
+ /** 519
   * Create an instance of _msg_t_4
   */
  static inline _msg_t_4* _allocate_msg_t_4(){
@@ -791,50 +791,50 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 541
+ /** 543
   * Public API
   */
- void *mmt_sec_convert_message_to_event_4( const message_t *msg){
+ static void *convert_message_to_event_4( const message_t *msg){
 	 if( msg == NULL ) return NULL;
 	 _msg_t_4 *new_msg = _allocate_msg_t_4( sizeof( _msg_t_4 ));
 	 size_t i;
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
+		 switch( msg->elements[i].proto_id ){/** 553 For each protocol*/
 		 case 178:// protocol ip
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 13:// attribute dst
-				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 12:// attribute src
-				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 558
+			 }//end switch of att_id 560
 			 break;
 		 case 354:// protocol tcp
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 6:// attribute flags
-				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 575
+			 }//end switch of att_id 577
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //578
+	 return (void *)new_msg; //580
  }//end function
  /** 449
   * Public API
   */
- const void* mmt_sec_hash_message_4( const void *data ){
-	 static uint8_t hash_table[ EVENTS_COUNT_4 ];
+ static const uint16_t* hash_message_4( const void *data ){
+	 static uint16_t hash_table[ EVENTS_COUNT_4 ];
 	 size_t i;	 _msg_t_4 *msg = (_msg_t_4 *) data;
 	 for( i=0; i<EVENTS_COUNT_4; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
-	 if( msg == NULL ) return (void *) hash_table;
+	 if( msg == NULL ) return hash_table;
 	 if( msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 12;
 	 if( msg->ip_dst != NULL && msg->ip_src != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 1 ] = 13;
-	 return (void *)hash_table;
+	 return hash_table;
  }
  /** 91
   * Rule 4, event 12
@@ -871,7 +871,7 @@
 	 if( ev_data->tcp_flags == NULL ) return 0;/* 62 */
 	 double tcp_flags = *( ev_data->tcp_flags );
 
-	 return ((tcp_flags == 2) && (0 != strcmp(ip_dst , ip_dst_12) && 0 == strcmp(ip_src , ip_src_12)));
+	 return ((tcp_flags == 2) && (0 == strcmp(ip_dst , ip_dst_12) && 0 == strcmp(ip_src , ip_src_12)));
  }
  
  /** 340
@@ -949,7 +949,7 @@
  /** 417
   * Create a new FSM for this rule
   */
- void *mmt_sec_create_new_fsm_4(){
+ static void *create_new_fsm_4(){
 		 return fsm_init( &s_4_0, &s_4_1, &s_4_2 );//init, error, final
  }//end function
 
@@ -958,7 +958,7 @@
 
  #define PROTO_ATTS_COUNT_5 3
 
- static proto_attribute_t proto_atts_5[ PROTO_ATTS_COUNT_5 ] = {{.proto = "ip", .att = "dst"}, {.proto = "ip", .att = "src"}, {.proto = "tcp", .att = "flags"}};
+ static proto_attribute_t proto_atts_5[ PROTO_ATTS_COUNT_5 ] = {{.proto = "ip", .proto_id = 178, .att = "dst", .att_id = 13, .data_type = 1}, {.proto = "ip", .proto_id = 178, .att = "src", .att_id = 12, .data_type = 1}, {.proto = "tcp", .proto_id = 354, .att = "flags", .att_id = 6, .data_type = 0}};
 
  /** 484
   * Structure to represent event data
@@ -970,7 +970,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_5;
- /** 517
+ /** 519
   * Create an instance of _msg_t_5
   */
  static inline _msg_t_5* _allocate_msg_t_5(){
@@ -982,50 +982,50 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 541
+ /** 543
   * Public API
   */
- void *mmt_sec_convert_message_to_event_5( const message_t *msg){
+ static void *convert_message_to_event_5( const message_t *msg){
 	 if( msg == NULL ) return NULL;
 	 _msg_t_5 *new_msg = _allocate_msg_t_5( sizeof( _msg_t_5 ));
 	 size_t i;
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
+		 switch( msg->elements[i].proto_id ){/** 553 For each protocol*/
 		 case 178:// protocol ip
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 13:// attribute dst
-				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_dst = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 12:// attribute src
-				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->ip_src = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 558
+			 }//end switch of att_id 560
 			 break;
 		 case 354:// protocol tcp
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 6:// attribute flags
-				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->tcp_flags = (double *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 575
+			 }//end switch of att_id 577
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //578
+	 return (void *)new_msg; //580
  }//end function
  /** 449
   * Public API
   */
- const void* mmt_sec_hash_message_5( const void *data ){
-	 static uint8_t hash_table[ EVENTS_COUNT_5 ];
+ static const uint16_t* hash_message_5( const void *data ){
+	 static uint16_t hash_table[ EVENTS_COUNT_5 ];
 	 size_t i;	 _msg_t_5 *msg = (_msg_t_5 *) data;
 	 for( i=0; i<EVENTS_COUNT_5; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
-	 if( msg == NULL ) return (void *) hash_table;
+	 if( msg == NULL ) return hash_table;
 	 if( msg->tcp_flags != NULL )
 		 hash_table[ 0 ] = 10;
 	 if( msg->ip_dst != NULL && msg->ip_src != NULL && msg->tcp_flags != NULL )
 		 hash_table[ 1 ] = 11;
-	 return (void *)hash_table;
+	 return hash_table;
  }
  /** 91
   * Rule 5, event 10
@@ -1134,7 +1134,7 @@
  /** 417
   * Create a new FSM for this rule
   */
- void *mmt_sec_create_new_fsm_5(){
+ static void *create_new_fsm_5(){
 		 return fsm_init( &s_5_0, &s_5_1, &s_5_2 );//init, error, final
  }//end function
 
@@ -1143,7 +1143,7 @@
 
  #define PROTO_ATTS_COUNT_6 2
 
- static proto_attribute_t proto_atts_6[ PROTO_ATTS_COUNT_6 ] = {{.proto = "http", .att = "method"}, {.proto = "http", .att = "user_agent"}};
+ static proto_attribute_t proto_atts_6[ PROTO_ATTS_COUNT_6 ] = {{.proto = "http", .proto_id = 153, .att = "method", .att_id = 1, .data_type = 1}, {.proto = "http", .proto_id = 153, .att = "user_agent", .att_id = 7, .data_type = 1}};
 
  /** 484
   * Structure to represent event data
@@ -1154,7 +1154,7 @@
 	  uint64_t timestamp;//timestamp
 	  uint64_t counter;//index of packet
  }_msg_t_6;
- /** 517
+ /** 519
   * Create an instance of _msg_t_6
   */
  static inline _msg_t_6* _allocate_msg_t_6(){
@@ -1165,43 +1165,43 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 541
+ /** 543
   * Public API
   */
- void *mmt_sec_convert_message_to_event_6( const message_t *msg){
+ static void *convert_message_to_event_6( const message_t *msg){
 	 if( msg == NULL ) return NULL;
 	 _msg_t_6 *new_msg = _allocate_msg_t_6( sizeof( _msg_t_6 ));
 	 size_t i;
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i]->proto_id ){/** 551 For each protocol*/
+		 switch( msg->elements[i].proto_id ){/** 553 For each protocol*/
 		 case 153:// protocol http
-			 switch( msg->elements[i]->att_id ){
+			 switch( msg->elements[i].att_id ){
 			 case 1:// attribute method
-				 new_msg->http_method = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->http_method = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
 			 case 7:// attribute user_agent
-				 new_msg->http_user_agent = (char *) mmt_mem_retain( msg->elements[i]->data );
+				 new_msg->http_user_agent = (char *) mmt_mem_retain( msg->elements[i].data );
 				 break;
-			 }//end switch of att_id 575
+			 }//end switch of att_id 577
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //578
+	 return (void *)new_msg; //580
  }//end function
  /** 449
   * Public API
   */
- const void* mmt_sec_hash_message_6( const void *data ){
-	 static uint8_t hash_table[ EVENTS_COUNT_6 ];
+ static const uint16_t* hash_message_6( const void *data ){
+	 static uint16_t hash_table[ EVENTS_COUNT_6 ];
 	 size_t i;	 _msg_t_6 *msg = (_msg_t_6 *) data;
 	 for( i=0; i<EVENTS_COUNT_6; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
-	 if( msg == NULL ) return (void *) hash_table;
+	 if( msg == NULL ) return hash_table;
 	 if( msg->http_method != NULL )
 		 hash_table[ 0 ] = 1;
 	 if( msg->http_user_agent != NULL )
 		 hash_table[ 1 ] = 2;
-	 return (void *)hash_table;
+	 return hash_table;
  }
  /** 91
   * Rule 6, event 1
@@ -1226,7 +1226,7 @@
 	 if( ev_data->http_user_agent == NULL ) return 0;/* 62 */
 	 const char *http_user_agent =  ev_data->http_user_agent ;
 
-	 return 0 != strcmp(http_user_agent , "phantom");
+	 return 0 == strcmp(http_user_agent , "phantom");
  }
  
  /** 340
@@ -1304,12 +1304,12 @@
  /** 417
   * Create a new FSM for this rule
   */
- void *mmt_sec_create_new_fsm_6(){
+ static void *create_new_fsm_6(){
 		 return fsm_init( &s_6_0, &s_6_1, &s_6_2 );//init, error, final
  }//end function
 
  //======================================GENERAL======================================
- /** 591
+ /** 593
   * Information of 6 rules
   */
  size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){
@@ -1324,9 +1324,9 @@
 			 .description      = "Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,
-			 .create_instance  = &mmt_sec_create_new_fsm_1,
-			 .hash_message     = &mmt_sec_hash_message_1,
-			 .convert_message  = &mmt_sec_convert_message_to_event_1
+			 .create_instance  = &create_new_fsm_1,
+			 .hash_message     = &hash_message_1,
+			 .convert_message  = &convert_message_to_event_1
 		 },
 		 {
 			 .id               = 2,
@@ -1338,9 +1338,9 @@
 			 .description      = "Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,
-			 .create_instance  = &mmt_sec_create_new_fsm_2,
-			 .hash_message     = &mmt_sec_hash_message_2,
-			 .convert_message  = &mmt_sec_convert_message_to_event_2
+			 .create_instance  = &create_new_fsm_2,
+			 .hash_message     = &hash_message_2,
+			 .convert_message  = &convert_message_to_event_2
 		 },
 		 {
 			 .id               = 3,
@@ -1352,9 +1352,9 @@
 			 .description      = "TCP SYN requests on microsoft-ds port 445 with SYN ACK.",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,
-			 .create_instance  = &mmt_sec_create_new_fsm_3,
-			 .hash_message     = &mmt_sec_hash_message_3,
-			 .convert_message  = &mmt_sec_convert_message_to_event_3
+			 .create_instance  = &create_new_fsm_3,
+			 .hash_message     = &hash_message_3,
+			 .convert_message  = &convert_message_to_event_3
 		 },
 		 {
 			 .id               = 4,
@@ -1366,9 +1366,9 @@
 			 .description      = "Two successive TCP SYN requests but with different destnation addresses.",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,
-			 .create_instance  = &mmt_sec_create_new_fsm_4,
-			 .hash_message     = &mmt_sec_hash_message_4,
-			 .convert_message  = &mmt_sec_convert_message_to_event_4
+			 .create_instance  = &create_new_fsm_4,
+			 .hash_message     = &hash_message_4,
+			 .convert_message  = &convert_message_to_event_4
 		 },
 		 {
 			 .id               = 5,
@@ -1380,9 +1380,9 @@
 			 .description      = "TCP SYN requests with SYN ACK.",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = "py_createstix(4_TCP_SYN_request_without_SYN_ACK_could_be_a_spoofed_address, ip.src.10)",
-			 .create_instance  = &mmt_sec_create_new_fsm_5,
-			 .hash_message     = &mmt_sec_hash_message_5,
-			 .convert_message  = &mmt_sec_convert_message_to_event_5
+			 .create_instance  = &create_new_fsm_5,
+			 .hash_message     = &hash_message_5,
+			 .convert_message  = &convert_message_to_event_5
 		 },
 		 {
 			 .id               = 6,
@@ -1394,9 +1394,9 @@
 			 .description      = "Get request from ghost",
 			 .if_satisfied     = NULL,
 			 .if_not_satisfied = NULL,
-			 .create_instance  = &mmt_sec_create_new_fsm_6,
-			 .hash_message     = &mmt_sec_hash_message_6,
-			 .convert_message  = &mmt_sec_convert_message_to_event_6
+			 .create_instance  = &create_new_fsm_6,
+			 .hash_message     = &hash_message_6,
+			 .convert_message  = &convert_message_to_event_6
 		 }
 	 };
 	 *rules_arr = rules;

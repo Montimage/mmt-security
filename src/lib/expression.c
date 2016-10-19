@@ -15,7 +15,7 @@
 #include "mmt_log.h"
 #include "mmt_dpi.h"
 
-#define MAX_STRING_SIZE 1000
+#define MAX_STRING_SIZE 10000
 
 /**
  * Convert from MMT_DPI_DATA_TYPE to MMT_SEC_DATA_TYPE that is either a STRING or a NUMERIC
@@ -134,14 +134,14 @@ expression_t *expr_create_an_expression( enum expression type, void *data ){
 }
 
 /** Public API */
-void expr_free_a_constant( constant_t *x, enum bool free_data){
+void expr_free_a_constant( constant_t *x, bool free_data){
 	if( free_data == YES )
 		mmt_free_and_assign_to_null( x->data );
 	mmt_free_and_assign_to_null( x );
 }
 
 /** Public API */
-void expr_free_a_variable( variable_t *x, enum bool free_data){
+void expr_free_a_variable( variable_t *x, bool free_data){
 	if( free_data == YES ){
 		mmt_free_and_assign_to_null( x->proto );
 		mmt_free_and_assign_to_null( x->att );
@@ -150,7 +150,7 @@ void expr_free_a_variable( variable_t *x, enum bool free_data){
 }
 
 /** Public API */
-void expr_free_an_operation( operation_t *x, enum bool free_data){
+void expr_free_an_operation( operation_t *x, bool free_data){
 	link_node_t *ptr, *q;
 	//free data and parameters of this operation
 	if( free_data == YES){
@@ -173,7 +173,7 @@ void expr_free_an_operation( operation_t *x, enum bool free_data){
 }
 
 /** Public API */
-void expr_free_an_expression( expression_t *expr, enum bool free_data){
+void expr_free_an_expression( expression_t *expr, bool free_data){
 	switch( expr->type ){
 		case VARIABLE:
 			expr_free_a_variable( expr->variable, free_data);
@@ -279,9 +279,9 @@ size_t _parse_a_string( char **name, const char *string, size_t str_size ){
 /**
  * Parse a number: integer or float
  */
-enum bool _parse_a_number( double **num, const char *string, size_t str_size ){
+size_t _parse_a_number( double **num, const char *string, size_t str_size ){
 	size_t i = 0, index = 0;
-	enum bool has_dot = NO;
+	bool has_dot = NO;
 	const char *temp;
 	char *str;
 	*num = NULL;
@@ -316,7 +316,8 @@ enum bool _parse_a_number( double **num, const char *string, size_t str_size ){
 	str  = mmt_mem_dup( temp, i );
 	*num  = mmt_malloc( sizeof( double ));
 	**num = atof( str );
-	mmt_free_and_assign_to_null( str );
+
+	mmt_free( str );
 
 	return index;
 }
@@ -368,7 +369,7 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 	char const *temp;
 	double *num = NULL;
 	variable_t *var;
-	enum bool has_reference = NO;
+	bool has_reference = NO;
 
 	*expr = NULL;
 
@@ -407,12 +408,12 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 	return index;
 }
 
-inline char _get_the_next_char( const char *string ){
+static inline char _get_the_next_char( const char *string ){
 	while( isspace( *string )) string ++;
 	return *string;
 }
 
-enum bool _parse_a_boolean_expression( enum bool is_first_time, expression_t *expr, const char *string ){
+static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t *expr, const char *string ){
 	//parse expression and create sub-tree, expr->operator = top operator
 	//((ARP.OPCODE == 2)&&(ARP.SRC_PROTO == ARP.SRC_PROTO.1))
 	//OR, AND, NEQ, EQ, GT, GTE, LT, LTE, THEN, COMPUTE, XC, XCE, XD, XDE, XE, ADD, SUB, MUL, DIV
@@ -420,7 +421,7 @@ enum bool _parse_a_boolean_expression( enum bool is_first_time, expression_t *ex
 
 	const char *temp = string;
 	const char *temp2 = string;
-
+	double *new_number = NULL;
 	expression_t *new_expr;
 	operation_t *new_op;
 	variable_t *new_var;
@@ -459,9 +460,10 @@ enum bool _parse_a_boolean_expression( enum bool is_first_time, expression_t *ex
 		//do nothing
 	}  else if (*temp == '\'') {
 		//a 'string'
-		index = _parse_constant( &new_cont, temp, MAX_STRING_SIZE );
+		index = _parse_a_string( &new_string, temp, MAX_STRING_SIZE );
 
-		new_expr = expr_create_an_expression( CONSTANT, new_cont );
+		new_expr = expr_create_an_expression( CONSTANT,
+				expr_create_a_constant(STRING, mmt_mem_size( new_string ), new_string) );
 		new_expr->father = expr;
 
 		//append new_expr to expr->params_list
@@ -494,9 +496,10 @@ enum bool _parse_a_boolean_expression( enum bool is_first_time, expression_t *ex
 		_parse_a_boolean_expression(NO, new_expr, temp + index );
 	} else if (isdigit(*temp)) {
 		//a number 1.0
-		index = _parse_constant( &new_cont, temp, MAX_STRING_SIZE );
+		index = _parse_a_number( &new_number, temp, MAX_STRING_SIZE );
+		//found a number
 		//create a new expression
-		new_expr = expr_create_an_expression( CONSTANT, new_cont );
+		new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(NUMERIC, sizeof( double), new_number) );
 		new_expr->father = expr;
 		//append new_expr to expr->params_list
 		expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
@@ -646,6 +649,7 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 		size = snprintf( buff, sizeof( buff), "\"%s\"", (char *)expr->data );
 	}
 	*string = mmt_mem_dup( buff, size );
+
 	return size;
 }
 
@@ -654,32 +658,27 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
  */
 size_t expr_stringify_variable( char **string, const variable_t *var){
 	size_t size = 0;
+	char buff[ 250 ];
 	*string = NULL;
 
 	if( var == NULL ){
 		return 0;
 	}
 
-	size = mmt_mem_size( var->proto ) + mmt_mem_size( var->att ) + 1;//1 for .
-
-
 	if( var->ref_index != (uint8_t)UNKNOWN ){
-		size += 1 + _num_digits( var->ref_index ); //1 byte for .
-		*string = mmt_malloc( size ); //mmt_malloc allocates size+1
-		snprintf(*string, size+1, "%s_%s_%d", var->proto, var->att, var->ref_index); //+1 for null character
+		size = snprintf(buff, 250, "%s_%s_%d", var->proto, var->att, var->ref_index);
 	}else{
-		*string = mmt_malloc( size ); //mmt_malloc allocates size+1
-		snprintf(*string, size+1, "%s_%s", var->proto, var->att ); //+1 for null character
+		size = snprintf(buff, 250, "%s_%s", var->proto, var->att );
 	}
-
+	*string = mmt_mem_dup( buff, size );
 	return size;
 }
 
-inline enum bool _is_comparison_operator( int op ){
+inline bool _is_comparison_operator( int op ){
 	return op == NEQ || op == EQ || op == GT || op == GTE || op == LT || op == LTE;
 }
 
-inline enum bool _is_string_param( const operation_t *opt ){
+inline bool _is_string_param( const operation_t *opt ){
 	link_node_t *ptr;
 	expression_t *expr;
 	ptr = opt->params_list;
@@ -699,69 +698,47 @@ inline enum bool _is_string_param( const operation_t *opt ){
  * Public API
  */
 size_t expr_stringify_operation( char **string, operation_t *opt ){
-	char *tmp, *root, *str;
+	char *tmp = NULL;
 	const char *delim;
-	link_node_t *ptr;
-	size_t size, delim_size = 0, new_size = 0;
+	link_node_t *node;
+	size_t index = 0;
 	expression_t *expr;
 
-	enum operator opt_operator;
-	char opt_name[100];
+	char str[ MAX_STRING_SIZE ];
 
-
-	root = mmt_malloc( 10000 );
-	*string = root;
-
-	opt_operator = opt->operator;
-	snprintf( opt_name, sizeof( opt_name), "%s", opt->name);
 	//change comparison of string to function: "a" == "b" ==> 0 == strcmp("a", "b")
-	if( _is_comparison_operator(opt_operator) && _is_string_param ( opt ) ){
-		opt_operator = FUNCTION;
-		snprintf( opt_name, 12, "0 %s strcmp", opt->name );
-	}
-
-	if( opt_operator == FUNCTION ){
-		sprintf( root, "%s(", opt_name );
-		new_size = strlen( opt_name ) + 1; //+1 for '('
-	}else{
-		sprintf( root, "(" );
-		new_size = 1;
-	}
-
-	//delimiter
-	if( opt_operator == FUNCTION ){
+	if( _is_comparison_operator( opt->operator ) && _is_string_param ( opt ) ){
+		//delimiter
 		delim = ",";
-		delim_size = 1;
+		index += sprintf( &str[ index ], "0 == strcmp(" );
+	}else if( opt->operator == FUNCTION ){
+		delim = ",";
+		index += sprintf( &str[ index ], "%s(", opt->name );
 	}else{
 		delim = opt->name;
-		delim_size = strlen( delim );
+		index += sprintf( &str[ index ], "(" );
 	}
 
 	//parameters
-	ptr = opt->params_list;
-	while( ptr != NULL ){
-		expr = (expression_t *) ptr->data;
-		size = expr_stringify_expression( &tmp, expr );
+	node = opt->params_list;
+	while( node != NULL ){
+		expr = (expression_t *) node->data;
+		(void) expr_stringify_expression( &tmp, expr );
 		//the last parameter ==> no need delimiter but a close-bracket
-		if( ptr->next == NULL ){
-			size += 1; ////close bracket
-			snprintf(root + new_size, size+1, "%s)", tmp);
+		if( node->next == NULL ){
+			index += sprintf( &str[ index ], "%s)", tmp);
 		}else{
-			size += delim_size + 2; //+2 for spaces around the delimiter
-			snprintf(root + new_size, size+1, "%s %s ", tmp, delim );
+			index += sprintf( &str[ index ], "%s %s ", tmp , delim);
 		}
-		new_size += size;
 		//tmp was created in expr_stringify_expression( &tmp ...
-		mmt_free_and_assign_to_null( tmp );
-		ptr = ptr->next;
+		mmt_free( tmp );
+		node = node->next;
 	};
 
-
 	//clone string
-	*string = mmt_mem_dup( root, new_size );
-	mmt_free_and_assign_to_null( root );
+	*string = mmt_mem_dup( str, index );
 
-	return new_size;
+	return index;
 }
 /**
  * public API
@@ -816,7 +793,7 @@ size_t _get_unique_variables_of_expression( const expression_t *expr, mmt_map_t 
 /**
  * Public API
  */
-size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map, enum bool has_index ){
+size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map, bool has_index ){
 	size_t var_count = 0;
 	mmt_map_t *map;
 	void *ptr;

@@ -112,7 +112,7 @@ typedef struct expression_struct{
  * - Return:
  * 	+ number of unique variables
  */
-size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map, enum bool has_ref);
+size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map, bool has_ref);
 
 /**
  * Parse a string to get expression
@@ -154,10 +154,10 @@ void expr_update_data_type( expression_t *expr );
 /**
  * Free a constant
  */
-void expr_free_a_constant( constant_t *, enum bool free_data);
-void expr_free_a_variable( variable_t *, enum bool free_data);
-void expr_free_an_operation( operation_t *, enum bool free_data);
-void expr_free_an_expression( expression_t *, enum bool free_data);
+void expr_free_a_constant( constant_t *, bool free_data);
+void expr_free_a_variable( variable_t *, bool free_data);
+void expr_free_an_operation( operation_t *, bool free_data);
+void expr_free_an_expression( expression_t *, bool free_data);
 
 constant_t *evaluate_expression( const expression_t *expr, const constant_t **constants, size_t const_size );
 

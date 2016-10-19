@@ -157,9 +157,9 @@ typedef struct rule_struct{
  */
 size_t read_rules_from_file( const char * file_name, rule_t *** properties_arr);
 
-void free_a_rule( rule_t *, enum bool free_data);
-void rule_free_an_operator( rule_operator_t *, enum bool free_data);
-void rule_free_an_event( rule_event_t *, enum bool free_data);
+void free_a_rule( rule_t *, bool free_data);
+void rule_free_an_operator( rule_operator_t *, bool free_data);
+void rule_free_an_event( rule_event_t *, bool free_data);
 
 
 /**

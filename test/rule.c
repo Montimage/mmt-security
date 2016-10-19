@@ -12,12 +12,12 @@
 #include "../src/lib/mmt_alloc.h"
 #include "../src/lib/rule.h"
 
-void print_variable( void *key, void *data, void *user_data ){
+void print_variable( void *key, void *data, void *user_data, size_t index, size_t total ){
 	variable_t *var = (variable_t *)key;
 	mmt_debug("   - %s.%s", var->proto, var->att );
 }
 
-void print_event( void *key, void *data, void *user_data ){
+void print_event( void *key, void *data, void *user_data, size_t index, size_t total ){
 	rule_event_t *event = (rule_event_t *)data;
 	mmt_map_t *map;
 	mmt_debug(" Event %d", *(uint8_t*)key );

@@ -9,8 +9,8 @@
 #define SRC_LIB_PLUGIN_ENGINE_H_
 
 
-#define PLUGINS_REPOSITORY "rules"
-#define PLUGINS_REPOSITORY_OPT "/opt/mmt/security/rules"
+#define MMT_SEC_PLUGINS_REPOSITORY "rules"
+#define MMT_SEC_PLUGINS_REPOSITORY_OPT "/opt/mmt/security/rules"
 #include "plugin_header.h"
 
 /**
@@ -18,20 +18,20 @@
  * - Return
  * 	+ number of loaded rules
  */
-size_t load_plugins( rule_info_t const *** plugins_arr );
+size_t load_mmt_sec_rules( rule_info_t const *** plugins_arr );
 
 /**
  * Loads one plugin.
  * - Return
  * 	+ number of loaded rules
  */
-size_t load_plugin( rule_info_t const ***plugins_arr, const char *plugin_path_name );
+size_t load_mmt_sec_rule( rule_info_t const ***plugins_arr, const char *plugin_path_name );
 /**
  * Closes all loaded plugins. This function MUST only be used when the protocols corresponding
  * to the loaded plugins have been retrieved. Normally this function is used when closing the
  * library.
  */
-void close_plugins();
+void close_mmt_sec_rules();
 
 
 #endif /* SRC_LIB_PLUGIN_ENGINE_H_ */

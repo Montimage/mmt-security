@@ -50,7 +50,7 @@ typedef struct fsm_struct{
 /**
  * Execute an entry
  */
-static void _exec_action( enum bool entry, const void *event_data, const fsm_state_t *state, _fsm_t *fsm ){
+static void _exec_action( bool entry, const void *event_data, const fsm_state_t *state, _fsm_t *fsm ){
 	enum fsm_action_type action_type;
 	if( entry == YES )
 		action_type = state->entry_action;
@@ -216,7 +216,7 @@ const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm) {
 /**
  * Public API
  */
-enum bool fsm_is_stopped( const fsm_t *fsm) {
+bool fsm_is_stopped( const fsm_t *fsm) {
 	if (!fsm) return YES;
 	return ((_fsm_t *)fsm)->current_state->transitions_count == 0;
 }
@@ -254,7 +254,7 @@ void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
 
 	_fsm = (_fsm_t *)fsm;
 	data = mmt_map_get_data( _fsm->execution_trace, &event_id );
-	mmt_debug("Get history %d: %s", event_id, data == NULL? "NUL": "not NULL" );
+	//mmt_debug("Get history %d: %s", event_id, data == NULL? "NUL": "not NULL" );
 	return data;
 }
 

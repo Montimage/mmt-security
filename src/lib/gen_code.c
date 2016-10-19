@@ -415,7 +415,7 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 	*/
 
 	_gen_comment(fd, "Create a new FSM for this rule");
-	fprintf( fd, "void *mmt_sec_create_new_fsm_%d(){", rule->id);
+	fprintf( fd, "static void *create_new_fsm_%d(){", rule->id);
 	fprintf( fd, "\n\t\t return fsm_init( &s_%d_0, &s_%d_1, &s_%d_2 );//init, error, final",
 			rule->id, rule->id, rule->id );
 	fprintf( fd, "\n }//end function");
@@ -447,14 +447,14 @@ void _iterate_events_to_gen_hash_function( void *key, void *data, void *user_dat
 	//first element
 	if( index == 0 ){
 		_gen_comment( fd, "Public API" );
-		fprintf( fd, "const void* mmt_sec_hash_message_%d( const void *data ){", rule_id );
-		fprintf( fd, "\n\t static uint8_t hash_table[ EVENTS_COUNT_%d ];", rule_id );
+		fprintf( fd, "static const uint16_t* hash_message_%d( const void *data ){", rule_id );
+		fprintf( fd, "\n\t static uint16_t hash_table[ EVENTS_COUNT_%d ];", rule_id );
 		fprintf( fd, "\n\t size_t i;\t _msg_t_%d *msg = (_msg_t_%d *) data;", rule_id, rule_id );
 
 		fprintf( fd, "\n\t for( i=0; i<EVENTS_COUNT_%d; i++) hash_table[i] = 0;", rule_id );
 		_gen_comment_line(fd, "Rest hash_table. This is call for every executions");
 
-		fprintf( fd, "\n\t if( msg == NULL ) return (void *) hash_table;");
+		fprintf( fd, "\n\t if( msg == NULL ) return hash_table;");
 	}
 
 	//body
@@ -470,7 +470,7 @@ void _iterate_events_to_gen_hash_function( void *key, void *data, void *user_dat
 
 	//last
 	if( index == total-1 ){
-		fprintf( fd, "\n\t return (void *)hash_table;");
+		fprintf( fd, "\n\t return hash_table;");
 		fprintf( fd, "\n }");//end function
 	}
 }
@@ -500,9 +500,11 @@ void _iterate_variables_to_gen_array_proto_att( void *key, void *data, void *use
 	FILE *fd = (FILE *)user_data;
 	variable_t *var = (variable_t *)data;
 
-	fprintf( fd, "%c{.proto = \"%s\", .att = \"%s\"}%s",
+	fprintf( fd, "%c{.proto = \"%s\", .proto_id = %"PRIu32", .att = \"%s\", .att_id = %"PRIu32", .data_type = %d}%s",
 			index == 0 ? '{':' ',
-			var->proto, var->att,
+			var->proto, var->proto_id,
+			var->att, var->att_id,
+			var->data_type,
 			index == total-1? "};\n": ","
 			);
 }
@@ -539,7 +541,7 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 	if( index == 0 ){
 		old_proto_id = -1; //init
 		_gen_comment( fd, "Public API" );
-		fprintf( fd, "void *mmt_sec_convert_message_to_event_%d( const message_t *msg){", rule_id );
+		fprintf( fd, "static void *convert_message_to_event_%d( const message_t *msg){", rule_id );
 		fprintf( fd, "\n\t if( msg == NULL ) return NULL;" );
 		fprintf( fd, "\n\t _msg_t_%d *new_msg = _allocate_msg_t_%d( sizeof( _msg_t_%d ));", rule_id, rule_id, rule_id );
 		fprintf( fd, "\n\t size_t i;" );
@@ -547,7 +549,7 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 		fprintf( fd, "\n\t new_msg->counter = msg->counter;" );
 		fprintf( fd, "\n\t for( i=0; i<msg->elements_count; i++){" );
 
-		fprintf( fd, "\n\t\t switch( msg->elements[i]->proto_id ){" );
+		fprintf( fd, "\n\t\t switch( msg->elements[i].proto_id ){" );
 		_gen_comment_line( fd, "For each protocol");
 	}
 
@@ -559,13 +561,13 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 			fprintf( fd, "\n\t\t\t break;");
 		}
 		fprintf( fd, "\n\t\t case %d:// protocol %s", var->proto_id, var->proto );
-		fprintf( fd, "\n\t\t\t switch( msg->elements[i]->att_id ){" );
+		fprintf( fd, "\n\t\t\t switch( msg->elements[i].att_id ){" );
 	}
 
 	//content of switch
 	fprintf( fd, "\n\t\t\t case %d:// attribute %s", var->att_id, var->att );
 
-	fprintf( fd, "\n\t\t\t\t new_msg->%s_%s = %s mmt_mem_retain( msg->elements[i]->data );",
+	fprintf( fd, "\n\t\t\t\t new_msg->%s_%s = %s mmt_mem_retain( msg->elements[i].data );",
 			var->proto, var->att,
 			var->data_type == NUMERIC? "(double *)" : "(char *)");
 	fprintf( fd, "\n\t\t\t\t break;");
@@ -605,9 +607,9 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 				_string( rules[i]->if_satisfied, 'N', "UL", 'L', '"', rules[i]->if_satisfied, '"') );
 		fprintf( fd, "\n\t\t\t .if_not_satisfied = %c%s%c,",
 				_string( rules[i]->if_not_satisfied, 'N', "UL", 'L', '"', rules[i]->if_not_satisfied, '"') );
-		fprintf( fd, "\n\t\t\t .create_instance  = &mmt_sec_create_new_fsm_%d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t .hash_message     = &mmt_sec_hash_message_%d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t .convert_message  = &mmt_sec_convert_message_to_event_%d", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .create_instance  = &create_new_fsm_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .hash_message     = &hash_message_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .convert_message  = &convert_message_to_event_%d", rules[i]->id );
 
 		if( i < count -1 )
 			fprintf( fd, "\n\t\t },");

@@ -200,7 +200,7 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 	fsm_t *new_fsm = NULL;
 	uint16_t new_fsm_id = 0;
 
-	mmt_debug( "  transition to verify: %zu", fsm_ind->index );
+	//mmt_debug( "  transition to verify: %zu", fsm_ind->index );
 	val = fsm_handle_event( fsm, fsm_ind->index, event_data, &new_fsm );
 
 	//if the execution of the transition having index = fsm_ind->index creates a new fsm
@@ -229,11 +229,13 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 		//then add to new list(s)
 		_set_expecting_events_id( _engine, fsm );
 
+		return RULE_ENGINE_RESULT_CONSUME;
 		break;
 
 		//the transition cannot fire
 	case FSM_NO_STATE_CHANGE:
 		//mmt_debug( "FSM_NO_STATE_CHANGE" );
+		return RULE_ENGINE_RESULT_NOT_USED;
 		break;
 
 		//the rue is validated
@@ -260,36 +262,34 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 		break;
 	}
 
-	return RULE_ENGINE_RESULT_UNKNOWN;
+	return RULE_ENGINE_RESULT_NOT_USED;
 }
 
 /**
  * Public API
  */
 enum rule_engine_result rule_engine_process( rule_engine_t *engine, const message_t *message ){
-	mmt_assert( engine != NULL, "Error: Engine cannot be NULL" );
+	//mmt_assert( engine != NULL, "Error: Engine cannot be NULL" );
 
 	_rule_engine_t *_engine = ( _rule_engine_t *) engine;
 	size_t i;
-	void *data          = _engine->rule_info->convert_message( message );
-	const uint8_t *hash = _engine->rule_info->hash_message( data );
+	void *data           = _engine->rule_info->convert_message( message );
+	const uint16_t *hash = _engine->rule_info->hash_message( data );
 	uint8_t event_id;
-	enum bool has_event = NO;
+	bool is_need_to_retain_message = NO;
 	link_node_t *node;
 	_fsm_tran_index_t *fsm_ind;
-	enum rule_engine_result ret;
+	enum rule_engine_result ret = RULE_ENGINE_RESULT_NOT_USED;;
 	//insert #message pointer to head of #data;
 
-	mmt_debug( "===Verify Rule %d===", _engine->rule_info->id );
+	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
 	//get from hash table the list of events to be verified
 	for( i=0; i<_engine->max_events_count; i++ ){
 		event_id = hash[i];
 		//this event does not fire
 		if(  event_id == 0) continue;
 
-		has_event = YES;
-
-		mmt_debug( "Event to verify: %d", event_id );
+		//mmt_debug( "Event to verify: %d", event_id );
 		event_id = event_id % _engine->max_events_count;
 
 		//verify instances that are waiting for event_id
@@ -301,21 +301,24 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, const messag
 			//put this after node = node->next
 			// because #node can be freed in the function #_fire_transition
 			ret = _fire_transition( fsm_ind, event_id, data, _engine );
-			if( ret == RULE_ENGINE_RESULT_VALIDATE || ret == RULE_ENGINE_RESULT_ERROR ){
-				//add the message to the cache
-				mmt_map_set_data( _engine->events_data_cache, data, (void *)message, YES );
-				return ret;
+			if( ret != RULE_ENGINE_RESULT_NOT_USED){
+				is_need_to_retain_message = YES;
+				if( ret == RULE_ENGINE_RESULT_VALIDATE || ret == RULE_ENGINE_RESULT_ERROR ){
+					//add the message to the cache
+					mmt_map_set_data( _engine->events_data_cache, data, (void *)message, YES );
+					return ret;
+				}
 			}
 		}
 	}
 
 	//data was not handled by any instance
-	if( has_event == NO ){
+	if( is_need_to_retain_message == NO ){
 		mmt_free( data );
 	}else
 		mmt_map_set_data( _engine->events_data_cache, data, (void *)message, YES );
 
-	return RULE_ENGINE_RESULT_UNKNOWN;
+	return RULE_ENGINE_RESULT_NOT_USED;
 }
 
 

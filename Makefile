@@ -70,9 +70,9 @@ gen_dpi src/lib/mmt_dpi.h:
 	@echo "Generate list of protocols and their attributes"	
 	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
 
-standalone: $(LIB_OBJS)
+standalone: src/lib/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c -lmmt_core -ldl
+	$(QUIET) $(CC) -Wl,--export-dynamic -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
 
 plugin_info: $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"

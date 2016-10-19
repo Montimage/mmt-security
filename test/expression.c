@@ -20,7 +20,7 @@ int main(){
 	constant_t *cont = NULL;
 	char *s = NULL, *s1, *temp = NULL;
 	char *name = NULL;
-	enum bool ret = NO;
+	bool ret = NO;
 	size_t str_size = 10, index=0;
 	variable_t *var = NULL;
 
@@ -56,13 +56,13 @@ int main(){
 	mmt_assert(  var != NULL && index == 6, "Not good for variable with ref_index" );
 	mmt_debug( "variable = %s#%s%d", var->proto, var->att, var->ref_index );
 
-	mmt_assert( stringify_variable( &temp, var ) > 0, "Stringify is incorrect");
+	mmt_assert( expr_stringify_variable( &temp, var ) > 0, "Stringify is incorrect");
 	mmt_debug("variable: %s", temp );
 
 	s[3] = 'z'; s[4] = '.'; s[5] = '5'; s[6] = '8';
 	mmt_assert( (_parse_variable(&var, s1, str_size) == YES ), "Not good for variable" );
 
-	mmt_assert( stringify_variable( &temp, var ) > 0, "Stringify is incorrect");
+	mmt_assert( expr_stringify_variable( &temp, var ) > 0, "Stringify is incorrect");
 	mmt_debug("variable: %s", temp );
 
 	s[3] = 'x';

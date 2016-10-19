@@ -55,7 +55,7 @@ link_node_t *insert_node_to_link_list( link_node_t *head, void *data ){
 	return new_node;
 }
 
-void free_link_list( link_node_t *head, enum bool free_data ){
+void free_link_list( link_node_t *head, bool free_data ){
 	link_node_t *ptr;
 	while( head != NULL ){
 		if( free_data )
@@ -116,6 +116,7 @@ typedef struct mmt_map_node_struct{
 	struct mmt_map_node_struct *left, *right;
 	void *key, *data;
 }_mmt_map_node_t;
+
 typedef struct mmt_map_struct{
 	_mmt_map_node_t *root;
 	int (*compare_function)(const void*, const void*);
@@ -142,7 +143,7 @@ mmt_map_t *mmt_map_init( int (*fun)(const void*, const void*) ){
 	return (mmt_map_t)map;
 }
 
-void _mmt_map_free_node( _mmt_map_node_t *node, enum bool free_data ){
+void _mmt_map_free_node( _mmt_map_node_t *node, bool free_data ){
 	if( node == NULL ) return;
 	//free its key-data if need
 	if( free_data == YES ){
@@ -164,7 +165,7 @@ void _mmt_map_free_node( _mmt_map_node_t *node, enum bool free_data ){
 /**
  * Public API
  */
-void mmt_map_free( mmt_map_t *map, enum bool free_data  ){
+void mmt_map_free( mmt_map_t *map, bool free_data  ){
 	if( map == NULL ) return;
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
 	_mmt_map_free_node( _tree->root, free_data );
@@ -172,7 +173,7 @@ void mmt_map_free( mmt_map_t *map, enum bool free_data  ){
 }
 
 
-void* _mmt_map_set_data( int (*fun)(const void*, const void*), _mmt_map_node_t **node, void *key, void *data, enum bool override_if_exist ){
+void* _mmt_map_set_data( int (*fun)(const void*, const void*), _mmt_map_node_t **node, void *key, void *data, bool override_if_exist ){
 	enum compare_result ret = 0;
 	void *ptr = NULL;
 	_mmt_map_node_t *node_ptr = *node;
@@ -204,7 +205,7 @@ void* _mmt_map_set_data( int (*fun)(const void*, const void*), _mmt_map_node_t *
 /**
  * Public API
  */
-void* mmt_map_set_data( mmt_map_t *map, void *key, void *data, enum bool override_if_exist ){
+void* mmt_map_set_data( mmt_map_t *map, void *key, void *data, bool override_if_exist ){
 	void *ptr;
 	if( map == NULL || key == NULL ) return NULL;
 	_mmt_map_t *_tree = (_mmt_map_t*) map;

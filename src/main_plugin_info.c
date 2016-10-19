@@ -23,9 +23,9 @@ int main( int argc, char** argv ){
 	// - /opt/mmt/security/plugins
 	// - ./plugins
 	if( argc == 1)
-		n = load_plugins( &rules_arr );
+		n = load_mmt_sec_rules( &rules_arr );
 	else
-		n = load_plugin( &rules_arr, argv[1] );
+		n = load_mmt_sec_rule( &rules_arr, argv[1] );
 
 	printf("Found %zu rule%s", n, n<=1? ".": "s." );
 

@@ -12,9 +12,13 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <inttypes.h>//for uint64_t
+//for uint64_t PRIu64
+#include <inttypes.h>
+#include <stdbool.h>
 
 #define UNKNOWN -1
-enum bool{ NO = 0, YES = 1};
+#define NO false
+#define YES true
+
 
 #endif /* SRC_LIB_BASE_H_ */

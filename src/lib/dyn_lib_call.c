@@ -44,7 +44,7 @@ int funct_get_return_type_and_size(int *size, char *lib_name, char *funct_name){
 		*(void **) (&embedded_function) = dlsym(lib_pointer, "get_data_type_of_funct_return_value");
 		int * temph = (int*) embedded_function(funct_name, size);
 		type = *temph;
-		mmt_free(temph);
+		mmt_mem_free(temph);
 	}
 #endif
 	return type;
@@ -82,9 +82,9 @@ void *funct_execute( const char *lib_name, const char *fn_name, size_t param_siz
 		case 4: ihandle = embedded_function(param_ptr[0], param_ptr[1], param_ptr[2], param_ptr[3]);
 			break;
 		}
-		result_data = mmt_malloc(data_size);
+		result_data = mmt_mem_alloc(data_size);
 		memcpy(result_data, ihandle, data_size);
-		mmt_free(ihandle);
+		mmt_mem_free(ihandle);
 
 #ifdef WIN32
 		FreeLibrary(lib_pointer);

@@ -13,9 +13,9 @@
 #include "expression.h"
 #include "mmt_alloc.h"
 #include "mmt_log.h"
-#include "mmt_dpi.h"
+#include "../dpi/mmt_dpi.h"
 
-#define MAX_STRING_SIZE 10000
+#define MAX_STR_SIZE 10000
 
 /**
  * Convert from MMT_DPI_DATA_TYPE to MMT_SEC_DATA_TYPE that is either a STRING or a NUMERIC
@@ -53,7 +53,6 @@ inline enum data_type convert_data_type( int type ){
 	case MMT_DATA_STRING_INDEX:
 	case MMT_DATA_PARENT:
 	case MMT_STATS:
-	case MMT_GENERIC_HEADER_LINE:
 	case MMT_STRING_DATA_POINTER:
 	case MMT_UNDEFINED_TYPE:
 		return STRING;
@@ -81,7 +80,7 @@ size_t get_variables_inside_expression( const expression_t *expr ){
 
 /** Public API */
 constant_t *expr_create_a_constant( enum data_type type, size_t data_size, void *data ){
-	constant_t *cont = mmt_malloc( sizeof( constant_t ));
+	constant_t *cont = mmt_mem_alloc( sizeof( constant_t ));
 	cont->data_type = type;
 	cont->data_size = data_size;
 	cont->data = data;
@@ -90,7 +89,7 @@ constant_t *expr_create_a_constant( enum data_type type, size_t data_size, void 
 
 /** Public API */
 variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index ){
-	variable_t *var = mmt_malloc( sizeof( variable_t ));
+	variable_t *var = mmt_mem_alloc( sizeof( variable_t ));
 	var->proto = proto;
 	var->att   = attr;
 	var->ref_index = ref_index;
@@ -105,7 +104,7 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index )
 
 /** Public API */
 operation_t *expr_create_an_operation( char *name, enum operator operator ){
-	operation_t *opt = mmt_malloc( sizeof( operation_t ));
+	operation_t *opt = mmt_mem_alloc( sizeof( operation_t ));
 	opt->name = name;
 	opt->operator = operator;
 	opt->params_list = NULL;
@@ -116,7 +115,7 @@ operation_t *expr_create_an_operation( char *name, enum operator operator ){
 
 /** Public API */
 expression_t *expr_create_an_expression( enum expression type, void *data ){
-	expression_t *expr = mmt_malloc( sizeof( expression_t));
+	expression_t *expr = mmt_mem_alloc( sizeof( expression_t));
 	expr->type   = type;
 	expr->father = NULL;
 	switch( type ){
@@ -314,10 +313,10 @@ size_t _parse_a_number( double **num, const char *string, size_t str_size ){
 
 	//duplicate the name
 	str  = mmt_mem_dup( temp, i );
-	*num  = mmt_malloc( sizeof( double ));
+	*num  = mmt_mem_alloc( sizeof( double ));
 	**num = atof( str );
 
-	mmt_free( str );
+	mmt_mem_free( str );
 
 	return index;
 }
@@ -460,7 +459,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		//do nothing
 	}  else if (*temp == '\'') {
 		//a 'string'
-		index = _parse_a_string( &new_string, temp, MAX_STRING_SIZE );
+		index = _parse_a_string( &new_string, temp, MAX_STR_SIZE );
 
 		new_expr = expr_create_an_expression( CONSTANT,
 				expr_create_a_constant(STRING, mmt_mem_size( new_string ), new_string) );
@@ -472,7 +471,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp + index);
 	} else if (isalpha(*temp) || *temp == '_') {
 		//a variable: PROTO.FIELD.EVENT
-		index = _parse_variable( &new_var, temp, MAX_STRING_SIZE );
+		index = _parse_variable( &new_var, temp, MAX_STR_SIZE );
 		mmt_assert( new_var != NULL, "Error 37c: Illegal variable name: %s", temp );
 		new_expr = expr_create_an_expression( VARIABLE, new_var );
 		new_expr->father = expr;
@@ -483,7 +482,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 	} else if (*temp == '#') {
 		//an embedded function: #func(param_1, param_2)
 		temp ++;
-		index = _parse_a_name( &new_string, temp, MAX_STRING_SIZE );
+		index = _parse_a_name( &new_string, temp, MAX_STR_SIZE );
 
 		new_op = expr_create_an_operation( new_string, FUNCTION );
 		new_expr = expr_create_an_expression( OPERATION, new_op );
@@ -496,7 +495,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, new_expr, temp + index );
 	} else if (isdigit(*temp)) {
 		//a number 1.0
-		index = _parse_a_number( &new_number, temp, MAX_STRING_SIZE );
+		index = _parse_a_number( &new_number, temp, MAX_STR_SIZE );
 		//found a number
 		//create a new expression
 		new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(NUMERIC, sizeof( double), new_number) );
@@ -628,7 +627,7 @@ int parse_expression( expression_t **expr, const char *string, size_t str_size )
  * public API
  */
 size_t expr_stringify_constant( char **string, const constant_t *expr){
-	char buff[10];
+	char buff[ MAX_STR_SIZE ];
 	size_t size;
 	double d;
 	enum data_type type;
@@ -645,9 +644,9 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 		else
 			size = sprintf(buff, "%.2f", d);
 
-	}else{
-		size = snprintf( buff, sizeof( buff), "\"%s\"", (char *)expr->data );
-	}
+	}else
+		size = snprintf( buff, MAX_STR_SIZE, "\"%s\"", (char *)expr->data );
+
 	*string = mmt_mem_dup( buff, size );
 
 	return size;
@@ -704,7 +703,7 @@ size_t expr_stringify_operation( char **string, operation_t *opt ){
 	size_t index = 0;
 	expression_t *expr;
 
-	char str[ MAX_STRING_SIZE ];
+	char str[ MAX_STR_SIZE ];
 
 	//change comparison of string to function: "a" == "b" ==> 0 == strcmp("a", "b")
 	if( _is_comparison_operator( opt->operator ) && _is_string_param ( opt ) ){
@@ -731,7 +730,7 @@ size_t expr_stringify_operation( char **string, operation_t *opt ){
 			index += sprintf( &str[ index ], "%s %s ", tmp , delim);
 		}
 		//tmp was created in expr_stringify_expression( &tmp ...
-		mmt_free( tmp );
+		mmt_mem_free( tmp );
 		node = node->next;
 	};
 
@@ -818,7 +817,7 @@ size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t *
  * public API
  */
 constant_t *evaluate_expression( const expression_t *expr, const constant_t **constants, size_t const_size ){
-	constant_t *ret = (constant_t *) mmt_malloc( sizeof( constant_t ));
+	constant_t *ret = (constant_t *) mmt_mem_alloc( sizeof( constant_t ));
 	return ret;
 }
 

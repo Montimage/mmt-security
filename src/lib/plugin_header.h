@@ -15,30 +15,15 @@
 #include <string.h>
 #include <sys/time.h>
 
+#include "message_t.h"
+
 typedef struct proto_attribute_struct{
 	const char *proto;
 	const char *att;
 	uint32_t proto_id;
 	uint32_t att_id;
-	int data_type;
+	int data_type; //NUMERIC, STRING
 }proto_attribute_t;
-
-/**
- *
- */
-typedef struct message_element_struct{
-	uint32_t proto_id;
-	uint32_t att_id;
-	void *data;
-}message_element_t;
-
-typedef struct message_struct{
-	uint64_t counter;
-	uint64_t timestamp;
-	size_t elements_count;
-	message_element_t *elements;
-}message_t;
-
 
 
 /**

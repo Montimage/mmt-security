@@ -137,7 +137,7 @@ struct fsm_state_struct;
 typedef struct fsm_transition_struct
 {
    /**  The event that will trigger this transition. */
-   uint32_t event_type;
+   uint16_t event_type;
    /**
     *  Check if data passed with event fulfills a condition.
     *
@@ -379,7 +379,7 @@ enum fsm_handle_event_value{
  *	- Return:
  * 	+ fsm_handle_event_value
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, void *event_data, fsm_t **new_fsm );
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, const void *event_data, fsm_t **new_fsm );
 
 /**
  *  Get the current state
@@ -450,7 +450,7 @@ static inline void fsm_free_event( fsm_event_t *event, bool free_data ){
 	if( event == NULL ) return;
 	if( free_data == YES )
 		mmt_free_and_assign_to_null( event->data );
-	mmt_free( event );
+	mmt_mem_free( event );
 }
 
 #endif /* SRC_LIB_FSM_H_ */

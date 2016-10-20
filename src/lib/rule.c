@@ -103,7 +103,7 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 	const xmlChar *xml_attr_name;
 	xmlChar *xml_attr_value;
 
-	rule_delay_t *delay = mmt_malloc( sizeof( rule_delay_t ));
+	rule_delay_t *delay = mmt_mem_alloc( sizeof( rule_delay_t ));
 
 	delay->time_min    = delay->time_max    = 0;
 	delay->counter_min = delay->counter_max = 0;
@@ -254,7 +254,7 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 
 
 static rule_node_t *_parse_a_rule_node( const xmlNode *xml_node ){
-	rule_node_t *rule_node = mmt_malloc( sizeof( rule_node_t ));
+	rule_node_t *rule_node = mmt_mem_alloc( sizeof( rule_node_t ));
 	//init default value
 	rule_node->type     = UNKNOWN;
 	rule_node->operator = NULL;

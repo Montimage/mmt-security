@@ -11,7 +11,8 @@
 #include "plugin_header.h"
 #include "base.h"
 #include "data_struct.h"
-#include "mmt_dpi.h"
+#include "../dpi/mmt_dpi.h"
+
 
 /**
  * init mmt-security engine:

@@ -13,7 +13,7 @@
 ///////////////////////////////////////Linked-list////////////////////////////////////////////
 /** Public API */
 link_node_t *create_node_of_link_list( void *data ){
-	link_node_t *new_node = mmt_malloc( sizeof( link_node_t ));
+	link_node_t *new_node = mmt_mem_alloc( sizeof( link_node_t ));
 	new_node->data = data;
 	new_node->prev = new_node->next = NULL;
 	return new_node;
@@ -59,10 +59,10 @@ void free_link_list( link_node_t *head, bool free_data ){
 	link_node_t *ptr;
 	while( head != NULL ){
 		if( free_data )
-			mmt_free( head->data );
+			mmt_mem_free( head->data );
 		ptr = head->next;
 		head->next = head->prev = NULL;
-		mmt_free( head );
+		mmt_mem_free( head );
 
 		head = ptr;
 	}
@@ -75,7 +75,7 @@ void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) ){
 			free_fn( head->data );
 		ptr = head->next;
 		head->next = head->prev = NULL;
-		mmt_free( head );
+		mmt_mem_free( head );
 
 		head = ptr;
 	}
@@ -95,7 +95,7 @@ link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
 		if( head != NULL )
 			head->prev = NULL;
 		//free this node
-		mmt_free( ptr );
+		mmt_mem_free( ptr );
 		return head;
 	}
 	//ptr is not null && ptr->pre is not null as ptr != head
@@ -104,7 +104,7 @@ link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
 	if( ptr->next != NULL )
 		ptr->next->prev = ptr->prev;
 	//free this node
-	mmt_free( ptr );
+	mmt_mem_free( ptr );
 
 	return head;
 }
@@ -136,7 +136,7 @@ size_t mmt_map_count( const mmt_map_t *map ){
  * Public API
  */
 mmt_map_t *mmt_map_init( int (*fun)(const void*, const void*) ){
-	_mmt_map_t *map = mmt_malloc( sizeof( _mmt_map_t ));
+	_mmt_map_t *map = mmt_mem_alloc( sizeof( _mmt_map_t ));
 	map->compare_function = fun;
 	map->root = NULL;
 	map->size = 0;
@@ -159,7 +159,7 @@ void _mmt_map_free_node( _mmt_map_node_t *node, bool free_data ){
 	node->left = node->right = NULL;
 
 	//free the node itself
-	mmt_free( node );
+	mmt_mem_free( node );
 }
 
 /**
@@ -169,7 +169,7 @@ void mmt_map_free( mmt_map_t *map, bool free_data  ){
 	if( map == NULL ) return;
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
 	_mmt_map_free_node( _tree->root, free_data );
-	mmt_free( map );
+	mmt_mem_free( map );
 }
 
 
@@ -179,7 +179,7 @@ void* _mmt_map_set_data( int (*fun)(const void*, const void*), _mmt_map_node_t *
 	_mmt_map_node_t *node_ptr = *node;
 
 	if( node_ptr == NULL ){
-		node_ptr = mmt_malloc( sizeof( _mmt_map_node_t ));
+		node_ptr = mmt_mem_alloc( sizeof( _mmt_map_node_t ));
 		node_ptr->left = node_ptr->right = NULL;
 		node_ptr->key  = key;
 		node_ptr->data = data;
@@ -291,7 +291,7 @@ static void _iterate_to_assign_to_array( void *key, void *data, void *user_data,
 }
 size_t mmt_map_get_data_array( const mmt_map_t *map, void **array){
 	size_t size = mmt_map_count(map);
-	array = mmt_malloc( size );
+	array = mmt_mem_alloc( size );
 	mmt_map_iterate(map, _iterate_to_assign_to_array, array );
 	return size;
 }

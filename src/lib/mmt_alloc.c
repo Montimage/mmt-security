@@ -10,6 +10,19 @@
 
 static size_t allocated_memory_size, freed_memory_size;
 
+typedef struct _memory_struct{
+	uint8_t ref_count;
+	size_t  size;
+	void *  data;
+}_memory_t;
+
+const static size_t size_of_memory_t = sizeof( _memory_t );
+
+#define _convert_mem( x ) (_memory_t *) ( (uint8_t*)x - size_of_memory_t )
+
+/**
+ * Public API
+ */
 void mmt_mem_info( size_t *allocated, size_t *freed ){
 	mmt_assert( allocated != NULL && freed != NULL, "Variables are NULL");
 	*allocated = allocated_memory_size;
@@ -20,34 +33,38 @@ void mmt_print_mem_info(){
 	mmt_log(INFO, "MMT allocated: %zu bytes, freed: %zu bytes", allocated_memory_size, freed_memory_size );
 }
 
-void *mmt_malloc(size_t size){
+void *mmt_mem_alloc(size_t size){
 	if( size == 0 ) return NULL;
+	_memory_t *mem = malloc( size_of_memory_t + size + 1 );
 
-	uint8_t * retval = (uint8_t *)malloc( sizeof( size_t ) + size + 1 );
 	//quit if not enough
-	mmt_assert( retval != NULL, "Not enough memory");
+	mmt_assert( mem != NULL, "Not enough memory");
 	//remember size of memory being allocated
 	allocated_memory_size += size;
 
+	//mem->data points to the memory segment after sizeof( _memory_t )
+	mem->data = mem + 1;
 	//safe string
-	retval[ sizeof( size_t ) + size ] = '\0';
+	((char *)mem->data)[ size ] = '\0';
 
 	//store size to head of the memory segment
-	*((size_t*) retval) = size;
+	mem->size      = size;
+	mem->ref_count = 1;
 
-	return (void*)( retval + sizeof( size_t ));
+	return mem->data;
 }
 
 
-void *mmt_realloc( void *x, size_t size ){
+void *mmt_mem_realloc( void *x, size_t size ){
+	mmt_halt( "Does not support properly %s:%d", __FILE__, __LINE__ );
    if( x == NULL ) {
       if( size == 0 ) return NULL; // nothing to do
-      return mmt_malloc( size );
+      return mmt_mem_alloc( size );
    }
 
    // x != NULL
    if( size == 0 ) {
-      mmt_free( x );
+      mmt_mem_free( x );
       return NULL;
    }
 
@@ -67,19 +84,27 @@ void *mmt_realloc( void *x, size_t size ){
 }
 
 
-void mmt_free( void *x ){
+void mmt_mem_free( void *x ){
    if( x == NULL ) return; // nothing to do
+   _memory_t *mem = _convert_mem( x );
+   if( mem->ref_count <= 1 ){
+		freed_memory_size += mem->size;
+		free( mem );
+   }else
+   	mem->ref_count --;
+}
 
-   uint8_t *x0 = (uint8_t*)x - sizeof( size_t );
-   freed_memory_size += *((size_t*)x0);
-   free( x0 );
+void *mmt_mem_retain( void *x ){
+   if( x == NULL ) return NULL; // nothing to do
+   _memory_t *mem = _convert_mem( x );
+   mem->ref_count ++;
+   return mem->data;
 }
 
 size_t mmt_mem_size( const void *x ){
    if( x == NULL ) return 0; // nothing to do
-
-   uint8_t *x0 = (uint8_t*)x - sizeof( size_t );
-   return *((size_t*) x0);
+   _memory_t *mem = _convert_mem( x );
+   return mem->size;
 }
 
 void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 ){
@@ -87,7 +112,7 @@ void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 ){
 	void *ret;
 	s1 = mmt_mem_size( ptr_1 );
 	s2 = mmt_mem_size( ptr_2 );
-	ret = mmt_malloc( s1 + s2 );
+	ret = mmt_mem_alloc( s1 + s2 );
 	memcpy( ret, ptr_1, s1 );
 	memcpy( ret + s2, ptr_2, s2 );
 	return ret;

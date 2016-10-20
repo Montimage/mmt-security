@@ -23,12 +23,14 @@
 # define __FAVOR_BSD
 #endif
 
-
+#include "dpi/types_defs.h"
 #include "mmt_core.h"
 
 #include "lib/mmt_lib.h"
 #include "lib/plugin_header.h"
 #include "lib/mmt_security.h"
+
+
 
 #define MAX_FILENAME_SIZE 256
 #define TRACE_FILE 1
@@ -51,7 +53,7 @@ void print_rules_info(){
 		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
 	}
 	printf("\n");
-	mmt_free( rules_arr );
+	mmt_mem_free( rules_arr );
 }
 
 void print_verdict( const rule_info_t *rule,		//id of rule
@@ -60,9 +62,13 @@ void print_verdict( const rule_info_t *rule,		//id of rule
 		uint32_t counter,
 		const mmt_map_t *trace,
 		void *user_data ){
+
+	mmt_assert( trace != NULL, "Cannot be NULL" );
+	mmt_assert( mmt_map_count( trace) > 0, "Cannot be zero" );
+
 	char *string = convert_execution_trace_to_json_string( trace );
-	mmt_debug( "Rule %"PRIu32": %s: %s \n%s\n %s", rule->id, rule->type_string, verdict_type_string[verdict], rule->description, string );
-	mmt_free( string );
+	mmt_debug( "Rule %"PRIu32": %s: %s \nDescription: %s\nTrace: %s", rule->id, rule->type_string, verdict_type_string[verdict], rule->description, string );
+	mmt_mem_free( string );
 }
 
 void usage(const char * prg_name) {
@@ -119,16 +125,23 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 
 static inline void* _get_data( const ipacket_t *pkt, const proto_attribute_t *me ){
 	double number;
-	char *string;
-	void *data = get_attribute_extracted_data( pkt, me->proto_id, me->att_id );
-	int type   = get_attribute_data_type( me->proto_id, me->att_id );
+	char buffer[100], *new_string = NULL;
+	const uint16_t buffer_size = 100;
+	uint16_t size;
+	uint8_t *data = (uint8_t *) get_attribute_extracted_data( pkt, me->proto_id, me->att_id );
+	//does not exist data for this proto_id and att_id
+	if( data == NULL ) return NULL;
+	buffer[0] = '\0';
+
+	int type = get_attribute_data_type( me->proto_id, me->att_id );
 	switch( type ){
 		 case MMT_UNDEFINED_TYPE: /**< no type constant value */
 			 return NULL;
 		 case MMT_DATA_CHAR: /**< 1 character constant value */
 	    case MMT_U8_DATA: /**< unsigned 1-byte constant value */
-	   	 	number = *(uint8_t *) data;
+	   	 	number = *data;
 	   	 	break;
+	    case MMT_DATA_PORT: /**< tcp/udp port constant value */
 	    case MMT_U16_DATA: /**< unsigned 2-bytes constant value */
 	   	 number = *(uint16_t *) data;
 	   	 break;
@@ -145,13 +158,23 @@ static inline void* _get_data( const ipacket_t *pkt, const proto_attribute_t *me
 	   	 return data;
 	   	 break;
 	    case MMT_DATA_MAC_ADDR: /**< ethernet mac address constant value */
+	   	 size = snprintf(buffer , buffer_size, "%02x:%02x:%02x:%02x:%02x:%02x", data[0], data[1], data[2], data[3], data[4], data[5] );
+	   	 //mmt_debug( "%d %s", size, buffer );
+	   	 return mmt_mem_dup( buffer, size );
 	    case MMT_DATA_IP_NET: /**< ip network address constant value */
+	   	 break;
 	    case MMT_DATA_IP_ADDR: /**< ip address constant value */
+	   	 inet_ntop(AF_INET, data, buffer, buffer_size );
+	   	 //mmt_debug( "IPv4: %s", string );
+			 return mmt_mem_dup( buffer, strlen( buffer));
 	    case MMT_DATA_IP6_ADDR: /**< ip6 address constant value */
+	   	 inet_ntop(AF_INET6, data, buffer, buffer_size );
+			 //mmt_debug( "IPv6: %s", string );
+			 return mmt_mem_dup( buffer, strlen( buffer));
 	    case MMT_DATA_PATH: /**< protocol path constant value */
 	    case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
 	    case MMT_DATA_BUFFER: /**< binary buffer content */
-	    case MMT_DATA_PORT: /**< tcp/udp port constant value */
+
 	    case MMT_DATA_POINT: /**< point constant value */
 	    case MMT_DATA_PORT_RANGE: /**< tcp/udp port range constant value */
 	    case MMT_DATA_DATE: /**< date constant value */
@@ -161,46 +184,51 @@ static inline void* _get_data( const ipacket_t *pkt, const proto_attribute_t *me
 	    case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
 	    case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
 	    case MMT_STATS: /**< pointer to MMT Protocol statistics */
+	   	 break;
 	    case MMT_BINARY_DATA: /**< binary constant value */
 	    case MMT_BINARY_VAR_DATA: /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
 	    case MMT_STRING_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum BINARY_64DATA_LEN long */
 	    case MMT_STRING_LONG_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum STRING_DATA_LEN long */
+	   	 return mmt_mem_dup( ((mmt_binary_var_data_t *)data)->data, ((mmt_binary_var_data_t *)data)->len );
 	    case MMT_HEADER_LINE: /**< string pointer value with a variable size. The string is not necessary null terminating */
-	    case MMT_GENERIC_HEADER_LINE: /**< structure representing an RFC2822 header line with null terminating field and value elements. */
+	   	 return mmt_mem_dup( ((mmt_header_line_t *)data)->ptr, ((mmt_header_line_t *)data)->len );
 	    case MMT_STRING_DATA_POINTER: /**< pointer constant value (size is void *). The data pointed to is of type string with null terminating character included */
-	   	 break;
+	   	 return mmt_mem_dup( data, strlen( (char*) data) );
 	}
-	if( me->data_type == 0 )//NUMERIC )
+	if( me->data_type == 0 ){//NUMERIC )
 		return mmt_mem_dup( &number, sizeof( double ));
+	}
 	return NULL;
 }
 
+
+
 static inline message_t* _get_packet_info( const ipacket_t *pkt, const mmt_sec_handler_t *handler ){
-	size_t size, i;
+	size_t size, i, index;
 	const proto_attribute_t **arr;
 	bool has_data = NO;
 	void *data;
-	message_t *msg = mmt_malloc( sizeof ( message_t ) );
+	message_t *msg = mmt_mem_alloc( sizeof ( message_t ) );
 	msg->timestamp = mmt_sec_encode_timeval( &pkt->p_hdr->ts );
 	msg->counter   = pkt->packet_id;
 
 	size = mmt_sec_get_unique_protocol_attributes( handler, &arr );
 
 	msg->elements_count = size;
-	msg->elements       = mmt_malloc( sizeof( message_element_t ) * size );
+	msg->elements       = mmt_mem_alloc( sizeof( message_element_t ) * size );
 	for( i=0; i<size; i++ ){
 		data = _get_data( pkt, arr[i] );
 		if( data != NULL )
 			has_data = YES;
-		msg->elements[i].proto_id = arr[i]->proto_id;
-		msg->elements[i].att_id   = arr[i]->att_id;
-		msg->elements[i].data     = NULL;//data;
 
+		msg->elements[i].proto_id  = arr[i]->proto_id;
+		msg->elements[i].att_id    = arr[i]->att_id;
+		msg->elements[i].data      = data;
+		msg->elements[i].data_type = arr[i]->data_type;
 	}
 
 	if( !has_data ){
-		mmt_free( msg->elements );
-		mmt_free( msg );
+		free_message_t( msg, YES );
 		return NULL;
 	}
 
@@ -215,13 +243,11 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	mmt_sec_process( sec_handler, msg );
 
-	mmt_free( msg->elements );
-	mmt_free( msg );
+	free_message_t( msg, YES );
 	return 0;
 }
 
-void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, const u_char *data )
-{
+void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, const u_char *data ){
 	mmt_handler_t *mmt = (mmt_handler_t*)user;
 	struct pkthdr header;
 	header.ts     = p_pkthdr->ts;
@@ -233,6 +259,7 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 }
 
 void signal_handler(int signal_type) {
+	mmt_info( "Interrupted" );
 	exit( signal_type );
 }
 
@@ -317,7 +344,7 @@ int main(int argc, char** argv) {
 	pcap_close(pcap);
 
 	mmt_sec_unregister( mmt_sec_handler );
-	mmt_free( rules_arr );
+	mmt_mem_free( rules_arr );
 
 	return EXIT_SUCCESS;
 }

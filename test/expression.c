@@ -26,7 +26,7 @@ int main(){
 
 	mmt_assert( (_parse_constant(&cont, s, 0) == NO), "Not good for NULL" );
 
-	s1 = s = mmt_malloc( 10 );
+	s1 = s = mmt_mem_alloc( 10 );
 	bzero( s, 10 );
 
 
@@ -35,22 +35,22 @@ int main(){
 	mmt_debug( "name = %s", name );
 	mmt_assert( (name[0] == 'y' && index == 3) , "Not good for a name: %zu - %s", index, name );
 
-	mmt_free( name );
+	mmt_mem_free( name );
 	name = NULL;
 	s[0] = '"';s[1] = 'x';s[2] = 'x';s[3] = '"';
 	index = _parse_a_string( &name, s1, str_size);
 	mmt_debug( "string = %s", name );
 	mmt_assert( ( index == 4 ), "Not good for string" );
 
-	mmt_free( name );
+	mmt_mem_free( name );
 	s[0] = 'x';s[1] = '.';s[2] = 'y';s[3] = ' ';
 	index = _parse_variable(&var, s1, str_size);
 	mmt_assert(  var != NULL && index == 3, "Not good for variable" );
 	mmt_debug( "variable = %s#%s", var->proto, var->att );
 
-	mmt_free( var->proto );
-	mmt_free( var->att );
-	mmt_free( var );
+	mmt_mem_free( var->proto );
+	mmt_mem_free( var->att );
+	mmt_mem_free( var );
 	s[0] = 'x';s[1] = '.';s[2] = 'y';s[3] = '.',s[4] = '1',s[5] = '8';
 	index = _parse_variable(&var, s1, str_size);
 	mmt_assert(  var != NULL && index == 6, "Not good for variable with ref_index" );

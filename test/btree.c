@@ -30,8 +30,8 @@ int main(){
 	ptr = mmt_map_set_data(map, key, data, YES );
 
 	mmt_assert( ptr != NULL && *ptr == 'y', "Not good for duplicated key %s", key );
-	mmt_free( ptr ); //free the old data, not data
-	mmt_free( key );
+	mmt_mem_free( ptr ); //free the old data, not data
+	mmt_mem_free( key );
 
 	ptr = mmt_map_get_data( map, "key" );
 	mmt_assert( ptr != NULL && *ptr == 'z', "Not good for get data %s", key );

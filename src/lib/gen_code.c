@@ -74,7 +74,7 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	//TODO: not need to check before validate the guard's boolean expression ?
 
 
-	mmt_free( str );
+	mmt_mem_free( str );
 }
 
 
@@ -108,11 +108,11 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	mmt_map_iterate( map, _iterate_variable, user_data );
 	fprintf(fd, "\n\n\t return %s;\n }\n ",  str);
 
-	mmt_free( str );
+	mmt_mem_free( str );
 	//add events to list events
 	//mmt_map_set_data(u_data->events_map, guard_fun_name, map, NO);
 	mmt_map_free( map, NO );
-	mmt_free( guard_fun_name );
+	mmt_mem_free( guard_fun_name );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -143,7 +143,7 @@ typedef struct _meta_transition_struct{
 }_meta_transition_t;
 
 static inline _meta_state_t *_create_new_state( index ){
-	_meta_state_t *s = mmt_malloc( sizeof( _meta_state_t ));
+	_meta_state_t *s = mmt_mem_alloc( sizeof( _meta_state_t ));
 	s->index        = index;
 	s->description  = NULL;
 	s->delay        = NULL;
@@ -155,13 +155,13 @@ static inline _meta_state_t *_create_new_state( index ){
 }
 
 static inline _meta_transition_t *_create_new_transition( int event_type, int guard_id, _meta_state_t *target, const rule_event_t *ev, const char *comment){
-	_meta_transition_t *t = mmt_malloc( sizeof( _meta_transition_t ));
+	_meta_transition_t *t = mmt_mem_alloc( sizeof( _meta_transition_t ));
 	t->event_type = event_type;
 	t->guard_id   = guard_id;
 	t->target     = target;
 	t->attached_event = ev;
 	if( comment != NULL )
-		snprintf(t->comment, STR_BUFFER_SIZE, "%s", comment);
+		snprintf(t->comment, MAX_STR_BUFFER, "%s", comment);
 	else
 		t->comment[0] = '\0';
 	return t;
@@ -483,15 +483,15 @@ void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data
 	if( index == 0 ){
 		_gen_comment( fd, "Structure to represent event data");
 		fprintf( fd, "typedef struct _msg_struct_%d{", _u_data->index );
+		fprintf( fd, "\n\t uint64_t timestamp;//timestamp");
+		fprintf( fd, "\n\t uint64_t counter;//index of packet");
 	}
-	fprintf( fd, "\n\t  %s%s_%s;",
+	fprintf( fd, "\n\t %s%s_%s;",
 			(var->data_type == NUMERIC? "const double *":"const char *"),
 			var->proto, var->att);
 
 	//last element
 	if( index + 1 == total ){
-		fprintf( fd, "\n\t  uint64_t timestamp;//timestamp");
-		fprintf( fd, "\n\t  uint64_t counter;//index of packet");
 		fprintf( fd, "\n }_msg_t_%d;", _u_data->index );
 	}
 }
@@ -518,7 +518,7 @@ void _iterate_variables_to_init_structure( void *key, void *data, void *user_dat
 	if( index == 0 ){
 		_gen_comment( fd, "Create an instance of _msg_t_%d", rule_id);
 		fprintf( fd, "static inline _msg_t_%d* _allocate_msg_t_%d(){", rule_id, rule_id );
-		fprintf( fd, "\n\t _msg_t_%d *m = mmt_malloc( sizeof( _msg_t_%d ));", rule_id, rule_id );
+		fprintf( fd, "\n\t _msg_t_%d *m = mmt_mem_alloc( sizeof( _msg_t_%d ));", rule_id, rule_id );
 	}
 	fprintf( fd, "\n\t m->%s_%s = NULL;", var->proto, var->att);
 
@@ -567,7 +567,7 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 	//content of switch
 	fprintf( fd, "\n\t\t\t case %d:// attribute %s", var->att_id, var->att );
 
-	fprintf( fd, "\n\t\t\t\t new_msg->%s_%s = %s mmt_mem_retain( msg->elements[i].data );",
+	fprintf( fd, "\n\t\t\t\t new_msg->%s_%s = %s msg->elements[i].data;",
 			var->proto, var->att,
 			var->data_type == NUMERIC? "(double *)" : "(char *)");
 	fprintf( fd, "\n\t\t\t\t break;");
@@ -693,7 +693,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 
 	str_ptr = get_current_date_time_string( "%Y-%m-%d %H:%M:%S" );
 	_gen_comment( fd, "This file is generated automatically on %s", str_ptr);
-	mmt_free( str_ptr );
+	mmt_mem_free( str_ptr );
 
 	//include
 	fprintf( fd, "#include <string.h>\n #include <stdio.h>\n #include <stdlib.h>\n #include \"plugin_header.h\"\n #include \"mmt_fsm.h\"\n #include \"mmt_alloc.h\"\n ");

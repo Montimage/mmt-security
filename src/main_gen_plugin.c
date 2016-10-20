@@ -31,6 +31,6 @@ int main( int argc, char** argv ){
 		free_a_rule( rule_list[i], YES);
 	}
 
-	mmt_free( rule_list );
+	mmt_mem_free( rule_list );
 	return 0;
 }

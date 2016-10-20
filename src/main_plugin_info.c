@@ -48,6 +48,6 @@ int main( int argc, char** argv ){
 		printf("\n\t- hash_message    : %p",  rules_arr[i]->hash_message );
 	}
 	printf("\n");
-	mmt_free( rules_arr );
+	mmt_mem_free( rules_arr );
 	return 0;
 }

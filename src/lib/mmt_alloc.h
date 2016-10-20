@@ -33,14 +33,14 @@ typedef struct mmt_pointer_struct{
  * - Error:
  * 	+ Exit system if memory is not enough
  */
-void *mmt_malloc( size_t size );
+void *mmt_mem_alloc( size_t size );
 /**
  * Free memory allocated by mmt_malloc
  * Do not use this function to free memory created by malloc
  */
-void  mmt_free( void *ptr );
-void *mmt_calloc( size_t nmemb, size_t size );
-void *mmt_realloc( void *ptr, size_t size );
+void  mmt_mem_free( void *ptr );
+void *mmt_mem_calloc( size_t nmemb, size_t size );
+void *mmt_mem_realloc( void *ptr, size_t size );
 
 /**
  * Get information about memory being allocated and freed
@@ -77,20 +77,15 @@ size_t mmt_mem_size( const void *ptr );
  */
 static inline void* mmt_mem_dup( const void *ptr, size_t size ){
 	if( size == 0 ) return NULL;
-	void *ret = mmt_malloc( size );
+	void *ret = mmt_mem_alloc( size );
 	memcpy( ret, ptr, size );
 	return ret;
 }
 
 void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 );
 
-static inline void *mmt_mem_retain( void *ptr ){
-	return ptr;
-}
+void *mmt_mem_retain( void *ptr );
 
-static inline void mmt_mem_release( void *ptr ){
-}
-
-#define mmt_free_and_assign_to_null( x ) while( x != NULL ){ mmt_free( x ); x = NULL; break; }
+#define mmt_free_and_assign_to_null( x ) while( x != NULL ){ mmt_mem_free( x ); x = NULL; break; }
 
 #endif /* SRC_MMT_ALLOC_H_ */

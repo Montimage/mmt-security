@@ -37,7 +37,7 @@ void callback( const rule_info_t *rule,		//id of rule
 		void *user_data ){
 	char *string = convert_execution_trace_to_json_string( trace );
 	mmt_debug( "Rule %"PRIu32": %s: %s \n%s\n %s", rule->id, rule->type_string, verdict_type_string[verdict], rule->description, string );
-	mmt_free( string );
+	mmt_mem_free( string );
 }
 
 int main( int argc, char **argv ){
@@ -57,6 +57,6 @@ int main( int argc, char **argv ){
 	}
 
 	mmt_sec_unregister( handler );
-	mmt_free( rules_array );
+	mmt_mem_free( rules_array );
 	return 0;
 }

@@ -54,7 +54,7 @@ void _iterate_proto_atts( void *key, void *data, void *user_data, size_t index, 
 	void **array = user_data;
 	array[ index ] = data;
 	//free the key being created on line 73
-	mmt_free( key );
+	mmt_mem_free( key );
 }
 
 static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
@@ -70,18 +70,18 @@ static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
 		rule = _handler->rules_array[i];
 		for( j=0; j<rule->proto_atts_count; j++ ){
 			me = &rule->proto_atts[j];
-			string = mmt_malloc( strlen( me->att) + strlen( me->proto ) + 1 );
+			string = mmt_mem_alloc( strlen( me->att) + strlen( me->proto ) + 1 );
 			sprintf( string, "%s.%s", me->proto, me->att );
 			if( mmt_map_set_data( map, string, (void *)me, NO ) != NULL ){
 				//already exist
-				mmt_free( string );
+				mmt_mem_free( string );
 				continue;
 			}
 		}
 	}
 
 	_handler->proto_atts_count = mmt_map_count( map );
-	_handler->proto_atts_array = mmt_malloc( _handler->proto_atts_count * sizeof( void* ));
+	_handler->proto_atts_array = mmt_mem_alloc( _handler->proto_atts_count * sizeof( void* ));
 	mmt_map_iterate( map, _iterate_proto_atts, _handler->proto_atts_array );
 
 	mmt_map_free( map, NO );
@@ -94,13 +94,13 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 		mmt_sec_callback callback, void *user_data){
 	size_t i;
 
-	_mmt_sec_handler_t *handler = mmt_malloc( sizeof( _mmt_sec_handler_t ));
+	_mmt_sec_handler_t *handler = mmt_mem_alloc( sizeof( _mmt_sec_handler_t ));
 	handler->rules_count = rules_count;
 	handler->rules_array = rules_array;
 	handler->callback = callback;
 	handler->user_data_for_callback = user_data;
 	//one fsm for one rule
-	handler->engines = mmt_malloc( sizeof( void *) * rules_count );
+	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
 	for( i=0; i<rules_count; i++ ){
 		handler->engines[i] = rule_engine_init( rules_array[i], MAX_INSTANCE_COUNT );
 	}
@@ -124,9 +124,9 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 		rule_engine_free( _handler->engines[i] );
 	}
 
-	mmt_free( _handler->proto_atts_array );
-	mmt_free( _handler->engines );
-	mmt_free( _handler );
+	mmt_mem_free( _handler->proto_atts_array );
+	mmt_mem_free( _handler->engines );
+	mmt_mem_free( _handler );
 }
 
 enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
@@ -159,6 +159,7 @@ enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
 	return VERDICT_UNKNOWN;
 }
 
+
 /**
  * Public API
  */
@@ -171,9 +172,11 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	_handler = (_mmt_sec_handler_t *)handler;
 	if( _handler->rules_count == 0 ) return;
 
+	message_t *msg = clone_message_t( message, YES );
+
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
-		ret = rule_engine_process( _handler->engines[i], message );
+		ret = rule_engine_process( _handler->engines[i], msg );
 
 		//find a validated/invalid trace
 		if( ret == RULE_ENGINE_RESULT_VALIDATE || ret == RULE_ENGINE_RESULT_ERROR ){
@@ -181,17 +184,17 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 			_handler->callback(
 					_handler->rules_array[i],
 					_get_verdict( _handler->rules_array[i]->type_id, ret ),
-					message->timestamp,
-					message->counter,
+					msg->timestamp,
+					msg->counter,
 					execution_trace,
 					_handler->user_data_for_callback );
 		}
-
-		//break;
 	}
+
+	free_message_t( msg, YES );
 }
 
-#define MAX_STRING_SIZE 2000
+#define MAX_STR_SIZE 2000
 
 static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t index, size_t total){
 	char *string = (char *) u_data;
@@ -213,7 +216,7 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 		me = &msg->elements[i];
 
 		//convert me->data to string
-		expr_const.data      = me->data;
+		expr_const.data = me->data;
 		//data_types of mmt-dpi
 		expr_const.data_type = get_attribute_data_type( me->proto_id, me->att_id );
 		//data_type of mmt-security contains only either a NUMERIC or a STRING
@@ -226,7 +229,7 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 				get_protocol_name_by_id( me->proto_id ),
 				get_attribute_name_by_protocol_id_and_attribute_id( me->proto_id, me->att_id ),
 				tmp);
-		mmt_free( tmp );
+		mmt_mem_free( tmp );
 	}
 	string += size;
 	sprintf( string, "]}%s", //end attributes, end event_
@@ -234,7 +237,7 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 }
 
 char* convert_execution_trace_to_json_string( const mmt_map_t *trace ){
-	char buffer[ MAX_STRING_SIZE ];
+	char buffer[ MAX_STR_SIZE ];
 	buffer[0] = '\0';
 
 	mmt_map_iterate( trace, _iterate_to_get_string, buffer);

@@ -36,7 +36,7 @@ MAIN_SRCS := $(filter-out $(SRCDIR)/tips.c, $(MAIN_SRCS))
 MAIN_SRCS := $(filter-out $(SRCDIR)/main_dpi.c, $(MAIN_SRCS))
 MAIN_OBJS := $(patsubst %.c,%.o, $(MAIN_SRCS))
 
-MMT_DPI_HEADER = $(SRCDIR)/lib/mmt_dpi.h
+MMT_DPI_HEADER = $(SRCDIR)/dpi/mmt_dpi.h
 
 ifndef VERBOSE
 	QUIET := @
@@ -65,12 +65,12 @@ gen_plugin: $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
 	@echo "[COMPILE] $(MAIN_GEN_PLUGIN)"
 	$(QUIET) $(CC) -o $(MAIN_GEN_PLUGIN) $(CLDFLAGS) $^ $(LIBS)
 	
-gen_dpi src/lib/mmt_dpi.h:
+gen_dpi src/dpi/mmt_dpi.h:
 	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -lmmt_core -ldl
 	@echo "Generate list of protocols and their attributes"	
 	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
 
-standalone: src/lib/mmt_dpi.h $(LIB_OBJS) 
+standalone: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
 

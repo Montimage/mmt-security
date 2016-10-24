@@ -26,6 +26,7 @@
 #include "base.h"
 #include "rule.h"
 #include "mmt_alloc.h"
+#include "message_t.h"
 
 typedef struct fsm_delay_struct{
 	/**
@@ -45,10 +46,8 @@ typedef struct fsm_delay_struct{
 }fsm_delay_t;
 /**
  *  Finite State Machine
- *
- * There is no need to manipulate the members directly.
  */
-typedef void * fsm_t;
+typedef void fsm_t;
 
 #define FSM_EVENT_TYPE_TIMEOUT 0
 
@@ -379,7 +378,7 @@ enum fsm_handle_event_value{
  *	- Return:
  * 	+ fsm_handle_event_value
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, const void *event_data, fsm_t **new_fsm );
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data, fsm_t **new_fsm );
 
 /**
  *  Get the current state

@@ -8,7 +8,7 @@
 #include "mmt_fsm.h"
 #include "mmt_alloc.h"
 #include "data_struct.h"
-
+#include "message_t.h"
 /**
  * Detailed definition of FSM
  */
@@ -42,8 +42,9 @@ typedef struct fsm_struct{
    /**
     * Trace of running FSM
     */
-   mmt_map_t *execution_trace; //map: <event_id : event_data>
+   mmt_map_t *events_trace; //map: <event_id : event_data>
 
+   mmt_map_t *messages_trace;
 
 }_fsm_t;
 
@@ -77,7 +78,8 @@ fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state
 	fsm->previous_state  = NULL;
 	fsm->error_state     = error_state;
 	fsm->id              = 0;
-	fsm->execution_trace = mmt_map_init( compare_uint16_t );
+	fsm->events_trace    = mmt_map_init( compare_uint16_t );
+	fsm->messages_trace  = mmt_map_init( compare_uint16_t );
 	return (fsm_t *) fsm;
 }
 
@@ -93,8 +95,11 @@ void fsm_reset( fsm_t *fsm ){
 	_fsm->current_state  = _fsm->init_state;
 	_fsm->previous_state = NULL;
 
-	mmt_map_free( _fsm->execution_trace, NO );
-	_fsm->execution_trace = mmt_map_init( compare_uint16_t );
+	mmt_map_free_key_and_data( _fsm->events_trace, NULL, mmt_mem_free );
+	_fsm->events_trace = mmt_map_init( compare_uint16_t );
+
+	mmt_map_free_key_and_data( _fsm->messages_trace, NULL, (void *)free_message_t );
+	_fsm->messages_trace = mmt_map_init( compare_uint16_t );
 }
 
 static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
@@ -104,7 +109,8 @@ static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
 	new_fsm->current_state   = _fsm->current_state;
 	new_fsm->previous_state  = _fsm->previous_state;
 	new_fsm->error_state     = _fsm->error_state;
-	new_fsm->execution_trace = mmt_map_clone( _fsm->execution_trace );
+	new_fsm->events_trace    = mmt_map_clone( _fsm->events_trace );
+	new_fsm->messages_trace  = mmt_map_clone( _fsm->messages_trace );
 	return new_fsm;
 }
 
@@ -114,14 +120,49 @@ fsm_t *fsm_clone( const fsm_t *fsm ) {
 }
 
 
+static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_state_t *new_state, const fsm_transition_t *tran, message_t *message_data, void *event_data ){
+	mmt_map_set_data( _fsm->events_trace, (void *) &tran->event_type, mmt_mem_retain( event_data ), YES );
+	mmt_map_set_data( _fsm->messages_trace, (void *) &tran->event_type, retain_message_t( message_data ), YES );
+
+	//mmt_debug( "Event type: %d, tran_index: %d", tran->event_type, transition_index );
+
+	/* Run exit action
+	 * (even if it returns to itself) */
+	if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING  &&  _fsm->current_state->exit_action != FSM_ACTION_CREATE_INSTANCE )
+		_exec_action( NO, event_data, _fsm->current_state, _fsm );
+
+	/* Call the new _state's entry action if it has any
+	 * (even if state returns to itself) */
+	if ( new_state->entry_action != FSM_ACTION_DO_NOTHING &&  new_state->entry_action != FSM_ACTION_CREATE_INSTANCE )
+		_exec_action( YES, event_data, new_state, _fsm );
+
+	// Update the states in FSM
+	_fsm->previous_state = _fsm->current_state;
+	_fsm->current_state = new_state;
+
+	/* If the state returned to itself */
+	if (_fsm->current_state == _fsm->previous_state)
+		return FSM_STATE_LOOP_SELF;
+
+	if (_fsm->current_state == _fsm->error_state)
+		return FSM_ERROR_STATE_REACHED;
+
+	/* If the target state is a final one, notify user that the machine has stopped */
+	if (!_fsm->current_state->transitions_count)
+		return FSM_FINAL_STATE_REACHED;
+
+	return FSM_STATE_CHANGED;
+}
+
 /**
  * Public API
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, const void *event_data, fsm_t **new_fsm ) {
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data, fsm_t **new_fsm ) {
 	const fsm_transition_t *tran = NULL;
 	const fsm_state_t *state = NULL;
 	_fsm_t *_fsm = NULL, *_new_fsm = NULL;
-
+	//set the
+	*new_fsm = NULL;
 	if (!fsm ) return FSM_ERR_ARG;
 
 	_fsm = (_fsm_t *)fsm;
@@ -148,9 +189,10 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 		return FSM_NO_STATE_CHANGE;
 
 	//TODO: timeout
-	if( tran->guard == NULL )
+	if( tran->guard == NULL ){
+		//mmt_debug( "Timeout" );
 		return FSM_NO_STATE_CHANGE;
-
+	}
 
 	/* A transition must have a next _state defined
 	 * If the user has not defined the next _state, go to error _state: */
@@ -158,46 +200,17 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 	state = tran->target_state;
 
-	//Create a new instance
+	//Create a new instance, then update its data
 	if ( _fsm->current_state->exit_action == FSM_ACTION_CREATE_INSTANCE || state->entry_action == FSM_ACTION_CREATE_INSTANCE ){
 		//mmt_debug(" CREATE new INSTANCE ");
 
 		_new_fsm = _fsm_clone( _fsm );
-		//add event to the new fsm
-		mmt_map_set_data( _new_fsm ->execution_trace, (void *) &tran->event_type, (void *)event_data, YES );
 		*new_fsm = (fsm_t *)_new_fsm;
+
+		return _update_fsm( _new_fsm, state, tran, message_data, event_data );
 	}else
 		//add event to execution trace
-		mmt_map_set_data( _fsm->execution_trace, (void *) &tran->event_type, (void *)event_data, YES );
-
-//mmt_debug( "Event type: %d, tran_index: %d", tran->event_type, transition_index );
-
-	/* Run exit action
-	 * (even if it returns to itself) */
-	if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING  &&  _fsm->current_state->exit_action != FSM_ACTION_CREATE_INSTANCE )
-		_exec_action( NO, event_data, _fsm->current_state, _fsm );
-
-	/* Call the new _state's entry action if it has any
-	 * (even if state returns to itself) */
-	if ( state->entry_action != FSM_ACTION_DO_NOTHING &&  state->entry_action != FSM_ACTION_CREATE_INSTANCE )
-		_exec_action( YES, event_data, state, _fsm );
-
-	// Update the states in FSM
-	_fsm->previous_state = _fsm->current_state;
-	_fsm->current_state = state;
-
-	/* If the state returned to itself */
-	if (_fsm->current_state == _fsm->previous_state)
-		return FSM_STATE_LOOP_SELF;
-
-	if (_fsm->current_state == _fsm->error_state)
-		return FSM_ERROR_STATE_REACHED;
-
-	/* If the target state is a final one, notify user that the machine has stopped */
-	if (!_fsm->current_state->transitions_count)
-		return FSM_FINAL_STATE_REACHED;
-
-	return FSM_STATE_CHANGED;
+		return _update_fsm( _fsm, state, tran, message_data, event_data );
 
 }
 
@@ -236,7 +249,8 @@ void fsm_free( fsm_t *fsm ){
 
 	_fsm = (_fsm_t *)fsm;
 
-	mmt_map_free( _fsm->execution_trace, NO );
+	mmt_map_free_key_and_data( _fsm->events_trace, NULL, mmt_mem_free );
+	mmt_map_free_key_and_data( _fsm->messages_trace, NULL, (void *)free_message_t );
 	mmt_mem_free( fsm );
 }
 
@@ -249,7 +263,7 @@ mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm ){
 	if ( fsm == NULL ) return NULL;
 
 	_fsm = (_fsm_t *)fsm;
-	return( _fsm->execution_trace );
+	return( _fsm->messages_trace );
 }
 
 
@@ -262,7 +276,7 @@ void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
 	if ( fsm == NULL ) return NULL;
 
 	_fsm = (_fsm_t *)fsm;
-	data = mmt_map_get_data( _fsm->execution_trace, &event_id );
+	data = mmt_map_get_data( _fsm->events_trace, &event_id );
 	//mmt_debug("Get history %d: %s", event_id, data == NULL? "NUL": "not NULL" );
 	return data;
 }
@@ -286,7 +300,6 @@ void fsm_set_id( fsm_t *fsm, uint16_t id ){
 	_fsm = (_fsm_t *)fsm;
 	_fsm->id = id;
 }
-
 
 /**
  * Public API

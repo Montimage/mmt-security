@@ -11,7 +11,7 @@
 static size_t allocated_memory_size, freed_memory_size;
 
 typedef struct _memory_struct{
-	uint8_t ref_count;
+	size_t ref_count;
 	size_t  size;
 	void *  data;
 }_memory_t;

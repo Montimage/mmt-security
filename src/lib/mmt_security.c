@@ -180,7 +180,9 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 
 		//find a validated/invalid trace
 		if( ret == RULE_ENGINE_RESULT_VALIDATE || ret == RULE_ENGINE_RESULT_ERROR ){
+			//get execution trace
 			execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
+			//call user-callback function
 			_handler->callback(
 					_handler->rules_array[i],
 					_get_verdict( _handler->rules_array[i]->type_id, ret ),

@@ -172,6 +172,32 @@ void mmt_map_free( mmt_map_t *map, bool free_data  ){
 	mmt_mem_free( map );
 }
 
+void _mmt_map_free_key_and_data( _mmt_map_node_t *node, void (*free_key_fn)( void *), void (*free_data_fn)( void *) ){
+	if( node == NULL ) return;
+	//free its key-data if need
+	if( free_key_fn != NULL )
+		free_key_fn( node->key );
+	if( free_data_fn != NULL )
+		free_data_fn( node->data );
+
+	//free its children
+	if( node->left != NULL )
+		_mmt_map_free_key_and_data( node->left, free_key_fn, free_data_fn );
+	if( node->right != NULL )
+		_mmt_map_free_key_and_data( node->right, free_key_fn, free_data_fn );
+
+	node->left = node->right = NULL;
+
+	//free the node itself
+	mmt_mem_free( node );
+}
+
+void mmt_map_free_key_and_data( mmt_map_t *map, void (*free_key_fn)( void *), void (*free_data_fn)( void *)  ){
+	if( map == NULL ) return;
+	_mmt_map_t *_tree = (_mmt_map_t*) map;
+	_mmt_map_free_key_and_data( _tree->root, free_key_fn, free_data_fn );
+	mmt_mem_free( map );
+}
 
 void* _mmt_map_set_data( int (*fun)(const void*, const void*), _mmt_map_node_t **node, void *key, void *data, bool override_if_exist ){
 	enum compare_result ret = 0;
@@ -284,6 +310,35 @@ mmt_map_t* mmt_map_clone( const mmt_map_t *map ){
 	return new_map;
 }
 
+void _mmt_map_clone_node_and_data( mmt_map_t *new_map, _mmt_map_node_t *node, void (*clone_key_fn)( void *), void (*clone_data_fn)( void *) ){
+	if( node == NULL ) return;
+
+	//free its children
+	if( node->left != NULL )
+		_mmt_map_clone_node_and_data( new_map, node->left, clone_key_fn, clone_data_fn );
+
+	//TODO
+	//_mmt_map_node_t *node_ptr = *node;
+
+
+	if( node->right != NULL )
+		_mmt_map_clone_node_and_data( new_map, node->right, clone_key_fn, clone_data_fn );
+}
+
+/**
+ * Public API
+ */
+mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void (*clone_key_fn)( void *), void (*clone_data_fn)( void *)  ){
+	if( map == NULL ) return NULL;
+	_mmt_map_t *_tree = (_mmt_map_t*) map;
+	mmt_map_t *new_map;
+
+	new_map = mmt_map_init( _tree->compare_function );
+	//clone map
+	_mmt_map_clone_node_and_data( new_map, _tree->root, clone_key_fn, clone_data_fn );
+
+	return new_map;
+}
 
 
 static void _iterate_to_assign_to_array( void *key, void *data, void *user_data, size_t index, size_t count){

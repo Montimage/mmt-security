@@ -159,6 +159,8 @@ void *mmt_map_get_data( const mmt_map_t *map, const void *key );
  */
 void mmt_map_free( mmt_map_t *map, bool free_data );
 
+void mmt_map_free_key_and_data( mmt_map_t *map, void (*free_key_fn)( void *), void (*free_data_fn)( void *)  );
+
 /**
  * Get number of elements in the map
  */
@@ -183,6 +185,8 @@ void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *
  * - Note: this function does not clone #key and #data of each node in the map
  */
 mmt_map_t* mmt_map_clone( const mmt_map_t *map );
+
+mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void (*clone_key_fn)( void *), void (*clone_data_fn)( void *)  );
 
 size_t mmt_map_get_data_array( const mmt_map_t *map, void **array);
 

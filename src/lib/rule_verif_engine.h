@@ -14,8 +14,7 @@
 typedef void rule_engine_t;
 
 enum rule_engine_result {
-	RULE_ENGINE_RESULT_NOT_USED, //the message is not used
-	RULE_ENGINE_RESULT_CONSUME,  //the message is used
+	RULE_ENGINE_RESULT_UNKNOWN, //do not known yet result
 	RULE_ENGINE_RESULT_ERROR,    //reach error state
 	RULE_ENGINE_RESULT_VALIDATE  //reach valid state
 };

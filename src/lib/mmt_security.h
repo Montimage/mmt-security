@@ -33,7 +33,7 @@ typedef void (*mmt_sec_callback)(
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
 		uint32_t counter,
-		const mmt_map_t *trace,
+		const mmt_map_t * const trace,
 		void *user_data		//#user-data being given in mmt_sec_register_rules
 		);
 

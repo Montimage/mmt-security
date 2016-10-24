@@ -39,7 +39,6 @@ message_t *clone_message_t( const message_t *msg, bool clone_data ){
 		else{
 			new_msg->elements[ i ].data = mmt_mem_dup( msg->elements[ i ].data,
 					msg->elements[i].data_type == NUMERIC ? sizeof( double ) : strlen( (char *)msg->elements[ i ].data ) );
-
 		}
 	}
 

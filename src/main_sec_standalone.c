@@ -60,7 +60,7 @@ void print_verdict( const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
 		uint32_t counter,
-		const mmt_map_t *trace,
+		const mmt_map_t *const trace,
 		void *user_data ){
 
 	mmt_assert( trace != NULL, "Cannot be NULL" );
@@ -259,7 +259,8 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 }
 
 void signal_handler(int signal_type) {
-	mmt_info( "Interrupted" );
+	mmt_print_mem_info();
+	mmt_info( "Interrupted by signal %d", signal_type );
 	exit( signal_type );
 }
 

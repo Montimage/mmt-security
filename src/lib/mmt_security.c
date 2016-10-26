@@ -135,7 +135,7 @@ enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
 	case RULE_TYPE_SECURITY:
 		switch( result ){
 		case RULE_ENGINE_RESULT_ERROR:
-			return VERDICT_RESPECTED;
+			return VERDICT_UNKNOWN;
 		case RULE_ENGINE_RESULT_VALIDATE:
 			return VERDICT_NOT_RESPECTED;
 		default:
@@ -146,7 +146,7 @@ enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
 	case RULE_TYPE_EVASION:
 		switch( result ){
 		case RULE_ENGINE_RESULT_ERROR:
-			return VERDICT_NOT_DETECTED;
+			return VERDICT_UNKNOWN;
 		case RULE_ENGINE_RESULT_VALIDATE:
 			return VERDICT_DETECTED;
 		default:
@@ -166,34 +166,38 @@ enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
 void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message ){
 	_mmt_sec_handler_t *_handler;
 	size_t i;
+	int verdict;
 	enum rule_engine_result ret;
 	const mmt_map_t *execution_trace;
 	mmt_assert( handler != NULL, "Need to register before processing");
 	_handler = (_mmt_sec_handler_t *)handler;
 	if( _handler->rules_count == 0 ) return;
 
-	message_t *msg = clone_message_t( message, YES );
+	message_t *msg = clone_message_t( message );
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
+//		printf("verify rule %d\n", _handler->rules_array[i]->id );
 		ret = rule_engine_process( _handler->engines[i], msg );
 
 		//find a validated/invalid trace
 		if( ret == RULE_ENGINE_RESULT_VALIDATE || ret == RULE_ENGINE_RESULT_ERROR ){
 			//get execution trace
 			execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
-			//call user-callback function
-			_handler->callback(
-					_handler->rules_array[i],
-					_get_verdict( _handler->rules_array[i]->type_id, ret ),
-					msg->timestamp,
-					msg->counter,
-					execution_trace,
-					_handler->user_data_for_callback );
+			verdict = _get_verdict( _handler->rules_array[i]->type_id, ret );
+			if( verdict != VERDICT_UNKNOWN )
+				//call user-callback function
+				_handler->callback(
+						_handler->rules_array[i],
+						verdict,
+						msg->timestamp,
+						msg->counter,
+						execution_trace,
+						_handler->user_data_for_callback );
 		}
 	}
 
-	free_message_t( msg, YES );
+	free_message_t( msg );
 }
 
 #define MAX_STR_SIZE 2000
@@ -209,7 +213,7 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 	string += strlen( string );
 	size = sprintf( string, "%s\"event_%d\": {\"timestamp\": %"PRIu64".%d, \"counter\": %"PRIu64", \"attributes\":[",
 			index == 0 ? "{": " ,",
-			*(uint16_t *) key,
+			*(uint16_t *) key, //event id
 			msg->timestamp / 1000000, //timestamp: second
 			(int)(msg->timestamp % 1000000), //timestamp: microsecond
 			msg->counter );

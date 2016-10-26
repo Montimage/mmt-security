@@ -42,7 +42,7 @@ ifndef VERBOSE
 	QUIET := @
 endif
 
-MAIN_DPI = gen_dpi
+MAIN_DPI = gen_dpi_header
 
 MAIN_GEN_PLUGIN = gen_plugin
 
@@ -79,4 +79,4 @@ plugin_info: $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	$(QUIET) $(CC) -o $(MAIN_PLUGIN_INFO) $(CLDFLAGS) $^ $(LIBS)
 
 clean:
-	$(QUIET) $(RM) $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)
+	$(QUIET) $(RM) $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE)

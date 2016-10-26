@@ -56,6 +56,7 @@ void print_rules_info(){
 	mmt_mem_free( rules_arr );
 }
 
+static size_t verdict_count = 0;
 void print_verdict( const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
@@ -63,11 +64,14 @@ void print_verdict( const rule_info_t *rule,		//id of rule
 		const mmt_map_t *const trace,
 		void *user_data ){
 
-	mmt_assert( trace != NULL, "Cannot be NULL" );
-	mmt_assert( mmt_map_count( trace) > 0, "Cannot be zero" );
+	//mmt_assert( trace != NULL, "Cannot be NULL %s:%d", __FILE__, __LINE__ );
+	//mmt_assert( mmt_map_count( trace) > 0, "Cannot be zero" );
 
+	verdict_count ++;
 	char *string = convert_execution_trace_to_json_string( trace );
-	mmt_debug( "Rule %"PRIu32": %s: %s \nDescription: %s\nTrace: %s", rule->id, rule->type_string, verdict_type_string[verdict], rule->description, string );
+	mmt_debug( "%zu. Rule %"PRIu32": %s: %s \nDescription: %s\nTrace: %s",
+			verdict_count,
+			rule->id, rule->type_string, verdict_type_string[verdict], rule->description, string );
 	mmt_mem_free( string );
 }
 
@@ -228,7 +232,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt, const mmt_sec_h
 	}
 
 	if( !has_data ){
-		free_message_t( msg, YES );
+		free_message_t( msg );
 		return NULL;
 	}
 
@@ -243,7 +247,7 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	mmt_sec_process( sec_handler, msg );
 
-	free_message_t( msg, YES );
+	free_message_t( msg );
 	return 0;
 }
 
@@ -257,9 +261,11 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 		fprintf(stderr, "Packet data extraction failure.\n");
 	}
 }
+static mmt_sec_handler_t *mmt_sec_handler = NULL;
 
 void signal_handler(int signal_type) {
-	mmt_print_mem_info();
+	mmt_sec_unregister( mmt_sec_handler );
+	mmt_mem_print_info();
 	mmt_info( "Interrupted by signal %d", signal_type );
 	exit( signal_type );
 }
@@ -279,7 +285,6 @@ int main(int argc, char** argv) {
 
 	const rule_info_t **rules_arr;
 	size_t i, j, size;
-	mmt_sec_handler_t *mmt_sec_handler = NULL;
 	uint16_t *rules_id_filter;
 	const proto_attribute_t **proto_atts;
 
@@ -319,8 +324,7 @@ int main(int argc, char** argv) {
 			fprintf(stderr, "pcap_open failed for the following reason: %s\n", errbuf);
 			return EXIT_FAILURE;
 		}
-
-		while ((data = pcap_next(pcap, &p_pkthdr))) {
+		while ((data = pcap_next(pcap, &p_pkthdr)) ) {
 			header.ts     = p_pkthdr.ts;
 			header.caplen = p_pkthdr.caplen;
 			header.len    = p_pkthdr.len;
@@ -347,6 +351,7 @@ int main(int argc, char** argv) {
 	mmt_sec_unregister( mmt_sec_handler );
 	mmt_mem_free( rules_arr );
 
+	mmt_mem_print_info();
 	return EXIT_SUCCESS;
 }
 

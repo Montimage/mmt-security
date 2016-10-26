@@ -154,6 +154,8 @@ typedef struct fsm_transition_struct
     * 	+ YES if the event's data fulfills the condition, otherwise NO.
     */
    int ( *guard )( const void *event_data, const fsm_t *fsm );
+
+   int action;
    /**
     *  The next state
     *

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml-stylesheet type="text/xsl" href="properties.xsl"?>
+<!-- MMT_Security Copyright (C) 2014  Montimage
+     Description: Detection of attacks in BGPost honeypot
+-->
+<beginning>
+
+
+<!-- TODO:
+R4_Decod_1c et R4_Decod_1d : Using fragroute
+
+C4_Analyse_1a : Il faut quelques regles qui analysent les champs de certains protocoles
+
+C4_Analyse_03a : la fonction de defragmentation detecte un chevauchement des zones de donnees transportees par des fragments IP (attack teardrop)
+
+Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapport aux sequences protocolaires generees par les outils (fragroute, etc.)
+-->
+
+
+<!-- Property 1: C4_Analyse_03g : Le champ Options doit etre homogene dans tous les fragments IP.-->
+<property value="THEN" delay_units="m" delay_min="0+" delay_max="1" property_id="1" type_property="EVASION" 
+    description="C4_Analyse_03g: The IP options field must be homogeneous in all IP fragments.">
+    <event value="COMPUTE" event_id="1" 
+           description="IP segment"
+           boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.options == ip.options)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src))))"/>
+           <!--
+           boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.options == ip.options)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src))))"/>
+           boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src)))"/>
+           -->
+    <event value="COMPUTE" event_id="2" 
+           description="IP options"
+           boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#check_ip_options(ip.options,ip.options.1) == 1))))"/>
+           <!--
+           boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#check_ip_options(ip.options,ip.options.1) == 1))))"/>
+           boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1))))"/>
+           -->
+</property>
+
+<!-- Property 2: C4_Analyse_03h : La taille minimum d un fragment IP est 28 bytes. Pour un IP fragment de offset 0 c est 40.-->
+<property value="THEN" delay_units="m" delay_min="0" delay_max="0" property_id="2" type_property="EVASION" 
+    description="C4_Analyse_03h: The minimum size of an IP fragment is 28 bytes and for an IP fragment with offset 0 it is 40.">
+    <event value="COMPUTE" event_id="3" 
+           description="IP segment and paquet size"
+           boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.tot_len &lt; 28)||((ip.frag_offset == 0)&amp;&amp;(ip.tot_len &lt; 40))))"/>
+    <event value="COMPUTE" event_id="4" 
+           description="IP segment"
+           boolean_expression="(ip.mf_flag > 0)"/>
+</property>
+
+<!-- Property 3: C4_Analyse_03f : HTTP detecte avec un port different de 80 et 3000.-->
+<property value="THEN" delay_units="m" delay_min="0" delay_max="0" property_id="3" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="5" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method == http.method)&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="6" 
+           description="HTTP packet"
+           boolean_expression="(http.method == http.method)"/>
+</property>
+
+<!-- Property 4: C4_Analyse_03e : l URI d un paquet HTTP contient des caracteres non authorises.-->
+<!-- URN invalid character set:
+     octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+-->
+<property value="THEN" delay_units="m" delay_min="0" delay_max="0" property_id="4" type_property="EVASION" 
+    description="C4_Analyse_03e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234.">
+    <event value="COMPUTE" event_id="7" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="8" 
+           description="HTTP packet"
+           boolean_expression="(http.method == http.method)"/>
+</property>
+
+</beginning>

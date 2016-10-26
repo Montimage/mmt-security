@@ -310,33 +310,45 @@ mmt_map_t* mmt_map_clone( const mmt_map_t *map ){
 	return new_map;
 }
 
-void _mmt_map_clone_node_and_data( mmt_map_t *new_map, _mmt_map_node_t *node, void (*clone_key_fn)( void *), void (*clone_data_fn)( void *) ){
+void _mmt_map_clone_node_and_data( _mmt_map_node_t **new_node, _mmt_map_node_t *node, void* (*clone_key_fn)( void *), void* (*clone_data_fn)( void *) ){
+	_mmt_map_node_t *node_ptr;
 	if( node == NULL ) return;
 
-	//free its children
+	//clone current node
+	node_ptr = mmt_mem_alloc( sizeof( _mmt_map_node_t ));
+	node_ptr->left = node_ptr->right = NULL;
+	if( clone_key_fn )
+		node_ptr->key  = clone_key_fn( node->key );
+	else
+		node_ptr->key  = node->key;
+	if( clone_data_fn )
+		node_ptr->data = clone_data_fn( node->data );
+	else
+		node_ptr->data = node->data;
+	*new_node = node_ptr;
+
+	//clone left branch
 	if( node->left != NULL )
-		_mmt_map_clone_node_and_data( new_map, node->left, clone_key_fn, clone_data_fn );
+		_mmt_map_clone_node_and_data( &(node_ptr->left), node->left, clone_key_fn, clone_data_fn );
 
-	//TODO
-	//_mmt_map_node_t *node_ptr = *node;
-
-
+	//clone right branch
 	if( node->right != NULL )
-		_mmt_map_clone_node_and_data( new_map, node->right, clone_key_fn, clone_data_fn );
+		_mmt_map_clone_node_and_data( &(node_ptr->right), node->right, clone_key_fn, clone_data_fn );
 }
 
 /**
  * Public API
  */
-mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void (*clone_key_fn)( void *), void (*clone_data_fn)( void *)  ){
+mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_fn)( void *), void* (*clone_data_fn)( void *)  ){
 	if( map == NULL ) return NULL;
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
 	mmt_map_t *new_map;
 
 	new_map = mmt_map_init( _tree->compare_function );
 	//clone map
-	_mmt_map_clone_node_and_data( new_map, _tree->root, clone_key_fn, clone_data_fn );
+	_mmt_map_clone_node_and_data( &(((_mmt_map_t *)new_map)->root), _tree->root, clone_key_fn, clone_data_fn );
 
+	((_mmt_map_t *)new_map)->size = mmt_map_count( map );
 	return new_map;
 }
 

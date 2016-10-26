@@ -50,7 +50,7 @@ link_node_t *remove_node_from_link_list( link_node_t *entry, const void *data );
 void free_link_list( link_node_t *head, bool free_data );
 void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) );
 
-static inline size_t count_node_from_link_list( const link_node_t *entry ){
+static inline size_t count_nodes_from_link_list( const link_node_t *entry ){
 	size_t size = 0;
 	while( entry != NULL ){
 		size ++;
@@ -186,7 +186,7 @@ void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *
  */
 mmt_map_t* mmt_map_clone( const mmt_map_t *map );
 
-mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void (*clone_key_fn)( void *), void (*clone_data_fn)( void *)  );
+mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_fn)( void *), void* (*clone_data_fn)( void *)  );
 
 size_t mmt_map_get_data_array( const mmt_map_t *map, void **array);
 

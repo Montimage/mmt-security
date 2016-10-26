@@ -57,7 +57,7 @@ void mmt_mem_info( size_t *allocated, size_t *freed );
 /**
  * Print information about memory allocated and freed
  */
-void mmt_print_mem_info();
+void mmt_mem_print_info();
 /**
  * Get size of the memory segment pointed by ptr.
  * Note that ptr is the pointer created by one of function: mmt_malloc, mmt_calloc
@@ -85,6 +85,11 @@ static inline void* mmt_mem_dup( const void *ptr, size_t size ){
 void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 );
 
 void *mmt_mem_retain( void *ptr );
+
+/**
+ * Return number of pointers pointing to this memory
+ */
+size_t mmt_mem_reference_count( void *ptr );
 
 #define mmt_free_and_assign_to_null( x ) while( x != NULL ){ mmt_mem_free( x ); x = NULL; break; }
 

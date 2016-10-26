@@ -32,8 +32,8 @@ typedef struct message_struct{
 	message_element_t *elements;
 }message_t;
 
-message_t *clone_message_t( const message_t *msg, bool clone_data );
+message_t *clone_message_t( const message_t *msg );
 message_t *retain_message_t( message_t *msg );
-void free_message_t( message_t *msg, bool free_data );
+void free_message_t( message_t *msg );
 
 #endif /* SRC_LIB_MESSAGE_T_H_ */

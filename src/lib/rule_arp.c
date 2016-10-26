@@ -1,6 +1,6 @@
 
- /** 695
-  * This file is generated automatically on 2016-10-20 17:30:44
+ /** 698
+  * This file is generated automatically on 2016-10-26 13:47:24
   */
  #include <string.h>
  #include <stdio.h>
@@ -17,7 +17,7 @@
 
  static proto_attribute_t proto_atts_10[ PROTO_ATTS_COUNT_10 ] = {{.proto = "arp", .proto_id = 30, .att = "ar_op", .att_id = 5, .data_type = 0}, {.proto = "arp", .proto_id = 30, .att = "ar_sha", .att_id = 6, .data_type = 1}, {.proto = "arp", .proto_id = 30, .att = "ar_sip", .att_id = 7, .data_type = 1}, {.proto = "arp", .proto_id = 30, .att = "ar_tip", .att_id = 9, .data_type = 1}};
 
- /** 484
+ /** 487
   * Structure to represent event data
   */
  typedef struct _msg_struct_10{
@@ -28,7 +28,7 @@
 	 const char *arp_ar_sip;
 	 const char *arp_ar_tip;
  }_msg_t_10;
- /** 519
+ /** 522
   * Create an instance of _msg_t_10
   */
  static inline _msg_t_10* _allocate_msg_t_10(){
@@ -41,7 +41,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 543
+ /** 546
   * Public API
   */
  static void *convert_message_to_event_10( const message_t *msg){
@@ -51,7 +51,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i].proto_id ){/** 553 For each protocol*/
+		 switch( msg->elements[i].proto_id ){/** 556 For each protocol*/
 		 case 30:// protocol arp
 			 switch( msg->elements[i].att_id ){
 			 case 5:// attribute ar_op
@@ -66,18 +66,18 @@
 			 case 9:// attribute ar_tip
 				 new_msg->arp_ar_tip = (char *) msg->elements[i].data;
 				 break;
-			 }//end switch of att_id 577
+			 }//end switch of att_id 580
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //580
+	 return (void *)new_msg; //583
  }//end function
- /** 449
+ /** 452
   * Public API
   */
  static const uint16_t* hash_message_10( const void *data ){
 	 static uint16_t hash_table[ EVENTS_COUNT_10 ];
 	 size_t i;	 _msg_t_10 *msg = (_msg_t_10 *) data;
-	 for( i=0; i<EVENTS_COUNT_10; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_10; i++) hash_table[i] = 0;/** 458 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return hash_table;
 	 if( msg->arp_ar_op != NULL )
 		 hash_table[ 0 ] = 1;
@@ -144,35 +144,35 @@
 	 return (((arp_ar_op == 2) && 0 == strcmp(arp_ar_sip , arp_ar_tip_1)) && 0 == strcmp(arp_ar_sha , arp_ar_sha_2));
  }
  
- /** 340
+ /** 341
   * States of FSM for rule 10
   */
  
- /** 341
+ /** 342
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_10_0, s_10_1, s_10_2, s_10_3, s_10_4;
- /** 354
+ /** 355
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 360
+ /** 361
   * initial state
   */
   s_10_0 = {
 	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  = "IPv4 address conflict detection (RFC5227). Possible arp poisoning.",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
-	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 382 An arp who was requested */
-		 /** 384 A real event */
-		 { .event_type = 1, .guard = &g_10_1, .target_state = &s_10_3} 
+		 /** 383 An arp who was requested */
+		 /** 385 A real event */
+		 { .event_type = 1, .guard = &g_10_1, .action = 0, .target_state = &s_10_3}  //FSM_ACTION_DO_NOTHING
 	 },
 	 .transitions_count = 1
  },
- /** 360
+ /** 361
   * timeout/error state
   */
   s_10_1 = {
@@ -184,7 +184,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 360
+ /** 361
   * final state
   */
   s_10_2 = {
@@ -199,20 +199,20 @@
 	 .delay        = {.time_min = 0, .time_max = 300000000, .counter_min = 0, .counter_max = 0},
 	 .description  =  NULL ,
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
-	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 384 Timeout event will fire this transition */
-		 { .event_type = 0, .guard = NULL  , .target_state = &s_10_4},
-		 /** 382 An arp reply with MAC address */
-		 /** 384 A real event */
-		 { .event_type = 2, .guard = &g_10_2, .target_state = &s_10_4},
-		 /** 384 A real event will fire this loop to create a new instance */
-		 { .event_type = 1, .guard = &g_10_1, .target_state = &s_10_3} 
+		 /** 385 Timeout event will fire this transition */
+		 { .event_type = 0, .guard = NULL  , .action = 0, .target_state = &s_10_4}, //FSM_ACTION_DO_NOTHING
+		 /** 383 An arp reply with MAC address */
+		 /** 385 A real event */
+		 { .event_type = 2, .guard = &g_10_2, .action = 0, .target_state = &s_10_4}, //FSM_ACTION_DO_NOTHING
+		 /** 385 A real event will fire this loop to create a new instance */
+		 { .event_type = 1, .guard = &g_10_1, .action = 1, .target_state = &s_10_3}  //FSM_ACTION_CREATE_INSTANCE
 	 },
 	 .transitions_count = 3
  },
- /** 360
+ /** 361
   * root node
   */
   s_10_4 = {
@@ -222,15 +222,15 @@
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 384 Timeout event will fire this transition */
-		 { .event_type = 0, .guard = NULL  , .target_state = &s_10_2},
-		 /** 382 An arp reply but with different MAC address */
-		 /** 384 A real event */
-		 { .event_type = 3, .guard = &g_10_3, .target_state = &s_10_2} 
+		 /** 385 Timeout event will fire this transition */
+		 { .event_type = 0, .guard = NULL  , .action = 0, .target_state = &s_10_2}, //FSM_ACTION_DO_NOTHING
+		 /** 383 An arp reply but with different MAC address */
+		 /** 385 A real event */
+		 { .event_type = 3, .guard = &g_10_3, .action = 0, .target_state = &s_10_2}  //FSM_ACTION_DO_NOTHING
 	 },
 	 .transitions_count = 2
  };
- /** 417
+ /** 420
   * Create a new FSM for this rule
   */
  static void *create_new_fsm_10(){
@@ -244,7 +244,7 @@
 
  static proto_attribute_t proto_atts_11[ PROTO_ATTS_COUNT_11 ] = {{.proto = "arp", .proto_id = 30, .att = "ar_op", .att_id = 5, .data_type = 0}, {.proto = "arp", .proto_id = 30, .att = "ar_sha", .att_id = 6, .data_type = 1}, {.proto = "arp", .proto_id = 30, .att = "ar_sip", .att_id = 7, .data_type = 1}};
 
- /** 484
+ /** 487
   * Structure to represent event data
   */
  typedef struct _msg_struct_11{
@@ -254,7 +254,7 @@
 	 const char *arp_ar_sha;
 	 const char *arp_ar_sip;
  }_msg_t_11;
- /** 519
+ /** 522
   * Create an instance of _msg_t_11
   */
  static inline _msg_t_11* _allocate_msg_t_11(){
@@ -266,7 +266,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 543
+ /** 546
   * Public API
   */
  static void *convert_message_to_event_11( const message_t *msg){
@@ -276,7 +276,7 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i].proto_id ){/** 553 For each protocol*/
+		 switch( msg->elements[i].proto_id ){/** 556 For each protocol*/
 		 case 30:// protocol arp
 			 switch( msg->elements[i].att_id ){
 			 case 5:// attribute ar_op
@@ -288,18 +288,18 @@
 			 case 7:// attribute ar_sip
 				 new_msg->arp_ar_sip = (char *) msg->elements[i].data;
 				 break;
-			 }//end switch of att_id 577
+			 }//end switch of att_id 580
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //580
+	 return (void *)new_msg; //583
  }//end function
- /** 449
+ /** 452
   * Public API
   */
  static const uint16_t* hash_message_11( const void *data ){
 	 static uint16_t hash_table[ EVENTS_COUNT_11 ];
 	 size_t i;	 _msg_t_11 *msg = (_msg_t_11 *) data;
-	 for( i=0; i<EVENTS_COUNT_11; i++) hash_table[i] = 0;/** 455 Rest hash_table. This is call for every executions*/
+	 for( i=0; i<EVENTS_COUNT_11; i++) hash_table[i] = 0;/** 458 Rest hash_table. This is call for every executions*/
 	 if( msg == NULL ) return hash_table;
 	 if( msg->arp_ar_op != NULL )
 		 hash_table[ 0 ] = 4;
@@ -345,35 +345,35 @@
 	 return (((arp_ar_op == 2) && 0 == strcmp(arp_ar_sip , arp_ar_sip_4)) && 0 == strcmp(arp_ar_sha , arp_ar_sha_4));
  }
  
- /** 340
+ /** 341
   * States of FSM for rule 11
   */
  
- /** 341
+ /** 342
   * Predefine list of states: init, error, final, ...
   */
  static fsm_state_t s_11_0, s_11_1, s_11_2, s_11_3;
- /** 354
+ /** 355
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 360
+ /** 361
   * initial state
   */
   s_11_0 = {
 	 .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},
 	 .description  = "IPv4 address conflict detection (RFC5227). Possible arp poisoning.",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
-	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
+	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 382 An arp reply with MAC address */
-		 /** 384 A real event */
-		 { .event_type = 4, .guard = &g_11_4, .target_state = &s_11_3} 
+		 /** 383 An arp reply with MAC address */
+		 /** 385 A real event */
+		 { .event_type = 4, .guard = &g_11_4, .action = 0, .target_state = &s_11_3}  //FSM_ACTION_DO_NOTHING
 	 },
 	 .transitions_count = 1
  },
- /** 360
+ /** 361
   * timeout/error state
   */
   s_11_1 = {
@@ -385,7 +385,7 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 360
+ /** 361
   * final state
   */
   s_11_2 = {
@@ -397,27 +397,27 @@
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 360
+ /** 361
   * root node
   */
   s_11_3 = {
 	 .delay        = {.time_min = 0, .time_max = 300000000, .counter_min = 0, .counter_max = 0},
 	 .description  = "IPv4 address conflict detection (RFC5227). Possible arp poisoning.",
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
-	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
+	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .data         = NULL,
 	 .transitions  = (fsm_transition_t[]){
-		 /** 384 Timeout event will fire this transition */
-		 { .event_type = 0, .guard = NULL  , .target_state = &s_11_2},
-		 /** 382 An arp reply but with different MAC address */
-		 /** 384 A real event */
-		 { .event_type = 5, .guard = &g_11_5, .target_state = &s_11_2},
-		 /** 384 A real event will fire this loop to create a new instance */
-		 { .event_type = 4, .guard = &g_11_4, .target_state = &s_11_3} 
+		 /** 385 Timeout event will fire this transition */
+		 { .event_type = 0, .guard = NULL  , .action = 0, .target_state = &s_11_2}, //FSM_ACTION_DO_NOTHING
+		 /** 383 An arp reply but with different MAC address */
+		 /** 385 A real event */
+		 { .event_type = 5, .guard = &g_11_5, .action = 0, .target_state = &s_11_2}, //FSM_ACTION_DO_NOTHING
+		 /** 385 A real event will fire this loop to create a new instance */
+		 { .event_type = 4, .guard = &g_11_4, .action = 1, .target_state = &s_11_3}  //FSM_ACTION_CREATE_INSTANCE
 	 },
 	 .transitions_count = 3
  };
- /** 417
+ /** 420
   * Create a new FSM for this rule
   */
  static void *create_new_fsm_11(){
@@ -425,7 +425,7 @@
  }//end function
 
  //======================================GENERAL======================================
- /** 593
+ /** 596
   * Information of 2 rules
   */
  size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){

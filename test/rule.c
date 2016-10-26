@@ -42,6 +42,6 @@ int main(){
 	}
 
 	mmt_free_and_assign_to_null( rule_list );
-	mmt_print_mem_info();
+	mmt_mem_print_info();
 	return 0;
 }

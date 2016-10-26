@@ -29,24 +29,25 @@ void mmt_mem_info( size_t *allocated, size_t *freed ){
 	*freed     = freed_memory_size;
 }
 
-void mmt_print_mem_info(){
+void mmt_mem_print_info(){
 	mmt_log(INFO, "MMT allocated: %zu bytes, freed: %zu bytes", allocated_memory_size, freed_memory_size );
 }
 
 void *mmt_mem_alloc(size_t size){
 	if( size == 0 ) return NULL;
-	_memory_t *mem = malloc( size_of_memory_t + size + 1 );
+	size = size_of_memory_t + size + 1;
+	_memory_t *mem = malloc( size );
 
 	//quit if not enough
 	mmt_assert( mem != NULL, "Not enough memory");
 	//remember size of memory being allocated
 	allocated_memory_size += size;
 
+	//safe string
+	((char *)mem)[ size-1 ] = '\0';
+
 	//mem->data points to the memory segment after sizeof( _memory_t )
 	mem->data = mem + 1;
-	//safe string
-	((char *)mem->data)[ size ] = '\0';
-
 	//store size to head of the memory segment
 	mem->size      = size;
 	mem->ref_count = 1;
@@ -105,6 +106,12 @@ size_t mmt_mem_size( const void *x ){
    if( x == NULL ) return 0; // nothing to do
    _memory_t *mem = _convert_mem( x );
    return mem->size;
+}
+
+size_t mmt_mem_reference_count( void *x ){
+	if( x == NULL ) return 0; // nothing to do
+	_memory_t *mem = _convert_mem( x );
+	return mem->ref_count;
 }
 
 void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 ){

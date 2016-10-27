@@ -17,7 +17,10 @@ void mmt_log( log_level_t level, const char *format, ... ){
 	/* Write the error message */
 	va_start(arg, format);
 	vsprintf(buffer, format, arg);
-	printf("%s - %s\n", log_level_name[level], buffer);
+	if( level == HALT || level == ERROR || level == WARN )
+		fprintf(stderr, "%s - %s\n", log_level_name[level], buffer);
+	else
+		fprintf(stdout, "%s - %s\n", log_level_name[level], buffer);
 	va_end(arg);
 	if( level == HALT ){
 		mmt_mem_print_info();

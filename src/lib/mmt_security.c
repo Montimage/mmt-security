@@ -14,7 +14,7 @@
 #include "expression.h"
 #include "rule.h"
 
-#define MAX_INSTANCE_COUNT 1000
+#define MAX_INSTANCE_COUNT 10000
 
 size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
 	return load_mmt_sec_rules( rules_array );
@@ -167,24 +167,25 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	_mmt_sec_handler_t *_handler;
 	size_t i;
 	int verdict;
-	enum rule_engine_result ret;
+	enum rule_engine_result ret = RULE_ENGINE_RESULT_UNKNOWN;
 	const mmt_map_t *execution_trace;
-	mmt_assert( handler != NULL, "Need to register before processing");
+//	mmt_assert( handler != NULL, "Need to register before processing");
 	_handler = (_mmt_sec_handler_t *)handler;
-	if( _handler->rules_count == 0 ) return;
+//	if( _handler->rules_count == 0 ) return;
 
 	message_t *msg = clone_message_t( message );
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
-//		printf("verify rule %d\n", _handler->rules_array[i]->id );
+		//printf("verify rule %d\n", _handler->rules_array[i]->id );
 		ret = rule_engine_process( _handler->engines[i], msg );
 
 		//find a validated/invalid trace
-		if( ret == RULE_ENGINE_RESULT_VALIDATE || ret == RULE_ENGINE_RESULT_ERROR ){
+		if( ret != RULE_ENGINE_RESULT_UNKNOWN ){
 			//get execution trace
 			execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
 			verdict = _get_verdict( _handler->rules_array[i]->type_id, ret );
+
 			if( verdict != VERDICT_UNKNOWN )
 				//call user-callback function
 				_handler->callback(

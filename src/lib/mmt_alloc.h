@@ -76,7 +76,7 @@ size_t mmt_mem_size( const void *ptr );
  * 	+ new data being duplicated
  */
 static inline void* mmt_mem_dup( const void *ptr, size_t size ){
-	if( size == 0 ) return NULL;
+	if( ptr == NULL || size == 0 ) return NULL;
 	void *ret = mmt_mem_alloc( size );
 	memcpy( ret, ptr, size );
 	return ret;

@@ -175,20 +175,20 @@ static inline void* _get_data( const ipacket_t *pkt, const proto_attribute_t *me
 	   	 inet_ntop(AF_INET6, data, buffer, buffer_size );
 			 //mmt_debug( "IPv6: %s", string );
 			 return mmt_mem_dup( buffer, strlen( buffer));
-	    case MMT_DATA_PATH: /**< protocol path constant value */
-	    case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
-	    case MMT_DATA_BUFFER: /**< binary buffer content */
-
-	    case MMT_DATA_POINT: /**< point constant value */
-	    case MMT_DATA_PORT_RANGE: /**< tcp/udp port range constant value */
-	    case MMT_DATA_DATE: /**< date constant value */
-	    case MMT_DATA_TIMEARG: /**< time argument constant value */
-	    case MMT_DATA_STRING_INDEX: /**< string index constant value (an association between a string and an integer) */
-	    case MMT_DATA_LAYERID: /**< Layer ID value */
-	    case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
-	    case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
-	    case MMT_STATS: /**< pointer to MMT Protocol statistics */
-	   	 break;
+//	    case MMT_DATA_PATH: /**< protocol path constant value */
+//	    case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
+//	    case MMT_DATA_BUFFER: /**< binary buffer content */
+//
+//	    case MMT_DATA_POINT: /**< point constant value */
+//	    case MMT_DATA_PORT_RANGE: /**< tcp/udp port range constant value */
+//	    case MMT_DATA_DATE: /**< date constant value */
+//	    case MMT_DATA_TIMEARG: /**< time argument constant value */
+//	    case MMT_DATA_STRING_INDEX: /**< string index constant value (an association between a string and an integer) */
+//	    case MMT_DATA_LAYERID: /**< Layer ID value */
+//	    case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
+//	    case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
+//	    case MMT_STATS: /**< pointer to MMT Protocol statistics */
+//	   	 break;
 	    case MMT_BINARY_DATA: /**< binary constant value */
 	    case MMT_BINARY_VAR_DATA: /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
 	    case MMT_STRING_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum BINARY_64DATA_LEN long */
@@ -198,6 +198,8 @@ static inline void* _get_data( const ipacket_t *pkt, const proto_attribute_t *me
 	   	 return mmt_mem_dup( ((mmt_header_line_t *)data)->ptr, ((mmt_header_line_t *)data)->len );
 	    case MMT_STRING_DATA_POINTER: /**< pointer constant value (size is void *). The data pointed to is of type string with null terminating character included */
 	   	 return mmt_mem_dup( data, strlen( (char*) data) );
+	    default:
+	   	 break;
 	}
 	if( me->data_type == 0 ){//NUMERIC )
 		return mmt_mem_dup( &number, sizeof( double ));
@@ -262,9 +264,11 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 	}
 }
 static mmt_sec_handler_t *mmt_sec_handler = NULL;
+static const rule_info_t **rules_arr = NULL;
 
 void signal_handler(int signal_type) {
 	mmt_sec_unregister( mmt_sec_handler );
+	mmt_mem_free( rules_arr );
 	mmt_mem_print_info();
 	mmt_info( "Interrupted by signal %d", signal_type );
 	exit( signal_type );
@@ -283,7 +287,6 @@ int main(int argc, char** argv) {
 
 	struct pkthdr header;
 
-	const rule_info_t **rules_arr;
 	size_t i, j, size;
 	uint16_t *rules_id_filter;
 	const proto_attribute_t **proto_atts;
@@ -321,7 +324,7 @@ int main(int argc, char** argv) {
 	if (type == TRACE_FILE) {
 		pcap = pcap_open_offline(filename, errbuf); // open offline trace
 		if (!pcap) { /* pcap error ? */
-			fprintf(stderr, "pcap_open failed for the following reason: %s\n", errbuf);
+			mmt_log(ERROR, "pcap_open failed for the following reason: %s\n", errbuf);
 			return EXIT_FAILURE;
 		}
 		while ((data = pcap_next(pcap, &p_pkthdr)) ) {
@@ -329,14 +332,14 @@ int main(int argc, char** argv) {
 			header.caplen = p_pkthdr.caplen;
 			header.len    = p_pkthdr.len;
 			if (!packet_process(mmt_dpi_handler, &header, data)) {
-				fprintf(stderr, "Packet data extraction failure.\n");
+				mmt_log(ERROR, "Packet data extraction failure.\n");
 			}
 		}
 	} else {
 		mmt_info("Listening on interface %s", filename );
 		pcap = pcap_open_live(filename, MTU_BIG, 1, 1000, errbuf);
 		if (!pcap) {
-			fprintf(stderr, "pcap_open failed for the following reason: %s\n", errbuf);
+			mmt_log(ERROR, "pcap_open failed for the following reason: %s\n", errbuf);
 			return EXIT_FAILURE;
 		}
 		(void)pcap_loop( pcap, -1, &live_capture_callback, (u_char*)mmt_dpi_handler );

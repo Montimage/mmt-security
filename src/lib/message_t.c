@@ -14,7 +14,7 @@
  */
 void free_message_t( message_t *msg ){
 	size_t i;
-
+	if( msg == NULL ) return;
 	for( i=0; i<msg->elements_count; i++ )
 		mmt_mem_free( msg->elements[i].data );
 
@@ -50,10 +50,7 @@ message_t *clone_message_t( const message_t *msg ){
 	new_msg->elements = mmt_mem_dup( msg->elements, sizeof( message_element_t ) * new_msg->elements_count );
 
 	for( i=0; i<new_msg->elements_count; i++ ){
-		if( msg->elements[i].data == NULL )
-			new_msg->elements[ i ].data = NULL;
-		else
-			new_msg->elements[ i ].data = mmt_mem_dup( msg->elements[ i ].data,
+		new_msg->elements[ i ].data = mmt_mem_dup( msg->elements[ i ].data,
 					msg->elements[i].data_type == NUMERIC ? sizeof( double ) : strlen( (char *)msg->elements[ i ].data ) );
 	}
 

@@ -52,12 +52,12 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	if( var->ref_index != (uint8_t)UNKNOWN ){
 		fprintf(fd, "\n\t his_data = (_msg_t_%d *)fsm_get_history( fsm, %d);", rule_id, var->ref_index );
 		//TODO: not need to check ?
-		fprintf(fd, "\n\t if( his_data == NULL ) return 0;");
+		//fprintf(fd, "\n\t if( his_data == NULL ) return 0;");
 	}
 
-	fprintf(fd, "\n\t if( %s->%s_%s == NULL ) return 0;",
-					( var->ref_index == (uint8_t)UNKNOWN )? "ev_data" : "his_data",
-					var->proto, var->att);
+	//fprintf(fd, "\n\t if( %s->%s_%s == NULL ) return 0;",
+	//				( var->ref_index == (uint8_t)UNKNOWN )? "ev_data" : "his_data",
+	//				var->proto, var->att);
 
 	_gen_code_line( fd );
 	//TODO: when proto starts by a number
@@ -457,7 +457,7 @@ void _iterate_events_to_gen_hash_function( void *key, void *data, void *user_dat
 		fprintf( fd, "\n\t for( i=0; i<EVENTS_COUNT_%d; i++) hash_table[i] = 0;", rule_id );
 		_gen_comment_line(fd, "Rest hash_table. This is call for every executions");
 
-		fprintf( fd, "\n\t if( msg == NULL ) return hash_table;");
+		fprintf( fd, "\n\t //if( msg == NULL ) return hash_table;");
 	}
 
 	//body

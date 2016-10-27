@@ -51,21 +51,21 @@ typedef struct fsm_struct{
 /**
  * Execute an entry
  */
-static void _exec_action( bool entry, const void *event_data, const fsm_state_t *state, _fsm_t *fsm ){
-	enum fsm_action_type action_type;
-	if( entry == YES )
-		action_type = state->entry_action;
-	else
-		action_type = state->exit_action;
-
-	switch( action_type ){
-		case FSM_ACTION_RESET_TIMER:
-			mmt_debug( "RESET TIMER ");
-			break;
-		default:
-			mmt_debug("Not good when calling this function with action_type = %d", action_type );
-	}
-}
+//static void _exec_action( bool entry, const void *event_data, const fsm_state_t *state, _fsm_t *fsm ){
+//	enum fsm_action_type action_type;
+//	if( entry == YES )
+//		action_type = state->entry_action;
+//	else
+//		action_type = state->exit_action;
+//
+//	switch( action_type ){
+//		case FSM_ACTION_RESET_TIMER:
+//			mmt_debug( "RESET TIMER ");
+//			break;
+//		default:
+//			mmt_debug("Not good when calling this function with action_type = %d", action_type );
+//	}
+//}
 
 /**
  * Public API
@@ -127,21 +127,21 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 
 	ptr = mmt_map_set_data( _fsm->events_trace, (void *) &tran->event_type, mmt_mem_retain( event_data ), YES );
 	//must free the old value
-	if( ptr != NULL ) mmt_mem_free( ptr );
+	mmt_mem_free( ptr );
 
 	ptr = mmt_map_set_data( _fsm->messages_trace, (void *) &tran->event_type, retain_message_t( message_data ), YES );
 	//must free the old value
-	if( ptr != NULL ) free_message_t( (message_t *) ptr );
+	free_message_t( (message_t *) ptr );
 
-	/* Run exit action
-	 * (even if it returns to itself) */
-	if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING  &&  _fsm->current_state->exit_action != FSM_ACTION_CREATE_INSTANCE )
-		_exec_action( NO, event_data, _fsm->current_state, _fsm );
-
-	/* Call the new _state's entry action if it has any
-	 * (even if state returns to itself) */
-	if ( new_state->entry_action != FSM_ACTION_DO_NOTHING &&  new_state->entry_action != FSM_ACTION_CREATE_INSTANCE )
-		_exec_action( YES, event_data, new_state, _fsm );
+//	/* Run exit action
+//	 * (even if it returns to itself) */
+//	if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING  &&  _fsm->current_state->exit_action != FSM_ACTION_CREATE_INSTANCE )
+//		_exec_action( NO, event_data, _fsm->current_state, _fsm );
+//
+//	/* Call the new _state's entry action if it has any
+//	 * (even if state returns to itself) */
+//	if ( new_state->entry_action != FSM_ACTION_DO_NOTHING &&  new_state->entry_action != FSM_ACTION_CREATE_INSTANCE )
+//		_exec_action( YES, event_data, new_state, _fsm );
 
 	// Update the states in FSM
 	_fsm->previous_state = _fsm->current_state;
@@ -155,9 +155,9 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 		return FSM_FINAL_STATE_REACHED;
 
 	/* If the state returned to itself */
-	if (_fsm->current_state == _fsm->previous_state){
-		return FSM_STATE_LOOP_SELF;
-	}
+//	if (_fsm->current_state == _fsm->previous_state){
+//		return FSM_STATE_LOOP_SELF;
+//	}
 
 
 	return FSM_STATE_CHANGED;
@@ -168,7 +168,6 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
  */
 enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data, fsm_t **new_fsm ) {
 	const fsm_transition_t *tran = NULL;
-	const fsm_state_t *state = NULL;
 	_fsm_t *_fsm = NULL, *_new_fsm = NULL;
 	//set the
 	*new_fsm = NULL;
@@ -185,20 +184,17 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	if( _fsm->current_state->transitions_count <= transition_index )
 		return FSM_ERR_ARG;
 
-	state = _fsm->current_state;
-
 	tran = &_fsm->current_state->transitions[ transition_index ];// _get_transition(_fsm, state, event);
-
-	//no transitions are satisfied
-	if( tran == NULL )
-		return FSM_NO_STATE_CHANGE;
+	//must not be null
+//	if( tran == NULL )
+//		return FSM_NO_STATE_CHANGE;
 
 	/* If transition is guarded, ensure that the condition is held: */
 	if (tran->guard != NULL && tran->guard( event_data, (fsm_t *)fsm)  == NO )
 		return FSM_NO_STATE_CHANGE;
 
 	//TODO: timeout
-	if( tran->guard == NULL ){
+	else if( tran->guard == NULL ){
 		//mmt_debug( "Timeout" );
 		return FSM_NO_STATE_CHANGE;
 	}
@@ -207,20 +203,18 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	 * If the user has not defined the next _state, go to error _state: */
 	//mmt_assert( tran->target_state != NULL, "Error: Target state cannot be NULL" );
 
-	state = tran->target_state;
-
 //	mmt_debug( "Exit action: %d", _fsm->current_state->exit_action );
 	//Create a new instance, then update its data
-	if ( _fsm->current_state->exit_action == FSM_ACTION_CREATE_INSTANCE
-			|| state->entry_action == FSM_ACTION_CREATE_INSTANCE
-			|| tran->action == FSM_ACTION_CREATE_INSTANCE ){
+	if ( tran->action == FSM_ACTION_CREATE_INSTANCE
+			|| _fsm->current_state->exit_action == FSM_ACTION_CREATE_INSTANCE
+			 ){
 
 		_new_fsm = _fsm_clone( _fsm );
 		*new_fsm = (fsm_t *)_new_fsm;
-		return _update_fsm( _new_fsm, state, tran, message_data, event_data );
+		return _update_fsm( _new_fsm, tran->target_state, tran, message_data, event_data );
 	}
 	//add event to execution trace
-	return _update_fsm( _fsm, state, tran, message_data, event_data );
+	return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
 
 }
 

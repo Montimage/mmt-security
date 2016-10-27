@@ -18,13 +18,17 @@ void print_variable( void *key, void *data, void *user_data, size_t index, size_
 }
 
 void print_event( void *key, void *data, void *user_data, size_t index, size_t total ){
+	char *string;
 	rule_event_t *event = (rule_event_t *)data;
 	mmt_map_t *map;
 	mmt_debug(" Event %d", *(uint8_t*)key );
 	mmt_debug(" + %s", event->description );
 	mmt_debug(" + number of variables: %zu", get_unique_variables_of_expression( event->expression, &map, NO ));
+	expr_stringify_expression( &string, event->expression );
+	mmt_debug(" + expression: %s", string );
 	mmt_map_iterate( map, print_variable, NULL );
 	mmt_map_free( map, NO );
+	mmt_mem_free( string );
 }
 
 int main(){

@@ -709,7 +709,7 @@ size_t expr_stringify_operation( char **string, operation_t *opt ){
 	if( _is_comparison_operator( opt->operator ) && _is_string_param ( opt ) ){
 		//delimiter
 		delim = ",";
-		index += sprintf( &str[ index ], "0 == strcmp(" );
+		index += sprintf( &str[ index ], "0 %s strcmp(", opt->name );
 	}else if( opt->operator == FUNCTION ){
 		delim = ",";
 		index += sprintf( &str[ index ], "%s(", opt->name );

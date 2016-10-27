@@ -138,20 +138,24 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 //	if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING  &&  _fsm->current_state->exit_action != FSM_ACTION_CREATE_INSTANCE )
 //		_exec_action( NO, event_data, _fsm->current_state, _fsm );
 //
-//	/* Call the new _state's entry action if it has any
-//	 * (even if state returns to itself) */
-//	if ( new_state->entry_action != FSM_ACTION_DO_NOTHING &&  new_state->entry_action != FSM_ACTION_CREATE_INSTANCE )
-//		_exec_action( YES, event_data, new_state, _fsm );
+
 
 	// Update the states in FSM
 	_fsm->previous_state = _fsm->current_state;
 	_fsm->current_state = new_state;
 
+	/* Call the new _state's entry action if it has any
+	 * (even if state returns to itself) */
+	if ( new_state->entry_action == FSM_ACTION_UPDATE_TIMER || _fsm->previous_state->entry_action == FSM_ACTION_UPDATE_TIMER ){
+		_fsm->counter = message_data->counter;
+		_fsm->timer   = message_data->timestamp;
+	}
+
 	if (_fsm->current_state == _fsm->error_state)
 		return FSM_ERROR_STATE_REACHED;
 
 	/* If the target state is a final one, notify user that the machine has stopped */
-	if (!_fsm->current_state->transitions_count)
+	else if (!_fsm->current_state->transitions_count)
 		return FSM_FINAL_STATE_REACHED;
 
 	/* If the state returned to itself */
@@ -163,12 +167,15 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	return FSM_STATE_CHANGED;
 }
 
+
 /**
  * Public API
  */
 enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data, fsm_t **new_fsm ) {
 	const fsm_transition_t *tran = NULL;
 	_fsm_t *_fsm = NULL, *_new_fsm = NULL;
+	uint64_t timer, counter;
+
 	//set the
 	*new_fsm = NULL;
 	if (!fsm ) return FSM_ERR_ARG;
@@ -184,6 +191,24 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	if( _fsm->current_state->transitions_count <= transition_index )
 		return FSM_ERR_ARG;
 
+	//check if timeout
+	tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
+	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ){
+		timer = message_data->timestamp - _fsm->timer;
+//		mmt_log( WARN, "Timeout out: %"PRIu64", max: %"PRIu64, timer, _fsm->current_state->delay.time_max);
+		//timeout
+		if( //_fsm->current_state->delay.counter_min < (message_data->counter - _fsm->counter)
+				//&& (message_data->counter - _fsm->counter) < _fsm->current_state->delay.counter_max
+				//&&
+				_fsm->current_state->delay.time_min <= timer//for delay_min, sign = +1 means strictly greater
+				&& timer <= _fsm->current_state->delay.time_max //for delay_max, sign = -1 means less than
+			)
+			;//it's OK ==>in the permetted delay
+		else
+			//fire timeout transition
+			return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
+	}
+
 	tran = &_fsm->current_state->transitions[ transition_index ];// _get_transition(_fsm, state, event);
 	//must not be null
 //	if( tran == NULL )
@@ -191,13 +216,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 	/* If transition is guarded, ensure that the condition is held: */
 	if (tran->guard != NULL && tran->guard( event_data, (fsm_t *)fsm)  == NO )
-		return FSM_NO_STATE_CHANGE;
-
-	//TODO: timeout
-	else if( tran->guard == NULL ){
-		//mmt_debug( "Timeout" );
-		return FSM_NO_STATE_CHANGE;
-	}
+			return FSM_NO_STATE_CHANGE;
 
 	/* A transition must have a next _state defined
 	 * If the user has not defined the next _state, go to error _state: */
@@ -205,9 +224,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 //	mmt_debug( "Exit action: %d", _fsm->current_state->exit_action );
 	//Create a new instance, then update its data
-	if ( tran->action == FSM_ACTION_CREATE_INSTANCE
-			|| _fsm->current_state->exit_action == FSM_ACTION_CREATE_INSTANCE
-			 ){
+	if ( tran->action == FSM_ACTION_CREATE_INSTANCE ){
 
 		_new_fsm = _fsm_clone( _fsm );
 		*new_fsm = (fsm_t *)_new_fsm;

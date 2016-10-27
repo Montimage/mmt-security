@@ -38,11 +38,13 @@ typedef struct fsm_delay_struct{
 	 * - if > 0 then after
 	 */
 	uint64_t time_min, time_max;
+	int time_min_sign, time_max_sign;
 	/**
 	 * Similar to [time_min, time_max] we can de ne [counter_min, counter_max] where the unit is the number of packets analysed.
 	 * note that either delay or counter needs to be used not both
 	 */
 	uint64_t counter_min, counter_max;
+	int counter_min_sign, counter_max_sign;
 }fsm_delay_t;
 /**
  *  Finite State Machine
@@ -54,7 +56,7 @@ typedef void fsm_t;
 enum fsm_action_type {
 	FSM_ACTION_DO_NOTHING,
 	FSM_ACTION_CREATE_INSTANCE,
-	FSM_ACTION_RESET_TIMER
+	FSM_ACTION_UPDATE_TIMER
 };
 
 /**

@@ -31,14 +31,14 @@ typedef struct rule_delay_struct{
 	 * - if = 0 then in same packet,
 	 * - if > 0 then after
 	 */
-	double time_min, time_max;
+	uint64_t time_min, time_max;
+	int time_min_sign, time_max_sign;
 	/**
 	 * Similar to [time_min, time_max] we can de ne [counter_min, counter_max] where the unit is the number of packets analysed.
 	 * note that either delay or counter needs to be used not both
 	 */
-	int counter_min, counter_max;
-	//default is seconds; other possible values: "Y","M","D","H","m","s","ms","mms"
-	enum time_unit time_unit;
+	uint64_t counter_min, counter_max;
+	int counter_min_sign, counter_max_sign;
 } rule_delay_t;
 
 enum delay{
@@ -50,7 +50,7 @@ enum delay{
  * A node of a property/operator is either an event or an operator
  */
 typedef struct rule_node_struct{
-	enum { RULE_EVENT, RULE_OPERATOR } type;
+	enum { RULE_NODE_TYPE_EVENT, RULE_NODE_TYPE_OPERATOR } type;
 	union{
 		struct rule_event_struct    *event;
 		struct rule_operator_struct *operator;

@@ -56,7 +56,6 @@ void print_rules_info(){
 	mmt_mem_free( rules_arr );
 }
 
-static size_t verdict_count = 0;
 void print_verdict( const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
@@ -64,14 +63,15 @@ void print_verdict( const rule_info_t *rule,		//id of rule
 		const mmt_map_t *const trace,
 		void *user_data ){
 
-	//mmt_assert( trace != NULL, "Cannot be NULL %s:%d", __FILE__, __LINE__ );
-	//mmt_assert( mmt_map_count( trace) > 0, "Cannot be zero" );
+	struct timeval now;
+	gettimeofday(&now, NULL);
 
-	verdict_count ++;
 	char *string = convert_execution_trace_to_json_string( trace );
-	mmt_debug( "%zu. Rule %"PRIu32": %s: %s \nDescription: %s\nTrace: %s",
-			verdict_count,
-			rule->id, rule->type_string, verdict_type_string[verdict], rule->description, string );
+
+	printf( "{\"timestamp\":%ld.%ld,\"pid\":%"PRIu32",\"verdict\":\"%s\",\"type\":\"%s\",\"cause\":\"%s\",\"history\":%s},\n",
+			now.tv_sec, now.tv_usec,
+			rule->id, verdict_type_string[verdict],  rule->type_string,  rule->description, string );
+
 	mmt_mem_free( string );
 }
 
@@ -314,7 +314,7 @@ int main(int argc, char** argv) {
 	//register protocols and their attributes using by mmt-sec
 	size = mmt_sec_get_unique_protocol_attributes( mmt_sec_handler, &proto_atts );
 	for( i=0; i<size; i++ ){
-		mmt_debug( "Registered attribute to extract: %s.%s", proto_atts[i]->proto, proto_atts[i]->att );
+		//mmt_debug( "Registered attribute to extract: %s.%s", proto_atts[i]->proto, proto_atts[i]->att );
 		register_extraction_attribute( mmt_dpi_handler, proto_atts[i]->proto_id, proto_atts[i]->att_id );
 	}
 

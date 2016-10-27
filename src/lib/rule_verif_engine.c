@@ -7,8 +7,6 @@
 #include "rule_verif_engine.h"
 #include "mmt_fsm.h"
 
-#define NO_EXCLUDE_ANY_EVENT -1
-
 typedef struct _rule_engine_struct{
 	const rule_info_t *rule_info;
 	//this fsm is used for execution the first events
@@ -47,7 +45,7 @@ static inline _fsm_tran_index_t* _create_fsm_tran_index_t( size_t index, fsm_t *
 /**
  * Index the transitions of #fsm that can be fired in the next event.
  */
-static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm, uint16_t exclude_event_id ){
+static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm ){
 	size_t i, d;
 	uint16_t event_id;
 	const fsm_transition_t *tran;
@@ -58,8 +56,6 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 //			"Error: Number of outgoing transition must not be greater than number of events (%zu <= %zu)",
 //			state->transitions_count, _engine->max_events_count );
 
-//mmt_info( "fsm %p Exclude %d", fsm, exclude_event_id );
-
 	//for each outgoing transition, we add it to the list of expecting events
 	for( i=0; i<state->transitions_count; i++ ){
 		//i == 0: timeout => not always
@@ -67,13 +63,13 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 		tran     = &( state->transitions[ i ] );
 		event_id = tran->event_type;
 
+		if( event_id == FSM_EVENT_TYPE_TIMEOUT )
+			continue;
+
 		//TODO: check if a rule has not continue event_id ranges
 		//e.g., a rule having 2 event ids: 1 and 7, so, 1 % 2 == 7 % 2
 		//MUST: event_id < _engine->max_events_count
 		event_id = event_id % _engine->max_events_count;
-
-		if( event_id == exclude_event_id ) continue;
-
 
 //d = count_nodes_from_link_list( _engine->fsm_by_expecting_event_id[ event_id ]);
 //mmt_assert( d<= 300, "Stop here, total ins: %zu", _engine->total_instances_count );
@@ -102,7 +98,7 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 	fsm_set_id( _engine->fsm_bootstrap, 0 );
 
 	_engine->rule_info                 = rule_info;
-	_engine->max_events_count          = rule_info->events_count + 1; //1 for timeout;
+	_engine->max_events_count          = rule_info->events_count;
 	_engine->max_instances_count       = max_instances_count;
 	_engine->instances_count           = 1; //fsm_bootstrap
 	//linked-list of fsm instances indexed by their expected event_id
@@ -112,7 +108,7 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 		_engine->fsm_by_expecting_event_id[ i ] = NULL;
 
 	//add fsm_bootstrap to the list
-	_set_expecting_events_id( _engine, _engine->fsm_bootstrap, NO_EXCLUDE_ANY_EVENT );
+	_set_expecting_events_id( _engine, _engine->fsm_bootstrap );
 
 	//linked-list of fsm instances
 	_engine->fsm_by_instance_id = mmt_mem_alloc( _engine->max_instances_count * sizeof( void *) );
@@ -243,7 +239,7 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 
 		//add the new_fsm to lists
 		//the #new_fsm does not need to listen to the transition having index = #fsm_ind->index
-		_set_expecting_events_id( _engine, new_fsm, event_id );
+		_set_expecting_events_id( _engine, new_fsm );
 		//add the new_fsm to the list of fsm(s) having the same id
 		_engine->fsm_by_instance_id[ new_fsm_id  ] = insert_node_to_link_list( _engine->fsm_by_instance_id[ new_fsm_id ], new_fsm );
 		_engine->total_instances_count ++;
@@ -296,7 +292,7 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 					remove_node_from_link_list( _engine->fsm_by_expecting_event_id[ event_id ], (void *)fsm_ind );
 			mmt_mem_free( fsm_ind );
 			//then add to new list(s)
-			_set_expecting_events_id( _engine, fsm, NO_EXCLUDE_ANY_EVENT );
+			_set_expecting_events_id( _engine, fsm );
 
 			return RULE_ENGINE_RESULT_UNKNOWN;
 			break;

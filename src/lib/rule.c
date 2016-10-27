@@ -42,9 +42,9 @@ void rule_free_an_operator( rule_operator_t *operator, bool free_data){
 void _free_rule_node( rule_node_t *node ){
 	if( node == NULL ) return;
 
-	if( node->type == RULE_EVENT )
+	if( node->type == RULE_NODE_TYPE_EVENT )
 		rule_free_an_event( node->event, YES );
-	else if( node->type == RULE_OPERATOR )
+	else if( node->type == RULE_NODE_TYPE_OPERATOR )
 		rule_free_an_operator( node->operator, YES );
 	else{
 		mmt_debug("Unexpected rule_node_type: %d", node->type );
@@ -67,8 +67,8 @@ void free_a_rule( rule_t *rule, bool free_data){
 	mmt_free_and_assign_to_null( rule );
 }
 
-static inline void _update_delay_to_micro_second( rule_delay_t *delay ){
-	switch( delay->time_unit ){
+static inline void _update_delay_to_micro_second( rule_delay_t *delay, int delay_time_unit ){
+	switch( delay_time_unit ){
 	case YEAR:
 		delay->time_max *= 360;
 		delay->time_min *= 360;
@@ -95,6 +95,17 @@ static inline void _update_delay_to_micro_second( rule_delay_t *delay ){
 	}
 }
 
+static inline int _get_sign( const char *str ){
+	switch( str[ strlen(str) - 1 ]){
+	case '-':
+		return -1;
+	case '+':
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 /**
  * Create and init values for a delay struct
  */
@@ -102,12 +113,15 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 	const xmlAttr *xml_attr;
 	const xmlChar *xml_attr_name;
 	xmlChar *xml_attr_value;
+	int delay_time_unit   = SECOND;
 
 	rule_delay_t *delay = mmt_mem_alloc( sizeof( rule_delay_t ));
 
-	delay->time_min    = delay->time_max    = 0;
-	delay->counter_min = delay->counter_max = 0;
-	delay->time_unit   = SECOND;
+	delay->time_min         = delay->time_max         = 0;
+	delay->time_min_sign    = delay->time_max_sign    = 0;
+	delay->counter_min      = delay->counter_max      = 0;
+	delay->counter_min_sign = delay->counter_max_sign = 0;
+
 
 	//parse attributes of the node
 	xml_attr = xml_node->properties;
@@ -115,31 +129,39 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 		xml_attr_name  = xml_attr->name;
 		xml_attr_value = xmlGetProp( (xmlNodePtr) xml_node, xml_attr_name );
 
-		if( str_equal( xml_attr_name, "delay_min" ) )
-			delay->time_min = (uint8_t) atoll( (const char*) xml_attr_value );
-		else if( str_equal( xml_attr_name, "delay_max" ) )
-			delay->time_max = (uint8_t) atoll( (const char*) xml_attr_value );
-		else if( str_equal( xml_attr_name, "counter_min" ) )
-			delay->counter_min = (uint8_t) atoll( (const char*) xml_attr_value );
-		else if( str_equal( xml_attr_name, "counter_max" ) )
-			delay->counter_max= (uint8_t) atoll( (const char*) xml_attr_value );
-		else if( str_equal( xml_attr_name, "delay_units" ) ){
+		if( str_equal( xml_attr_name, "delay_min" ) ){
+			delay->time_min = (uint64_t) atoll( (const char*) xml_attr_value );
+			delay->time_min_sign = _get_sign( (const char*)xml_attr_value );
+			if( delay->time_max_sign == 1 )
+				delay->time_min += 1;
+		}else if( str_equal( xml_attr_name, "delay_max" ) ){
+			delay->time_max = (uint64_t) atoll( (const char*) xml_attr_value );
+			delay->time_max_sign = _get_sign( (const char*)xml_attr_value );
+			if( delay->time_max_sign == -1 )
+				delay->time_max -= 1;
+		}else if( str_equal( xml_attr_name, "counter_min" ) ){
+			delay->counter_min = (uint64_t) atoll( (const char*) xml_attr_value );
+			delay->counter_min_sign = _get_sign( (const char*)xml_attr_value );
+		}else if( str_equal( xml_attr_name, "counter_max" ) ){
+			delay->counter_max= (uint64_t) atoll( (const char*) xml_attr_value );
+			delay->counter_max_sign = _get_sign( (const char*)xml_attr_value );
+		}else if( str_equal( xml_attr_name, "delay_units" ) ){
 			if( str_equal( xml_attr_value, "Y"))
-				delay->time_unit = YEAR;
+				delay_time_unit = YEAR;
 			else if( str_equal( xml_attr_value, "M"))
-				delay->time_unit = MONTH;
+				delay_time_unit = MONTH;
 			else if( str_equal( xml_attr_value, "D"))
-				delay->time_unit = DAY;
+				delay_time_unit = DAY;
 			else if( str_equal( xml_attr_value, "H"))
-				delay->time_unit = HOUR;
+				delay_time_unit = HOUR;
 			else if( str_equal( xml_attr_value, "m"))
-				delay->time_unit = MINUTE;
+				delay_time_unit = MINUTE;
 			else if( str_equal( xml_attr_value, "s"))
-				delay->time_unit = SECOND;
+				delay_time_unit = SECOND;
 			else if( str_equal( xml_attr_value, "ms"))
-				delay->time_unit = MILI_SECOND;
+				delay_time_unit = MILI_SECOND;
 			else if( str_equal( xml_attr_value, "mms"))
-				delay->time_unit = MICRO_SECOND;
+				delay_time_unit = MICRO_SECOND;
 			else{
 				mmt_assert(1, "Error 13d: Unexpected time_units: %s", xml_attr_value );
 			}
@@ -148,7 +170,7 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 		xml_attr = xml_attr->next;
 	}
 
-	_update_delay_to_micro_second( delay );
+	_update_delay_to_micro_second( delay, delay_time_unit );
 	return delay;
 }
 
@@ -261,10 +283,10 @@ static rule_node_t *_parse_a_rule_node( const xmlNode *xml_node ){
 	rule_node->event    = NULL;
 
 	if( str_equal( xml_node->name, "operator" ) ){
-		rule_node->type     = RULE_OPERATOR;
+		rule_node->type     = RULE_NODE_TYPE_OPERATOR;
 		rule_node->operator = _parse_an_operator( xml_node );
 	}else if( str_equal( xml_node->name, "event" ) ){
-		rule_node->type  = RULE_EVENT;
+		rule_node->type  = RULE_NODE_TYPE_EVENT;
 		rule_node->event = _parse_an_event( xml_node );
 	}
 	else{
@@ -414,7 +436,7 @@ size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *even
 	size_t events_count = 0;
 	rule_event_t *ptr;
 	if ( node == NULL ) return 0;
-	if( node->type == RULE_EVENT ){
+	if( node->type == RULE_NODE_TYPE_EVENT ){
 
 		//if user does not set id of event ==> we assign it to an unique number
 		if( node->event->id == (uint16_t) UNKNOWN )
@@ -425,7 +447,7 @@ size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *even
 		//must not have 2 events with the same id
 		mmt_assert( ptr == NULL, "Error 13g: Duplicated events having id=%d", node->event->id );
 		return 1;
-	}else if( node->type == RULE_OPERATOR ){
+	}else if( node->type == RULE_NODE_TYPE_OPERATOR ){
 		events_count += _get_unique_events_of_rule_node( node->operator->context, events_map );
 		events_count += _get_unique_events_of_rule_node( node->operator->trigger, events_map );
 		return events_count;

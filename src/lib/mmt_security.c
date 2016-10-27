@@ -212,7 +212,7 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 	constant_t expr_const;
 
 	string += strlen( string );
-	size = sprintf( string, "%s\"event_%d\": {\"timestamp\": %"PRIu64".%d, \"counter\": %"PRIu64", \"attributes\":[",
+	size = sprintf( string, "%s\"event_%d\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
 			index == 0 ? "{": " ,",
 			*(uint16_t *) key, //event id
 			msg->timestamp / 1000000, //timestamp: second
@@ -222,21 +222,24 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 	for( i=0; i<msg->elements_count; i++ ){
 		me = &msg->elements[i];
 
+		if( me->data == NULL ) continue;
+
 		//convert me->data to string
 		expr_const.data = me->data;
 		//data_types of mmt-dpi
 		expr_const.data_type = get_attribute_data_type( me->proto_id, me->att_id );
 		//data_type of mmt-security contains only either a NUMERIC or a STRING
-		expr_const.data_type = convert_data_type( expr_const.data_type );
-		(void) expr_stringify_constant( &tmp, &expr_const );
+		 expr_const.data_type = convert_data_type( expr_const.data_type );
 
-		string += size;
-		size = sprintf( string, "%s{\"%s.%s\": %s}",
-				(i != 0? ", ":""),
-				get_protocol_name_by_id( me->proto_id ),
-				get_attribute_name_by_protocol_id_and_attribute_id( me->proto_id, me->att_id ),
-				tmp);
-		mmt_mem_free( tmp );
+		if( expr_stringify_constant( &tmp, &expr_const ) ){
+			string += size;
+			size = sprintf( string, "%s{\"%s.%s\":%s}",
+					(i != 0? ", ":""),
+					get_protocol_name_by_id( me->proto_id ),
+					get_attribute_name_by_protocol_id_and_attribute_id( me->proto_id, me->att_id ),
+					tmp);
+			mmt_mem_free( tmp );
+		}
 	}
 	string += size;
 	sprintf( string, "]}%s", //end attributes, end event_

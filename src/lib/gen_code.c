@@ -170,14 +170,14 @@ static inline _meta_transition_t *_create_new_transition( int event_type, int gu
 	return t;
 }
 
-static inline void _gen_transition_rule( _meta_state_t *s_init, _meta_state_t *s_pass,  _meta_state_t *s_fail,
+static inline void _gen_transition_rule( _meta_state_t *s_init, _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
 		link_node_t *states_list, const  rule_node_t *rule_node, size_t *index,  const rule_t *rule, int tran_action);
 
 /**
  * a THEN b
  * target state of a is the source state of b
  */
-static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail,
+static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
 		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
 		size_t *index, const rule_operator_t *operator, const rule_t *rule, int tran_action ){
 	_meta_state_t *new_state = _create_new_state( 0 );
@@ -196,43 +196,42 @@ static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *
 			_create_new_transition( FSM_EVENT_TYPE_TIMEOUT, 0, s_fail, FSM_ACTION_DO_NOTHING, NULL, "Timeout event will fire this transition"));
 
 	//gen for context
-	_gen_transition_rule( s_init, new_state, s_fail, states_list, context, index, rule, FSM_ACTION_CREATE_INSTANCE );
+	_gen_transition_rule( s_init, new_state, s_incl, s_incl, states_list, context, index, rule, FSM_ACTION_CREATE_INSTANCE );
 	//increase index
 	new_state->index = (*index)++;
-	new_state->entry_action = FSM_ACTION_UPDATE_TIMER;
 	states_list  = append_node_to_link_list( states_list, new_state );
 	//gen for trigger
-	_gen_transition_rule( new_state, s_pass, s_fail, states_list, trigger, index, rule, tran_action );
+	_gen_transition_rule( new_state, s_pass, s_fail, s_fail, states_list, trigger, index, rule, tran_action );
 }
 
 /**
  * a AND b == (a THEN b) OR (b THEN a)
  */
-static inline void _gen_transition_and( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail,
+static inline void _gen_transition_and( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
 		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
 		size_t *index, const rule_operator_t *operator, const rule_t *rule, int tran_action ){
 
-	_gen_transition_then( s_init, s_pass, s_fail, states_list, context, trigger, index, operator, rule, tran_action );
-	_gen_transition_then( s_init, s_pass, s_fail, states_list, trigger, context, index, operator, rule, tran_action );
+	_gen_transition_then( s_init, s_pass, s_fail, s_incl, states_list, context, trigger, index, operator, rule, tran_action );
+	_gen_transition_then( s_init, s_pass, s_fail, s_incl, states_list, trigger, context, index, operator, rule, tran_action );
 }
 
 /**
  * a OR b
  * a and b having the same source and target states
  */
-static inline void _gen_transition_or( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail,
+static inline void _gen_transition_or( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
 		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
 		size_t *index, const rule_operator_t *operator, const rule_t *rule, int tran_action ){
 
-	_gen_transition_rule( s_init, s_pass, s_fail, states_list, context, index, rule, tran_action );
-	_gen_transition_rule( s_init, s_pass, s_fail, states_list, trigger, index, rule, tran_action );
+	_gen_transition_rule( s_init, s_pass, s_fail, s_incl, states_list, context, index, rule, tran_action );
+	_gen_transition_rule( s_init, s_pass, s_fail, s_incl, states_list, trigger, index, rule, tran_action );
 }
 
 /**
  * a NOT b
  *
  */
-static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail,
+static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
 		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
 		size_t *index, const rule_operator_t *operator, const rule_t *rule, int tran_action ){
 
@@ -253,19 +252,18 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 			_create_new_transition( FSM_EVENT_TYPE_TIMEOUT, 0, s_pass, FSM_ACTION_DO_NOTHING, NULL, "Timeout event will fire this transition"));
 
 	//gen for context
-	_gen_transition_rule( s_init, state, s_fail, states_list, context, index, rule, FSM_ACTION_CREATE_INSTANCE );
+	_gen_transition_rule( s_init, state, s_incl, s_incl, states_list, context, index, rule, FSM_ACTION_CREATE_INSTANCE );
 	//increase index
 	state->index = (*index)++;
-	state->entry_action = FSM_ACTION_UPDATE_TIMER;
 	states_list  = append_node_to_link_list( states_list, state );
 	//gen for trigger
-	_gen_transition_rule( state, s_fail, s_pass, states_list, trigger, index, rule, tran_action );
+	_gen_transition_rule( state, s_fail, s_pass, s_fail, states_list, trigger, index, rule, tran_action );
 }
 
 /**
  * Generate a fsm of a rule
  */
-static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail,
+static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
 		link_node_t *states_list, const  rule_node_t *rule_node, size_t *index, const rule_t *rule, int tran_action ){
 
 	rule_operator_t *opt;
@@ -279,16 +277,16 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 	opt = rule_node->operator;
 	switch( opt->value){
 	case OP_TYPE_THEN:
-		_gen_transition_then(s_init, s_pass, s_fail, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
+		_gen_transition_then(s_init, s_pass, s_fail, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
 		break;
 	case OP_TYPE_AND:
-		_gen_transition_and(s_init, s_pass, s_fail, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
+		_gen_transition_and(s_init, s_pass, s_fail, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
 		break;
 	case OP_TYPE_OR:
-		_gen_transition_or(s_init, s_pass, s_fail, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
+		_gen_transition_or(s_init, s_pass, s_fail, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
 		break;
 	case OP_TYPE_NOT:
-		_gen_transition_not(s_init, s_fail, s_pass, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
+		_gen_transition_not(s_init, s_fail, s_pass, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
 		break;
 	}
 }
@@ -296,7 +294,7 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 
 static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 	size_t size, states_count, i;
-	_meta_state_t *s_init, *s_fail, *s_pass, *state;
+	_meta_state_t *s_init, *s_fail, *s_pass, *s_incl, *state;
 	_meta_transition_t *tran;
 	link_node_t *states_list = NULL, *p_link_node, *p_t;
 	char buffer[ MAX_STR_BUFFER ];
@@ -306,13 +304,13 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 	static const char *fsm_action_string[] = {
 			"FSM_ACTION_DO_NOTHING",
 			"FSM_ACTION_CREATE_INSTANCE",
-			"FSM_ACTION_RESET_TIMER"
 	};
 
 	states_count = 0;
 	s_init = _create_new_state( states_count ++ );
 	s_fail = _create_new_state( states_count ++ );
 	s_pass = _create_new_state( states_count ++ );
+	s_incl = _create_new_state( states_count ++ );
 
 	sprintf(s_init->comment, "initial state");
 	s_init->description = rule->description;
@@ -327,8 +325,9 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 	states_list = append_node_to_link_list(states_list, s_init );
 	states_list = append_node_to_link_list(states_list, s_fail );
 	states_list = append_node_to_link_list(states_list, s_pass );
+	states_list = append_node_to_link_list(states_list, s_incl );
 
-	_gen_transition_then(s_init, s_pass, s_fail, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING );
+	_gen_transition_then(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING );
 
 	_gen_comment( fd, "States of FSM for rule %d", rule_id );
 	_gen_comment(fd, "Predefine list of states: init, fail, pass, ..." );
@@ -354,11 +353,11 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 
 		fprintf( fd, " s_%d_%zu = {", rule_id, state->index );
 		if( state->delay == NULL )
-			fprintf( fd, "\n\t .delay        = {.time_min = 0, .time_min_sign = 0, .time_max = 0, .time_max_sign = 0, .counter_min = 0, .counter_min_sign = 0, .counter_max = 0, .counter_max_sign = 0},");
+			fprintf( fd, "\n\t .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},");
 		else
-			fprintf( fd, "\n\t .delay        = {.time_min = %"PRIu64"LL, .time_min_sign = %d, .time_max = %"PRIu64"LL, .time_max_sign = %d, .counter_min = %"PRIu64"LL, .counter_min_sign = %d, .counter_max = %"PRIu64"LL, .counter_max_sign = %d},",
-					state->delay->time_min, state->delay->time_min_sign, state->delay->time_max, state->delay->time_max_sign,
-					state->delay->counter_min, state->delay->counter_min_sign, state->delay->counter_max, state->delay->counter_max_sign);
+			fprintf( fd, "\n\t .delay        = {.time_min = %"PRIu64"LL, .time_max = %"PRIu64"LL, .counter_min = %"PRIu64"LL, .counter_max = %"PRIu64"LL},",
+					state->delay->time_min,    state->delay->time_max,
+					state->delay->counter_min, state->delay->counter_max);
 
 		fprintf( fd, "\n\t .description  = %c%s%c,", _string( state->description, ' ', "NULL", ' ', '"', state->description, '"'));
 		fprintf( fd, "\n\t .entry_action = %d, //%s", state->entry_action, fsm_action_string[ state->entry_action ] );
@@ -414,8 +413,8 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 
 	_gen_comment(fd, "Create a new FSM for this rule");
 	fprintf( fd, "static void *create_new_fsm_%d(){", rule->id);
-	fprintf( fd, "\n\t\t return fsm_init( &s_%d_0, &s_%d_1, &s_%d_2 );//init, error, final",
-			rule->id, rule->id, rule->id );
+	fprintf( fd, "\n\t\t return fsm_init( &s_%d_%zu, &s_%d_%zu, &s_%d_%zu, &s_%d_%zu );//init, error, final, inconclusive",
+			rule->id, s_init->index, rule->id, s_fail->index, rule->id, s_pass->index, rule->id, s_incl->index );
 	fprintf( fd, "\n }//end function");
 
 

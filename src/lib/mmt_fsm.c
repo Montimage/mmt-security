@@ -9,12 +9,13 @@
 #include "mmt_alloc.h"
 #include "data_struct.h"
 #include "message_t.h"
+
 /**
  * Detailed definition of FSM
  */
 typedef struct fsm_struct{
-	uint64_t timer;
-	uint64_t counter;
+	uint64_t time_min, time_max;
+	uint64_t counter_min, counter_max;
 
    /**  Pointer to the current fsm_state_struct */
    const fsm_state_t *current_state;
@@ -37,6 +38,10 @@ typedef struct fsm_struct{
     * It is used only in #fsm_reset to restore the #current_state
     */
    const fsm_state_t *init_state;
+
+   const fsm_state_t *incl_state;
+
+   const fsm_state_t *success_state;
 
    uint16_t id;
    /**
@@ -70,16 +75,20 @@ typedef struct fsm_struct{
 /**
  * Public API
  */
-fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state, const fsm_state_t *final) {
+fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state) {
 	_fsm_t *fsm = mmt_mem_alloc( sizeof( _fsm_t ));
 
 	fsm->init_state      = initial_state;
 	fsm->current_state   = initial_state;
 	fsm->previous_state  = NULL;
 	fsm->error_state     = error_state;
+	fsm->incl_state      = incl_state;
+	fsm->success_state   = final;
 	fsm->id              = 0;
 	fsm->events_trace    = mmt_map_init( compare_uint16_t );
 	fsm->messages_trace  = mmt_map_init( compare_uint16_t );
+	fsm->time_max    = fsm->time_min    = 0;
+	fsm->counter_max = fsm->counter_min = 0;
 	return (fsm_t *) fsm;
 }
 
@@ -109,6 +118,7 @@ static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
 	new_fsm->current_state   = _fsm->current_state;
 	new_fsm->previous_state  = _fsm->previous_state;
 	new_fsm->error_state     = _fsm->error_state;
+	new_fsm->incl_state      = _fsm->incl_state;
 	new_fsm->events_trace    = mmt_map_clone_key_and_data( _fsm->events_trace, NULL, mmt_mem_retain );
 	new_fsm->messages_trace  = mmt_map_clone_key_and_data( _fsm->messages_trace, NULL, (void *)retain_message_t );
 
@@ -123,6 +133,7 @@ fsm_t *fsm_clone( const fsm_t *fsm ) {
 
 static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_state_t *new_state, const fsm_transition_t *tran, message_t *message_data, void *event_data ){
 	void *ptr = NULL;
+	uint64_t val;
 	//mmt_debug( "fsm_id = %d, ref = %zu, event_id: %d", _fsm->id, mmt_mem_reference_count( event_data), tran->event_type );
 
 	ptr = mmt_map_set_data( _fsm->events_trace, (void *) &tran->event_type, mmt_mem_retain( event_data ), YES );
@@ -139,24 +150,35 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 //		_exec_action( NO, event_data, _fsm->current_state, _fsm );
 //
 
-
 	// Update the states in FSM
 	_fsm->previous_state = _fsm->current_state;
 	_fsm->current_state = new_state;
 
+	//update deadline
+	//outgoing from init state
+	if( _fsm->previous_state == _fsm->init_state ){
+		_fsm->counter_min += new_state->delay.counter_min + message_data->counter;
+		_fsm->time_min    += new_state->delay.time_min    + message_data->timestamp;
+
+		_fsm->counter_max += new_state->delay.counter_max + message_data->counter;
+		_fsm->time_max    += new_state->delay.time_max    + message_data->timestamp;
+	}else{
+		_fsm->counter_min += new_state->delay.counter_min;
+		_fsm->time_min    += new_state->delay.time_min;
+
+		_fsm->counter_max += new_state->delay.counter_max + message_data->counter;
+		_fsm->time_max += new_state->delay.counter_max + message_data->timestamp;
+	}
 	/* Call the new _state's entry action if it has any
 	 * (even if state returns to itself) */
-	if ( new_state->entry_action == FSM_ACTION_UPDATE_TIMER || _fsm->previous_state->entry_action == FSM_ACTION_UPDATE_TIMER ){
-		_fsm->counter = message_data->counter;
-		_fsm->timer   = message_data->timestamp;
-	}
 
 	if (_fsm->current_state == _fsm->error_state)
 		return FSM_ERROR_STATE_REACHED;
-
-	/* If the target state is a final one, notify user that the machine has stopped */
-	else if (!_fsm->current_state->transitions_count)
+	else if (_fsm->current_state == _fsm->incl_state)
+		return FSM_INCONCLUSIVE_STATE_REACHED;
+	else if ( _fsm->current_state == _fsm->success_state )
 		return FSM_FINAL_STATE_REACHED;
+	/* If the target state is a final one, notify user that the machine has stopped */
 
 	/* If the state returned to itself */
 //	if (_fsm->current_state == _fsm->previous_state){
@@ -194,14 +216,14 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	//check if timeout
 	tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
 	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ){
-		timer = message_data->timestamp - _fsm->timer;
+		timer = message_data->timestamp;
 //		mmt_log( WARN, "Timeout out: %"PRIu64", max: %"PRIu64, timer, _fsm->current_state->delay.time_max);
 		//timeout
 		if( //_fsm->current_state->delay.counter_min < (message_data->counter - _fsm->counter)
 				//&& (message_data->counter - _fsm->counter) < _fsm->current_state->delay.counter_max
 				//&&
-				_fsm->current_state->delay.time_min <= timer//for delay_min, sign = +1 means strictly greater
-				&& timer <= _fsm->current_state->delay.time_max //for delay_max, sign = -1 means less than
+				_fsm->current_state->delay.time_min <= timer
+				&& timer <= _fsm->current_state->delay.time_max
 			)
 			;//it's OK ==>in the permetted delay
 		else
@@ -320,16 +342,4 @@ void fsm_set_id( fsm_t *fsm, uint16_t id ){
 	if ( fsm == NULL ) return;
 	_fsm = (_fsm_t *)fsm;
 	_fsm->id = id;
-}
-
-/**
- * Public API
- */
-void fsm_get_timer_and_counter( const fsm_t *fsm, uint64_t *timer, uint64_t *counter ){
-	_fsm_t *_fsm;
-	if ( fsm == NULL ) return;
-	_fsm = (_fsm_t *)fsm;
-
-	*timer   = _fsm->timer;
-	*counter = _fsm->counter;
 }

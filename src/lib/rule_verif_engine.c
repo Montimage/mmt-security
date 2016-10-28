@@ -274,6 +274,10 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 				_reset_engine_for_fsm( _engine, fsm_get_id( new_fsm ) );
 				return RULE_ENGINE_RESULT_ERROR;
 				break;
+			case FSM_INCONCLUSIVE_STATE_REACHED:
+				//mmt_debug("INCL");
+				_reset_engine_for_fsm( _engine, fsm_get_id( new_fsm ) );
+				break;
 //			case FSM_ERR_ARG:
 //				//TODO: reset
 //				mmt_debug( "FSM_ERR_ARG" );
@@ -316,6 +320,10 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 			_store_valid_execution_trace( _engine, fsm );
 			_reset_engine_for_fsm( _engine, fsm_get_id( fsm ) );
 			return RULE_ENGINE_RESULT_ERROR;
+			break;
+		case FSM_INCONCLUSIVE_STATE_REACHED:
+			//mmt_debug("FSM_INCONCLUSIVE_STATE_REACHED");
+			_reset_engine_for_fsm( _engine, fsm_get_id( fsm ) );
 			break;
 //		case FSM_ERR_ARG:
 //			//TODO: reset

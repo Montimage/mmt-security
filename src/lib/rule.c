@@ -97,10 +97,10 @@ static inline void _update_delay_to_micro_second( rule_delay_t *delay, int delay
 
 static inline int _get_sign( const char *str ){
 	switch( str[ strlen(str) - 1 ]){
-	case '-':
+	case '-':  //for delay_max, sign = -1 means less than
 		return -1;
 	case '+':
-		return 1;
+		return 1;  //for delay_min, sign = +1 means greater than
 	default:
 		return 0;
 	}
@@ -114,13 +114,15 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 	const xmlChar *xml_attr_name;
 	xmlChar *xml_attr_value;
 	int delay_time_unit   = SECOND;
+	int time_min_sign, time_max_sign, counter_min_sign, counter_max_sign;
 
 	rule_delay_t *delay = mmt_mem_alloc( sizeof( rule_delay_t ));
 
 	delay->time_min         = delay->time_max         = 0;
-	delay->time_min_sign    = delay->time_max_sign    = 0;
 	delay->counter_min      = delay->counter_max      = 0;
-	delay->counter_min_sign = delay->counter_max_sign = 0;
+
+	time_min_sign    = time_max_sign    = 0;
+	counter_min_sign = counter_max_sign = 0;
 
 
 	//parse attributes of the node
@@ -131,20 +133,16 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 
 		if( str_equal( xml_attr_name, "delay_min" ) ){
 			delay->time_min = (uint64_t) atoll( (const char*) xml_attr_value );
-			delay->time_min_sign = _get_sign( (const char*)xml_attr_value );
-			if( delay->time_max_sign == 1 )
-				delay->time_min += 1;
+			time_min_sign = _get_sign( (const char*)xml_attr_value );
 		}else if( str_equal( xml_attr_name, "delay_max" ) ){
 			delay->time_max = (uint64_t) atoll( (const char*) xml_attr_value );
-			delay->time_max_sign = _get_sign( (const char*)xml_attr_value );
-			if( delay->time_max_sign == -1 )
-				delay->time_max -= 1;
+			time_max_sign = _get_sign( (const char*)xml_attr_value );
 		}else if( str_equal( xml_attr_name, "counter_min" ) ){
 			delay->counter_min = (uint64_t) atoll( (const char*) xml_attr_value );
-			delay->counter_min_sign = _get_sign( (const char*)xml_attr_value );
+			counter_min_sign = _get_sign( (const char*)xml_attr_value );
 		}else if( str_equal( xml_attr_name, "counter_max" ) ){
 			delay->counter_max= (uint64_t) atoll( (const char*) xml_attr_value );
-			delay->counter_max_sign = _get_sign( (const char*)xml_attr_value );
+			counter_max_sign = _get_sign( (const char*)xml_attr_value );
 		}else if( str_equal( xml_attr_name, "delay_units" ) ){
 			if( str_equal( xml_attr_value, "Y"))
 				delay_time_unit = YEAR;
@@ -171,6 +169,12 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 	}
 
 	_update_delay_to_micro_second( delay, delay_time_unit );
+
+	delay->time_min += time_min_sign;
+	delay->time_max += time_max_sign;
+	delay->counter_min  += counter_min_sign;
+	delay->counter_max  += counter_max_sign;
+
 	return delay;
 }
 

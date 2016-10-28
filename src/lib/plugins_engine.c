@@ -23,12 +23,12 @@ static int load_filter( const struct dirent *entry ){
 size_t _load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	const rule_info_t *tmp_array, **array;
 	size_t size = 0, i;
-
-	size = mmt_sec_get_plugin_info( &tmp_array );
-	array = mmt_mem_alloc( size * sizeof( void * ));
-	for( i=0; i<size; i++ )
-		array[i] = & tmp_array[i];
-	*ret_array = array;
+//
+//	size = mmt_sec_get_plugin_info( &tmp_array );
+//	array = mmt_mem_alloc( size * sizeof( void * ));
+//	for( i=0; i<size; i++ )
+//		array[i] = & tmp_array[i];
+//	*ret_array = array;
 
 	return size;
 }

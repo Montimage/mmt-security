@@ -56,7 +56,6 @@ typedef void fsm_t;
 enum fsm_action_type {
 	FSM_ACTION_DO_NOTHING,
 	FSM_ACTION_CREATE_INSTANCE,
-	FSM_ACTION_UPDATE_TIMER
 };
 
 /**
@@ -310,7 +309,7 @@ typedef struct fsm_state_struct{
  * 	+ error_state pointer to a state that acts a final state and notifies
  * 		the system/user that an error has occurred.
  */
-fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final );
+fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *inconclusive );
 
 /**
  * Reset the machine to #init_state and #error_state as being initialized.
@@ -361,6 +360,8 @@ enum fsm_handle_event_value{
 	FSM_NO_STATE_CHANGE,
    /**  A final state (any but the error state) was reached */
 	FSM_FINAL_STATE_REACHED,
+
+	FSM_INCONCLUSIVE_STATE_REACHED
 };
 
 /**
@@ -446,8 +447,6 @@ void fsm_set_id( fsm_t *fsm, uint16_t id );
 mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm );
 
 void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
-
-void fsm_get_timer_and_counter( const fsm_t *fsm, uint64_t *timer, uint64_t *counter );
 
 static inline void fsm_free_event( fsm_event_t *event, bool free_data ){
 	if( event == NULL ) return;

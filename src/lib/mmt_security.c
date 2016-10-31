@@ -177,7 +177,7 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
-		//printf("verify rule %d\n", _handler->rules_array[i]->id );
+		//mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
 		ret = rule_engine_process( _handler->engines[i], msg );
 
 		//find a validated/invalid trace
@@ -186,7 +186,7 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 			execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
 			verdict = _get_verdict( _handler->rules_array[i]->type_id, ret );
 
-			if( verdict != VERDICT_UNKNOWN )
+			if( verdict != VERDICT_UNKNOWN ){
 				//call user-callback function
 				_handler->callback(
 						_handler->rules_array[i],
@@ -195,6 +195,8 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 						msg->counter,
 						execution_trace,
 						_handler->user_data_for_callback );
+
+			}
 		}
 	}
 
@@ -210,9 +212,12 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 	const message_element_t *me;
 	char *tmp;
 	constant_t expr_const;
+	bool is_first = YES;
 
 	string += strlen( string );
-	size = sprintf( string, "%s\"event_%d\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
+	//TODO: use %06d for timestamp
+	//size = sprintf( string, "%s\"event_%d\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
+	size = sprintf( string, "%s\"event_%d\":{\"timestamp\":%"PRIu64".%d,\"counter\":%"PRIu64",\"attributes\":[",
 			index == 0 ? "{": " ,",
 			*(uint16_t *) key, //event id
 			msg->timestamp / 1000000, //timestamp: second
@@ -234,11 +239,12 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 		if( expr_stringify_constant( &tmp, &expr_const ) ){
 			string += size;
 			size = sprintf( string, "%s{\"%s.%s\":%s}",
-					(i != 0? ", ":""),
+					(is_first? "":","),
 					get_protocol_name_by_id( me->proto_id ),
 					get_attribute_name_by_protocol_id_and_attribute_id( me->proto_id, me->att_id ),
 					tmp);
 			mmt_mem_free( tmp );
+			is_first = NO;
 		}
 	}
 	string += size;

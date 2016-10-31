@@ -81,6 +81,7 @@ static inline void _update_delay_to_micro_second( rule_delay_t *delay, int delay
 	case HOUR:
 		delay->time_max *= 60;
 		delay->time_min *= 60;
+		mmt_debug("HOUR");
 	case MINUTE:
 		delay->time_max *= 60;
 		delay->time_min *= 60;
@@ -150,7 +151,7 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 				delay_time_unit = MONTH;
 			else if( str_equal( xml_attr_value, "D"))
 				delay_time_unit = DAY;
-			else if( str_equal( xml_attr_value, "H"))
+			else if( str_equal( xml_attr_value, "h"))
 				delay_time_unit = HOUR;
 			else if( str_equal( xml_attr_value, "m"))
 				delay_time_unit = MINUTE;
@@ -161,7 +162,7 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 			else if( str_equal( xml_attr_value, "mms"))
 				delay_time_unit = MICRO_SECOND;
 			else{
-				mmt_assert(1, "Error 13d: Unexpected time_units: %s", xml_attr_value );
+				mmt_assert(0, "Error 13d: Unexpected time_units: %s", xml_attr_value );
 			}
 		}
 		xmlFree( xml_attr_value );

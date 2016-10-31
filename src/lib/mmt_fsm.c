@@ -112,15 +112,18 @@ void fsm_reset( fsm_t *fsm ){
 }
 
 static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
-	_fsm_t *new_fsm = mmt_mem_alloc( sizeof( _fsm_t ));
-	new_fsm->id              = _fsm->id;
-	new_fsm->init_state      = _fsm->init_state;
-	new_fsm->current_state   = _fsm->current_state;
-	new_fsm->previous_state  = _fsm->previous_state;
-	new_fsm->error_state     = _fsm->error_state;
-	new_fsm->incl_state      = _fsm->incl_state;
+//	_fsm_t *new_fsm = mmt_mem_alloc( sizeof( _fsm_t ));
+//	new_fsm->id              = _fsm->id;
+//	new_fsm->init_state      = _fsm->init_state;
+//	new_fsm->current_state   = _fsm->current_state;
+//	new_fsm->previous_state  = _fsm->previous_state;
+//	new_fsm->error_state     = _fsm->error_state;
+//	new_fsm->incl_state      = _fsm->incl_state;
+//
+	_fsm_t *new_fsm = mmt_mem_dup( _fsm, sizeof( _fsm_t) );
 	new_fsm->events_trace    = mmt_map_clone_key_and_data( _fsm->events_trace, NULL, mmt_mem_retain );
 	new_fsm->messages_trace  = mmt_map_clone_key_and_data( _fsm->messages_trace, NULL, (void *)retain_message_t );
+
 
 	return new_fsm;
 }
@@ -134,7 +137,7 @@ fsm_t *fsm_clone( const fsm_t *fsm ) {
 static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_state_t *new_state, const fsm_transition_t *tran, message_t *message_data, void *event_data ){
 	void *ptr = NULL;
 	uint64_t val;
-	//mmt_debug( "fsm_id = %d, ref = %zu, event_id: %d", _fsm->id, mmt_mem_reference_count( event_data), tran->event_type );
+	//mmt_debug( "fsm_id = %d (%p), ref = %zu, event_id: %d", _fsm->id, _fsm, mmt_mem_reference_count( event_data), tran->event_type );
 
 	ptr = mmt_map_set_data( _fsm->events_trace, (void *) &tran->event_type, mmt_mem_retain( event_data ), YES );
 	//must free the old value
@@ -163,21 +166,31 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 		_fsm->counter_max += new_state->delay.counter_max + message_data->counter;
 		_fsm->time_max    += new_state->delay.time_max    + message_data->timestamp;
 	}else{
-		_fsm->counter_min += new_state->delay.counter_min;
-		_fsm->time_min    += new_state->delay.time_min;
+		val = new_state->delay.counter_min + message_data->counter;
+		if( val > _fsm->counter_min ) _fsm->counter_min = val;
 
-		_fsm->counter_max += new_state->delay.counter_max + message_data->counter;
-		_fsm->time_max += new_state->delay.counter_max + message_data->timestamp;
+		val = new_state->delay.time_min + message_data->timestamp;
+		if( val > _fsm->time_min ) _fsm->time_min = val;
+
+		val = new_state->delay.counter_max + message_data->counter;
+		if( val < _fsm->counter_max ) _fsm->counter_max = val;
+
+		val = new_state->delay.time_max + message_data->timestamp;
+		if( val < _fsm->time_max ) _fsm->time_max = val;
 	}
 	/* Call the new _state's entry action if it has any
 	 * (even if state returns to itself) */
 
-	if (_fsm->current_state == _fsm->error_state)
+	if (_fsm->current_state == _fsm->error_state){
+		//mmt_debug("FSM_ERROR_STATE_REACHED" );
 		return FSM_ERROR_STATE_REACHED;
-	else if (_fsm->current_state == _fsm->incl_state)
+	}else if (_fsm->current_state == _fsm->incl_state){
+		//mmt_debug("FSM_INCONCLUSIVE_STATE_REACHED" );
 		return FSM_INCONCLUSIVE_STATE_REACHED;
-	else if ( _fsm->current_state == _fsm->success_state )
+	}else if ( _fsm->current_state == _fsm->success_state ){
+		//mmt_debug("FSM_FINAL_STATE_REACHED" );
 		return FSM_FINAL_STATE_REACHED;
+	}
 	/* If the target state is a final one, notify user that the machine has stopped */
 
 	/* If the state returned to itself */
@@ -185,7 +198,7 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 //		return FSM_STATE_LOOP_SELF;
 //	}
 
-
+	//mmt_debug("FSM_STATE_CHANGED" );
 	return FSM_STATE_CHANGED;
 }
 
@@ -216,29 +229,24 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	//check if timeout
 	tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
 	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ){
-		timer = message_data->timestamp;
 //		mmt_log( WARN, "Timeout out: %"PRIu64", max: %"PRIu64, timer, _fsm->current_state->delay.time_max);
 		//timeout
-		if( //_fsm->current_state->delay.counter_min < (message_data->counter - _fsm->counter)
-				//&& (message_data->counter - _fsm->counter) < _fsm->current_state->delay.counter_max
-				//&&
-				_fsm->current_state->delay.time_min <= timer
-				&& timer <= _fsm->current_state->delay.time_max
-			)
-			;//it's OK ==>in the permetted delay
-		else
+		if( !(message_data->timestamp <= _fsm->time_max ))
 			//fire timeout transition
 			return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
 	}
 
 	tran = &_fsm->current_state->transitions[ transition_index ];// _get_transition(_fsm, state, event);
 	//must not be null
-//	if( tran == NULL )
-//		return FSM_NO_STATE_CHANGE;
+//	if( tran == NULL ) return FSM_NO_STATE_CHANGE;
+
+	if( !(_fsm->time_min <= message_data->timestamp) )
+		return FSM_NO_STATE_CHANGE;
 
 	/* If transition is guarded, ensure that the condition is held: */
 	if (tran->guard != NULL && tran->guard( event_data, (fsm_t *)fsm)  == NO )
-			return FSM_NO_STATE_CHANGE;
+		return FSM_NO_STATE_CHANGE;
+
 
 	/* A transition must have a next _state defined
 	 * If the user has not defined the next _state, go to error _state: */
@@ -247,7 +255,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 //	mmt_debug( "Exit action: %d", _fsm->current_state->exit_action );
 	//Create a new instance, then update its data
 	if ( tran->action == FSM_ACTION_CREATE_INSTANCE ){
-
+		//mmt_debug( " new FSM");
 		_new_fsm = _fsm_clone( _fsm );
 		*new_fsm = (fsm_t *)_new_fsm;
 		return _update_fsm( _new_fsm, tran->target_state, tran, message_data, event_data );

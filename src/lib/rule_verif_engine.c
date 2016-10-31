@@ -165,10 +165,12 @@ const mmt_map_t* rule_engine_get_valide_trace( const rule_engine_t *engine ){
 }
 
 
-static inline void _reset_engine_for_fsm( _rule_engine_t *_engine, uint16_t fsm_id ){
+//Remove all instance having id = #fsm_id
+static inline void _reset_engine_for_fsm( _rule_engine_t *_engine, fsm_t *fsm ){
 	size_t i;
 	link_node_t *node, *ptr;
 	_fsm_tran_index_t *fsm_ind;
+	uint16_t fsm_id = fsm_get_id( fsm );
 	//remove all fsm having #fsm_id from the list #fsm_by_expecting_event_id
 	for( i=0; i<_engine->max_events_count; i++ ){
 		node = _engine->fsm_by_expecting_event_id[ i ];
@@ -201,6 +203,46 @@ static inline void _reset_engine_for_fsm( _rule_engine_t *_engine, uint16_t fsm_
 	free_link_list_and_data( _engine->fsm_by_instance_id[ fsm_id ], (void *)fsm_free );
 	//put it to be available for the other
 	_engine->fsm_by_instance_id[ fsm_id ] = NULL;
+}
+
+//Remove only one instance from
+// - list of expecting events
+// - list of instances
+static inline void _reset_engine_for_instance( _rule_engine_t *_engine, fsm_t *fsm ){
+	size_t i;
+	link_node_t *node, *ptr;
+	_fsm_tran_index_t *fsm_ind;
+	uint16_t fsm_id = fsm_get_id( fsm );
+	//remove all fsm having #fsm_id from the list #fsm_by_expecting_event_id
+	for( i=0; i<_engine->max_events_count; i++ ){
+		node = _engine->fsm_by_expecting_event_id[ i ];
+		while( node != NULL ){
+			ptr = node->next;
+			fsm_ind = (_fsm_tran_index_t *) node->data;
+
+			//found a node containing fsm
+			if( fsm_ind->fsm == fsm ){
+
+				//head?
+				if( node == _engine->fsm_by_expecting_event_id[ i ] ){
+					if( ptr != NULL ) ptr->prev = NULL;
+					_engine->fsm_by_expecting_event_id[ i ] = ptr;
+				}else{
+					node->prev->next = ptr;
+					if( ptr != NULL )
+						ptr->prev = node->prev;
+				}
+				mmt_mem_free( fsm_ind );//node->data
+				mmt_mem_free( node );
+			}
+			node = ptr;
+		}
+	}
+	//remove all fsm having id == #fsm_id and free them
+	//TODO: refine
+//	_engine->total_instances_count -= count_nodes_from_link_list( _engine->fsm_by_instance_id[ fsm_id ] );
+	_engine->fsm_by_instance_id[ fsm_id ] = remove_node_from_link_list(  _engine->fsm_by_instance_id[ fsm_id ], fsm );
+	fsm_free( fsm );
 }
 
 static inline uint16_t _find_an_available_id( _rule_engine_t *_engine ){
@@ -252,32 +294,26 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 //		}
 
 		switch( val ){
-//			case FSM_STATE_CHANGED:
-//				return RULE_ENGINE_RESULT_UNKNOWN;
-//				break;
-//				//the transition cannot fire
-//			case FSM_NO_STATE_CHANGE:
-//				//mmt_debug( "FSM_NO_STATE_CHANGE" );
-//				return RULE_ENGINE_RESULT_UNKNOWN;
-//				break;
-
 				//the rue is validated
 			case FSM_FINAL_STATE_REACHED:
 				//mmt_debug( "FSM_FINAL_STATE_REACHED" );
 				_store_valid_execution_trace( _engine, new_fsm );
-				_reset_engine_for_fsm( _engine, fsm_get_id( new_fsm ) );
+				_reset_engine_for_fsm( _engine, new_fsm );
 				return RULE_ENGINE_RESULT_VALIDATE;
 				break;
 				//the rule is not validated
 			case FSM_ERROR_STATE_REACHED:
 				_store_valid_execution_trace( _engine, new_fsm );
-				_reset_engine_for_fsm( _engine, fsm_get_id( new_fsm ) );
+				_reset_engine_for_fsm( _engine, new_fsm );
+				_reset_engine_for_instance( _engine, new_fsm );
 				return RULE_ENGINE_RESULT_ERROR;
 				break;
 			case FSM_INCONCLUSIVE_STATE_REACHED:
 				//mmt_debug("INCL");
-				_reset_engine_for_fsm( _engine, fsm_get_id( new_fsm ) );
+				_reset_engine_for_instance( _engine, new_fsm );
 				break;
+//			case FSM_STATE_CHANGED:
+//			case FSM_NO_STATE_CHANGE:
 //			case FSM_ERR_ARG:
 //				//TODO: reset
 //				mmt_debug( "FSM_ERR_ARG" );
@@ -301,30 +337,24 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 			return RULE_ENGINE_RESULT_UNKNOWN;
 			break;
 
-//			//the transition cannot fire
-//		case FSM_NO_STATE_CHANGE:
-//			//mmt_debug( "FSM_NO_STATE_CHANGE" );
-//			return RULE_ENGINE_RESULT_UNKNOWN;
-//			break;
-
 			//the rue is validated
 		case FSM_FINAL_STATE_REACHED:
 			//mmt_debug( "FSM_FINAL_STATE_REACHED" );
 			_store_valid_execution_trace( _engine, fsm );
 			//remove all fsm having the same id
-			_reset_engine_for_fsm( _engine, fsm_get_id( fsm ) );
+			_reset_engine_for_fsm( _engine, fsm );
 			return RULE_ENGINE_RESULT_VALIDATE;
 			break;
 			//the rule is not validated
 		case FSM_ERROR_STATE_REACHED:
 			_store_valid_execution_trace( _engine, fsm );
-			_reset_engine_for_fsm( _engine, fsm_get_id( fsm ) );
+			_reset_engine_for_fsm( _engine, fsm );
 			return RULE_ENGINE_RESULT_ERROR;
 			break;
 		case FSM_INCONCLUSIVE_STATE_REACHED:
-			//mmt_debug("FSM_INCONCLUSIVE_STATE_REACHED");
-			_reset_engine_for_fsm( _engine, fsm_get_id( fsm ) );
+			_reset_engine_for_instance( _engine, fsm );
 			break;
+//		case FSM_NO_STATE_CHANGE:
 //		case FSM_ERR_ARG:
 //			//TODO: reset
 //			mmt_debug( "FSM_ERR_ARG" );
@@ -378,6 +408,7 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 
 			ret = _fire_transition( fsm_ind, event_id, message, data, _engine );
 
+			//get only one verdict per packet
 			if( ret != RULE_ENGINE_RESULT_UNKNOWN ){
 				//must free #data before returning
 				mmt_mem_free( data );

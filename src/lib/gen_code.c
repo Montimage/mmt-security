@@ -196,6 +196,7 @@ static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *
 			_create_new_transition( FSM_EVENT_TYPE_TIMEOUT, 0, s_fail, FSM_ACTION_DO_NOTHING, NULL, "Timeout event will fire this transition"));
 
 	//gen for context
+	//if context is not satisfied => goto #s_incl instead of #s_fail
 	_gen_transition_rule( s_init, new_state, s_incl, s_incl, states_list, context, index, rule, FSM_ACTION_CREATE_INSTANCE );
 	//increase index
 	new_state->index = (*index)++;
@@ -257,6 +258,7 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 	state->index = (*index)++;
 	states_list  = append_node_to_link_list( states_list, state );
 	//gen for trigger
+	//if #trigger occurs => goto #s_fail, otherwise if timeout => goto #s_pass
 	_gen_transition_rule( state, s_fail, s_pass, s_fail, states_list, trigger, index, rule, tran_action );
 }
 

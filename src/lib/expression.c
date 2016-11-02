@@ -10,9 +10,8 @@
 #include <limits.h>
 #include "base.h"
 #include "mmt_utils.h"
+#include "mmt_lib.h"
 #include "expression.h"
-#include "mmt_alloc.h"
-#include "mmt_log.h"
 #include "../dpi/mmt_dpi.h"
 
 #define MAX_STR_SIZE 10000

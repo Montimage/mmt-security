@@ -7,8 +7,8 @@
 
 #include "mmt_security.h"
 #include "base.h"
-#include "mmt_alloc.h"
-#include "mmt_log.h"
+#include "mmt_lib.h"
+
 #include "mmt_fsm.h"
 #include "plugins_engine.h"
 #include "rule_verif_engine.h"
@@ -17,7 +17,6 @@
 
 #include "plugin_header.h"
 
-#include "data_struct.h"
 #include "../dpi/mmt_dpi.h"
 
 #define MAX_INSTANCE_COUNT 10000

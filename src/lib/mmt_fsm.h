@@ -27,6 +27,7 @@
 #include "rule.h"
 #include "mmt_alloc.h"
 #include "message_t.h"
+#include "mmt_map_t.h"
 
 typedef struct fsm_delay_struct{
 	/**

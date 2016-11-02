@@ -10,10 +10,13 @@
 #include "lib/mmt_log.h"
 #include "lib/mmt_alloc.h"
 #include "lib/plugins_engine.h"
+#include <dirent.h>
+#include <dlfcn.h>
 
 int main( int argc, char** argv ){
 	const rule_info_t **rules_arr;
 	size_t i, j, n;
+	void* lib;
 
 	mmt_assert( argc <= 2, "Usage: %s [lib_file.so]", argv[0] );
 
@@ -22,10 +25,14 @@ int main( int argc, char** argv ){
 		// - /opt/mmt/security/rules
 		// - ./rules
 		n = load_mmt_sec_rules( &rules_arr );
-	else
+	else{
 		//load only one plugin given by argv[1]
 		n = load_mmt_sec_rule( &rules_arr, argv[1] );
 
+		lib = dlopen ( argv[1], RTLD_LAZY );
+		const char* ( *fn ) () = dlsym ( lib, "__get_generated_date" );
+		printf("Rule was created on %s\n", fn() );
+	}
 
 	//print rules' information
 	printf("Found %zu rule%s", n, n<=1? ".": "s." );

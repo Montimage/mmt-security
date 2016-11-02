@@ -13,8 +13,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/time.h>
+
+#include "mmt_dbl_linked_list.h"
 #include "plugin_header.h"
-#include "data_struct.h"
+#include "mmt_map_t.h"
 /**
  * init mmt-security engine:
  * - load plugins (encoded rules)

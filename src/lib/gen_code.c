@@ -7,11 +7,9 @@
 
 #include "gen_code.h"
 #include "mmt_utils.h"
-#include "data_struct.h"
+#include "mmt_lib.h"
 #include "expression.h"
 #include "mmt_fsm.h"
-#include "mmt_log.h"
-#include "mmt_alloc.h"
 
 
 #define STR_BUFFER_SIZE 10000
@@ -617,6 +615,9 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 	}
 	fprintf( fd, "\n\t };\n\t *rules_arr = rules;");
 	fprintf( fd, "\n\t return %zu;\n }", count);
+
+	fprintf( fd, "\n const char * __get_generated_date(){ return \"%s (%s)\";};",
+			get_current_date_time_string("%Y-%m-%d %H:%M:%S"), GIT_VERSION ); //GIT_VERSION is defined in Makefile
 }
 
 

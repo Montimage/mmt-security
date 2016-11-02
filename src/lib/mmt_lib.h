@@ -11,7 +11,7 @@
 #include "base.h"
 #include "mmt_log.h"
 #include "mmt_alloc.h"
-#include "data_struct.h"
-
+#include "mmt_dbl_linked_list.h"
+#include "mmt_map_t.h"
 
 #endif /* SRC_LIB_MMT_LIB_H_ */

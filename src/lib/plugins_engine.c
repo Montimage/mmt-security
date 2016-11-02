@@ -10,9 +10,7 @@
 
 #include "plugins_engine.h"
 #include "base.h"
-#include "mmt_alloc.h"
-#include "mmt_log.h"
-#include "data_struct.h"
+#include "mmt_lib.h"
 
 #define MAX_PLUGIN_COUNT 1000
 

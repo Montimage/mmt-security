@@ -5,9 +5,9 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
 
+#include "mmt_lib.h"
+
 #include "mmt_fsm.h"
-#include "mmt_alloc.h"
-#include "data_struct.h"
 #include "message_t.h"
 
 /**

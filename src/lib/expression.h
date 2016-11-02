@@ -13,7 +13,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "data_struct.h"
+
+#include "mmt_dbl_linked_list.h"
+#include "mmt_map_t.h"
+#include "mmt_log.h"
 
 enum data_type{
 	NUMERIC, STRING

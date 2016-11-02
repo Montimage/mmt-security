@@ -14,30 +14,25 @@
  */
 void free_message_t( message_t *msg ){
 	size_t i;
-	if( msg == NULL ) return;
-	for( i=0; i<msg->elements_count; i++ )
-		mmt_mem_free( msg->elements[i].data );
+	__check_null( msg,  );  // nothing to do
 
-	mmt_mem_free( msg->elements );
+	//free message contains only when there is one reference to its father
+	if( mmt_mem_reference_count( msg ) == 1 ){
+		for( i=0; i<msg->elements_count; i++ )
+			mmt_mem_free( msg->elements[i].data );
+
+		mmt_mem_free( msg->elements );
+	}
 	mmt_mem_free( msg );
 }
 
-
 /**
- * Public API
+ * public API
  */
 message_t *retain_message_t( message_t *msg ){
-	size_t i;
-	if( msg == NULL ) return NULL;
-	for( i=0; i<msg->elements_count; i++ ){
-		mmt_mem_retain( msg->elements[i].data );
-	}
-
-	mmt_mem_retain( msg->elements );
 	mmt_mem_retain( msg );
 	return msg;
 }
-
 /**
  * Public API
  */

@@ -5,6 +5,7 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
 #include <stdint.h>
+#include "base.h"
 #include "mmt_alloc.h"
 #include "mmt_log.h"
 
@@ -57,7 +58,7 @@ void *mmt_mem_alloc(size_t size){
 
 
 void mmt_mem_free( void *x ){
-   if( x == NULL ) return; // nothing to do
+	__check_null( x, );
    _memory_t *mem = _convert_mem( x );
    if( mem->ref_count <= 1 ){
 		freed_memory_size += mem->size;
@@ -67,14 +68,15 @@ void mmt_mem_free( void *x ){
 }
 
 void *mmt_mem_retain( void *x ){
-   if( x == NULL ) return NULL; // nothing to do
+	__check_null( x, NULL );  // nothing to do
    _memory_t *mem = _convert_mem( x );
    mem->ref_count ++;
    return mem->data;
 }
 
 size_t mmt_mem_size( const void *x ){
-   if( x == NULL ) return 0; // nothing to do
+	__check_null( x, 0 );  // nothing to do
+
    _memory_t *mem = _convert_mem( x );
    return mem->size;
 }
@@ -83,15 +85,4 @@ size_t mmt_mem_reference_count( void *x ){
 	if( x == NULL ) return 0; // nothing to do
 	_memory_t *mem = _convert_mem( x );
 	return mem->ref_count;
-}
-
-void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 ){
-	size_t s1, s2;
-	void *ret;
-	s1 = mmt_mem_size( ptr_1 );
-	s2 = mmt_mem_size( ptr_2 );
-	ret = mmt_mem_alloc( s1 + s2 );
-	memcpy( ret, ptr_1, s1 );
-	memcpy( ret + s2, ptr_2, s2 );
-	return ret;
 }

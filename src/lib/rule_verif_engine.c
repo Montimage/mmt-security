@@ -131,7 +131,8 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 void rule_engine_free( rule_engine_t *engine ){
 	size_t i;
 	_rule_engine_t *_engine = (_rule_engine_t *)engine;
-	if( _engine == NULL ) return;
+
+	__check_null( engine, );
 
 	for( i=0; i<_engine->max_events_count; i++ )
 		free_link_list(_engine->fsm_by_expecting_event_id[ i ], YES );
@@ -159,6 +160,7 @@ static inline void _store_valid_execution_trace( _rule_engine_t *_engine, fsm_t 
  * Public API
  */
 const mmt_map_t* rule_engine_get_valide_trace( const rule_engine_t *engine ){
+	__check_null( engine, NULL );
 	_rule_engine_t *_engine = ( _rule_engine_t *)engine;
 	return _engine->valid_execution_trace;
 }
@@ -380,6 +382,8 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	_fsm_tran_index_t *fsm_ind;
 	enum rule_engine_result ret = RULE_ENGINE_RESULT_UNKNOWN;;
 	//insert #message pointer to head of #data;
+
+	__check_null( engine, RULE_ENGINE_RESULT_UNKNOWN );
 
 	for( i=0; i<_engine->max_events_count; i++ )
 		_engine->tmp_fsm_by_expecting_event_id[ i ] = _engine->fsm_by_expecting_event_id[ i ];

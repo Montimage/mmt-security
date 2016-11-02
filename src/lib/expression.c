@@ -88,7 +88,7 @@ constant_t *expr_create_a_constant( enum data_type type, size_t data_size, void 
 }
 
 /** Public API */
-variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index ){
+variable_t *expr_create_a_variable( char *proto, char *attr, uint16_t ref_index ){
 	variable_t *var = mmt_mem_alloc( sizeof( variable_t ));
 	var->proto = proto;
 	var->att   = attr;
@@ -364,7 +364,7 @@ size_t _parse_constant( constant_t **expr, const char *string, size_t str_size )
 size_t _parse_variable( variable_t **expr, const char *string, size_t str_size ){
 	size_t index, i = 0, j, k;
 	char *str_1 = NULL, *str_2 = NULL;
-	uint8_t ref_index = UNKNOWN;
+	uint16_t ref_index = UNKNOWN;
 	char const *temp;
 	double *num = NULL;
 	variable_t *var;
@@ -392,7 +392,7 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 					index ++; //jump over the second dot
 					temp = string + index; //2 dots
 					index += _parse_a_number( &num, temp, str_size - index );
-					ref_index = (uint8_t ) (*num);
+					ref_index = (uint16_t ) (*num);
 					mmt_free_and_assign_to_null( num );
 				}
 
@@ -664,7 +664,7 @@ size_t expr_stringify_variable( char **string, const variable_t *var){
 		return 0;
 	}
 
-	if( var->ref_index != (uint8_t)UNKNOWN ){
+	if( var->ref_index != (uint16_t)UNKNOWN ){
 		size = snprintf(buff, 250, "%s_%s_%d", var->proto, var->att, var->ref_index);
 	}else{
 		size = snprintf(buff, 250, "%s_%s", var->proto, var->att );

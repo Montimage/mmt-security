@@ -8,12 +8,13 @@
 #ifndef SRC_LIB_MMT_SECURITY_H_
 #define SRC_LIB_MMT_SECURITY_H_
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/time.h>
 #include "plugin_header.h"
-#include "base.h"
 #include "data_struct.h"
-#include "../dpi/mmt_dpi.h"
-
-
 /**
  * init mmt-security engine:
  * - load plugins (encoded rules)

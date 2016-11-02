@@ -3,6 +3,9 @@
  *
  *  Created on: Oct 14, 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
+ *
+ *  Verify a rule.
+ *  This manages: create/free all fsm instances of a rule.
  */
 
 #ifndef SRC_LIB_RULE_VERIF_ENGINE_H_

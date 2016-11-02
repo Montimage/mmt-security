@@ -4,7 +4,7 @@
  *  Created on: 20 sept. 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  *
- *  Security Rules
+ *  Parse .xml property file
  */
 
 #ifndef SRC_LIB_RULE_H_
@@ -19,7 +19,6 @@ typedef struct rule_event_struct{
 	expression_t* expression;
 }rule_event_t;
 
-enum time_unit {YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILI_SECOND, MICRO_SECOND};
 /**
  * Delay either by timer or counter (number of packets)
  */

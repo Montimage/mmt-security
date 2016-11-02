@@ -74,8 +74,6 @@ static inline void* mmt_mem_dup( const void *ptr, size_t size ){
 	return ret;
 }
 
-void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 );
-
 /**
  * Increase number of reference to the memory to 1
  * - Input:

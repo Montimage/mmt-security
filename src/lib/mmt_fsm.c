@@ -97,7 +97,7 @@ fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state
  */
 void fsm_reset( fsm_t *fsm ){
 	_fsm_t *_fsm;
-	if( !fsm ) return;
+	__check_null( fsm, );
 
 	_fsm = (_fsm_t *)fsm;
 	//reset the current state to the initial one
@@ -129,7 +129,7 @@ static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
 }
 
 fsm_t *fsm_clone( const fsm_t *fsm ) {
-	if( !fsm ) return NULL;
+	__check_null( fsm, NULL );
 	return (fsm_t *) _fsm_clone( (_fsm_t *) fsm);
 }
 
@@ -213,7 +213,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 	//set the
 	*new_fsm = NULL;
-	if (!fsm ) return FSM_ERR_ARG;
+	__check_null( fsm, FSM_ERR_ARG );
 
 	_fsm = (_fsm_t *)fsm;
 	if (!_fsm->current_state) {
@@ -269,7 +269,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
  * Public API
  */
 const fsm_state_t *fsm_get_current_state( const fsm_t *fsm) {
-	if (!fsm) return NULL;
+	__check_null( fsm, NULL );
 
 	return ((_fsm_t *)fsm)->current_state;
 }
@@ -278,7 +278,7 @@ const fsm_state_t *fsm_get_current_state( const fsm_t *fsm) {
  * Public API
  */
 const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm) {
-	if (!fsm) return NULL;
+	__check_null( fsm, NULL );
 
 	return ((_fsm_t *)fsm)->previous_state;
 }
@@ -287,7 +287,7 @@ const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm) {
  * Public API
  */
 bool fsm_is_stopped( const fsm_t *fsm) {
-	if (!fsm) return YES;
+	__check_null( fsm, YES );
 	return ((_fsm_t *)fsm)->current_state->transitions_count == 0;
 }
 
@@ -296,7 +296,7 @@ bool fsm_is_stopped( const fsm_t *fsm) {
  */
 void fsm_free( fsm_t *fsm ){
 	_fsm_t *_fsm;
-	if ( fsm == NULL ) return;
+	__check_null( fsm, );
 
 	_fsm = (_fsm_t *)fsm;
 
@@ -311,7 +311,7 @@ void fsm_free( fsm_t *fsm ){
  */
 const mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm ){
 	_fsm_t *_fsm;
-	if ( fsm == NULL ) return NULL;
+	__check_null( fsm, NULL );
 
 	_fsm = (_fsm_t *)fsm;
 	return( _fsm->messages_trace );
@@ -321,15 +321,13 @@ const mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm ){
 /**
  * Public API
  */
-void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
+const void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
 	_fsm_t *_fsm;
-	void *data;
-	if ( fsm == NULL ) return NULL;
+	//void *data;
+	__check_null( fsm, NULL );
 
 	_fsm = (_fsm_t *)fsm;
-	data = mmt_map_get_data( _fsm->events_trace, &event_id );
-	//mmt_debug("Get history %d: %s", event_id, data == NULL? "NUL": "not NULL" );
-	return data;
+	return mmt_map_get_data( _fsm->events_trace, &event_id );
 }
 
 /**
@@ -337,7 +335,8 @@ void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
  */
 uint16_t fsm_get_id( const fsm_t *fsm ){
 	_fsm_t *_fsm;
-	if ( fsm == NULL ) return -1;
+	__check_null( fsm, -1 );
+
 	_fsm = (_fsm_t *)fsm;
 	return _fsm->id;
 }
@@ -347,7 +346,7 @@ uint16_t fsm_get_id( const fsm_t *fsm ){
  */
 void fsm_set_id( fsm_t *fsm, uint16_t id ){
 	_fsm_t *_fsm;
-	if ( fsm == NULL ) return;
+	__check_null( fsm,  );
 	_fsm = (_fsm_t *)fsm;
 	_fsm->id = id;
 }

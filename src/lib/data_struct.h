@@ -10,8 +10,9 @@
 #ifndef SRC_LIB_DATA_STRUCT_H_
 #define SRC_LIB_DATA_STRUCT_H_
 
-#include <string.h>
-#include "base.h"
+#include <stdint.h>
+//for uint64_t PRIu64
+#include <inttypes.h>
 #include "mmt_log.h"
 
 //////////////////////////////////Linked-List ///////////////////////////////////////

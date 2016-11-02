@@ -20,5 +20,6 @@
 #define NO false
 #define YES true
 
+#define __check_null( x, y ) if( x == NULL ) return y
 
 #endif /* SRC_LIB_BASE_H_ */

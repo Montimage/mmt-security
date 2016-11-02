@@ -442,7 +442,7 @@ const mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm );
 /**
  * Get data of an event_id
  */
-void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
+const void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
 
 /**
  * Free a #fsm_event_t object

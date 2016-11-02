@@ -16,6 +16,8 @@
 
 #define str_equal(X,Y) xmlStrcmp( X, (const xmlChar*)Y) == 0
 
+enum time_unit {YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILI_SECOND, MICRO_SECOND};
+
 void rule_free_an_event( rule_event_t *event, bool free_data){
 	if( event == NULL ) return;
 	if( free_data ){

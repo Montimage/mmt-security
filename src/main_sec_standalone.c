@@ -25,13 +25,15 @@
 # define __FAVOR_BSD
 #endif
 
-#include "dpi/types_defs.h"
 #include "mmt_core.h"
+
+#include "dpi/mmt_dpi.h"
+#include "dpi/types_defs.h"
+
 
 #include "lib/mmt_lib.h"
 #include "lib/plugin_header.h"
 #include "lib/mmt_security.h"
-
 
 
 #define MAX_FILENAME_SIZE 256

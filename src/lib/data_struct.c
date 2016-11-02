@@ -5,11 +5,11 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
 
-
+#include <string.h>
+#include "base.h"
 #include "data_struct.h"
-#include "mmt_log.h"
 #include "mmt_alloc.h"
-
+#include "mmt_log.h"
 ///////////////////////////////////////Linked-list////////////////////////////////////////////
 /** Public API */
 link_node_t *create_node_of_link_list( void *data ){

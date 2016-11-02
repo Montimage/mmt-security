@@ -50,30 +50,27 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	size = expr_stringify_variable( &str, var );
 	if( size == 0 ) return;
 
-	if( var->ref_index != (uint8_t)UNKNOWN ){
+	if( var->ref_index != (uint16_t)UNKNOWN ){
 		fprintf(fd, "\n\t his_data = (_msg_t_%d *)fsm_get_history( fsm, %d);", rule_id, var->ref_index );
 		//TODO: not need to check ?
-		//fprintf(fd, "\n\t if( his_data == NULL ) return 0;");
+		fprintf(fd, "\n\t if( his_data == NULL ) return 0;");
 	}
 
-	//fprintf(fd, "\n\t if( %s->%s_%s == NULL ) return 0;",
-	//				( var->ref_index == (uint8_t)UNKNOWN )? "ev_data" : "his_data",
-	//				var->proto, var->att);
-
 	_gen_code_line( fd );
+	//TODO: not need to check before validate the guard's boolean expression ?
+	fprintf( fd, "\n\t if( %s->%s_%s == NULL ) return 0;",
+					( var->ref_index == (uint16_t)UNKNOWN )? "ev_data" : "his_data",
+					var->proto, var->att
+	);
 	//TODO: when proto starts by a number
 	fprintf( fd, "\n\t %s%s = %s %s->%s_%s %s;",
 			((var->data_type == NUMERIC)? "double " : "const char *"),
 			str,
 			((var->data_type == NUMERIC)? "*(" : ""),
-			( var->ref_index == (uint8_t)UNKNOWN )? "ev_data" : "his_data",
+			( var->ref_index == (uint16_t)UNKNOWN )? "ev_data" : "his_data",
 			var->proto, var->att,
 			((var->data_type == NUMERIC)? ")" : "")
 	);
-
-
-	//TODO: not need to check before validate the guard's boolean expression ?
-
 
 	mmt_mem_free( str );
 }
@@ -116,6 +113,8 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	mmt_mem_free( guard_fun_name );
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//Gen FSM from a rule///////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 #define MAX_STR_BUFFER 10000
 /**
@@ -288,10 +287,11 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 		_gen_transition_or(s_init, s_pass, s_fail, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
 		break;
 	case OP_TYPE_NOT:
-		_gen_transition_not(s_init, s_fail, s_pass, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
+		_gen_transition_not(s_init, s_pass, s_fail, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
 		break;
 	}
 }
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
@@ -542,7 +542,7 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 		_gen_comment( fd, "Public API" );
 		fprintf( fd, "static void *convert_message_to_event_%d( const message_t *msg){", rule_id );
 		fprintf( fd, "\n\t if( msg == NULL ) return NULL;" );
-		fprintf( fd, "\n\t _msg_t_%d *new_msg = _allocate_msg_t_%d( sizeof( _msg_t_%d ));", rule_id, rule_id, rule_id );
+		fprintf( fd, "\n\t _msg_t_%d *new_msg = _allocate_msg_t_%d();", rule_id, rule_id );
 		fprintf( fd, "\n\t size_t i;" );
 		fprintf( fd, "\n\t new_msg->timestamp = msg->timestamp;" );
 		fprintf( fd, "\n\t new_msg->counter = msg->counter;" );

@@ -44,7 +44,7 @@ typedef struct{
 	//a variable: TCP.SRC or TCP.SRC.1
 	char *proto, *att;
 	uint32_t proto_id, att_id;//those are generated from their name: tcp => 354
-	uint8_t ref_index;
+	uint16_t ref_index;
 } variable_t;
 
 
@@ -146,7 +146,7 @@ size_t expr_stringify_expression( char **string, const expression_t *expr);
 
 
 constant_t *expr_create_a_constant( enum data_type type, size_t data_size, void *data );
-variable_t *expr_create_a_variable( char *proto, char *attr, uint8_t ref_index );
+variable_t *expr_create_a_variable( char *proto, char *attr, uint16_t ref_index );
 operation_t *expr_create_an_operation( char *name, enum operator operator );
 expression_t *expr_create_an_expression( enum expression type, void *data );
 

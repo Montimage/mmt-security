@@ -309,7 +309,7 @@ void fsm_free( fsm_t *fsm ){
 /**
  * Public API
  */
-mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm ){
+const mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm ){
 	_fsm_t *_fsm;
 	if ( fsm == NULL ) return NULL;
 

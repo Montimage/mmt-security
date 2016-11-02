@@ -15,12 +15,6 @@
 #include <stdint.h>
 #include <string.h>
 
-
-typedef struct mmt_pointer_struct{
-	size_t size;
-	void *data;
-}mmt_pointer_t;
-
 /**
  * A wrapper of malloc
  * Allocate a new segment of memory having the given size.
@@ -39,8 +33,6 @@ void *mmt_mem_alloc( size_t size );
  * Do not use this function to free memory created by malloc
  */
 void  mmt_mem_free( void *ptr );
-void *mmt_mem_calloc( size_t nmemb, size_t size );
-void *mmt_mem_realloc( void *ptr, size_t size );
 
 /**
  * Get information about memory being allocated and freed
@@ -84,6 +76,13 @@ static inline void* mmt_mem_dup( const void *ptr, size_t size ){
 
 void* mmt_mem_concat( const void *ptr_1, const void *ptr_2 );
 
+/**
+ * Increase number of reference to the memory to 1
+ * - Input:
+ * 	+ ptr: data to be increase
+ * - Return:
+ * 	a pointer point to #ptr;
+ */
 void *mmt_mem_retain( void *ptr );
 
 /**

@@ -1,14 +1,11 @@
 /*
- * main_rule_info.c
+ * main_plugin_info.c
  *
  *  Created on: Oct 10, 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  *
  *  Get information of rules encoded in a binary file (.so)
  */
-#include <dlfcn.h>
-#include <stdlib.h>
-#include <string.h>
 #include "lib/base.h"
 #include "lib/mmt_log.h"
 #include "lib/mmt_alloc.h"
@@ -19,14 +16,18 @@ int main( int argc, char** argv ){
 	size_t i, j, n;
 
 	mmt_assert( argc <= 2, "Usage: %s [lib_file.so]", argv[0] );
-	//load plugins from default folder:
-	// - /opt/mmt/security/plugins
-	// - ./plugins
+
 	if( argc == 1)
+		//load all plugins from default folder:
+		// - /opt/mmt/security/rules
+		// - ./rules
 		n = load_mmt_sec_rules( &rules_arr );
 	else
+		//load only one plugin given by argv[1]
 		n = load_mmt_sec_rule( &rules_arr, argv[1] );
 
+
+	//print rules' information
 	printf("Found %zu rule%s", n, n<=1? ".": "s." );
 
 	for( i=0; i<n; i++ ){
@@ -48,6 +49,8 @@ int main( int argc, char** argv ){
 		printf("\n\t- hash_message    : %p",  rules_arr[i]->hash_message );
 	}
 	printf("\n");
+
+	//need to free the array
 	mmt_mem_free( rules_arr );
 	return 0;
 }

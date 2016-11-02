@@ -265,28 +265,10 @@ typedef struct fsm_state_struct{
    void *data;
    /**
     *  This function is called whenever the state is being entered. May be NULL.
-    *
-    * - Note
-    * 	If a state returns to itself through a transition (either directly
-    * 		or through a parent/group sate), its #entry_action will not be called.
-    * 	A group/parent state with its #entry_state defined will not have
-    * 		its #entry_action called.
-    *
-    *- Input:
-    * 	+ state_data the statet's #data will be passed.
-    * 	+ event the event that triggered the transition will be passed.
     */
    int entry_action;
    /**
     *  This function is called whenever the state is being left. May be NULL.
-    *
-    * - Note
-    * 	 If a state returns to itself through a transition (either directly
-    * 		or through a parent/group sate), its #exit_action will not be called.
-    *
-    *	- Input:
-    * 	+ state_data the state's #data will be passed.
-    * 	+ event the event that triggered a transition will be passed.
     */
    int exit_action;
 }fsm_state_t;
@@ -308,8 +290,10 @@ typedef struct fsm_state_struct{
  * 	+ init_state the initial state of the machine.
  * 	+ error_state pointer to a state that acts a final state and notifies
  * 		the system/user that an error has occurred.
+ * 	+ final_state
+ * 	+ incl_state
  */
-fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *inconclusive );
+fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state );
 
 /**
  * Reset the machine to #init_state and #error_state as being initialized.
@@ -361,6 +345,7 @@ enum fsm_handle_event_value{
    /**  A final state (any but the error state) was reached */
 	FSM_FINAL_STATE_REACHED,
 
+	/** current_state of #fsm is #incl_state */
 	FSM_INCONCLUSIVE_STATE_REACHED
 };
 
@@ -412,9 +397,8 @@ const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm );
  * - Input:
  *		+ the state machine to test.
  *	- Return:
- *		+ true if the state machine has reached a final state,
- *			otherwise, false if #fsm is NULL or if the current state is not a
- * final state.
+ *		+ true if the state machine is at a state having no outgoing transition,
+ *			otherwise, false
  */
 bool fsm_is_stopped( const fsm_t *fsm );
 
@@ -434,8 +418,14 @@ void fsm_free( fsm_t *fsm );
  */
 fsm_t * fsm_clone( const fsm_t *fsm );
 
+/**
+ * Get id of the machine
+ */
 uint16_t fsm_get_id( const fsm_t *fsm );
 
+/**
+ * Set id of the machine
+ */
 void fsm_set_id( fsm_t *fsm, uint16_t id );
 
 /**
@@ -443,11 +433,20 @@ void fsm_set_id( fsm_t *fsm, uint16_t id );
  *
  * - Input:
  *		+ the state machine to get.
+ *	- Return:
+ *		+ a map of events and its data. Each element of the map is indexed by event_id
+ *		  of the machine, and its data has type #message_t that validates the event.
  */
-mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm );
+const mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm );
 
+/**
+ * Get data of an event_id
+ */
 void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
 
+/**
+ * Free a #fsm_event_t object
+ */
 static inline void fsm_free_event( fsm_event_t *event, bool free_data ){
 	if( event == NULL ) return;
 	if( free_data == YES )

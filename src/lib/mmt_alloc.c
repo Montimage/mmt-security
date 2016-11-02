@@ -56,35 +56,6 @@ void *mmt_mem_alloc(size_t size){
 }
 
 
-void *mmt_mem_realloc( void *x, size_t size ){
-	mmt_halt( "Does not support properly %s:%d", __FILE__, __LINE__ );
-   if( x == NULL ) {
-      if( size == 0 ) return NULL; // nothing to do
-      return mmt_mem_alloc( size );
-   }
-
-   // x != NULL
-   if( size == 0 ) {
-      mmt_mem_free( x );
-      return NULL;
-   }
-
-   // ( x != NULL ) && ( size != 0 )
-   uint8_t *x0 = (uint8_t*)x - sizeof( size_t );
-   size_t  psz = *((size_t*)x0);
-
-   uint8_t *x1 = (uint8_t*)realloc( x0, size + sizeof( size_t ));
-
-   mmt_assert( x1 != NULL, "not enough memory" );
-
-   //set new size
-   *((size_t*)x1) = size;
-   allocated_memory_size  += ( size - psz );
-
-   return (void*)( x1 + sizeof( size_t ));
-}
-
-
 void mmt_mem_free( void *x ){
    if( x == NULL ) return; // nothing to do
    _memory_t *mem = _convert_mem( x );

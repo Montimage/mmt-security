@@ -31,22 +31,32 @@ typedef struct proto_attribute_struct{
  */
 typedef struct rule_info_struct{
 	uint32_t id;
+	/** rule type */
 	int type_id;
-	const char *type_string; //"attack", "security", "test", "evasion"
+	/** rule type that is either "attack", "security", "test", "evasion"*/
+	const char *type_string;
+	/** number of events existing in the rules  */
 	uint8_t events_count;
-	const char *description;
-	const char *if_satisfied;
-	const char *if_not_satisfied;
 	/**
-	 * Size of #proto_atts
+	 * Description of the rule
 	 */
+	const char *description;
+	/** a command to be executed when a rule is satisfied */
+	const char *if_satisfied;
+	/** a command to be executed when a rule is not satisfied */
+	const char *if_not_satisfied;
+
+	/** Size of #proto_atts */
 	size_t proto_atts_count;
+	/** Array of protocols and their attributes being used in this rule */
 	const proto_attribute_t *proto_atts;
-	//return a FSM instance
+
+	/** Create a FSM instance */
 	void* (* create_instance )();
 
-	//return a struct using by guard of FSM above, e.g., _msg_t_1
+	/** Create an internal struct using by guard of FSM above, e.g., _msg_t_1 */
 	void* (* convert_message )( const message_t * message);
+
 	/**
 	 * - Return:
 	 * 	+ An array (size #events_count) of number.

@@ -5,6 +5,8 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  *
  * Standalone mmt-security application.
+ * This application can analyze (1) real-time traffic by monitoring a NIC or (2)
+ * traffic saved in a pcap file. The verdicts will be printed to the current screen.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,8 +37,11 @@
 #define MAX_FILENAME_SIZE 256
 #define TRACE_FILE 1
 #define LIVE_INTERFACE 2
-#define MTU_BIG (16 * 1024)
+#define SNAP_LEN (16 * 1024)
 
+/**
+ * Print information of the rules existing.
+ */
 void print_rules_info(){
 	const rule_info_t **rules_arr;
 	size_t i, n  = 0;
@@ -56,6 +61,10 @@ void print_rules_info(){
 	mmt_mem_free( rules_arr );
 }
 
+/**
+ * Print verdict to the screen.
+ * This function is called each time a verdict being detected.
+ */
 void print_verdict( const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
@@ -127,6 +136,11 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 	return 0;
 }
 
+/**
+ * Convert data encoded in a pcap packet to readable data that is either a double
+ * or a string ending by '\0'.
+ * This function will create a new memory segment to store its result.
+ */
 static inline void* _get_data( const ipacket_t *pkt, const proto_attribute_t *me ){
 	double number;
 	char buffer[100], *new_string = NULL;
@@ -208,7 +222,12 @@ static inline void* _get_data( const ipacket_t *pkt, const proto_attribute_t *me
 }
 
 
-
+/**
+ * Convert a pcap packet to a message being understandable by mmt-security.
+ * The function returns NULL if the packet contains no interested information.
+ * Otherwise it creates a new memory segment to store the result message. One need
+ * to use #free_message_t to free the message.
+ */
 static inline message_t* _get_packet_info( const ipacket_t *pkt, const mmt_sec_handler_t *handler ){
 	size_t size, i, index;
 	const proto_attribute_t **arr;
@@ -218,6 +237,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt, const mmt_sec_h
 	msg->timestamp = mmt_sec_encode_timeval( &pkt->p_hdr->ts );
 	msg->counter   = pkt->packet_id;
 
+	//get a list of proto/attributes being used by mmt-security
 	size = mmt_sec_get_unique_protocol_attributes( handler, &arr );
 
 	msg->elements_count = size;
@@ -233,6 +253,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt, const mmt_sec_h
 		msg->elements[i].data_type = arr[i]->data_type;
 	}
 
+	//need to free #msg when the packet contains no-interested information
 	if( !has_data ){
 		free_message_t( msg );
 		return NULL;
@@ -241,14 +262,22 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt, const mmt_sec_h
 	return msg;
 }
 
+/**
+ * This function is called by mmt-dpi for each incoming packet containing registered proto/att.
+ * It gets interested information from the #ipkacet to a message then sends the
+ * message to mmt-security.
+ */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
 	mmt_sec_handler_t *sec_handler = (mmt_sec_handler_t *) args;
 	message_t *msg = _get_packet_info( ipacket, sec_handler );
 
+	//if there is no interested information
+	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
 	if( msg == NULL ) return 1;
 
 	mmt_sec_process( sec_handler, msg );
 
+	//need to free #msg
 	free_message_t( msg );
 	return 0;
 }
@@ -263,6 +292,7 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 		fprintf(stderr, "Packet data extraction failure.\n");
 	}
 }
+
 static mmt_sec_handler_t *mmt_sec_handler = NULL;
 static const rule_info_t **rules_arr = NULL;
 
@@ -298,12 +328,13 @@ int main(int argc, char** argv) {
 	signal(SIGSEGV, signal_handler);
 	signal(SIGABRT, signal_handler);
 
+	//get all available rules
 	size = load_mmt_sec_rules( &rules_arr );
+	//init mmt-sec to verify the rules
 	mmt_sec_handler = mmt_sec_register( rules_arr, size, print_verdict, NULL );
 
 	//init mmt_dpi extraction
 	init_extraction();
-
 	//Initialize dpi handler
 	mmt_dpi_handler = mmt_init_handler(DLT_EN10MB, 0, mmt_errbuf);
 	if (!mmt_dpi_handler) { /* pcap error ? */
@@ -322,6 +353,7 @@ int main(int argc, char** argv) {
 	register_packet_handler(mmt_dpi_handler, 1, packet_handler, (void *)mmt_sec_handler );
 
 	if (type == TRACE_FILE) {
+		mmt_info("Analyzing pcap file %s", filename );
 		pcap = pcap_open_offline(filename, errbuf); // open offline trace
 		if (!pcap) { /* pcap error ? */
 			mmt_log(ERROR, "pcap_open failed for the following reason: %s\n", errbuf);
@@ -337,7 +369,7 @@ int main(int argc, char** argv) {
 		}
 	} else {
 		mmt_info("Listening on interface %s", filename );
-		pcap = pcap_open_live(filename, MTU_BIG, 1, 1000, errbuf);
+		pcap = pcap_open_live(filename, SNAP_LEN, 1, 1000, errbuf);
 		if (!pcap) {
 			mmt_log(ERROR, "pcap_open failed for the following reason: %s\n", errbuf);
 			return EXIT_FAILURE;
@@ -345,16 +377,20 @@ int main(int argc, char** argv) {
 		(void)pcap_loop( pcap, -1, &live_capture_callback, (u_char*)mmt_dpi_handler );
 	}
 
+	//free resources using by mmt-dpi
 	mmt_close_handler(mmt_dpi_handler);
-
 	close_extraction();
 
+	//free resources using by libpcap
 	pcap_close(pcap);
 
+	//free resources using by mmt-sec
 	mmt_sec_unregister( mmt_sec_handler );
 	mmt_mem_free( rules_arr );
 
-	mmt_mem_print_info();
+	//print info about memory using by mmt-sec
+	//mmt_mem_print_info();
+
 	return EXIT_SUCCESS;
 }
 

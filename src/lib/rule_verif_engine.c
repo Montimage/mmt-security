@@ -152,8 +152,7 @@ void rule_engine_free( rule_engine_t *engine ){
 static inline void _store_valid_execution_trace( _rule_engine_t *_engine, fsm_t *fsm ){
 	mmt_map_free_key_and_data( _engine->valid_execution_trace, NULL, (void *)free_message_t );
 
-	_engine->valid_execution_trace = fsm_get_execution_trace( fsm );
-	_engine->valid_execution_trace = mmt_map_clone_key_and_data( _engine->valid_execution_trace, NULL, (void *)retain_message_t );
+	_engine->valid_execution_trace = mmt_map_clone_key_and_data( fsm_get_execution_trace( fsm ), NULL, (void *)retain_message_t );
 }
 
 /**

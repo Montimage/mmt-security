@@ -81,7 +81,6 @@ static inline void _update_delay_to_micro_second( rule_delay_t *delay, int delay
 	case HOUR:
 		delay->time_max *= 60;
 		delay->time_min *= 60;
-		mmt_debug("HOUR");
 	case MINUTE:
 		delay->time_max *= 60;
 		delay->time_min *= 60;

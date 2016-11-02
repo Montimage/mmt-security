@@ -1,26 +1,16 @@
 /*
- * dpi_proto_attribute.c
+ * main_gen_dpi.c
  *
  *  Created on: 4 oct. 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
+ *
+ *  Generate a list of available protocols and for each protocol, the list of its attributes
+ *  The output is printed to the screen.
+ *  By using this list, mmt-security can be independent from mmt-dpi, e.g., one does not need
+ *  to install mmt-dpi to run mmt-security as all it needs is this list.
+ *  Note that mmt_sec_standalone.c still need mmt-dpi to extract packets' information.
  */
 
-/**
- * This example is intened to provide the list of available protocols and for each protocol, the list of its attributes
- *
- * Compile this example with:
- *
- * gcc -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -lmmt_core -o proto dpi_proto_attribute.c -lmmt_core -ldl
- *
- * Then execute the program:
- *
- * ./proto > proto_attr_output.h
- *
- * The output in the file proto_attr_output.h
- *
- * 	That is it!
- *
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -72,7 +62,6 @@ int main(int argc, char** argv) {
 	close_extraction();
 
 	printf( "};\n #define DPI_PROTO_SIZE %d\n ", proto_count );
-
 
 	//avoid duplicate from data_types.h
 	printf("\n #ifndef TYPES_DEFS_H" );

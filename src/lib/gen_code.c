@@ -711,8 +711,8 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 /**
  * Compile the generated code
  */
-int compile_gen_code( const char *lib_file, const char *code_file ){
+int compile_gen_code( const char *lib_file, const char *code_file, const char *incl_dir ){
 	char cmd_str[ 10000 ];
-	sprintf( cmd_str, "/usr/bin/gcc -g -fPIC -shared %s -o %s -I /home/mmt/mmt-security/src/lib", code_file, lib_file );
+	sprintf( cmd_str, "/usr/bin/gcc -g -fPIC -shared %s -o %s -I %s", code_file, lib_file, incl_dir );
 	return system ( cmd_str );
 }

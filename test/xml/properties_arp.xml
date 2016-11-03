@@ -16,7 +16,7 @@
 <!-- Property 1: One ARP request receives two replies with different MAC addresses.
 -->
 
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="10" type_property="ATTACK" 
+<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="410" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
     <operator value="THEN" delay_units="m" delay_min="0+" delay_max="5">
       <event value="COMPUTE" event_id="1" 
@@ -35,7 +35,7 @@
                  above and detects the same potential attacks without generating a message for each combination of request-reply.
 -->
 
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="12" type_property="ATTACK" 
+<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="412" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
       <event value="COMPUTE" event_id="4" 
              description="An arp reply with MAC address"

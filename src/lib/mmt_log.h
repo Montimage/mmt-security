@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include "base.h"
 
 typedef enum {
 	INFO, DEBUG, WARN, ERROR, HALT
@@ -29,7 +30,7 @@ void mmt_log( log_level_t level, const char *format, ... )
 #define mmt_error( ... ) mmt_log( ERROR, __VA_ARGS__ )
 #define mmt_halt( ... )  mmt_log( HALT, __VA_ARGS__ )
 
-#define mmt_assert( expr, ... ) while( !(expr) ){ mmt_log( HALT, __VA_ARGS__ ); break; }
+#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ mmt_log( HALT, __VA_ARGS__ ); break; }
 
 #ifdef DEBUG_MODE
 	#define mmt_debug(...) do{ printf("%s:%d ", __FILE__, __LINE__); mmt_log( DEBUG, __VA_ARGS__ ); break; }while(1)

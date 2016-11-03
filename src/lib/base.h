@@ -20,6 +20,8 @@
 #define NO false
 #define YES true
 
-#define __check_null( x, y ) if( x == NULL ) return y
+#define __check_null( x, y ) if( unlikely( x == NULL )) return y; else
+#define likely(x)       __builtin_expect((x),1)
+#define unlikely(x)     __builtin_expect((x),0)
 
 #endif /* SRC_LIB_BASE_H_ */

@@ -6,8 +6,6 @@
  */
 
 #include <string.h>
-#include "base.h"
-#include "mmt_alloc.h"
 #include "mmt_lib.h"
 
 ///////////////////////////////////////Linked-list////////////////////////////////////////////
@@ -25,8 +23,7 @@ link_node_t *append_node_to_link_list( link_node_t *head, void *data ){
 
 	new_node = create_node_of_link_list( data );
 
-	if( head == NULL )
-		return new_node;
+	if( unlikely( head == NULL )) return new_node;
 
 	//append to tail
 	ptr = head;
@@ -45,8 +42,7 @@ link_node_t *insert_node_to_link_list( link_node_t *head, void *data ){
 
 	new_node = create_node_of_link_list( data );
 
-	if( head == NULL )
-		return new_node;
+	if( unlikely( head == NULL )) return new_node;
 
 	//insert to head
 	new_node->next = head;
@@ -86,6 +82,7 @@ link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
 	link_node_t *ptr = head;
 	while( ptr != NULL && ptr->data != data )
 		ptr = ptr->next;
+
 	//not found any node having this #data
 	if( ptr == NULL )
 		return head;
@@ -103,6 +100,7 @@ link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
 
 	if( ptr->next != NULL )
 		ptr->next->prev = ptr->prev;
+
 	//free this node
 	mmt_mem_free( ptr );
 

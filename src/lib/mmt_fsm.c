@@ -53,24 +53,6 @@ typedef struct fsm_struct{
 
 }_fsm_t;
 
-/**
- * Execute an entry
- */
-//static void _exec_action( bool entry, const void *event_data, const fsm_state_t *state, _fsm_t *fsm ){
-//	enum fsm_action_type action_type;
-//	if( entry == YES )
-//		action_type = state->entry_action;
-//	else
-//		action_type = state->exit_action;
-//
-//	switch( action_type ){
-//		case FSM_ACTION_RESET_TIMER:
-//			mmt_debug( "RESET TIMER ");
-//			break;
-//		default:
-//			mmt_debug("Not good when calling this function with action_type = %d", action_type );
-//	}
-//}
 
 /**
  * Public API
@@ -112,18 +94,10 @@ void fsm_reset( fsm_t *fsm ){
 }
 
 static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
-//	_fsm_t *new_fsm = mmt_mem_alloc( sizeof( _fsm_t ));
-//	new_fsm->id              = _fsm->id;
-//	new_fsm->init_state      = _fsm->init_state;
-//	new_fsm->current_state   = _fsm->current_state;
-//	new_fsm->previous_state  = _fsm->previous_state;
-//	new_fsm->error_state     = _fsm->error_state;
-//	new_fsm->incl_state      = _fsm->incl_state;
-//
+
 	_fsm_t *new_fsm = mmt_mem_dup( _fsm, sizeof( _fsm_t) );
 	new_fsm->events_trace    = mmt_map_clone_key_and_data( _fsm->events_trace, NULL, mmt_mem_retain );
 	new_fsm->messages_trace  = mmt_map_clone_key_and_data( _fsm->messages_trace, NULL, (void *)retain_message_t );
-
 
 	return new_fsm;
 }
@@ -141,11 +115,11 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 
 	ptr = mmt_map_set_data( _fsm->events_trace, (void *) &tran->event_type, mmt_mem_retain( event_data ), YES );
 	//must free the old value
-	mmt_mem_free( ptr );
+	if( unlikely( ptr != NULL ) ) mmt_mem_free( ptr );
 
 	ptr = mmt_map_set_data( _fsm->messages_trace, (void *) &tran->event_type, retain_message_t( message_data ), YES );
 	//must free the old value
-	free_message_t( (message_t *) ptr );
+	if( unlikely( ptr != NULL ) ) free_message_t( (message_t *) ptr );
 
 //	/* Run exit action
 //	 * (even if it returns to itself) */
@@ -155,11 +129,11 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 
 	// Update the states in FSM
 	_fsm->previous_state = _fsm->current_state;
-	_fsm->current_state = new_state;
+	_fsm->current_state  = new_state;
 
 	//update deadline
 	//outgoing from init state
-	if( _fsm->previous_state == _fsm->init_state ){
+	if( unlikely(_fsm->previous_state == _fsm->init_state) ){
 		_fsm->counter_min += new_state->delay.counter_min + message_data->counter;
 		_fsm->time_min    += new_state->delay.time_min    + message_data->timestamp;
 
@@ -216,14 +190,12 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	__check_null( fsm, FSM_ERR_ARG );
 
 	_fsm = (_fsm_t *)fsm;
-	if (!_fsm->current_state) {
-		//_go_to_error_state(_fsm, event);
+	if ( unlikely( !_fsm->current_state )) //unknown current_state
 		return FSM_ERROR_STATE_REACHED;
-	}
 	//no outgoing transitions
-	if (!_fsm->current_state->transitions_count )
+	else if ( unlikely( !_fsm->current_state->transitions_count ))
 		return FSM_NO_STATE_CHANGE;
-	if( _fsm->current_state->transitions_count <= transition_index )
+	else if( unlikely( _fsm->current_state->transitions_count <= transition_index ))
 		return FSM_ERR_ARG;
 
 	//check if timeout

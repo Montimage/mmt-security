@@ -256,12 +256,11 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt, const mmt_sec_h
 	}
 
 	//need to free #msg when the packet contains no-interested information
-	if( !has_data ){
-		free_message_t( msg );
-		return NULL;
-	}
+	if( likely( has_data ))
+		return msg;
 
-	return msg;
+	free_message_t( msg );
+	return NULL;
 }
 
 /**
@@ -275,7 +274,7 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	//if there is no interested information
 	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
-	if( msg == NULL ) return 1;
+	if( unlikely( msg == NULL )) return 1;
 
 	mmt_sec_process( sec_handler, msg );
 

@@ -35,7 +35,8 @@ void mmt_mem_print_info(){
 }
 
 void *mmt_mem_alloc(size_t size){
-	if( size == 0 ) return NULL;
+	if( unlikely( size == 0 )) return NULL;
+
 	size = size_of_memory_t + size + 1;
 	_memory_t *mem = malloc( size );
 
@@ -59,6 +60,7 @@ void *mmt_mem_alloc(size_t size){
 
 void mmt_mem_free( void *x ){
 	__check_null( x, );
+
    _memory_t *mem = _convert_mem( x );
    if( mem->ref_count <= 1 ){
 		freed_memory_size += mem->size;

@@ -69,7 +69,7 @@ void _mmt_map_free_node( _mmt_map_node_t *node, bool free_data ){
  * Public API
  */
 void mmt_map_free( mmt_map_t *map, bool free_data  ){
-	if( map == NULL ) return;
+	__check_null( map, );
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
 	_mmt_map_free_node( _tree->root, free_data );
 	mmt_mem_free( map );
@@ -165,9 +165,12 @@ void *_mmt_map_get_data( int (*fun)(const void*, const void*), _mmt_map_node_t *
  * Public API
  */
 void *mmt_map_get_data( const mmt_map_t *map, const void *key ){
-	if( map == NULL || key == NULL ) return NULL;
+	__check_null( map, NULL );
+	__check_null( key, NULL );
+
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
-	if( _tree->root == NULL ) return NULL;
+
+	__check_null( _tree->root, NULL );
 
 	return _mmt_map_get_data( _tree->compare_function, _tree->root, key );
 }
@@ -187,9 +190,11 @@ void _mmt_map_node_iterate( const _mmt_map_node_t *node, void (*map_iterate_func
  */
 void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *key, void *data, void *user_data, size_t index, size_t total ), void *user_data ){
 	size_t index = 0;
-	if( map == NULL ) return;
+	__check_null( map,  );
+
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
-	if( _tree->root == NULL ) return;
+
+	__check_null( _tree->root, );
 
 	_mmt_map_node_iterate( _tree->root, map_iterate_function, user_data, &index, _tree->size );
 }
@@ -202,7 +207,8 @@ void _iterate_to_clone_map( void *key, void *data, void *user_data, size_t index
  * Public API
  */
 mmt_map_t* mmt_map_clone( const mmt_map_t *map ){
-	if( map == NULL ) return NULL;
+	__check_null( map, NULL );
+
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
 	mmt_map_t *new_map;
 
@@ -215,7 +221,8 @@ mmt_map_t* mmt_map_clone( const mmt_map_t *map ){
 
 void _mmt_map_clone_node_and_data( _mmt_map_node_t **new_node, _mmt_map_node_t *node, void* (*clone_key_fn)( void *), void* (*clone_data_fn)( void *) ){
 	_mmt_map_node_t *node_ptr;
-	if( node == NULL ) return;
+
+	__check_null( node, );
 
 	//clone current node
 	node_ptr = mmt_mem_alloc( sizeof( _mmt_map_node_t ));
@@ -243,7 +250,8 @@ void _mmt_map_clone_node_and_data( _mmt_map_node_t **new_node, _mmt_map_node_t *
  * Public API
  */
 mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_fn)( void *), void* (*clone_data_fn)( void *)  ){
-	if( map == NULL ) return NULL;
+	__check_null( map, NULL );
+
 	_mmt_map_t *_tree = (_mmt_map_t*) map;
 	mmt_map_t *new_map;
 
@@ -253,15 +261,4 @@ mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_f
 
 	((_mmt_map_t *)new_map)->size = mmt_map_count( map );
 	return new_map;
-}
-
-
-static void _iterate_to_assign_to_array( void *key, void *data, void *user_data, size_t index, size_t count){
-	//user_data[ index ] = data;
-}
-size_t mmt_map_get_data_array( const mmt_map_t *map, void **array){
-	size_t size = mmt_map_count(map);
-	array = mmt_mem_alloc( size );
-	mmt_map_iterate(map, _iterate_to_assign_to_array, array );
-	return size;
 }

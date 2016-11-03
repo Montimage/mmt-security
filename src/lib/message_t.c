@@ -39,7 +39,7 @@ message_t *retain_message_t( message_t *msg ){
 message_t *clone_message_t( const message_t *msg ){
 	message_t *new_msg;
 	size_t i;
-	if( msg == NULL ) return NULL;
+	__check_null( msg, NULL );
 
 	return retain_message_t( (message_t*)msg );
 //

@@ -393,7 +393,7 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	for( i=0; i<_engine->max_events_count; i++ ){
 		event_id = hash[i];
 		//this event does not fire
-		if(  event_id == 0 ) continue;
+		if(  event_id == 0 ) break;
 //mmt_debug( "Event_id : %d", event_id );
 		event_id = event_id % _engine->max_events_count;
 

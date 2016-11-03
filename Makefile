@@ -15,7 +15,7 @@ GIT_VERSION := $(shell git describe --abbrev=7 --always)
 #set of library
 LIBS     = -ldl -lpthread -lxml2
 
-CFLAGS   = -O0 -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
+CFLAGS   = -O3 -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
 CLDFLAGS = 
 
 #for debuging

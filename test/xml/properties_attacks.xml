@@ -4,7 +4,7 @@
 <beginning>
 
 <!-- Property 1: Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).-->
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="1" property_id="1" type_property="ATTACK" 
+<property value="THEN" delay_units="m" delay_min="0+" delay_max="1" property_id="31" type_property="ATTACK" 
     description="Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).">
     <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
       <event value="COMPUTE" event_id="1" 
@@ -25,7 +25,7 @@
 </property>
 
 <!-- Property 2: Attempted to connect via ssh but reseted immediately. Source address is spoofed, infected machine or attacker.-->
-<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="2" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="32" type_property="ATTACK" 
     description="Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).">
     <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
       <event value="COMPUTE" event_id="5" 
@@ -41,7 +41,7 @@
 </property>
 
 <!-- Property 3: Several TCP SYN requests without SYN ACK. Source address is spoofed, infected machine or attacker. Note: done on port 445.-->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="6" property_id="3" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="6" property_id="33" type_property="ATTACK" 
     description="TCP SYN requests on microsoft-ds port 445 with SYN ACK."
     >
     <!--if_not_satisfied="py_createstix(3_BGPOST_TCP_SYN_request_without_SYN_ACK_could_be_a_spoofed_address, ip.src.8)"-->
@@ -65,7 +65,7 @@
 -->
 
 <!-- Property 4: One ARP request receives two replies with different MAC addresses.-->
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="4" type_property="ATTACK" 
+<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="34" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
     <operator value="THEN" delay_units="m" delay_min="0+" delay_max="5">
       <event value="COMPUTE" event_id="10" 
@@ -82,7 +82,7 @@
 
 <!-- Property 5: Two ARP replies that should provide the same MAC address are different. This rule is simpler than Property 1 
                  above and detects the same potential attacks without generating a message for each combination of request-reply.-->
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="5" type_property="ATTACK" 
+<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="35" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
       <event value="COMPUTE" event_id="13" 
              description="An arp reply with MAC address"
@@ -94,7 +94,7 @@
 
 
 <!-- Property 6: 4_Analyse_03b : TCP SYN scan to detect SYNFUL compromise) (|ack - seq| == 0xC123D ou 791101). -->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="6" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="36" type_property="ATTACK" 
     description="4_Analyse_03b : SYN and ACK paquets with a 0xC123D delta between TCP sequence numbers (scan done by SYNFUL attack).">
     <event value="COMPUTE" event_id="15"
            description="TCP SYN"
@@ -105,7 +105,7 @@
 </property>
 
 <!-- Property 7: R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK before belonging to the same session.-->
-<property value="THEN" delay_units="s" delay_min="-6" delay_max="6" property_id="7" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="-6" delay_max="6" property_id="37" type_property="ATTACK" 
     description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK before belonging to the same session.">
     <event value="COMPUTE" event_id="17"
            description="TCP RST"

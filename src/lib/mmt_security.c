@@ -125,7 +125,7 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
  */
 void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	size_t i;
-	if( handler == NULL ) return;
+	__check_null( handler, );
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
 
 	//free data elements of _handler
@@ -178,9 +178,8 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	int verdict;
 	enum rule_engine_result ret = RULE_ENGINE_RESULT_UNKNOWN;
 	const mmt_map_t *execution_trace;
-//	mmt_assert( handler != NULL, "Need to register before processing");
+
 	_handler = (_mmt_sec_handler_t *)handler;
-//	if( _handler->rules_count == 0 ) return;
 
 	message_t *msg = clone_message_t( message );
 
@@ -212,31 +211,33 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	free_message_t( msg );
 }
 
-#define MAX_STR_SIZE 2000
+
+#define MAX_STR_SIZE 50000
 
 static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t index, size_t total){
 	char *string = (char *) u_data;
-	size_t size, i;
+	size_t size, i, total_len;
 	const message_t *msg = (message_t *)data;
 	const message_element_t *me;
 	char *tmp;
 	constant_t expr_const;
 	bool is_first = YES;
 
-	string += strlen( string );
-	//TODO: use %06d for timestamp
-	//size = sprintf( string, "%s\"event_%d\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
-	size = sprintf( string, "%s\"event_%d\":{\"timestamp\":%"PRIu64".%d,\"counter\":%"PRIu64",\"attributes\":[",
+	total_len = strlen( string );
+	string += total_len;
+
+	size = sprintf( string, "%s\"event_%d\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
 			index == 0 ? "{": " ,",
 			*(uint16_t *) key, //event id
 			msg->timestamp / 1000000, //timestamp: second
 			(int)(msg->timestamp % 1000000), //timestamp: microsecond
 			msg->counter );
+
 	//go into detail of a message
 	for( i=0; i<msg->elements_count; i++ ){
 		me = &msg->elements[i];
 
-		if( me->data == NULL ) continue;
+		if( unlikely( me->data == NULL ) ) continue;
 
 		//convert me->data to string
 		expr_const.data = me->data;
@@ -246,6 +247,10 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 		 expr_const.data_type = convert_data_type( expr_const.data_type );
 
 		if( expr_stringify_constant( &tmp, &expr_const ) ){
+
+			total_len += size;
+			if( unlikely( total_len >= MAX_STR_SIZE )) return;
+
 			string += size;
 			size = sprintf( string, "%s{\"%s.%s\":%s}",
 					(is_first? "":","),
@@ -256,9 +261,14 @@ static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t 
 			is_first = NO;
 		}
 	}
+
+	total_len += size;
+	if( unlikely( total_len >= MAX_STR_SIZE )) return;
+
 	string += size;
 	sprintf( string, "]}%s", //end attributes, end event_
 			index == total-1? "}": ""  );
+
 }
 
 char* convert_execution_trace_to_json_string( const mmt_map_t *trace ){

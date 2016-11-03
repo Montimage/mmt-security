@@ -39,7 +39,7 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	struct _user_data *_u_data = (struct _user_data *)user_data;
 	FILE *fd = _u_data->file;
 	uint32_t rule_id  = _u_data->index;
-
+	static bool __got_history;
 	size_t size;
 	variable_t *var = (variable_t *) data;
 
@@ -47,18 +47,23 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	size = expr_stringify_variable( &str, var );
 	if( size == 0 ) return;
 
-	if( var->ref_index != (uint16_t)UNKNOWN ){
+	if( index == 0 ) __got_history = NO;
+
+	if( var->ref_index != (uint16_t)UNKNOWN && __got_history == NO ){
 		fprintf(fd, "\n\t his_data = (_msg_t_%d *)fsm_get_history( fsm, %d);", rule_id, var->ref_index );
 		//TODO: not need to check ?
-		fprintf(fd, "\n\t if( his_data == NULL ) return 0;");
+		fprintf(fd, "\n\t if( unlikely( his_data == NULL )) return 0;");
+
+		__got_history = YES;
 	}
 
 	_gen_code_line( fd );
 	//TODO: not need to check before validate the guard's boolean expression ?
-	fprintf( fd, "\n\t if( %s->%s_%s == NULL ) return 0;",
-					( var->ref_index == (uint16_t)UNKNOWN )? "ev_data" : "his_data",
-					var->proto, var->att
-	);
+//	fprintf( fd, "\n\t if( unlikely( %s->%s_%s == NULL )) return 0;",
+//					( var->ref_index == (uint16_t)UNKNOWN )? "ev_data" : "his_data",
+//					var->proto, var->att
+//	);
+
 	//TODO: when proto starts by a number
 	fprintf( fd, "\n\t %s%s = %s %s->%s_%s %s;",
 			((var->data_type == NUMERIC)? "double " : "const char *"),
@@ -98,7 +103,7 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	//guard function header
 	fprintf(fd, "static inline int %s( const void *event_data, const fsm_t *fsm ){",
 			guard_fun_name );
-	fprintf(fd, "\n\t if( event_data == NULL ) return 0;" );
+	fprintf(fd, "\n\t if( unlikely( event_data == NULL )) return 0;" );
 	fprintf(fd, "\n\t const _msg_t_%d *his_data, *ev_data = (_msg_t_%d *) event_data;", rule_id, rule_id);
 	mmt_map_iterate( map, _iterate_variable, user_data );
 	fprintf(fd, "\n\n\t return %s;\n }\n ",  str);
@@ -538,7 +543,7 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 		old_proto_id = -1; //init
 		_gen_comment( fd, "Public API" );
 		fprintf( fd, "static void *convert_message_to_event_%d( const message_t *msg){", rule_id );
-		fprintf( fd, "\n\t if( msg == NULL ) return NULL;" );
+		fprintf( fd, "\n\t if( unlikely( msg == NULL )) return NULL;" );
 		fprintf( fd, "\n\t _msg_t_%d *new_msg = _allocate_msg_t_%d();", rule_id, rule_id );
 		fprintf( fd, "\n\t size_t i;" );
 		fprintf( fd, "\n\t new_msg->timestamp = msg->timestamp;" );
@@ -693,7 +698,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 	mmt_mem_free( str_ptr );
 
 	//include
-	fprintf( fd, "#include <string.h>\n #include <stdio.h>\n #include <stdlib.h>\n #include \"plugin_header.h\"\n #include \"mmt_fsm.h\"\n #include \"mmt_alloc.h\"\n ");
+	fprintf( fd, "#include <string.h>\n #include <stdio.h>\n #include <stdlib.h>\n #include \"plugin_header.h\"\n #include \"mmt_fsm.h\"\n #include \"mmt_lib.h\"\n ");
 
 	for( i=0; i<count; i++ )
 		_gen_fsm_for_a_rule( fd, rules[i] );
@@ -712,7 +717,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 int compile_gen_code( const char *lib_file, const char *code_file, const char *incl_dir ){
 	char cmd_str[ 10000 ];
 
-	sprintf( cmd_str, "/usr/bin/gcc %s -fPIC -shared %s -o %s -I %s",
+	sprintf( cmd_str, "/usr/bin/gcc %s -fPIC -shared -O3  %s -o %s -I %s",
 #ifdef DEBUG_MODE
 			"-g",
 #else

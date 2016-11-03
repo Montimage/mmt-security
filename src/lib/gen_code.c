@@ -145,7 +145,7 @@ typedef struct _meta_transition_struct{
 	int action;
 }_meta_transition_t;
 
-static inline _meta_state_t *_create_new_state( index ){
+static inline _meta_state_t *_create_new_state( size_t index ){
 	_meta_state_t *s = mmt_mem_alloc( sizeof( _meta_state_t ));
 	s->index        = index;
 	s->description  = NULL;

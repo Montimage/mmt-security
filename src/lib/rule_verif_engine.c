@@ -371,6 +371,8 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
  */
 enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *message ){
 	//mmt_assert( engine != NULL, "Error: Engine cannot be NULL" );
+	__check_null( engine,  RULE_ENGINE_RESULT_UNKNOWN );
+	__check_null( message, RULE_ENGINE_RESULT_UNKNOWN );
 
 	_rule_engine_t *_engine = ( _rule_engine_t *) engine;
 	size_t i;
@@ -393,7 +395,7 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	for( i=0; i<_engine->max_events_count; i++ ){
 		event_id = hash[i];
 		//this event does not fire
-		if(  event_id == 0 ) break;
+		if(  event_id == 0 ) continue;
 //mmt_debug( "Event_id : %d", event_id );
 		event_id = event_id % _engine->max_events_count;
 

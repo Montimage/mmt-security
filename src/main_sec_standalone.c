@@ -21,6 +21,8 @@
 #include <signal.h>
 #include <errno.h>
 
+#include <arpa/inet.h>
+
 #ifndef __FAVOR_BSD
 # define __FAVOR_BSD
 #endif
@@ -38,7 +40,7 @@
 #define MAX_FILENAME_SIZE 256
 #define TRACE_FILE 1
 #define LIVE_INTERFACE 2
-#define SNAP_LEN (16 * 1024)
+#define SNAP_LEN 65355
 
 /**
  * Print information of the rules existing.
@@ -47,7 +49,7 @@ void print_rules_info(){
 	const rule_info_t **rules_arr;
 	size_t i, n  = 0;
 
-	n = load_mmt_sec_rules( &rules_arr );
+	n = mmt_sec_get_rules_info( &rules_arr );
 
 	printf("Found %zu rule%s", n, n<=1? ".": "s." );
 
@@ -174,9 +176,6 @@ static inline void* _get_data( const ipacket_t *pkt, const proto_attribute_t *me
 	    case MMT_DATA_FLOAT: /**< float constant value */
 	   	 number = *(float *) data;
 			 break;
-	    case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
-	   	 return data;
-	   	 break;
 	    case MMT_DATA_MAC_ADDR: /**< ethernet mac address constant value */
 	   	 size = snprintf(buffer , buffer_size, "%02x:%02x:%02x:%02x:%02x:%02x", data[0], data[1], data[2], data[3], data[4], data[5] );
 	   	 //mmt_debug( "%d %s", size, buffer );
@@ -191,6 +190,8 @@ static inline void* _get_data( const ipacket_t *pkt, const proto_attribute_t *me
 	   	 inet_ntop(AF_INET6, data, buffer, buffer_size );
 			 //mmt_debug( "IPv6: %s", string );
 			 return mmt_mem_dup( buffer, strlen( buffer));
+
+//	    case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
 //	    case MMT_DATA_PATH: /**< protocol path constant value */
 //	    case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
 //	    case MMT_DATA_BUFFER: /**< binary buffer content */
@@ -296,12 +297,28 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 
 static mmt_sec_handler_t *mmt_sec_handler = NULL;
 static const rule_info_t **rules_arr = NULL;
+static pcap_t *pcap;
 
 void signal_handler(int signal_type) {
+	struct pcap_stat pcs; /* packet capture filter stats */
+
 	mmt_sec_unregister( mmt_sec_handler );
 	mmt_mem_free( rules_arr );
 	mmt_mem_print_info();
 	mmt_info( "Interrupted by signal %d", signal_type );
+
+
+	pcap_breakloop( pcap );
+
+	if (pcap_stats(pcap, &pcs) < 0) {
+		(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));
+	}else{
+		(void) fprintf(stderr, "\n%12d packets received by filter\n", pcs.ps_recv);
+		(void) fprintf(stderr, "%12d packets dropped by kernel (%3.2f%%)\n", pcs.ps_drop, pcs.ps_drop * 100.0 / pcs.ps_recv);
+		(void) fprintf(stderr, "%12d packets dropped by interface\n", pcs.ps_ifdrop);
+		fflush(stderr);
+	}
+
 	exit( signal_type );
 }
 
@@ -309,7 +326,7 @@ int main(int argc, char** argv) {
 	mmt_handler_t *mmt_dpi_handler;
 	char mmt_errbuf[1024];
 
-	pcap_t *pcap;
+
 	const unsigned char *data;
 	struct pcap_pkthdr p_pkthdr;
 	char errbuf[1024];
@@ -330,7 +347,7 @@ int main(int argc, char** argv) {
 	signal(SIGABRT, signal_handler);
 
 	//get all available rules
-	size = load_mmt_sec_rules( &rules_arr );
+	size = mmt_sec_get_rules_info( &rules_arr );
 	//init mmt-sec to verify the rules
 	mmt_sec_handler = mmt_sec_register( rules_arr, size, print_verdict, NULL );
 
@@ -370,11 +387,18 @@ int main(int argc, char** argv) {
 		}
 	} else {
 		mmt_info("Listening on interface %s", filename );
-		pcap = pcap_open_live(filename, SNAP_LEN, 1, 1000, errbuf);
-		if (!pcap) {
-			mmt_log(ERROR, "pcap_open failed for the following reason: %s\n", errbuf);
-			return EXIT_FAILURE;
+
+		pcap = pcap_create( filename, errbuf);
+		if (pcap == NULL) {
+			fprintf(stderr, "Couldn't open device %s\n", errbuf);
+			exit( EXIT_FAILURE );
 		}
+		pcap_set_snaplen(pcap, SNAP_LEN);
+		pcap_set_promisc(pcap, 1);
+		pcap_set_timeout(pcap, 0);
+		pcap_set_buffer_size(pcap, 100*1000*1000);
+		pcap_activate(pcap);
+
 		(void)pcap_loop( pcap, -1, &live_capture_callback, (u_char*)mmt_dpi_handler );
 	}
 

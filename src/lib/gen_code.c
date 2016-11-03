@@ -10,7 +10,7 @@
 #include "mmt_lib.h"
 #include "expression.h"
 #include "mmt_fsm.h"
-
+#include "version.h"
 
 #define STR_BUFFER_SIZE 10000
 #define _gen_comment( fd, format, ... ) fprintf( fd, "\n /** %d\n  * " format "\n  */\n ", __LINE__, ##__VA_ARGS__ )
@@ -42,7 +42,6 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 
 	size_t size;
 	variable_t *var = (variable_t *) data;
-	uint32_t p_id, a_id;
 
 	//init for the first element
 	size = expr_stringify_variable( &str, var );
@@ -293,7 +292,7 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 ////////////////////////////////////////////////////////////////////////////////
 
 static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
-	size_t size, states_count, i;
+	size_t size, states_count;
 	_meta_state_t *s_init, *s_fail, *s_pass, *s_incl, *state;
 	_meta_transition_t *tran;
 	link_node_t *states_list = NULL, *p_link_node, *p_t;
@@ -616,8 +615,8 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 	fprintf( fd, "\n\t };\n\t *rules_arr = rules;");
 	fprintf( fd, "\n\t return %zu;\n }", count);
 
-	fprintf( fd, "\n const char * __get_generated_date(){ return \"%s (%s)\";};",
-			get_current_date_time_string("%Y-%m-%d %H:%M:%S"), GIT_VERSION ); //GIT_VERSION is defined in Makefile
+	fprintf( fd, "\n const char * __get_generated_date(){ return \"%s, version %s\";};",
+			get_current_date_time_string("%Y-%m-%d %H:%M:%S"), MMT_SEC_VERSION );
 }
 
 
@@ -633,12 +632,10 @@ void _iterate_event_to_get_unique_variables( void *key, void *data, void *user_d
 }
 
 static void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
-	char *str_ptr;
-	size_t i, size;
+	size_t size;
 	struct _user_data _u_data;
 	_u_data.file  = fd;
 	_u_data.index = rule->id;
-	uint16_t rule_id = rule->id;
 	/**
 	 * a set of events
 	 * <event_id, map>
@@ -714,6 +711,14 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
  */
 int compile_gen_code( const char *lib_file, const char *code_file, const char *incl_dir ){
 	char cmd_str[ 10000 ];
-	sprintf( cmd_str, "/usr/bin/gcc -g -fPIC -shared %s -o %s -I %s", code_file, lib_file, incl_dir );
+
+	sprintf( cmd_str, "/usr/bin/gcc %s -fPIC -shared %s -o %s -I %s",
+#ifdef DEBUG_MODE
+			"-g",
+#else
+			"",
+#endif
+			code_file, lib_file, incl_dir );
+
 	return system ( cmd_str );
 }

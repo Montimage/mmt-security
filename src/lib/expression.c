@@ -333,10 +333,9 @@ size_t _num_digits( int n ){
  * A constant is either a number or a string
  */
 size_t _parse_constant( constant_t **expr, const char *string, size_t str_size ){
-	size_t i = 0, index;
+	size_t index;
 	char *name = NULL;
 	double *number = NULL;
-	constant_t *cont;
 	*expr = NULL;
 	if( string == NULL  || str_size == 0 )
 		return 0;
@@ -361,13 +360,11 @@ size_t _parse_constant( constant_t **expr, const char *string, size_t str_size )
  * Parse a variable that is in format: proto.att[.index], e.g., TCP.SRC or TCP.SRC.1
  */
 size_t _parse_variable( variable_t **expr, const char *string, size_t str_size ){
-	size_t index, i = 0, j, k;
+	size_t index;
 	char *str_1 = NULL, *str_2 = NULL;
 	uint16_t ref_index = UNKNOWN;
 	char const *temp;
 	double *num = NULL;
-	variable_t *var;
-	bool has_reference = NO;
 
 	*expr = NULL;
 
@@ -423,7 +420,6 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 	expression_t *new_expr;
 	operation_t *new_op;
 	variable_t *new_var;
-	constant_t *new_cont;
 	char *new_string;
 
 	//jump
@@ -629,7 +625,7 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 	char buff[ MAX_STR_SIZE ];
 	size_t size;
 	double d;
-	enum data_type type;
+
 	if( expr == NULL ){
 		string = NULL;
 		return 0;
@@ -794,7 +790,7 @@ size_t _get_unique_variables_of_expression( const expression_t *expr, mmt_map_t 
 size_t get_unique_variables_of_expression( const expression_t *expr, mmt_map_t **variables_map, bool has_index ){
 	size_t var_count = 0;
 	mmt_map_t *map;
-	void *ptr;
+
 	*variables_map = NULL;
 	if( expr == NULL ) return 0;
 	if( has_index == YES )

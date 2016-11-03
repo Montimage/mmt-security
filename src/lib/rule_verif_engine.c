@@ -46,7 +46,7 @@ static inline _fsm_tran_index_t* _create_fsm_tran_index_t( size_t index, fsm_t *
  * Index the transitions of #fsm that can be fired in the next event.
  */
 static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm ){
-	size_t i, d;
+	size_t i;
 	uint16_t event_id;
 	const fsm_transition_t *tran;
 	const fsm_state_t *state = fsm_get_current_state( fsm );
@@ -262,10 +262,9 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 	//fire a specific transition of the current state of #node->fsm
 	//the transition has index = #node->tran_index
 	enum fsm_handle_event_value val;
-	mmt_map_t *trace_map;
 	fsm_t *new_fsm = NULL;
 	uint16_t new_fsm_id = 0;
-	int d = 0;
+
 	//mmt_debug( "  transition to verify: %zu", fsm_ind->index );
 	val = fsm_handle_event( fsm, fsm_ind->index, message_data, event_data, &new_fsm );
 

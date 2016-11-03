@@ -41,7 +41,7 @@ link_node_t *append_node_to_link_list( link_node_t *head, void *data ){
 
 /** Public API */
 link_node_t *insert_node_to_link_list( link_node_t *head, void *data ){
-	link_node_t *new_node, *ptr;
+	link_node_t *new_node;
 
 	new_node = create_node_of_link_list( data );
 

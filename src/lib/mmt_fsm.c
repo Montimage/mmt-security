@@ -209,7 +209,7 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data, fsm_t **new_fsm ) {
 	const fsm_transition_t *tran = NULL;
 	_fsm_t *_fsm = NULL, *_new_fsm = NULL;
-	uint64_t timer, counter;
+	//uint64_t timer, counter;
 
 	//set the
 	*new_fsm = NULL;

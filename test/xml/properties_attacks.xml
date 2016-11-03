@@ -70,7 +70,7 @@
     <operator value="THEN" delay_units="m" delay_min="0+" delay_max="5">
       <event value="COMPUTE" event_id="10" 
              description="An arp who was requested"
-             boolean_expression="(arp.ar_op == 1))"/>
+             boolean_expression="(arp.ar_op == 1)"/>
       <event value="COMPUTE" event_id="11" 
              description="An arp reply with MAC address"
              boolean_expression="((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.10))"/>
@@ -109,10 +109,10 @@
     description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK before belonging to the same session.">
     <event value="COMPUTE" event_id="17"
            description="TCP RST"
-           boolean_expression="((tcp.flags == 4)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;((ip.src == ip.src)&amp;&amp;((tcp.src_port == tcp.src_port)&amp;&amp;(tcp.dst_port == tcp.dst_port)))))"/>
+           boolean_expression="((tcp.flags == 4)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;((ip.src == ip.src)&amp;&amp;((tcp.src_port == tcp.src_port)&amp;&amp;(tcp.dest_port == tcp.dest_port)))))"/>
     <event value="COMPUTE" event_id="18" 
            description="TCP ACK"
-           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.dst.17)&amp;&amp;((ip.src == ip.src.17)&amp;&amp;((tcp.src_port == tcp.src_port.17)&amp;&amp;(tcp.dst_port == tcp.dst_port.17)))))"/>
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.dst.17)&amp;&amp;((ip.src == ip.src.17)&amp;&amp;((tcp.src_port == tcp.src_port.17)&amp;&amp;(tcp.dest_port == tcp.dest_port.17)))))"/>
 </property>
 
 </beginning>

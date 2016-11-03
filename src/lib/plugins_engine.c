@@ -9,7 +9,6 @@
 #include <stdlib.h>
 
 #include "plugins_engine.h"
-#include "base.h"
 #include "mmt_lib.h"
 
 #define MAX_PLUGIN_COUNT 1000
@@ -18,18 +17,19 @@ static int load_filter( const struct dirent *entry ){
 	char *ext = strrchr( entry->d_name, '.' );
 	return( ext && !strcmp( ext, ".so" ));
 }
-size_t _load_mmt_sec_rules( const rule_info_t ***ret_array ){
-	const rule_info_t *tmp_array, **array;
-	size_t size = 0, i;
-//
-//	size = mmt_sec_get_plugin_info( &tmp_array );
-//	array = mmt_mem_alloc( size * sizeof( void * ));
-//	for( i=0; i<size; i++ )
-//		array[i] = & tmp_array[i];
-//	*ret_array = array;
 
-	return size;
-}
+//size_t _load_mmt_sec_rules( const rule_info_t ***ret_array ){
+//	const rule_info_t *tmp_array, **array;
+//	size_t size = 0, i;
+////
+////	size = mmt_sec_get_plugin_info( &tmp_array );
+////	array = mmt_mem_alloc( size * sizeof( void * ));
+////	for( i=0; i<size; i++ )
+////		array[i] = & tmp_array[i];
+////	*ret_array = array;
+//
+//	return size;
+//}
 
 size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	size_t size, i, j, index;

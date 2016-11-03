@@ -17,6 +17,12 @@
 #include "mmt_dbl_linked_list.h"
 #include "plugin_header.h"
 #include "mmt_map_t.h"
+
+/**
+ * Get the current version information of mmt-sec
+ */
+const char *mmt_sec_get_version_info();
+
 /**
  * init mmt-security engine:
  * - load plugins (encoded rules)

@@ -9,18 +9,19 @@ OUTPUT   = security
 #directory where probe will be installed on
 INSTALL_DIR = /opt/mmt/security
 
-GIT_VERSION := $(shell git describe --abbrev=7 --dirty --always --tags)
+#get git version abbrev
+GIT_VERSION := $(shell git describe --abbrev=7 --always)
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2
 
-CFLAGS   = -g -O0 -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
-CLDFLAGS = -g
+CFLAGS   = -O0 -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
+CLDFLAGS = 
 
 #for debuging
 ifdef DEBUG
-	CFLAGS   += -g -DNDEBUG
-	CLDFLAGS += -g -DNDEBUG
+	CFLAGS   += -g -DDEBUG_MODE
+	CLDFLAGS += -g -DDEBUG_MODE
 endif
 
 #folders containing source files

@@ -14,12 +14,16 @@
 #include "rule_verif_engine.h"
 #include "expression.h"
 #include "rule.h"
-
+#include "version.h"
 #include "plugin_header.h"
 
 #include "../dpi/mmt_dpi.h"
 
 #define MAX_INSTANCE_COUNT 10000
+
+const char *mmt_sec_get_version_info(){
+	return MMT_SEC_VERSION;
+}
 
 size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
 	return load_mmt_sec_rules( rules_array );

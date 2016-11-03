@@ -12,6 +12,8 @@
 #include <stdint.h>
 #include <time.h>
 #include "mmt_alloc.h"
+
+#define str_end_with( str, y) (strcmp(str + strlen(str) - strlen( y ), y) == 0)
 /**
  * find a byte in an array
  * - Return
@@ -41,6 +43,7 @@ static inline char* get_current_date_time_string( const char *template ){
 	strftime(text, sizeof(text)-1, template, t);
 	return mmt_mem_dup( text, strlen( text ));
 }
+
 
 /**
  * Encode 2 uint16_t to 1 uint32_t

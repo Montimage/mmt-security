@@ -13,7 +13,7 @@
 #include "mmt_lib.h"
 
 
-#define str_equal(X,Y) xmlStrcmp( X, (const xmlChar*)Y) == 0
+#define str_equal(X,Y) xmlStrcmp( (const xmlChar*)X, (const xmlChar*)Y) == 0
 
 enum time_unit {YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILI_SECOND, MICRO_SECOND};
 
@@ -113,7 +113,8 @@ static inline int _get_sign( const char *str ){
 rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 	const xmlAttr *xml_attr;
 	const xmlChar *xml_attr_name;
-	xmlChar *xml_attr_value;
+	xmlChar *ptr;
+	char *xml_attr_value;
 	int delay_time_unit   = SECOND;
 	int time_min_sign, time_max_sign, counter_min_sign, counter_max_sign;
 
@@ -130,20 +131,33 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 	xml_attr = xml_node->properties;
 	while( xml_attr != NULL && xml_attr->name != NULL){
 		xml_attr_name  = xml_attr->name;
-		xml_attr_value = xmlGetProp( (xmlNodePtr) xml_node, xml_attr_name );
+		ptr            = xmlGetProp( (xmlNodePtr) xml_node, xml_attr_name );
+		xml_attr_value = (char *)ptr;
 
 		if( str_equal( xml_attr_name, "delay_min" ) ){
-			delay->time_min = (uint64_t) atoll( (const char*) xml_attr_value );
-			time_min_sign = _get_sign( (const char*)xml_attr_value );
+			if( xml_attr_value[0] == '-' ){
+				xml_attr_value = xml_attr_value + 1;
+			}
+			delay->time_min = (uint64_t) atoll( xml_attr_value );
+			time_min_sign = _get_sign( xml_attr_value );
 		}else if( str_equal( xml_attr_name, "delay_max" ) ){
-			delay->time_max = (uint64_t) atoll( (const char*) xml_attr_value );
-			time_max_sign = _get_sign( (const char*)xml_attr_value );
+			if( xml_attr_value[0] == '-' ){
+				xml_attr_value = xml_attr_value + 1;
+			}
+			delay->time_max = (uint64_t) atoll( xml_attr_value );
+			time_max_sign = _get_sign( xml_attr_value );
 		}else if( str_equal( xml_attr_name, "counter_min" ) ){
-			delay->counter_min = (uint64_t) atoll( (const char*) xml_attr_value );
-			counter_min_sign = _get_sign( (const char*)xml_attr_value );
+			if( xml_attr_value[0] == '-' ){
+
+			}
+			delay->counter_min = (uint64_t) atoll( xml_attr_value );
+			counter_min_sign = _get_sign( xml_attr_value );
 		}else if( str_equal( xml_attr_name, "counter_max" ) ){
-			delay->counter_max= (uint64_t) atoll( (const char*) xml_attr_value );
-			counter_max_sign = _get_sign( (const char*)xml_attr_value );
+			if( xml_attr_value[0] == '-' ){
+				xml_attr_value = xml_attr_value + 1;
+			}
+			delay->counter_max= (uint64_t) atoll( xml_attr_value );
+			counter_max_sign = _get_sign( xml_attr_value );
 		}else if( str_equal( xml_attr_name, "delay_units" ) ){
 			if( str_equal( xml_attr_value, "Y"))
 				delay_time_unit = YEAR;
@@ -165,7 +179,7 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 				mmt_assert(0, "Error 13d: Unexpected time_units: %s", xml_attr_value );
 			}
 		}
-		xmlFree( xml_attr_value );
+		xmlFree( ptr );
 		xml_attr = xml_attr->next;
 	}
 
@@ -383,9 +397,9 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr){
 	xmlDoc *xml_doc = NULL;
 	xmlNode *root_node = NULL, *prop_node;
-	rule_t *array[1000], **ret ;
+	rule_t *array[1000] ;
 
-	size_t count = 0, i;
+	size_t count = 0;
 	*properties_arr = NULL;
 
 	/*

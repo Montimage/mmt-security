@@ -30,7 +30,6 @@
 #include "dpi/mmt_dpi.h"
 #include "dpi/types_defs.h"
 
-
 #include "lib/mmt_lib.h"
 #include "lib/plugin_header.h"
 #include "lib/mmt_security.h"
@@ -87,6 +86,7 @@ void print_verdict( const rule_info_t *rule,		//id of rule
 }
 
 void usage(const char * prg_name) {
+	fprintf(stderr, "MMT-Security version %s\n", mmt_sec_get_version_info() );
 	fprintf(stderr, "%s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");

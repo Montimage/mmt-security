@@ -75,7 +75,7 @@
            boolean_expression="(tcp.flags == 2)"/>
     <event value="COMPUTE" event_id="13" 
            description="SYN request"
-           boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst != ip.dst.12)&amp;&amp;(ip.src == ip.src.12)))"/>
+           boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst != ip.dst.12)&amp;&amp;((ip.src == ip.src.12) &amp;&amp;(tcp.src_port == tcp.src_port.12))))"/>
 
 <!-- Property 5: TCP SYN requests with SYN ACK.-->
 <!--

@@ -14,7 +14,6 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "mmt_dbl_linked_list.h"
 #include "plugin_header.h"
 #include "mmt_map_t.h"
 

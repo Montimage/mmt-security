@@ -1,7 +1,10 @@
 CC     = gcc
+AR     = ar rcs
 RM     = rm -rf
 MKDIR  = mkdir -p
 CP     = cp
+MV     = mv
+LN     = ln -s
 
 #name of executable file to generate
 OUTPUT   = security
@@ -10,11 +13,12 @@ INSTALL_DIR = /opt/mmt/security
 
 #get git version abbrev
 GIT_VERSION := $(shell git describe --abbrev=7 --always)
+VERSION     := 1.0
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2
 
-CFLAGS   = -O0 -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
+CFLAGS   = -fPIC -O3 -Wall -DVERSION=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
 CLDFLAGS = 
 
 #for debuging
@@ -45,16 +49,18 @@ endif
 
 MAIN_DPI = gen_dpi_header
 
-MAIN_GEN_PLUGIN = gen_plugin
+MAIN_GEN_PLUGIN = compile_rule
 
-MAIN_PLUGIN_INFO = plugin_info
+MAIN_PLUGIN_INFO = rule_info
 
 MAIN_STAND_ALONE = mmt_sec_standalone
+
+LIB_NAME = libmmt_security
 
 all: $(MMT_DPI_HEADER) $(LIB_OBJS) $(MAIN_OBJS)
 	@echo "[COMPILE] $(OUTPUT)"
 	$(QUIET) $(CC) -o $(OUTPUT) $(CLDFLAGS)  $^ $(LIBS)
-%.o: %.c
+%.o: %.c src/dpi/mmt_dpi.h
 	@echo "[COMPILE] $(notdir $@)"
 	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -c -o $@ $<
 	
@@ -62,7 +68,7 @@ test.%: $(MMT_DPI_HEADER) $(LIB_OBJS) test/%.o
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(OUTPUT) $(CLDFLAGS)  $^ $(LIBS)
 
-gen_plugin: src/dpi/mmt_dpi.h $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
+compile_rule: src/dpi/mmt_dpi.h $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
 	@echo "[COMPILE] $(MAIN_GEN_PLUGIN)"
 	$(QUIET) $(CC) -o $(MAIN_GEN_PLUGIN) $(CLDFLAGS) $^ $(LIBS)
 	
@@ -70,14 +76,54 @@ standalone: src/dpi/mmt_dpi.h $(LIB_OBJS)
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
 
-plugin_info: src/dpi/mmt_dpi.h $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
+rule_info: src/dpi/mmt_dpi.h $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"
 	$(QUIET) $(CC) -o $(MAIN_PLUGIN_INFO) $(CLDFLAGS) $^ $(LIBS)
 
 gen_dpi src/dpi/mmt_dpi.h:
 	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -lmmt_core -ldl
-	@echo "Generate list of protocols and their attributes"	
+	$(QUIET) echo "Generate list of protocols and their attributes"	
 	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
+
+$(LIB_NAME).a: $(LIB_OBJS)
+	$(QUIET) echo "[ARCHIVE] $(notdir $@)"
+	$(QUIET) $(AR) $(LIB_NAME).a  $(LIB_OBJS)
+
+
+$(LIB_NAME).so: $(LIB_OBJS)
+	@echo "[LIBRARY] $(notdir $@)"
+	$(QUIET) $(CC)  -fPIC -shared -O3 -o $(LIB_NAME).so $(LIB_OBJS)
+	
+lib: $(LIB_NAME).a $(LIB_NAME).so
+	
+INSTALL_DIR=/opt/mmt/security
+$(INSTALL_DIR):
+	$(QUIET) $(MKDIR) $(INSTALL_DIR)/rules
+uninstall:
+	$(QUIET) $(RM) $(INSTALL_DIR)
+install: uninstall $(INSTALL_DIR) clean standalone rule_info compile_rule lib
+	
+	$(QUIET) $(MKDIR) $(INSTALL_DIR)/include
+	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(INSTALL_DIR)/include/
+	
+	$(QUIET) $(MKDIR) $(INSTALL_DIR)/bin
+	$(QUIET) $(MV) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  $(INSTALL_DIR)/bin
+	$(QUIET) $(MV)  $(MAIN_STAND_ALONE) $(INSTALL_DIR)/bin/mmt_security
+	
+	$(QUIET) $(MKDIR) $(INSTALL_DIR)/lib
+	$(QUIET) $(MV)  $(LIB_NAME).so $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION)
+	$(QUIET) $(MV)  $(LIB_NAME).a $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION)
+	
+	$(QUIET) $(RM)  $(INSTALL_DIR)/lib/$(LIB_NAME).so $(INSTALL_DIR)/lib/$(LIB_NAME).a
+	
+	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME).so 
+	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME).a
+	$(QUIET) chmod -x $(INSTALL_DIR)/lib/$(LIB_NAME).*
+	
+	@echo "Installed mmt-security in $(INSTALL_DIR)"
+	
+dist-clean: uninstall
+	@echo "Removed mmt-security from $(INSTALL_DIR)"
 	
 clean:
-	$(QUIET) $(RM) $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE)
+	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE)

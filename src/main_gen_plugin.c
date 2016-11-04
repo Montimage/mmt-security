@@ -26,7 +26,7 @@ int main( int argc, char** argv ){
 		fprintf( stderr, "\n - option        : ");
 		fprintf( stderr, "\n      + \"-c\"   : generate only code c" );
 		fprintf( stderr, "\n      + otherwise: generate code c, then compile to .so file.");
-		fprintf( stderr, "\n                   This option gives a path to -I option of gcc. If it is ignored, the default path is \"./src/lib\"");
+		fprintf( stderr, "\n                   This option gives a path to -I option of gcc. If it is ignored, the default path is \"./src/lib\" and \"/opt/mmt/security/include\"");
 		fprintf( stderr, "\n");
 		return 1;
 	}
@@ -61,7 +61,7 @@ int main( int argc, char** argv ){
 	}else{
 		//compile code file
 		if( argc == 3 )
-			ret = compile_gen_code(output_file, c_file, "./src/lib" );
+			ret = compile_gen_code(output_file, c_file, "./src/lib -I/opt/mmt/security/include" );
 		else
 			ret = compile_gen_code(output_file, c_file, argv[3] );
 

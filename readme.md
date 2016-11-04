@@ -2,43 +2,43 @@
 
 This repository contains mmt-security toolset:
 
-- gen_plugin: encode .xml rules into a shared library (file .so)
-- plugin_info: get information of one or all encoded rules
+- compile_rule: encode .xml rules into a shared library (file .so)
+- rule_info: get information of one or all encoded rules
 - standalone: use mmt-security to analyse realtime traffic or pcap file
 
-## gen_plugin
+## compile_rule
 
 Parse rules in .xml file, then generate .c file, then compile to a plugin .so file.
 
 ### compile
 
 ```makefile
-make gen_plugin
+make compile_rule
 ```
 
 ### run
 
 ```bash
-./gen_plugin rules/rule_acdc.so test/xml/properties_acdc.xml
+./compile_rule rules/rule_acdc.so test/xml/properties_acdc.xml
 ```
 
-## plugin_info
+## rule_info
 
 Get information of rules encoded in a binary file (.so).
 
 ### compile 
 
 ```makefile
-make plugin_info
+make rule_info
 ```
 
 ### run
 
 ```bash
 #print information of all available plugins (located in `./rules` and `/opt/mmt/security/rules`)
-./plugin_info
+./rule_info
 #print information of rules encoded in `./rules/rule_acdc.so`
-./plugin_info ./rules/rule_acdc.so
+./rule_info ./rules/rule_acdc.so
 ```
 
 ## mmt-sec-standalone
@@ -58,5 +58,5 @@ make standalone
 
 
 ```bash
-./mmt_sec_standalone
+./mmt_security
 ```

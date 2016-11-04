@@ -8,7 +8,9 @@
 #ifndef SRC_LIB_VERSION_H_
 #define SRC_LIB_VERSION_H_
 
-#define VERSION "1.0"
+#ifndef VERSION
+	#define VERSION "1.0"
+#endif
 
 #ifdef GIT_VERSION
 	//GIT_VERSION is given by Makefile

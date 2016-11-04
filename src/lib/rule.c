@@ -117,7 +117,7 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 	char *xml_attr_value;
 	int delay_time_unit   = SECOND;
 	int time_min_sign, time_max_sign, counter_min_sign, counter_max_sign;
-
+	bool has_delay = NO;
 	rule_delay_t *delay = mmt_mem_alloc( sizeof( rule_delay_t ));
 
 	delay->time_min         = delay->time_max         = 0;
@@ -140,24 +140,28 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 			}
 			delay->time_min = (uint64_t) atoll( xml_attr_value );
 			time_min_sign = _get_sign( xml_attr_value );
+			has_delay = YES;
 		}else if( str_equal( xml_attr_name, "delay_max" ) ){
 			if( xml_attr_value[0] == '-' ){
 				xml_attr_value = xml_attr_value + 1;
 			}
 			delay->time_max = (uint64_t) atoll( xml_attr_value );
 			time_max_sign = _get_sign( xml_attr_value );
+			has_delay = YES;
 		}else if( str_equal( xml_attr_name, "counter_min" ) ){
 			if( xml_attr_value[0] == '-' ){
 
 			}
 			delay->counter_min = (uint64_t) atoll( xml_attr_value );
 			counter_min_sign = _get_sign( xml_attr_value );
+			has_delay = YES;
 		}else if( str_equal( xml_attr_name, "counter_max" ) ){
 			if( xml_attr_value[0] == '-' ){
 				xml_attr_value = xml_attr_value + 1;
 			}
 			delay->counter_max= (uint64_t) atoll( xml_attr_value );
 			counter_max_sign = _get_sign( xml_attr_value );
+			has_delay = YES;
 		}else if( str_equal( xml_attr_name, "delay_units" ) ){
 			if( str_equal( xml_attr_value, "Y"))
 				delay_time_unit = YEAR;
@@ -178,18 +182,22 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 			else{
 				mmt_assert(0, "Error 13d: Unexpected time_units: %s", xml_attr_value );
 			}
+			has_delay = YES;
 		}
 		xmlFree( ptr );
 		xml_attr = xml_attr->next;
 	}
 
-	_update_delay_to_micro_second( delay, delay_time_unit );
+	if( has_delay ){
+		_update_delay_to_micro_second( delay, delay_time_unit );
 
-	delay->time_min += time_min_sign;
-	delay->time_max += time_max_sign;
-	delay->counter_min  += counter_min_sign;
-	delay->counter_max  += counter_max_sign;
+		delay->time_min += time_min_sign;
+		delay->time_max += time_max_sign;
+		delay->counter_min  += counter_min_sign;
+		delay->counter_max  += counter_max_sign;
 
+		mmt_assert( !(delay->time_min == delay->time_max && delay->time_max == 0), "Delay must not be zero!");
+	}
 	return delay;
 }
 
@@ -233,6 +241,22 @@ static rule_event_t *_parse_an_event(const xmlNode *xml_node ){
 //pre-define this function
 static rule_node_t *_parse_a_rule_node( const xmlNode *xml_node );
 
+static inline int _get_value( const xmlChar *xml_attr_value ){
+	if( str_equal( xml_attr_value, "THEN" ) )
+		return RULE_VALUE_THEN;
+	else if( str_equal( xml_attr_value, "OR" ) )
+		return RULE_VALUE_OR;
+	else if( str_equal( xml_attr_value, "AND" ) )
+		return RULE_VALUE_AND;
+	else if( str_equal( xml_attr_value, "NOT" ) )
+		return RULE_VALUE_NOT;
+	else if( str_equal( xml_attr_value, "COMPUTE" ) )
+		return RULE_VALUE_COMPUTE;
+	else
+		mmt_assert( 1, "Error 13d: Unexpected attribute value: %s", xml_attr_value );
+	return UNKNOWN;
+}
+
 static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 	rule_operator_t operator, *ret = NULL;
 	xmlAttr *xml_attr;
@@ -240,7 +264,7 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 	xmlChar *xml_attr_value;
 
 	//init default values
-	operator.value        = OP_TYPE_THEN;
+	operator.value        = RULE_VALUE_THEN;
 	operator.description  = NULL;
 	operator.repeat_times = 1;
 	operator.context      = NULL;
@@ -255,16 +279,7 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 
 		//for each attribute
 		if( str_equal( xml_attr_name, "value" ) ){
-			if( str_equal( xml_attr_value, "THEN" ) )
-				operator.value = OP_TYPE_THEN;
-			else if( str_equal( xml_attr_value, "OR" ) )
-				operator.value = OP_TYPE_OR;
-			else if( str_equal( xml_attr_value, "AND" ) )
-				operator.value = OP_TYPE_AND;
-			else if( str_equal( xml_attr_value, "NOT" ) )
-				operator.value = OP_TYPE_NOT;
-			else
-				mmt_assert( 1, "Error 13d: Unexpected attribute value of operator tag: %s", xml_attr_value );
+			operator.value = _get_value( xml_attr_name );
 		}else if( str_equal( xml_attr_name, "description" ) )
 			operator.description = mmt_mem_dup( xml_attr_value, strlen( (const char*) xml_attr_value ));
 		/*
@@ -324,6 +339,7 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 
 	//init default values
 	rule.id               = UNKNOWN;
+	rule.value            = RULE_VALUE_THEN;
 	rule.type             = RULE_TYPE_SECURITY;
 	rule.description      = NULL;
 	rule.if_satisfied     = NULL;
@@ -342,6 +358,8 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 		//for each attribute
 		if( str_equal( xml_attr_name, "property_id" ) )
 			rule.id = (uint16_t) atoi( (const char*) xml_attr_value );
+		else if( str_equal( xml_attr_name, "value" ) )
+			rule.value = _get_value( xml_attr_name );
 		else if( str_equal( xml_attr_name, "type_property" ) ){
 			if( str_equal( xml_attr_value, "ATTACK" ) )
 				rule.type = RULE_TYPE_ATTACK;
@@ -384,6 +402,12 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 
 		xml_node = xml_node->next;
 	}
+
+	mmt_assert( (rule.value == RULE_VALUE_COMPUTE || rule.trigger != NULL ),
+				"Error 13g: Require trigger for rule %d", rule.id );
+	mmt_assert( (rule.value != RULE_VALUE_COMPUTE || (rule.context != NULL && rule.trigger != NULL )),
+			"Error 13g: Require context and trigger for rule %d", rule.id );
+
 	//TODO: avoid duplicate event_id
 	//TODO: avoid variable references to non-exist event
 
@@ -480,7 +504,7 @@ size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *even
  */
 size_t get_unique_events_of_rule( const rule_t *rule, mmt_map_t **events_map ){
 	size_t events_count = 0;
-	mmt_map_t *map = mmt_map_init( compare_uint8_t );
+	mmt_map_t *map = mmt_map_init( compare_uint16_t );
 
 	events_count += _get_unique_events_of_rule_node( rule->context, map );
 	events_count += _get_unique_events_of_rule_node( rule->trigger, map );

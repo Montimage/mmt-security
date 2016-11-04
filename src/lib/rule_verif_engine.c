@@ -66,11 +66,6 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 		if( event_id == FSM_EVENT_TYPE_TIMEOUT )
 			continue;
 
-		//TODO: check if a rule has not continue event_id ranges
-		//e.g., a rule having 2 event ids: 1 and 7, so, 1 % 2 == 7 % 2
-		//MUST: event_id < _engine->max_events_count
-		event_id = event_id % _engine->max_events_count;
-
 //d = count_nodes_from_link_list( _engine->fsm_by_expecting_event_id[ event_id ]);
 //mmt_assert( d<= 300, "Stop here, total ins: %zu", _engine->total_instances_count );
 
@@ -98,7 +93,7 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 	fsm_set_id( _engine->fsm_bootstrap, 0 );
 
 	_engine->rule_info                 = rule_info;
-	_engine->max_events_count          = rule_info->events_count;
+	_engine->max_events_count          = rule_info->events_count + 1; //event_id start from 1
 	_engine->max_instances_count       = max_instances_count;
 	_engine->instances_count           = 1; //fsm_bootstrap
 	//linked-list of fsm instances indexed by their expected event_id
@@ -370,7 +365,6 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
  * Public API
  */
 enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *message ){
-	//mmt_assert( engine != NULL, "Error: Engine cannot be NULL" );
 	__check_null( engine,  RULE_ENGINE_RESULT_UNKNOWN );
 	__check_null( message, RULE_ENGINE_RESULT_UNKNOWN );
 
@@ -384,20 +378,17 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	enum rule_engine_result ret = RULE_ENGINE_RESULT_UNKNOWN;;
 	//insert #message pointer to head of #data;
 
-	__check_null( engine, RULE_ENGINE_RESULT_UNKNOWN );
-
 	for( i=0; i<_engine->max_events_count; i++ )
 		_engine->tmp_fsm_by_expecting_event_id[ i ] = _engine->fsm_by_expecting_event_id[ i ];
 
-//	mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
+	//	mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
 	//get from hash table the list of events to be verified
 	for( i=0; i<_engine->max_events_count; i++ ){
 		event_id = hash[i];
 		//this event does not fire
 		if(  event_id == 0 ) continue;
-//mmt_debug( "Event_id : %d", event_id );
-		event_id = event_id % _engine->max_events_count;
+		//mmt_debug( "Event_id : %d", event_id );
 
 		//verify instances that are waiting for event_id
 		node = _engine->tmp_fsm_by_expecting_event_id[ event_id ];
@@ -420,6 +411,7 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 			}
 		}
 	}
+
 	mmt_mem_free( data );
 	//data was not handled by any instance
 	return RULE_ENGINE_RESULT_UNKNOWN;

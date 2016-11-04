@@ -20,8 +20,8 @@ typedef enum {
  * logging information
  * - Input:
  * 	+ level: log level
- * 		use level.HALT to exit the system after logging the message
- * 	+ format: same as pr
+ * 		use HALT to exit the system after logging the message
+ * 	+ format: same as #printf function
  */
 void mmt_log( log_level_t level, const char *format, ... )
 	__attribute__((format (printf, 2, 3)));

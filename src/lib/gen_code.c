@@ -80,7 +80,7 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 
 static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data, size_t index, size_t total ){
 	char *str = NULL, *guard_fun_name, buffer[1000];
-	size_t size;
+	size_t size, var_count;
 	mmt_map_t *map;
 	rule_event_t *event = (rule_event_t *)data;
 	struct _user_data *_u_data = (struct _user_data *)user_data;
@@ -93,7 +93,7 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	if( size == 0 ) return;
 
 	//set of variables
-	size = get_unique_variables_of_expression( event->expression, &map, YES );
+	var_count = get_unique_variables_of_expression( event->expression, &map, YES );
 
 	//name of function
 	size = snprintf( buffer, sizeof( buffer ) -1, "g_%d_%d", rule_id, event_id );
@@ -103,9 +103,11 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	//guard function header
 	fprintf(fd, "static inline int %s( const void *event_data, const fsm_t *fsm ){",
 			guard_fun_name );
-	fprintf(fd, "\n\t if( unlikely( event_data == NULL )) return 0;" );
-	fprintf(fd, "\n\t const _msg_t_%d *his_data, *ev_data = (_msg_t_%d *) event_data;", rule_id, rule_id);
-	mmt_map_iterate( map, _iterate_variable, user_data );
+	if( var_count != 0 ){
+		fprintf(fd, "\n\t if( unlikely( event_data == NULL )) return 0;" );
+		fprintf(fd, "\n\t const _msg_t_%d *his_data, *ev_data = (_msg_t_%d *) event_data;", rule_id, rule_id);
+		mmt_map_iterate( map, _iterate_variable, user_data );
+	}
 	fprintf(fd, "\n\n\t return %s;\n }\n ",  str);
 
 	mmt_mem_free( str );
@@ -270,6 +272,7 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 		link_node_t *states_list, const  rule_node_t *rule_node, size_t *index, const rule_t *rule, int tran_action ){
 
 	rule_operator_t *opt;
+	__check_null( rule_node, );
 
 	if( rule_node->type == RULE_NODE_TYPE_EVENT ){
 		s_init->transitions = append_node_to_link_list( s_init->transitions,
@@ -279,17 +282,19 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 
 	opt = rule_node->operator;
 	switch( opt->value){
-	case OP_TYPE_THEN:
+	case RULE_VALUE_THEN:
 		_gen_transition_then(s_init, s_pass, s_fail, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
 		break;
-	case OP_TYPE_AND:
+	case RULE_VALUE_AND:
 		_gen_transition_and(s_init, s_pass, s_fail, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
 		break;
-	case OP_TYPE_OR:
+	case RULE_VALUE_OR:
 		_gen_transition_or(s_init, s_pass, s_fail, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
 		break;
-	case OP_TYPE_NOT:
+	case RULE_VALUE_NOT:
 		_gen_transition_not(s_init, s_pass, s_fail, s_incl, states_list, opt->context, opt->trigger, index, opt, rule, tran_action);
+		break;
+	case RULE_VALUE_COMPUTE:
 		break;
 	}
 }
@@ -631,9 +636,17 @@ void _iterate_variable_to_add_to_a_new_map( void *key, void *data, void *user_da
 void _iterate_event_to_get_unique_variables( void *key, void *data, void *user_data, size_t index, size_t total ){
 	rule_event_t *ev = (rule_event_t *)data;
 	mmt_map_t *map;
+
 	get_unique_variables_of_expression( ev->expression, &map, NO );
 	mmt_map_iterate( map, _iterate_variable_to_add_to_a_new_map, user_data );
 	mmt_map_free( map, NO );
+}
+
+void _iterate_event_to_verify_id( void *key, void *data, void *user_data, size_t index, size_t total ){
+	rule_event_t *ev = (rule_event_t *)data;
+
+	mmt_assert( ev->id <= total, "Error in rule %d: Event_id %d is greater than number of events (%zu). Event_id must start from 1 and continue ..",
+			((struct _user_data *)user_data)->index, ev->id, total );
 }
 
 static void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
@@ -654,6 +667,8 @@ static void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 
 	size = get_unique_events_of_rule( rule, &events_map );
 	if( size == 0 ) return;
+
+	mmt_map_iterate( events_map, _iterate_event_to_verify_id, &_u_data );
 
 	mmt_map_iterate( events_map, _iterate_event_to_get_unique_variables, variables_map );
 

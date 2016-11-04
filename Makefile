@@ -18,13 +18,16 @@ VERSION     := 1.0
 #set of library
 LIBS     = -ldl -lpthread -lxml2
 
-CFLAGS   = -fPIC -O3 -Wall -DVERSION=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
+CFLAGS   = -fPIC -Wall -DVERSION=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
 CLDFLAGS = 
 
 #for debuging
 ifdef DEBUG
 	CFLAGS   += -g -DDEBUG_MODE
 	CLDFLAGS += -g -DDEBUG_MODE
+else
+	CFLAGS   += -O3
+	CLDFLAGS += -O3
 endif
 
 #folders containing source files

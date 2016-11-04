@@ -54,6 +54,8 @@ typedef struct rule_node_struct{
 	};
 }rule_node_t;
 
+enum value {RULE_VALUE_COMPUTE, RULE_VALUE_THEN, RULE_VALUE_OR, RULE_VALUE_AND, RULE_VALUE_NOT};
+
 typedef struct rule_operator_struct{
 	/**
 	 * Operators are used to combine different events and build complex events.
@@ -62,7 +64,7 @@ typedef struct rule_operator_struct{
 	 * - OR  operator is used to describe the occurrence of a least one of the events.
 	 * - NOT  negates the underlying sub-tree.
 	 */
-	enum {OP_TYPE_THEN, OP_TYPE_OR, OP_TYPE_AND, OP_TYPE_NOT} value;
+	enum value value;
 	/**
 	 * Gives the text that clearly explains what the complex event is about.
 	 */
@@ -104,6 +106,8 @@ typedef struct rule_struct{
 	 * or that the property specifies a security rule that needs to be respected.
 	 */
 	enum {RULE_TYPE_ATTACK, RULE_TYPE_SECURITY, RULE_TYPE_EVASION, RULE_TYPE_TEST} type;
+
+	enum value value;
 	/**
 	 * Gives the text that clearly explains what the property is about.
 	 */

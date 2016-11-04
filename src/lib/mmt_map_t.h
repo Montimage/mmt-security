@@ -3,6 +3,12 @@
  *
  *  Created on: Nov 2, 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
+ *
+ * This is an implementation of a generic map on top of a binary-tree.
+ * A map is a set of key-value pairs in which each key is unique.
+ *	A key and a value can be anything.
+ *	One need to provide a function to compare 2 keys, such as strcmp to compare 2 strings.
+ *
  */
 
 #ifndef SRC_LIB_MMT_MAP_T_H_
@@ -10,13 +16,7 @@
 
 #include <inttypes.h>
 
-////////////////////////Binary-Tree map////////////////////////////////////////////////
-/**
- * We implement a generic map on top of a binary-tree.
- * A map is a set of key-value in which each key is unique.
- *	A key and a value can be anything.
- *	One need to provide a function to compare 2 keys, such as strcmp to compare 2 strings.
- */
+
 enum compare_result {CMP_LESS = -1, CMP_EQUAL = 0, CMP_GREATER = 1};
 
 static inline int compare_string( const void *a, const void *b ){
@@ -24,9 +24,6 @@ static inline int compare_string( const void *a, const void *b ){
 }
 /**
  * Integer comparison
- */
-/**
- * Public API
  */
 static inline int compare_uint8_t( const void *a, const void *b){
 	//mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint8_t function %s:%d", __FILE__, __LINE__ );
@@ -112,6 +109,12 @@ void *mmt_map_get_data( const mmt_map_t *map, const void *key );
  */
 void mmt_map_free( mmt_map_t *map, bool free_data );
 
+/**
+ * Free a map and its keys-data.
+ * This differs from #mmt_map_free in the way #key and #data are freed.
+ * In function #mmt_map_free, key and data are freed, if #free_data = YES, by #mmt_mem_free.
+ * In this function, key and data are freed by the functions given in the parameters.
+ */
 void mmt_map_free_key_and_data( mmt_map_t *map, void (*free_key_fn)( void *), void (*free_data_fn)( void *)  );
 
 /**
@@ -123,7 +126,7 @@ size_t mmt_map_count( const mmt_map_t *map );
  * Iterate a map
  * Input:
  * 	+ map to iterate
- * 	+ an iterate function having 3 parameters:
+ * 	+ an iterate function having the following parameters:
  * 		- key
  * 		- data
  * 		- user_data is the "user_data" parameter
@@ -139,6 +142,10 @@ void mmt_map_iterate( const mmt_map_t *map, void (*map_iterate_function)( void *
  */
 mmt_map_t* mmt_map_clone( const mmt_map_t *map );
 
+/**
+ * Clone a map by cloning #key and #data of each node of the map
+ *
+ */
 mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_fn)( void *), void* (*clone_data_fn)( void *)  );
 
 #endif /* SRC_LIB_MMT_MAP_T_H_ */

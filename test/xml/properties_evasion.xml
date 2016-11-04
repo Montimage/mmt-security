@@ -20,14 +20,14 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 <!-- Property 1: C4_Analyse_03g : Le champ Options doit etre homogene dans tous les fragments IP.-->
 <property value="THEN" delay_units="m" delay_min="0+" delay_max="1" property_id="21" type_property="EVASION" 
     description="C4_Analyse_03g: The IP options field must be homogeneous in all IP fragments.">
-    <event value="COMPUTE" event_id="1" 
+    <event  event_id="1" 
            description="IP segment"
            boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.options == ip.options)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src))))"/>
            <!--
            boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.options == ip.options)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src))))"/>
            boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src)))"/>
            -->
-    <event value="COMPUTE" event_id="2" 
+    <event  event_id="2" 
            description="IP options"
            boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#check_ip_options(ip.options,ip.options.1) == 1))))"/>
            <!--
@@ -37,39 +37,35 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 </property>
 
 <!-- Property 2: C4_Analyse_03h : La taille minimum d un fragment IP est 28 bytes. Pour un IP fragment de offset 0 c est 40.-->
-<property value="THEN" delay_units="m" delay_min="0" delay_max="0" property_id="22" type_property="EVASION" 
+<property value="THEN" property_id="22" type_property="EVASION" 
     description="C4_Analyse_03h: The minimum size of an IP fragment is 28 bytes and for an IP fragment with offset 0 it is 40.">
-    <event value="COMPUTE" event_id="3" 
+    <event  event_id="1" 
            description="IP segment and paquet size"
            boolean_expression="((ip.mf_flag > 0)&amp;&amp;((ip.tot_len &lt; 28)||((ip.frag_offset == 0)&amp;&amp;(ip.tot_len &lt; 40))))"/>
-    <event value="COMPUTE" event_id="4" 
-           description="IP segment"
-           boolean_expression="(ip.mf_flag > 0)"/>
+     <event boolean_expression="1"/>
 </property>
 
 <!-- Property 3: C4_Analyse_03f : HTTP detecte avec un port different de 80 et 3000.-->
-<property value="THEN" delay_units="m" delay_min="0" delay_max="0" property_id="23" type_property="EVASION" 
+<property value="THEN" property_id="23" type_property="EVASION" 
     description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
-    <event value="COMPUTE" event_id="5" 
+    <event  event_id="1" 
         description="HTTP packet using a port different from 80 and 8080"
            boolean_expression="((http.method == http.method)&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
-    <event value="COMPUTE" event_id="6" 
+    <event  event_id="2" 
            description="HTTP packet"
-           boolean_expression="(http.method == http.method)"/>
+           boolean_expression="(2)"/>
 </property>
 
 <!-- Property 4: C4_Analyse_03e : l URI d un paquet HTTP contient des caracteres non authorises.-->
 <!-- URN invalid character set:
      octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
 -->
-<property value="THEN" delay_units="m" delay_min="0" delay_max="0" property_id="24" type_property="EVASION" 
+<property value="THEN" property_id="24" type_property="EVASION" 
     description="C4_Analyse_03e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234.">
-    <event value="COMPUTE" event_id="7" 
+    <event  event_id="1" 
            description="HTTP URI invalid"
            boolean_expression="((http.method == http.method)&amp;&amp;(#strlen(http.uri) > 1))"/>
-    <event value="COMPUTE" event_id="8" 
-           description="HTTP packet"
-           boolean_expression="(http.method == http.method)"/>
+   <event boolean_expression="1"/>
 </property>
 
 </beginning>

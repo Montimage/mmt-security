@@ -131,6 +131,9 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	_fsm->previous_state = _fsm->current_state;
 	_fsm->current_state  = new_state;
 
+	if( new_state->delay.time_max == 0 && new_state->delay.time_min == 0 )
+		return FSM_STATE_TEMPORARY;
+
 	//update deadline
 	//outgoing from init state
 	if( unlikely(_fsm->previous_state == _fsm->init_state) ){
@@ -200,7 +203,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 	//check if timeout
 	tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
-	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ){
+	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT && _fsm->current_state->delay.time_max != 0 ){
 //		mmt_log( WARN, "Timeout out: %"PRIu64", max: %"PRIu64, timer, _fsm->current_state->delay.time_max);
 		//timeout
 		if( !(message_data->timestamp <= _fsm->time_max ))
@@ -208,12 +211,12 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 			return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
 	}
 
+	if( !(_fsm->time_min <= message_data->timestamp) )
+		return FSM_NO_STATE_CHANGE;
+
 	tran = &_fsm->current_state->transitions[ transition_index ];// _get_transition(_fsm, state, event);
 	//must not be null
 //	if( tran == NULL ) return FSM_NO_STATE_CHANGE;
-
-	if( !(_fsm->time_min <= message_data->timestamp) )
-		return FSM_NO_STATE_CHANGE;
 
 	/* If transition is guarded, ensure that the condition is held: */
 	if (tran->guard != NULL && tran->guard( event_data, (fsm_t *)fsm)  == NO )

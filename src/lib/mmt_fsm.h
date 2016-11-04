@@ -347,7 +347,10 @@ enum fsm_handle_event_value{
 	FSM_FINAL_STATE_REACHED,
 
 	/** current_state of #fsm is #incl_state */
-	FSM_INCONCLUSIVE_STATE_REACHED
+	FSM_INCONCLUSIVE_STATE_REACHED,
+
+	/** State must continue to handle the event happened on one of its incoming transition*/
+	FSM_STATE_TEMPORARY
 };
 
 /**

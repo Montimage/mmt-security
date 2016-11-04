@@ -41,7 +41,7 @@ void *mmt_mem_alloc(size_t size){
 	_memory_t *mem = malloc( size );
 
 	//quit if not enough
-	mmt_assert( mem != NULL, "Not enough memory");
+	mmt_assert( mem != NULL, "Not enough memory to allocate %zu bytes", size);
 	//remember size of memory being allocated
 	allocated_memory_size += size;
 

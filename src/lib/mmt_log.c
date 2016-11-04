@@ -23,7 +23,6 @@ void mmt_log( log_level_t level, const char *format, ... ){
 		fprintf(stdout, "%s - %s\n", log_level_name[level], buffer);
 	va_end(arg);
 	if( level == HALT ){
-		mmt_mem_print_info();
 		exit( 1 );
 	}
 }

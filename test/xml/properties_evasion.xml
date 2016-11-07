@@ -5,6 +5,13 @@
 -->
 <beginning>
 
+<!-- each function name must be prefixed by em_ -->
+<embedded_functions><![CDATA[
+#include <string.h>
+int check_uri( const char* uri){
+   return 1;
+}
+]]></embedded_functions>
 
 <!-- TODO:
 R4_Decod_1c et R4_Decod_1d : Using fragroute
@@ -62,10 +69,10 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 -->
 <property value="THEN" property_id="24" type_property="EVASION" 
     description="C4_Analyse_03e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234.">
-    <event  event_id="1" 
+    <event boolean_expression="1"/>
+    <event 
            description="HTTP URI invalid"
-           boolean_expression="((http.method == http.method)&amp;&amp;(#strlen(http.uri) > 1))"/>
-   <event boolean_expression="1"/>
+           boolean_expression="(#check_uri(http.uri) > 1)"/>
 </property>
 
 </beginning>

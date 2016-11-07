@@ -33,7 +33,7 @@ void mmt_log( log_level_t level, const char *format, ... )
 #define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ mmt_log( HALT, __VA_ARGS__ ); break; }
 
 #ifdef DEBUG_MODE
-	#define mmt_debug(...) do{ printf("%s:%d ", __FILE__, __LINE__); mmt_log( DEBUG, __VA_ARGS__ ); break; }while(1)
+	#define mmt_debug(...) do{ printf("%s:%d ", __FILE__, __LINE__); mmt_log( DEBUG, __VA_ARGS__ ); fflush( stdout ); break; }while(1)
 #else
 	#define mmt_debug(...)
 #endif

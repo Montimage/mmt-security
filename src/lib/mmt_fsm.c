@@ -107,10 +107,25 @@ fsm_t *fsm_clone( const fsm_t *fsm ) {
 	return (fsm_t *) _fsm_clone( (_fsm_t *) fsm);
 }
 
+static inline enum fsm_handle_event_value _fire_a_tran( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data ) {
+	fsm_t *new_fsm = NULL;
+	enum fsm_handle_event_value ret;
+
+	ret = fsm_handle_event( fsm,  transition_index, message_data, event_data, &new_fsm );
+
+	//Occasionally a new fsm may be created, we do not need it
+	//if( unlikely( new_fsm != NULL ) ) fsm_free( new_fsm );
+
+	return ret;
+}
 
 static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_state_t *new_state, const fsm_transition_t *tran, message_t *message_data, void *event_data ){
 	void *ptr = NULL;
 	uint64_t val;
+	size_t i;
+	enum fsm_handle_event_value ret;
+
+
 	//mmt_debug( "fsm_id = %d (%p), ref = %zu, event_id: %d", _fsm->id, _fsm, mmt_mem_reference_count( event_data), tran->event_type );
 
 	ptr = mmt_map_set_data( _fsm->events_trace, (void *) &tran->event_type, mmt_mem_retain( event_data ), YES );
@@ -123,7 +138,6 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 
 //	/* Run exit action
 //	 * (even if it returns to itself) */
-//	if ( _fsm->current_state->exit_action != FSM_ACTION_DO_NOTHING  &&  _fsm->current_state->exit_action != FSM_ACTION_CREATE_INSTANCE )
 //		_exec_action( NO, event_data, _fsm->current_state, _fsm );
 //
 
@@ -131,8 +145,42 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	_fsm->previous_state = _fsm->current_state;
 	_fsm->current_state  = new_state;
 
-	if( new_state->delay.time_max == 0 && new_state->delay.time_min == 0 )
-		return FSM_STATE_TEMPORARY;
+	/* If the target state is a final one, notify user that the machine has stopped */
+	if (_fsm->current_state == _fsm->error_state){
+		//mmt_debug("FSM_ERROR_STATE_REACHED" );
+		return FSM_ERROR_STATE_REACHED;
+	}else if (_fsm->current_state == _fsm->incl_state){
+		//mmt_debug("FSM_INCONCLUSIVE_STATE_REACHED" );
+		return FSM_INCONCLUSIVE_STATE_REACHED;
+	}else if ( _fsm->current_state == _fsm->success_state ){
+		//mmt_debug("FSM_FINAL_STATE_REACHED" );
+		return FSM_FINAL_STATE_REACHED;
+	}else if( _fsm->current_state->transitions_count == 0 )
+		return FSM_ERROR_STATE_REACHED;
+
+	// We reach a state in which has delay = 0
+	// => we need to continue verifying the next outgoing transitions
+	//    against the current message_data and event_data
+	if( new_state->is_temporary ){
+		//for each outgoing transition of the target
+		for( i=0; i<new_state->transitions_count; i++ ){
+			//fire the timeout transition only if other transitions cannot be fired
+			if( new_state->transitions[i].event_type == FSM_EVENT_TYPE_TIMEOUT )
+				continue;
+
+			ret = _fire_a_tran( (fsm_t *) _fsm, (uint16_t)i, message_data, event_data );
+
+			if( ret != FSM_NO_STATE_CHANGE )
+				return ret;
+		}
+
+		//fire timeout transition only if we cannot find any other outgoing transitions
+		if( new_state->transitions[0].event_type == FSM_EVENT_TYPE_TIMEOUT )
+			return _fire_a_tran( (fsm_t *) _fsm, 0, message_data, event_data );
+
+		mmt_debug( "LOOOP" );
+		return FSM_NO_STATE_CHANGE;
+	}
 
 	//update deadline
 	//outgoing from init state
@@ -157,23 +205,6 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	}
 	/* Call the new _state's entry action if it has any
 	 * (even if state returns to itself) */
-
-	if (_fsm->current_state == _fsm->error_state){
-		//mmt_debug("FSM_ERROR_STATE_REACHED" );
-		return FSM_ERROR_STATE_REACHED;
-	}else if (_fsm->current_state == _fsm->incl_state){
-		//mmt_debug("FSM_INCONCLUSIVE_STATE_REACHED" );
-		return FSM_INCONCLUSIVE_STATE_REACHED;
-	}else if ( _fsm->current_state == _fsm->success_state ){
-		//mmt_debug("FSM_FINAL_STATE_REACHED" );
-		return FSM_FINAL_STATE_REACHED;
-	}
-	/* If the target state is a final one, notify user that the machine has stopped */
-
-	/* If the state returned to itself */
-//	if (_fsm->current_state == _fsm->previous_state){
-//		return FSM_STATE_LOOP_SELF;
-//	}
 
 	//mmt_debug("FSM_STATE_CHANGED" );
 	return FSM_STATE_CHANGED;
@@ -201,6 +232,8 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	else if( unlikely( _fsm->current_state->transitions_count <= transition_index ))
 		return FSM_ERR_ARG;
 
+//	mmt_debug( "Verify transition: %d of fsm %p", transition_index, fsm );
+
 	//check if timeout
 	tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
 	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT && _fsm->current_state->delay.time_max != 0 ){
@@ -211,6 +244,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 			return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
 	}
 
+	//do not use the message/event if it comes early than time_min
 	if( !(_fsm->time_min <= message_data->timestamp) )
 		return FSM_NO_STATE_CHANGE;
 

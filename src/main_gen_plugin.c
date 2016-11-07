@@ -17,6 +17,7 @@ int main( int argc, char** argv ){
 	size_t rule_count, i;
 	char c_file[10000];
 	const char* xml_file, *output_file;
+	char *embedded_functions;
 	int ret;
 
 	if( argc != 3 && argc != 4){
@@ -50,10 +51,10 @@ int main( int argc, char** argv ){
 	}
 
 	//read rule from .xml file
-	rule_count = read_rules_from_file( xml_file, &rule_list );
+	rule_count = read_rules_from_file( xml_file, &rule_list, &embedded_functions );
 
 	//generate rules to .c code
-	generate_fsm( c_file, rule_list, rule_count );
+	generate_fsm( c_file, rule_list, rule_count, embedded_functions );
 
 	if( argc == 4 && strcmp( argv[3], "-c") == 0 ){
 		mmt_info( "Encoded %zu rules from \"%s\" to \"%s\"", rule_count, xml_file, c_file );
@@ -65,13 +66,13 @@ int main( int argc, char** argv ){
 		else
 			ret = compile_gen_code(output_file, c_file, argv[3] );
 
-		//delete .c file
-		remove( c_file );
-
 		//mmt_debug( "ret = %d", ret );
-		if( ret == 0 )
+		if( ret == 0 ){
 			mmt_info( "Encoded %zu rules from \"%s\" to \"%s\"", rule_count, xml_file, output_file );
-		else
+
+			//delete .c file
+			remove( c_file );
+		}else
 			mmt_error( "Cannot encode rule \"%s\". Check options.", xml_file );
 	}
 
@@ -80,5 +81,6 @@ int main( int argc, char** argv ){
 		free_a_rule( rule_list[i], YES);
 
 	mmt_mem_free( rule_list );
+	mmt_mem_free( embedded_functions );
 	return 0;
 }

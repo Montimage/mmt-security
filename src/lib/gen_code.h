@@ -11,7 +11,7 @@
 #include "base.h"
 #include "rule.h"
 
-int generate_fsm( const char* file_name, rule_t *const*rules, size_t count );
+int generate_fsm( const char* file_name, rule_t *const*rules, size_t count, const char *embedded_functions );
 
 int compile_gen_code( const char *lib_file, const char *code_file, const char *incl_dir );
 

@@ -144,9 +144,9 @@ enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
 	case RULE_TYPE_SECURITY:
 		switch( result ){
 		case RULE_ENGINE_RESULT_ERROR:
-			return VERDICT_UNKNOWN;
-		case RULE_ENGINE_RESULT_VALIDATE:
 			return VERDICT_NOT_RESPECTED;
+		case RULE_ENGINE_RESULT_VALIDATE:
+			return VERDICT_RESPECTED;
 		default:
 			return VERDICT_UNKNOWN;
 		}
@@ -155,7 +155,7 @@ enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
 	case RULE_TYPE_EVASION:
 		switch( result ){
 		case RULE_ENGINE_RESULT_ERROR:
-			return VERDICT_UNKNOWN;
+			return VERDICT_NOT_DETECTED;
 		case RULE_ENGINE_RESULT_VALIDATE:
 			return VERDICT_DETECTED;
 		default:

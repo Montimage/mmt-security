@@ -274,9 +274,6 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 		}else
 			new_fsm_id = fsm_get_id( new_fsm );
 
-		//add the new_fsm to lists
-		//the #new_fsm does not need to listen to the transition having index = #fsm_ind->index
-		_set_expecting_events_id( _engine, new_fsm );
 		//add the new_fsm to the list of fsm(s) having the same id
 		_engine->fsm_by_instance_id[ new_fsm_id  ] = insert_node_to_link_list( _engine->fsm_by_instance_id[ new_fsm_id ], new_fsm );
 		_engine->total_instances_count ++;
@@ -300,7 +297,6 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 			case FSM_ERROR_STATE_REACHED:
 				_store_valid_execution_trace( _engine, new_fsm );
 				_reset_engine_for_fsm( _engine, new_fsm );
-				_reset_engine_for_instance( _engine, new_fsm );
 				return RULE_ENGINE_RESULT_ERROR;
 				break;
 			case FSM_INCONCLUSIVE_STATE_REACHED:
@@ -314,6 +310,9 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 //				mmt_debug( "FSM_ERR_ARG" );
 //				break;
 			default:
+				//add the new_fsm to lists
+				//the #new_fsm does not need to listen to the transition having index = #fsm_ind->index
+				_set_expecting_events_id( _engine, new_fsm );
 				break;
 			}
 	}

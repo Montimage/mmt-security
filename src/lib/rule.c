@@ -370,7 +370,7 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 			else if( str_equal( xml_attr_value, "TEST" ) )
 				rule.type = RULE_TYPE_TEST;
 			else
-				mmt_assert( 1, "Error 13c: Unexpected type_property: %s", xml_attr_value );
+				mmt_assert( 0, "Error 13c: Unexpected type_property: %s", xml_attr_value );
 		}else if( str_equal( xml_attr_name, "description" ) )
 			rule.description = mmt_mem_dup( xml_attr_value, strlen( (const char*) xml_attr_value ));
 		else if( str_equal( xml_attr_name, "if_satisfied" ) )
@@ -396,7 +396,7 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 			else if( rule.trigger == NULL )
 				rule.trigger = _parse_a_rule_node( xml_node );
 			else{
-				mmt_assert(1, "Error 13f: Unexpected more than 2 children in property tag");
+				mmt_assert(0, "Error 13f: Unexpected more than 2 children in property tag");
 			}
 		}
 
@@ -415,16 +415,22 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 	return ret;
 }
 
+#define MAX_STRING_SIZE 10000
 /**
  * Public API
  */
-size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr){
+size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, char **embedded_functions){
 	xmlDoc *xml_doc = NULL;
-	xmlNode *root_node = NULL, *prop_node;
+	xmlNode *root_node = NULL, *xml_node;
 	rule_t *array[1000] ;
+	char string[ MAX_STRING_SIZE ], *string_ptr;
+	size_t rules_count = 0, size;
+	xmlChar *xml_content;
 
-	size_t count = 0;
 	*properties_arr = NULL;
+	//safe string
+	string[ 0 ] = '\0';
+	string_ptr = string;
 
 	/*
 	 * this initialize the library and check potential ABI mismatches
@@ -444,18 +450,25 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr){
 			"Error 13b: Name of the root node must be 'beginning', not '%s'", root_node->name );
 
 	//first property
-	prop_node = root_node->children;
-	while( prop_node != NULL ){
+	xml_node = root_node->children;
+	while( xml_node != NULL ){
 
-		if( prop_node->type == XML_ELEMENT_NODE && str_equal( prop_node->name, "property") ){
-			array[ count ] = _parse_a_rule( prop_node );
+		if( xml_node->type == XML_ELEMENT_NODE ) {
+			if( str_equal( xml_node->name, "property") ) {
+				array[ rules_count ] = _parse_a_rule( xml_node );
 
-			//when we get a new property => increase the counter
-			if( array[ count] != NULL )
-				count ++;
+				//when we get a new property => increase the counter
+				if( array[ rules_count] != NULL )
+					rules_count ++;
+			}else if( str_equal( xml_node->name, "embedded_functions") ){
+				//mmt_assert( xml_node->type == XML_CDATA_SECTION_NODE, "Error 13b: Need to surround content of node \"%s\" by CDATA", xml_node->name );
+				xml_content = xmlNodeGetContent( xml_node );
+				string_ptr += sprintf( string_ptr, "%s", xml_content );
+				xmlFree( xml_content );
+			}
 		}
 		//goto the next property
-		prop_node = prop_node->next;
+		xml_node = xml_node->next;
 	}
 
 	/*free the document */
@@ -470,9 +483,11 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr){
 	//TODO: avoid duplicate rule_id
 
 	//copy result to a new array
-	*properties_arr = mmt_mem_dup( &array, count * sizeof( rule_t *) );
+	*properties_arr = mmt_mem_dup( &array, rules_count * sizeof( rule_t *) );
 
-	return count;
+	*embedded_functions = mmt_mem_dup( string, strlen( string ) );
+
+	return rules_count;
 }
 
 size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *events_map ){

@@ -250,6 +250,9 @@ typedef struct fsm_transition_struct
 typedef struct fsm_state_struct{
 	const fsm_delay_t delay;
 
+	/* delay = 0*/
+	bool is_temporary;
+
 	char *description;
 
    /**
@@ -348,9 +351,6 @@ enum fsm_handle_event_value{
 
 	/** current_state of #fsm is #incl_state */
 	FSM_INCONCLUSIVE_STATE_REACHED,
-
-	/** State must continue to handle the event happened on one of its incoming transition*/
-	FSM_STATE_TEMPORARY
 };
 
 /**

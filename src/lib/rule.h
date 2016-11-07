@@ -150,13 +150,14 @@ typedef struct rule_struct{
  * - Input
  * 	+ file_name: path of property file
  * - Output:
- * 	+ properties_arr: array of pointers point to properties
+ * 	+ properties_arr    : array of pointers point to properties
+ * 	+ embedded_functions: string representing C code that will be inserted into the generated code
  * - Return:
  * 	+ Number of properties being read
  * - Error:
  * 	+ Exist the system if there exist some syntax errors
  */
-size_t read_rules_from_file( const char * file_name, rule_t *** properties_arr);
+size_t read_rules_from_file( const char * file_name, rule_t *** properties_arr, char **embedded_functions);
 
 void free_a_rule( rule_t *, bool free_data);
 void rule_free_an_operator( rule_operator_t *, bool free_data);

@@ -88,7 +88,7 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	uint32_t rule_id  = _u_data->index;
 	uint16_t event_id = event->id;
 
-	_gen_comment( fd, "Rule %d, event %d\n  * %s", rule_id, event_id, event->description );
+	_gen_comment( fd, "Rule %d, event %d\n  * %s", rule_id, event_id, event->description == NULL? "" : event->description );
 	size = expr_stringify_expression( &str, event->expression );
 	if( size == 0 ) return;
 
@@ -176,6 +176,10 @@ static inline _meta_transition_t *_create_new_transition( int event_type, int gu
 static inline void _gen_transition_rule( _meta_state_t *s_init, _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
 		link_node_t *states_list, const  rule_node_t *rule_node, size_t *index,  const rule_t *rule, int tran_action);
 
+static inline bool _is_zero_delay( rule_delay_t *delay ){
+	return delay->time_max == 0 && delay->time_min == 0;
+}
+
 /**
  * a THEN b
  * target state of a is the source state of b
@@ -195,7 +199,8 @@ static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *
 	}
 
 	//add timeout transition ==> goto error state
-	new_state->transitions = append_node_to_link_list( new_state->transitions,
+	//if( !_is_zero_delay( new_state->delay ))
+		new_state->transitions = append_node_to_link_list( new_state->transitions,
 			_create_new_transition( FSM_EVENT_TYPE_TIMEOUT, 0, s_fail, FSM_ACTION_DO_NOTHING, NULL, "Timeout event will fire this transition"));
 
 	//gen for context
@@ -252,7 +257,8 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 
 
 	//add timeout transition
-	state->transitions = append_node_to_link_list( state->transitions,
+	//if( !_is_zero_delay( state->delay ))
+		state->transitions = append_node_to_link_list( state->transitions,
 			_create_new_transition( FSM_EVENT_TYPE_TIMEOUT, 0, s_pass, FSM_ACTION_DO_NOTHING, NULL, "Timeout event will fire this transition"));
 
 	//gen for context
@@ -361,13 +367,17 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 			_gen_comment(fd, "%s", state->comment );
 
 		fprintf( fd, " s_%d_%zu = {", rule_id, state->index );
-		if( state->delay == NULL )
+		if( state->delay == NULL ){
 			fprintf( fd, "\n\t .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},");
-		else
+			fprintf( fd, "\n\t .is_temporary = 1,");
+		}else{
 			fprintf( fd, "\n\t .delay        = {.time_min = %"PRIu64"LL, .time_max = %"PRIu64"LL, .counter_min = %"PRIu64"LL, .counter_max = %"PRIu64"LL},",
 					state->delay->time_min,    state->delay->time_max,
 					state->delay->counter_min, state->delay->counter_max);
 
+			fprintf( fd, "\n\t .is_temporary = %d,", !!(state->delay->time_max == 0 && state->delay->time_min == 0
+													  	  && state->delay->counter_max == 0 && state->delay->counter_min == 0));
+		}
 		fprintf( fd, "\n\t .description  = %c%s%c,", _string( state->description, ' ', "NULL", ' ', '"', state->description, '"'));
 		fprintf( fd, "\n\t .entry_action = %d, //%s", state->entry_action, fsm_action_string[ state->entry_action ] );
 		fprintf( fd, "\n\t .exit_action  = %d, //%s", state->exit_action,  fsm_action_string[ state->exit_action ] );
@@ -449,6 +459,7 @@ void _iterate_events_to_gen_hash_function( void *key, void *data, void *user_dat
 	uint32_t rule_id = _u_data->index;
 	mmt_map_t *variables_map = NULL;
 	rule_event_t *rule_event = (rule_event_t *)data;
+	size_t size;
 
 	//first element
 	if( index == 0 ){
@@ -460,14 +471,17 @@ void _iterate_events_to_gen_hash_function( void *key, void *data, void *user_dat
 		fprintf( fd, "\n\t for( i=0; i<EVENTS_COUNT_%d; i++) hash_table[i] = 0;", rule_id );
 		_gen_comment_line(fd, "Rest hash_table. This is call for every executions");
 
-		fprintf( fd, "\n\t //if( msg == NULL ) return hash_table;");
+		fprintf( fd, "\n\t //if( msg == NULL ) return hash_table;\n");
 	}
 
 	//body
 
 	//create a new map that contains unique variables (2 variables are differed by its #proto and #att)
-	get_unique_variables_of_expression( rule_event->expression, &variables_map, NO );
-	mmt_map_iterate( variables_map, _iterate_variable_to_print_hash_function_body, fd );
+	size = get_unique_variables_of_expression( rule_event->expression, &variables_map, NO );
+	if( size > 0 )
+		mmt_map_iterate( variables_map, _iterate_variable_to_print_hash_function_body, fd );
+	else
+		fprintf(fd, "\n\t//always need to check the event %d", rule_event->id );
 	//Continue from function above to print out "if"
 	fprintf( fd, "\n\t\t hash_table[ %zu ] = %d;", index, rule_event->id );
 
@@ -594,7 +608,7 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
  */
 static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t count ){
 	size_t i;
-
+	char *string;
 	fprintf(fd, "\n\n //======================================GENERAL======================================");
 	_gen_comment( fd, "Information of %zu rules", count );
 	fprintf( fd, "size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){");
@@ -625,8 +639,10 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 	fprintf( fd, "\n\t };\n\t *rules_arr = rules;");
 	fprintf( fd, "\n\t return %zu;\n }", count);
 
-	fprintf( fd, "\n const char * __get_generated_date(){ return \"%s, version %s\";};",
-			get_current_date_time_string("%Y-%m-%d %H:%M:%S"), MMT_SEC_VERSION );
+	_gen_comment(fd, "Moment the rules being encoded");
+	string = get_current_date_time_string("%Y-%m-%d %H:%M:%S");
+	fprintf( fd, "\n const char * __get_generated_date(){ return \"%s, version %s\";};", string, MMT_SEC_VERSION );
+	mmt_mem_free( string );
 }
 
 
@@ -650,7 +666,7 @@ void _iterate_event_to_verify_id( void *key, void *data, void *user_data, size_t
 }
 
 static void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
-	size_t size;
+	size_t events_count, variables_count;
 	struct _user_data _u_data;
 	_u_data.file  = fd;
 	_u_data.index = rule->id;
@@ -665,29 +681,40 @@ static void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 	 */
 	mmt_map_t *variables_map =  mmt_map_init( &compare_variable_name );
 
-	size = get_unique_events_of_rule( rule, &events_map );
-	if( size == 0 ) return;
+	events_count = get_unique_events_of_rule( rule, &events_map );
+	if( events_count == 0 ) return;
 
 	mmt_map_iterate( events_map, _iterate_event_to_verify_id, &_u_data );
 
 	mmt_map_iterate( events_map, _iterate_event_to_get_unique_variables, variables_map );
 
-	fprintf( fd, "\n\n //======================================RULE %d======================================", rule->id );
-	fprintf( fd, "\n #define EVENTS_COUNT_%d %zu\n", rule->id, mmt_map_count( events_map ) );
-	fprintf( fd, "\n #define PROTO_ATTS_COUNT_%d %zu\n", rule->id, mmt_map_count( variables_map ) );
-	fprintf( fd, "\n static proto_attribute_t proto_atts_%d[ PROTO_ATTS_COUNT_%d ] = ", rule->id, rule->id );
-	mmt_map_iterate(variables_map, _iterate_variables_to_gen_array_proto_att, fd );
+	variables_count = mmt_map_count( variables_map );
 
+	fprintf( fd, "\n\n //======================================RULE %d======================================", rule->id );
+	fprintf( fd, "\n #define EVENTS_COUNT_%d %zu\n", rule->id, events_count );
+	fprintf( fd, "\n #define PROTO_ATTS_COUNT_%d %zu\n", rule->id, variables_count );
+	fprintf( fd, "\n static proto_attribute_t proto_atts_%d[ PROTO_ATTS_COUNT_%d ] = ", rule->id, rule->id );
+	if( variables_count > 0 )
+		mmt_map_iterate(variables_map, _iterate_variables_to_gen_array_proto_att, fd );
+	else
+		//there is no variables
+		fprintf( fd, "{};");
 
 	//define a structure using in guard functions
-	mmt_map_iterate(variables_map, _iterate_variables_to_gen_structure, &_u_data );
+	if( variables_count > 0 )
+		mmt_map_iterate(variables_map, _iterate_variables_to_gen_structure, &_u_data );
+	else
+		fprintf( fd, "\n typedef void _msg_t_%d;", rule->id );
 
 	mmt_map_iterate(variables_map, _iterate_variables_to_init_structure, &_u_data );
+
 	//convert from a message_t to a structure generated above
-	mmt_map_iterate(variables_map, _iterate_variables_to_convert_to_structure, &_u_data );
+	if( variables_count > 0 )
+		mmt_map_iterate(variables_map, _iterate_variables_to_convert_to_structure, &_u_data );
+	else
+		fprintf( fd, "\n void* convert_message_to_event_%d(const message_t *msg){ return NULL; }", rule->id );
 
 	mmt_map_iterate(events_map, _iterate_events_to_gen_hash_function, &_u_data );
-
 
 	mmt_map_iterate(events_map, _iterate_event_to_gen_guards, &_u_data );
 
@@ -701,7 +728,7 @@ static void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 /**
  * Public API
  */
-int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
+int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, const char*embedded_functions ){
 	char *str_ptr;
 	size_t i;
 	//open file for writing
@@ -715,11 +742,17 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count ){
 	//include
 	fprintf( fd, "#include <string.h>\n #include <stdio.h>\n #include <stdlib.h>\n #include \"plugin_header.h\"\n #include \"mmt_fsm.h\"\n #include \"mmt_lib.h\"\n ");
 
+	//embedded_functions
+	_gen_comment(fd, "Embedded functions");
+	if(embedded_functions != NULL )
+		fprintf( fd, "%s", embedded_functions );
+
 	for( i=0; i<count; i++ )
 		_gen_fsm_for_a_rule( fd, rules[i] );
 
 	//information of rules
 	_gen_rule_information( fd, rules, count );
+
 
 	fclose(fd);
 

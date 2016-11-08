@@ -54,7 +54,7 @@ typedef struct rule_node_struct{
 	};
 }rule_node_t;
 
-enum value {RULE_VALUE_COMPUTE, RULE_VALUE_THEN, RULE_VALUE_OR, RULE_VALUE_AND, RULE_VALUE_NOT};
+enum value {RULE_VALUE_COMPUTE, RULE_VALUE_THEN, RULE_VALUE_BEFORE, RULE_VALUE_OR, RULE_VALUE_AND, RULE_VALUE_NOT};
 
 typedef struct rule_operator_struct{
 	/**

@@ -176,9 +176,6 @@ static inline _meta_transition_t *_create_new_transition( int event_type, int gu
 static inline void _gen_transition_rule( _meta_state_t *s_init, _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
 		link_node_t *states_list, const  rule_node_t *rule_node, size_t *index,  const rule_t *rule, int tran_action);
 
-static inline bool _is_zero_delay( rule_delay_t *delay ){
-	return delay->time_max == 0 && delay->time_min == 0;
-}
 
 /**
  * a THEN b
@@ -199,7 +196,6 @@ static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *
 	}
 
 	//add timeout transition ==> goto error state
-	//if( !_is_zero_delay( new_state->delay ))
 		new_state->transitions = append_node_to_link_list( new_state->transitions,
 			_create_new_transition( FSM_EVENT_TYPE_TIMEOUT, 0, s_fail, FSM_ACTION_DO_NOTHING, NULL, "Timeout event will fire this transition"));
 
@@ -257,7 +253,6 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 
 
 	//add timeout transition
-	//if( !_is_zero_delay( state->delay ))
 		state->transitions = append_node_to_link_list( state->transitions,
 			_create_new_transition( FSM_EVENT_TYPE_TIMEOUT, 0, s_pass, FSM_ACTION_DO_NOTHING, NULL, "Timeout event will fire this transition"));
 
@@ -269,6 +264,42 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 	//gen for trigger
 	//if #trigger occurs => goto #s_fail, otherwise if timeout => goto #s_pass
 	_gen_transition_rule( state, s_fail, s_pass, s_fail, states_list, trigger, index, rule, tran_action );
+}
+
+/**
+ * a BEFORE b : b must happen before a
+ *
+ */
+static inline void _gen_transition_before( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
+		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
+		size_t *index, const rule_operator_t *operator, const rule_t *rule, int tran_action ){
+
+	_meta_state_t *state = _create_new_state( 0 );
+	//root
+	if( operator == NULL ){
+		state->description = rule->description;
+		state->delay       = rule->delay;
+		snprintf(state->comment, MAX_STR_BUFFER, "root node");
+	}else{
+		state->description = operator->description;
+		state->delay       = operator->delay;
+	}
+
+	//add timeout transition
+		state->transitions = append_node_to_link_list( state->transitions,
+			_create_new_transition( FSM_EVENT_TYPE_TIMEOUT, 0, s_incl, FSM_ACTION_DO_NOTHING, NULL, "Timeout event will fire this transition"));
+
+	//if context occurred but trigger did not occurs before => goto #s_fail
+	_gen_transition_rule( s_init, s_fail, s_fail, s_incl, states_list, context, index, rule, tran_action );
+
+	//gen for trigger that must occurs before
+	_gen_transition_rule( s_init, state, s_incl, s_incl, states_list, trigger, index, rule, FSM_ACTION_CREATE_INSTANCE );
+	//increase index
+	state->index = (*index)++;
+	states_list  = append_node_to_link_list( states_list, state );
+	//gen for trigger
+	//if #context occurs => goto #s_pass, otherwise if timeout => goto #s_incl
+	_gen_transition_rule( state, s_pass, s_incl, s_incl, states_list, context, index, rule, tran_action );
 }
 
 /**
@@ -302,6 +333,11 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 		break;
 	case RULE_VALUE_COMPUTE:
 		break;
+	case RULE_VALUE_BEFORE:
+		_gen_transition_before(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, index, NULL, rule, FSM_ACTION_DO_NOTHING);
+		break;
+	default:
+		mmt_assert(0, "Does not support value=%d of operator tag.", opt->value );
 	}
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -342,7 +378,27 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 	states_list = append_node_to_link_list(states_list, s_pass );
 	states_list = append_node_to_link_list(states_list, s_incl );
 
-	_gen_transition_then(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING );
+	switch( rule->value){
+	case RULE_VALUE_THEN:
+		_gen_transition_then(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
+		break;
+	case RULE_VALUE_AND:
+		_gen_transition_and(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
+		break;
+	case RULE_VALUE_OR:
+		_gen_transition_or(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
+		break;
+	case RULE_VALUE_NOT:
+		_gen_transition_not(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
+		break;
+	case RULE_VALUE_COMPUTE:
+		break;
+	case RULE_VALUE_BEFORE:
+		_gen_transition_before(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
+		break;
+	default:
+		mmt_assert(0, "Does not support value=%d of property tag.", rule->value );
+	}
 
 	_gen_comment( fd, "States of FSM for rule %d", rule_id );
 	_gen_comment(fd, "Predefine list of states: init, fail, pass, ..." );
@@ -663,6 +719,8 @@ void _iterate_event_to_verify_id( void *key, void *data, void *user_data, size_t
 
 	mmt_assert( ev->id <= total, "Error in rule %d: Event_id %d is greater than number of events (%zu). Event_id must start from 1 and continue ..",
 			((struct _user_data *)user_data)->index, ev->id, total );
+	mmt_assert( ev->id > 0, "Error in rule %d: Event_id must start from 1, not 0.",
+				((struct _user_data *)user_data)->index );
 }
 
 static void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){

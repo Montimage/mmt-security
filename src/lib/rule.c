@@ -107,6 +107,11 @@ static inline int _get_sign( const char *str ){
 	}
 }
 
+static inline uint64_t _parse_unsigned_int( const char * str, const char *error_message ){
+	mmt_assert( str[0] != '-', "%s: %s", error_message, str );
+	return atoll( str );
+}
+
 /**
  * Create and init values for a delay struct
  */
@@ -135,30 +140,23 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 		xml_attr_value = (char *)ptr;
 
 		if( str_equal( xml_attr_name, "delay_min" ) ){
-			if( xml_attr_value[0] == '-' ){
-				xml_attr_value = xml_attr_value + 1;
-			}
+			mmt_assert( xml_attr_value[0] != '-', "Error 13j: \"delay_min\" must not be negative. Note: you can use value=BEFORE" );
+
 			delay->time_min = (uint64_t) atoll( xml_attr_value );
 			time_min_sign = _get_sign( xml_attr_value );
 			has_delay = YES;
 		}else if( str_equal( xml_attr_name, "delay_max" ) ){
-			if( xml_attr_value[0] == '-' ){
-				xml_attr_value = xml_attr_value + 1;
-			}
+			mmt_assert( xml_attr_value[0] != '-', "Error 13j: \"delay_max\" must not be negative. Note: you can use value=BEFORE" );
 			delay->time_max = (uint64_t) atoll( xml_attr_value );
 			time_max_sign = _get_sign( xml_attr_value );
 			has_delay = YES;
 		}else if( str_equal( xml_attr_name, "counter_min" ) ){
-			if( xml_attr_value[0] == '-' ){
-
-			}
+			mmt_assert( xml_attr_value[0] != '-', "Error 13j: \"counter_min\" must not be negative. Note: you can use value=BEFORE" );
 			delay->counter_min = (uint64_t) atoll( xml_attr_value );
 			counter_min_sign = _get_sign( xml_attr_value );
 			has_delay = YES;
 		}else if( str_equal( xml_attr_name, "counter_max" ) ){
-			if( xml_attr_value[0] == '-' ){
-				xml_attr_value = xml_attr_value + 1;
-			}
+			mmt_assert( xml_attr_value[0] != '-', "Error 13j: \"counter_max\" must not be negative. Note: you can use value=BEFORE" );
 			delay->counter_max= (uint64_t) atoll( xml_attr_value );
 			counter_max_sign = _get_sign( xml_attr_value );
 			has_delay = YES;
@@ -224,7 +222,7 @@ static rule_event_t *_parse_an_event(const xmlNode *xml_node ){
 		else if( str_equal( xml_attr_name, "description" ) )
 			event.description = mmt_mem_dup( xml_attr_value, strlen( (const char*) xml_attr_value ));
 		else if( str_equal( xml_attr_name, "event_id" ) )
-			event.id = atoi( (const char*) xml_attr_value );
+			event.id = _parse_unsigned_int( (const char*) xml_attr_value, "Error 14a: event_id must not be negative" );
 		else if( str_equal( xml_attr_name, "value" ) ){
 			//do nothing
 		}else
@@ -244,6 +242,8 @@ static rule_node_t *_parse_a_rule_node( const xmlNode *xml_node );
 static inline int _get_value( const xmlChar *xml_attr_value ){
 	if( str_equal( xml_attr_value, "THEN" ) )
 		return RULE_VALUE_THEN;
+	if( str_equal( xml_attr_value, "BEFORE" ) )
+		return RULE_VALUE_BEFORE;
 	else if( str_equal( xml_attr_value, "OR" ) )
 		return RULE_VALUE_OR;
 	else if( str_equal( xml_attr_value, "AND" ) )
@@ -253,7 +253,7 @@ static inline int _get_value( const xmlChar *xml_attr_value ){
 	else if( str_equal( xml_attr_value, "COMPUTE" ) )
 		return RULE_VALUE_COMPUTE;
 	else
-		mmt_assert( 1, "Error 13d: Unexpected attribute value: %s", xml_attr_value );
+		mmt_assert( 0, "Error 13d: Unexpected attribute value=\"%s\"", xml_attr_value );
 	return UNKNOWN;
 }
 
@@ -279,7 +279,7 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 
 		//for each attribute
 		if( str_equal( xml_attr_name, "value" ) ){
-			operator.value = _get_value( xml_attr_name );
+			operator.value = _get_value( xml_attr_value );
 		}else if( str_equal( xml_attr_name, "description" ) )
 			operator.description = mmt_mem_dup( xml_attr_value, strlen( (const char*) xml_attr_value ));
 		/*
@@ -298,7 +298,7 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 			else if( operator.trigger == NULL )
 				operator.trigger = _parse_a_rule_node( xml_node );
 			else
-				mmt_assert(1, "Error 13f: Unexpected more than 2 children in property tag");
+				mmt_assert(0, "Error 13f: Unexpected more than 2 children in property tag");
 		}
 
 		xml_node = xml_node->next;
@@ -357,9 +357,9 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 
 		//for each attribute
 		if( str_equal( xml_attr_name, "property_id" ) )
-			rule.id = (uint16_t) atoi( (const char*) xml_attr_value );
+			rule.id = (uint16_t) _parse_unsigned_int( (const char*) xml_attr_value, "Error 14b: property_id must not be negative" );
 		else if( str_equal( xml_attr_name, "value" ) )
-			rule.value = _get_value( xml_attr_name );
+			rule.value = _get_value( xml_attr_value );
 		else if( str_equal( xml_attr_name, "type_property" ) ){
 			if( str_equal( xml_attr_value, "ATTACK" ) )
 				rule.type = RULE_TYPE_ATTACK;
@@ -490,7 +490,7 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, 
 	return rules_count;
 }
 
-size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *events_map ){
+size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *events_map, size_t *event_index ){
 	size_t events_count = 0;
 	rule_event_t *ptr;
 	if ( node == NULL ) return 0;
@@ -498,7 +498,12 @@ size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *even
 
 		//if user does not set id of event ==> we assign it to an unique number
 		if( node->event->id == (uint16_t) UNKNOWN )
-			node->event->id = mmt_map_count( events_map ) + 1;
+			node->event->id = *event_index;
+		else{
+
+		}
+
+		(*event_index) ++;
 
 		//check if event is existing in the map
 		ptr = mmt_map_set_data( events_map, &(node->event->id), node->event, YES );
@@ -506,8 +511,8 @@ size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *even
 		mmt_assert( ptr == NULL, "Error 13g: Duplicated events having id=%d", node->event->id );
 		return 1;
 	}else if( node->type == RULE_NODE_TYPE_OPERATOR ){
-		events_count += _get_unique_events_of_rule_node( node->operator->context, events_map );
-		events_count += _get_unique_events_of_rule_node( node->operator->trigger, events_map );
+		events_count += _get_unique_events_of_rule_node( node->operator->context, events_map, event_index );
+		events_count += _get_unique_events_of_rule_node( node->operator->trigger, events_map, event_index );
 		return events_count;
 	}else
 		mmt_debug( "Unknown rule_node_t->type = %d", node->type );
@@ -518,11 +523,11 @@ size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *even
  * Public API
  */
 size_t get_unique_events_of_rule( const rule_t *rule, mmt_map_t **events_map ){
-	size_t events_count = 0;
+	size_t events_count = 0, event_index = 1;
 	mmt_map_t *map = mmt_map_init( compare_uint16_t );
 
-	events_count += _get_unique_events_of_rule_node( rule->context, map );
-	events_count += _get_unique_events_of_rule_node( rule->trigger, map );
+	events_count += _get_unique_events_of_rule_node( rule->context, map, &event_index );
+	events_count += _get_unique_events_of_rule_node( rule->trigger, map, &event_index );
 	if( events_count == 0 )
 		mmt_free_and_assign_to_null( map );
 	*events_map = map;

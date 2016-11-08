@@ -22,7 +22,7 @@ void mmt_print_execution_trace (void) {
   mmt_error("Obtained %zd stack frames:", size);
 
   for (i = 0; i < size; i++)
-     mmt_error("%zu. %s", i, strings[i]);
+     fprintf(stderr, "\t %zu. %s\n", (i+1), strings[i]);
 
   free (strings);
 }
@@ -42,7 +42,12 @@ void mmt_log( log_level_t level, const char *format, ... ){
 		fprintf(stdout, "%s - %s\n", log_level_name[level], buffer);
 	va_end(arg);
 	if( level == HALT ){
+
+//DEBUG_MODE given by Makefile
+#ifdef DEBUG_MODE
 		mmt_print_execution_trace();
+#endif
+
 		exit( 1 );
 	}
 }

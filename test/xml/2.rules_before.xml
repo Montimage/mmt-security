@@ -12,16 +12,16 @@ static inline int em_check_ip( const char* ip){
 }
 ]]></embedded_functions>
 
-<property value="THEN" property_id="102" type_property="SECURITY" 
-    description="check every packet">
+<property value="BEFORE" property_id="102" type_property="SECURITY" 
+    description="check every packet" delay_min="0" delay_max="2">
     <event boolean_expression="1"/>
-    <event 
+    <event event_id="2"
            description="Must be Valid IP"
            boolean_expression="(#em_check_ip( ip.src ) )"/>
 </property>
  
 
-<property value="THEN" property_id="103" type_property="SECURITY" 
+<property value="BEFORE" property_id="103" type_property="SECURITY" 
     description="check every packet">
     <event 
            description="Could be Valid IP"

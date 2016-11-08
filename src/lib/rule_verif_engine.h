@@ -17,7 +17,7 @@
 typedef void rule_engine_t;
 
 enum rule_engine_result {
-	RULE_ENGINE_RESULT_UNKNOWN, //do not known yet result
+	RULE_ENGINE_RESULT_UNKNOWN,  //do not known yet result
 	RULE_ENGINE_RESULT_ERROR,    //reach error state
 	RULE_ENGINE_RESULT_VALIDATE  //reach valid state
 };

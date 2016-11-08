@@ -15,7 +15,7 @@
 #include <sys/time.h>
 
 #include "plugin_header.h"
-#include "mmt_map_t.h"
+#include "mmt_array_t.h"
 
 /**
  * Get the current version information of mmt-sec
@@ -41,7 +41,7 @@ typedef void (*mmt_sec_callback)(
 		enum verdict_type verdict,		//DETECTED, NOT_RESPECTED
 		uint64_t timestamp,  			//moment (by time) the rule is validated
 		uint32_t counter,					//moment (by order of packet) the rule is validated
-		const mmt_map_t * const trace,//historic of messages that validates the rule
+		const mmt_array_t * const trace,//historic of messages that validates the rule
 		void *user_data					//#user-data being given in mmt_sec_register_rules
 		);
 
@@ -82,7 +82,7 @@ size_t mmt_sec_get_unique_protocol_attributes( const mmt_sec_handler_t *handler,
 /**
  * Convert a given execution trace to a JSON string
  */
-char* convert_execution_trace_to_json_string( const mmt_map_t *trace );
+char* convert_execution_trace_to_json_string( const mmt_array_t *trace );
 
 /**
  * Encode a #timeval to an uint64_t value

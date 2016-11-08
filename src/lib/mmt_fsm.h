@@ -27,7 +27,7 @@
 #include "rule.h"
 #include "mmt_alloc.h"
 #include "message_t.h"
-#include "mmt_map_t.h"
+#include "mmt_array_t.h"
 
 typedef struct fsm_delay_struct{
 	/**
@@ -297,7 +297,7 @@ typedef struct fsm_state_struct{
  * 	+ final_state
  * 	+ incl_state
  */
-fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state );
+fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state, size_t events_count );
 
 /**
  * Reset the machine to #init_state and #error_state as being initialized.
@@ -441,7 +441,7 @@ void fsm_set_id( fsm_t *fsm, uint16_t id );
  *		+ a map of events and its data. Each element of the map is indexed by event_id
  *		  of the machine, and its data has type #message_t that validates the event.
  */
-const mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm );
+const mmt_array_t* fsm_get_execution_trace( const fsm_t *fsm );
 
 /**
  * Get data of an event_id

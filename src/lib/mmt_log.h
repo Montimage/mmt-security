@@ -38,4 +38,6 @@ void mmt_log( log_level_t level, const char *format, ... )
 	#define mmt_debug(...)
 #endif
 
+void mmt_print_execution_trace();
+
 #endif /* SRC_LOG_H_ */

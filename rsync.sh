@@ -3,7 +3,7 @@ rsync -e "ssh -i /Users/nhnghia/.ssh/id_rsa -p 2222" -rca .git ./src ./test ./Ma
 
 DEBUG="DEBUG=1"
 
-RUN="make standalone $DEBUG ; time ./mmt_sec_standalone -t ./test/pcap/test_p1_acdc.pcap"
+RUN="make standalone $DEBUG ; valgrind --leak-check=yes ./mmt_sec_standalone -t ./test/pcap/test_p1_acdc.pcap"
 #RUN="make test.rule $DEBUG; ./security"
 RUN="make compile_rule $DEBUG; ./compile_rule rules/1.so test/xml/1.rules_zero_delay.xml; $RUN"
 

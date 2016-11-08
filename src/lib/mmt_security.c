@@ -22,6 +22,7 @@
 #define MAX_INSTANCE_COUNT 10000
 
 const char *mmt_sec_get_version_info(){
+	//define in version.h
 	return MMT_SEC_VERSION;
 }
 
@@ -40,11 +41,10 @@ typedef struct _mmt_sec_handler_struct{
 
 	size_t proto_atts_count;
 	const proto_attribute_t **proto_atts_array;
-
 }_mmt_sec_handler_t;
 
 size_t mmt_sec_get_rules(  const mmt_sec_handler_t *handler, const rule_info_t ***rules_array ){
-	if( handler == NULL ) return 0;
+	__check_null( handler, 0 );
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *) handler;
 
 	*rules_array = _handler->rules_array;
@@ -52,14 +52,15 @@ size_t mmt_sec_get_rules(  const mmt_sec_handler_t *handler, const rule_info_t *
 }
 
 size_t mmt_sec_get_unique_protocol_attributes( const mmt_sec_handler_t *handler, const proto_attribute_t ***proto_atts_array ){
-	if( handler == NULL ) return 0;
+	__check_null( handler, 0 );
+
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *) handler;
 
 	*proto_atts_array = _handler->proto_atts_array;
 	return _handler->proto_atts_count;
 }
 
-void _iterate_proto_atts( void *key, void *data, void *user_data, size_t index, size_t total ){
+static inline void _iterate_proto_atts( void *key, void *data, void *user_data, size_t index, size_t total ){
 	void **array = user_data;
 	array[ index ] = data;
 	//free the key being created on line 73
@@ -103,6 +104,8 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 		mmt_sec_callback callback, void *user_data){
 	size_t i;
 
+	__check_null( rules_array, NULL );
+
 	_mmt_sec_handler_t *handler = mmt_mem_alloc( sizeof( _mmt_sec_handler_t ));
 	handler->rules_count = rules_count;
 	handler->rules_array = rules_array;
@@ -126,6 +129,7 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	size_t i;
 	__check_null( handler, );
+
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
 
 	//free data elements of _handler
@@ -138,7 +142,7 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	mmt_mem_free( _handler );
 }
 
-enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
+static inline enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
 	switch ( rule_type ) {
 	case RULE_TYPE_TEST:
 	case RULE_TYPE_SECURITY:
@@ -146,7 +150,7 @@ enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
 		case RULE_ENGINE_RESULT_ERROR:
 			return VERDICT_NOT_RESPECTED;
 		case RULE_ENGINE_RESULT_VALIDATE:
-			return VERDICT_RESPECTED;
+			return VERDICT_UNKNOWN; //VERDICT_RESPECTED;
 		default:
 			return VERDICT_UNKNOWN;
 		}
@@ -155,7 +159,7 @@ enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
 	case RULE_TYPE_EVASION:
 		switch( result ){
 		case RULE_ENGINE_RESULT_ERROR:
-			return VERDICT_NOT_DETECTED;
+			return VERDICT_UNKNOWN; //VERDICT_NOT_DETECTED;
 		case RULE_ENGINE_RESULT_VALIDATE:
 			return VERDICT_DETECTED;
 		default:
@@ -177,7 +181,9 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	size_t i;
 	int verdict;
 	enum rule_engine_result ret = RULE_ENGINE_RESULT_UNKNOWN;
-	const mmt_map_t *execution_trace;
+	const mmt_array_t *execution_trace;
+
+	__check_null( handler, );
 
 	_handler = (_mmt_sec_handler_t *)handler;
 
@@ -214,68 +220,75 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 
 #define MAX_STR_SIZE 50000
 
-static void _iterate_to_get_string( void *key, void *data, void *u_data, size_t index, size_t total){
-	char *string = (char *) u_data;
-	size_t size, i, total_len;
-	const message_t *msg = (message_t *)data;
+char* convert_execution_trace_to_json_string( const mmt_array_t *trace ){
+	char buffer[ MAX_STR_SIZE ];
+	char *string = buffer;
+	size_t size, i, total_len, index;
+	const message_t *msg;
 	const message_element_t *me;
 	char *tmp;
 	constant_t expr_const;
-	bool is_first = YES;
+	bool is_first;
+
+	__check_null( trace, NULL );
+
+	buffer[0] = '\0';
+
+
 
 	total_len = strlen( string );
 	string += total_len;
 
-	size = sprintf( string, "%s\"event_%d\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
-			index == 0 ? "{": " ,",
-			*(uint16_t *) key, //event id
-			msg->timestamp / 1000000, //timestamp: second
-			(int)(msg->timestamp % 1000000), //timestamp: microsecond
-			msg->counter );
+	for( index=0; index<trace->elements_count; index ++ ){
+		msg = trace->data[ index ];
+		if( msg == NULL ) continue;
 
-	//go into detail of a message
-	for( i=0; i<msg->elements_count; i++ ){
-		me = &msg->elements[i];
 
-		if( unlikely( me->data == NULL ) ) continue;
 
-		//convert me->data to string
-		expr_const.data = me->data;
-		//data_types of mmt-dpi
-		expr_const.data_type = get_attribute_data_type( me->proto_id, me->att_id );
-		//data_type of mmt-security contains only either a NUMERIC or a STRING
-		 expr_const.data_type = convert_data_type( expr_const.data_type );
+		size = sprintf( string, "%s\"event_%zu\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
+				index == 0 ? "{": " ,",
+						index,
+						msg->timestamp / 1000000, //timestamp: second
+						(int)(msg->timestamp % 1000000), //timestamp: microsecond
+						msg->counter );
 
-		if( expr_stringify_constant( &tmp, &expr_const ) ){
+		is_first = YES;
+		//go into detail of a message
+		for( i=0; i<msg->elements_count; i++ ){
+			me = &msg->elements[i];
 
-			total_len += size;
-			if( unlikely( total_len >= MAX_STR_SIZE )) return;
+			if( me->data == NULL ) continue;
 
-			string += size;
-			size = sprintf( string, "%s{\"%s.%s\":%s}",
-					(is_first? "":","),
-					get_protocol_name_by_id( me->proto_id ),
-					get_attribute_name_by_protocol_id_and_attribute_id( me->proto_id, me->att_id ),
-					tmp);
-			mmt_mem_free( tmp );
-			is_first = NO;
+			//convert me->data to string
+			expr_const.data = me->data;
+			//data_types of mmt-dpi
+			//expr_const.data_type = get_attribute_data_type( me->proto_id, me->att_id );
+			//data_type of mmt-security contains only either a NUMERIC or a STRING
+			//expr_const.data_type = convert_data_type( expr_const.data_type );
+			expr_const.data_type = me->data_type;
+
+			if( expr_stringify_constant( &tmp, &expr_const ) ){
+
+				total_len += size;
+				if( unlikely( total_len >= MAX_STR_SIZE )) break;
+
+				string += size;
+				size = sprintf( string, "%s{\"%s.%s\":%s}",
+						(is_first? "":","),
+						get_protocol_name_by_id( me->proto_id ),
+						get_attribute_name_by_protocol_id_and_attribute_id( me->proto_id, me->att_id ),
+						tmp);
+				mmt_mem_free( tmp );
+				is_first = NO;
+			}
 		}
+
+		total_len += size;
+		if( unlikely( total_len >= MAX_STR_SIZE )) break;
+
+		string += size;
+		sprintf( string, "]}%s", //end attributes, end event_
+				index == trace->elements_count - 1? "}": ""  );
 	}
-
-	total_len += size;
-	if( unlikely( total_len >= MAX_STR_SIZE )) return;
-
-	string += size;
-	sprintf( string, "]}%s", //end attributes, end event_
-			index == total-1? "}": ""  );
-
-}
-
-char* convert_execution_trace_to_json_string( const mmt_map_t *trace ){
-	char buffer[ MAX_STR_SIZE ];
-	buffer[0] = '\0';
-
-	mmt_map_iterate( trace, _iterate_to_get_string, buffer);
-
 	return (char *) mmt_mem_dup( buffer, strlen( buffer) );
 }

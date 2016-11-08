@@ -23,7 +23,7 @@ typedef struct _rule_engine_struct{
 	//number of instances
 	size_t instances_count;
 
-	mmt_map_t *valid_execution_trace;
+	mmt_array_t *valid_execution_trace;
 }_rule_engine_t;
 
 /**
@@ -140,21 +140,23 @@ void rule_engine_free( rule_engine_t *engine ){
 
 	mmt_mem_free( _engine->fsm_by_instance_id );
 
-	mmt_map_free_key_and_data( _engine->valid_execution_trace, NULL, (void *)free_message_t );
+	if( _engine->valid_execution_trace != NULL )
+		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );
 
 	mmt_mem_free( _engine );
 }
 
 static inline void _store_valid_execution_trace( _rule_engine_t *_engine, fsm_t *fsm ){
-	mmt_map_free_key_and_data( _engine->valid_execution_trace, NULL, (void *)free_message_t );
+	if( _engine->valid_execution_trace != NULL )
+		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );
 
-	_engine->valid_execution_trace = mmt_map_clone_key_and_data( fsm_get_execution_trace( fsm ), NULL, (void *)retain_message_t );
+	_engine->valid_execution_trace = mmt_array_clone( fsm_get_execution_trace( fsm ), (void *)retain_message_t );
 }
 
 /**
  * Public API
  */
-const mmt_map_t* rule_engine_get_valide_trace( const rule_engine_t *engine ){
+const mmt_array_t* rule_engine_get_valide_trace( const rule_engine_t *engine ){
 	__check_null( engine, NULL );
 	_rule_engine_t *_engine = ( _rule_engine_t *)engine;
 	return _engine->valid_execution_trace;

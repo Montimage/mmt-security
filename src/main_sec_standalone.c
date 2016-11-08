@@ -76,7 +76,7 @@ void print_verdict( const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
 		uint32_t counter,
-		const mmt_map_t *const trace,
+		const mmt_array_t *const trace,
 		void *user_data ){
 
 	struct timeval now;
@@ -309,6 +309,7 @@ static pcap_t *pcap;
 void signal_handler(int signal_type) {
 	struct pcap_stat pcs; /* packet capture filter stats */
 
+	mmt_mem_free( proto_atts );
 	mmt_sec_unregister( mmt_sec_handler );
 	mmt_mem_free( rules_arr );
 	mmt_mem_print_info();
@@ -426,7 +427,7 @@ int main(int argc, char** argv) {
 	//free resources using by mmt-sec
 	mmt_sec_unregister( mmt_sec_handler );
 	mmt_mem_free( rules_arr );
-
+	mmt_mem_free( proto_atts );
 	//print info about memory using by mmt-sec
 	//mmt_mem_print_info();
 

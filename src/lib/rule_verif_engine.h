@@ -30,6 +30,6 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 
 void rule_engine_free( rule_engine_t *engine );
 
-const mmt_map_t* rule_engine_get_valide_trace( const rule_engine_t *_engine );
+const mmt_array_t* rule_engine_get_valide_trace( const rule_engine_t *_engine );
 
 #endif /* SRC_LIB_RULE_VERIF_ENGINE_H_ */

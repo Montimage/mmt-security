@@ -432,8 +432,8 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 
 	_gen_comment(fd, "Create a new FSM for this rule");
 	fprintf( fd, "static void *create_new_fsm_%d(){", rule->id);
-	fprintf( fd, "\n\t\t return fsm_init( &s_%d_%zu, &s_%d_%zu, &s_%d_%zu, &s_%d_%zu );//init, error, final, inconclusive",
-			rule->id, s_init->index, rule->id, s_fail->index, rule->id, s_pass->index, rule->id, s_incl->index );
+	fprintf( fd, "\n\t\t return fsm_init( &s_%d_%zu, &s_%d_%zu, &s_%d_%zu, &s_%d_%zu, EVENTS_COUNT_%d );//init, error, final, inconclusive, events_count",
+			rule->id, s_init->index, rule->id, s_fail->index, rule->id, s_pass->index, rule->id, s_incl->index, rule->id );
 	fprintf( fd, "\n }//end function");
 
 

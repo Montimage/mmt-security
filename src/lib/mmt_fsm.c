@@ -47,17 +47,19 @@ typedef struct fsm_struct{
    /**
     * Trace of running FSM
     */
-   mmt_map_t *events_trace; //map: <event_id : event_data>
+   mmt_array_t *events_trace; //map: <event_id : event_data>
 
-   mmt_map_t *messages_trace;
+   mmt_array_t *messages_trace;
 
+   /** ID of event to be verified */
+   uint16_t current_event_id;
 }_fsm_t;
 
 
 /**
  * Public API
  */
-fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state) {
+fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state, size_t events_count ) {
 	_fsm_t *fsm = mmt_mem_alloc( sizeof( _fsm_t ));
 
 	fsm->init_state      = initial_state;
@@ -67,10 +69,12 @@ fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state
 	fsm->incl_state      = incl_state;
 	fsm->success_state   = final;
 	fsm->id              = 0;
-	fsm->events_trace    = mmt_map_init( compare_uint16_t );
-	fsm->messages_trace  = mmt_map_init( compare_uint16_t );
+	fsm->events_trace    = mmt_array_init( events_count + 1 ); //event_id starts from 1, zero is timeout
+	fsm->messages_trace  = mmt_array_init( events_count + 1 ); //event_id starts from 1, zero is timeout
 	fsm->time_max    = fsm->time_min    = 0;
 	fsm->counter_max = fsm->counter_min = 0;
+	fsm->current_event_id = 0;
+
 	return (fsm_t *) fsm;
 }
 
@@ -79,25 +83,27 @@ fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state
  */
 void fsm_reset( fsm_t *fsm ){
 	_fsm_t *_fsm;
+	size_t i;
 	__check_null( fsm, );
 
 	_fsm = (_fsm_t *)fsm;
 	//reset the current state to the initial one
 	_fsm->current_state  = _fsm->init_state;
 	_fsm->previous_state = NULL;
+	_fsm->current_event_id = 0;
 
-	mmt_map_free_key_and_data( _fsm->events_trace, NULL, mmt_mem_free );
-	_fsm->events_trace = mmt_map_init( compare_uint16_t );
-
-	mmt_map_free_key_and_data( _fsm->messages_trace, NULL, (void *)free_message_t );
-	_fsm->messages_trace = mmt_map_init( compare_uint16_t );
+	for( i=0; i< _fsm->events_trace->elements_count; i++ ){
+		mmt_free_and_assign_to_null( _fsm->events_trace->data[ i ]   );
+		mmt_free_and_assign_to_null( _fsm->messages_trace->data[ i ] );
+	}
 }
 
 static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
 
 	_fsm_t *new_fsm = mmt_mem_dup( _fsm, sizeof( _fsm_t) );
-	new_fsm->events_trace    = mmt_map_clone_key_and_data( _fsm->events_trace, NULL, mmt_mem_retain );
-	new_fsm->messages_trace  = mmt_map_clone_key_and_data( _fsm->messages_trace, NULL, (void *)retain_message_t );
+
+	new_fsm->events_trace    = mmt_array_clone( _fsm->events_trace,   mmt_mem_retain );
+	new_fsm->messages_trace  = mmt_array_clone( _fsm->messages_trace, (void *)retain_message_t );
 
 	return new_fsm;
 }
@@ -114,10 +120,11 @@ static inline enum fsm_handle_event_value _fire_a_tran( fsm_t *fsm, uint16_t tra
 	ret = fsm_handle_event( fsm,  transition_index, message_data, event_data, &new_fsm );
 
 	//Occasionally a new fsm may be created, we do not need it
-	//if( unlikely( new_fsm != NULL ) ) fsm_free( new_fsm );
+	if( unlikely( new_fsm != NULL ) ) fsm_free( new_fsm );
 
 	return ret;
 }
+
 
 static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_state_t *new_state, const fsm_transition_t *tran, message_t *message_data, void *event_data ){
 	void *ptr = NULL;
@@ -125,16 +132,18 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	size_t i;
 	enum fsm_handle_event_value ret;
 
+	if( _fsm->current_event_id == 0 ){
+		mmt_halt( "Not possible");
+	}
 
 	//mmt_debug( "fsm_id = %d (%p), ref = %zu, event_id: %d", _fsm->id, _fsm, mmt_mem_reference_count( event_data), tran->event_type );
+	if( unlikely( _fsm->events_trace->data[ _fsm->current_event_id   ] != NULL ) )
+		mmt_mem_free( _fsm->events_trace->data[ _fsm->current_event_id   ] );
+	if( unlikely( _fsm->messages_trace->data[ _fsm->current_event_id   ] != NULL ) )
+		free_message_t( _fsm->messages_trace->data[ _fsm->current_event_id   ] );
 
-	ptr = mmt_map_set_data( _fsm->events_trace, (void *) &tran->event_type, mmt_mem_retain( event_data ), YES );
-	//must free the old value
-	if( unlikely( ptr != NULL ) ) mmt_mem_free( ptr );
-
-	ptr = mmt_map_set_data( _fsm->messages_trace, (void *) &tran->event_type, retain_message_t( message_data ), YES );
-	//must free the old value
-	if( unlikely( ptr != NULL ) ) free_message_t( (message_t *) ptr );
+	_fsm->events_trace->data[ _fsm->current_event_id   ] = mmt_mem_retain( event_data );
+	_fsm->messages_trace->data[ _fsm->current_event_id ] = retain_message_t( message_data );
 
 //	/* Run exit action
 //	 * (even if it returns to itself) */
@@ -233,6 +242,11 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 		return FSM_ERR_ARG;
 
 //	mmt_debug( "Verify transition: %d of fsm %p", transition_index, fsm );
+	//event_type = FSM_EVENT_TYPE_TIMEOUT when this function is called by #_fire_a_tran
+	//e.g., when no real-transition can be fired
+	//in such a case, event_id will be the last transition that can not be fire
+	if( _fsm->current_state->transitions[ transition_index ].event_type != FSM_EVENT_TYPE_TIMEOUT )
+		_fsm->current_event_id = _fsm->current_state->transitions[ transition_index ].event_type;
 
 	//check if timeout
 	tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
@@ -249,13 +263,13 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 		return FSM_NO_STATE_CHANGE;
 
 	tran = &_fsm->current_state->transitions[ transition_index ];// _get_transition(_fsm, state, event);
+
 	//must not be null
 //	if( tran == NULL ) return FSM_NO_STATE_CHANGE;
 
 	/* If transition is guarded, ensure that the condition is held: */
-	if (tran->guard != NULL && tran->guard( event_data, (fsm_t *)fsm)  == NO )
+	if (tran->guard != NULL && tran->guard( event_data, fsm)  == NO )
 		return FSM_NO_STATE_CHANGE;
-
 
 	/* A transition must have a next _state defined
 	 * If the user has not defined the next _state, go to error _state: */
@@ -309,8 +323,8 @@ void fsm_free( fsm_t *fsm ){
 
 	_fsm = (_fsm_t *)fsm;
 
-	mmt_map_free_key_and_data( _fsm->events_trace, NULL, mmt_mem_free );
-	mmt_map_free_key_and_data( _fsm->messages_trace, NULL, (void *)free_message_t );
+	mmt_array_free( _fsm->events_trace,   mmt_mem_free );
+	mmt_array_free( _fsm->messages_trace, (void *)free_message_t );
 	mmt_mem_free( fsm );
 }
 
@@ -318,7 +332,7 @@ void fsm_free( fsm_t *fsm ){
 /**
  * Public API
  */
-const mmt_map_t* fsm_get_execution_trace( const fsm_t *fsm ){
+const mmt_array_t* fsm_get_execution_trace( const fsm_t *fsm ){
 	_fsm_t *_fsm;
 	__check_null( fsm, NULL );
 
@@ -336,7 +350,7 @@ const void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
 	__check_null( fsm, NULL );
 
 	_fsm = (_fsm_t *)fsm;
-	return mmt_map_get_data( _fsm->events_trace, &event_id );
+	return _fsm->events_trace->data[ event_id ];
 }
 
 /**

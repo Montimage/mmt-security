@@ -3,10 +3,10 @@
 -->
 <beginning>
 
-<!-- each function name must be prefixed by em_ -->
+<!-- each function name should be prefixed by em_ -->
 <embedded_functions><![CDATA[
 #include <string.h>
-int check_ip( const char* ip){
+int em_check_ip( const char* ip){
   return 0;
 }
 ]]></embedded_functions>
@@ -16,7 +16,7 @@ int check_ip( const char* ip){
     <event boolean_expression="1"/>
     <event 
            description="Must be Valid IP"
-           boolean_expression="(#check_ip( ip.src ) )"/>
+           boolean_expression="(#em_check_ip( ip.src ) )"/>
 </property>
  
 
@@ -24,10 +24,9 @@ int check_ip( const char* ip){
     description="check every packet">
     <event 
            description="Could be Valid IP"
-           boolean_expression="(#check_ip( ip.src ) )"/>
+           boolean_expression="(#em_check_ip( ip.src ) )"/>
     <event boolean_expression="1"/>
 </property>
-
 
  
 </beginning>

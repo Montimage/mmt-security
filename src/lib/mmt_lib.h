@@ -13,6 +13,7 @@
 #include "mmt_alloc.h"
 #include "mmt_dbl_linked_list.h"
 #include "mmt_map_t.h"
+#include "mmt_array_t.h"
 #include "mmt_utils.h"
 
 #endif /* SRC_LIB_MMT_LIB_H_ */

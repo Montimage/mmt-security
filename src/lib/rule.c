@@ -422,9 +422,9 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, char **embedded_functions){
 	xmlDoc *xml_doc = NULL;
 	xmlNode *root_node = NULL, *xml_node;
-	rule_t *array[1000] ;
+	rule_t *array[1000], *rule_ptr ;
 	char string[ MAX_STRING_SIZE ], *string_ptr;
-	size_t rules_count = 0, size;
+	size_t rules_count = 0, size, i;
 	xmlChar *xml_content;
 
 	*properties_arr = NULL;
@@ -455,11 +455,16 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, 
 
 		if( xml_node->type == XML_ELEMENT_NODE ) {
 			if( str_equal( xml_node->name, "property") ) {
-				array[ rules_count ] = _parse_a_rule( xml_node );
+				rule_ptr = _parse_a_rule( xml_node );
 
 				//when we get a new property => increase the counter
-				if( array[ rules_count] != NULL )
+				if( rule_ptr != NULL ){
+					//check duplicated rule_id
+					for( i=0; i<rules_count; i++ )
+						mmt_assert( array[i]->id != rule_ptr->id, "Error 13h: Duplicate rule id %d", rule_ptr->id );
+					array[ rules_count ] = rule_ptr;
 					rules_count ++;
+				}
 			}else if( str_equal( xml_node->name, "embedded_functions") ){
 				//mmt_assert( xml_node->type == XML_CDATA_SECTION_NODE, "Error 13b: Need to surround content of node \"%s\" by CDATA", xml_node->name );
 				xml_content = xmlNodeGetContent( xml_node );

@@ -379,6 +379,11 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	enum rule_engine_result ret = RULE_ENGINE_RESULT_UNKNOWN;;
 	//insert #message pointer to head of #data;
 
+	/**
+	 * We need to store the head of each entry in #fsm_by_expecting_event_id
+	 * as when verifying one event, a new fsm instance can be created and inserted
+	 * to the head of one entry
+	 */
 	for( i=0; i<_engine->max_events_count; i++ )
 		_engine->tmp_fsm_by_expecting_event_id[ i ] = _engine->fsm_by_expecting_event_id[ i ];
 
@@ -400,9 +405,9 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 
 			fsm_ind = (_fsm_tran_index_t *)node->data;
 			node = node->next;
+
 			//put this after node = node->next
 			// because #node can be freed( or inserted a new node) in the function #_fire_transition
-
 			ret = _fire_transition( fsm_ind, event_id, message, data, _engine );
 
 			//get only one verdict per packet

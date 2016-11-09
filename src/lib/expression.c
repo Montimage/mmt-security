@@ -268,7 +268,10 @@ size_t _parse_a_string( char **name, const char *string, size_t str_size ){
 	mmt_assert( index < str_size, "Error 3.a: String is in incorrect format: %s", temp );
 
 	//duplicate the name
-	*name = mmt_mem_dup( temp + 1, i - 1 );
+	if( i-1 == 0)
+		*name = mmt_mem_dup( "", 1 );
+	else
+		*name = mmt_mem_dup( temp + 1, i - 1 );
 
 	//jump over the closer
 	return index + 1;

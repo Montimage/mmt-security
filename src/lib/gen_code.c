@@ -267,7 +267,7 @@ static inline void _gen_transition_not( _meta_state_t *s_init,  _meta_state_t *s
 }
 
 /**
- * a BEFORE b : b must happen before a
+ * a BEFORE b : if we have a, then b must be occurred before
  *
  */
 static inline void _gen_transition_before( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
@@ -289,16 +289,17 @@ static inline void _gen_transition_before( _meta_state_t *s_init,  _meta_state_t
 		state->transitions = append_node_to_link_list( state->transitions,
 			_create_new_transition( FSM_EVENT_TYPE_TIMEOUT, 0, s_incl, FSM_ACTION_DO_NOTHING, NULL, "Timeout event will fire this transition"));
 
-	//if context occurred but trigger did not occurs before => goto #s_fail
+	//if a occurred but b did not occurs before => goto #s_fail
 	_gen_transition_rule( s_init, s_fail, s_fail, s_incl, states_list, context, index, rule, tran_action );
 
-	//gen for trigger that must occurs before
+	//gen for b that must occurs before
 	_gen_transition_rule( s_init, state, s_incl, s_incl, states_list, trigger, index, rule, FSM_ACTION_CREATE_INSTANCE );
 	//increase index
 	state->index = (*index)++;
 	states_list  = append_node_to_link_list( states_list, state );
-	//gen for trigger
-	//if #context occurs => goto #s_pass, otherwise if timeout => goto #s_incl
+	//gen for a that occurs after b
+	//if a (e.g., and b before) occurs => goto #s_pass,
+	// otherwise if timeout (e.g., we had b but not a) => goto #s_incl
 	_gen_transition_rule( state, s_pass, s_incl, s_incl, states_list, context, index, rule, tran_action );
 }
 
@@ -425,7 +426,7 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 		fprintf( fd, " s_%d_%zu = {", rule_id, state->index );
 		if( state->delay == NULL ){
 			fprintf( fd, "\n\t .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},");
-			fprintf( fd, "\n\t .is_temporary = 1,");
+			fprintf( fd, "\n\t .is_temporary = %d,", state != s_init && state != s_fail && state != s_incl && state != s_pass );
 		}else{
 			fprintf( fd, "\n\t .delay        = {.time_min = %"PRIu64"LL, .time_max = %"PRIu64"LL, .counter_min = %"PRIu64"LL, .counter_max = %"PRIu64"LL},",
 					state->delay->time_min,    state->delay->time_max,
@@ -453,6 +454,11 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 				if( tran->comment[0] != '\0' )
 					fprintf( fd, "\n\t\t /** %d %s */", __LINE__, tran->comment );
 				sprintf( buffer, "&g_%d_%d", rule_id, tran->guard_id );
+
+				//always create a new instance when going out from the initial state
+				if( state == s_init )
+					tran->action = FSM_ACTION_CREATE_INSTANCE;
+
 				fprintf( fd, "\n\t\t { .event_type = %d, .guard = %s, .action = %d, .target_state = &s_%d_%zu}%c //%s",
 						tran->event_type,
 						(tran->event_type == FSM_EVENT_TYPE_TIMEOUT ? "NULL  "  : buffer   ), //guard

@@ -1,4 +1,4 @@
-CC     = gcc
+CC     = gcc-4.9
 AR     = ar rcs
 RM     = rm -rf
 MKDIR  = mkdir -p
@@ -23,8 +23,8 @@ CLDFLAGS =
 
 #for debuging
 ifdef DEBUG
-	CFLAGS   += -g -DDEBUG_MODE
-	CLDFLAGS += -g -DDEBUG_MODE
+	CFLAGS   += -g -DDEBUG_MODE -O0 -fstack-protector-all -Wmaybe-uninitialized -Wuninitialized
+	CLDFLAGS += -g -DDEBUG_MODE -O0 -fstack-protector-all
 else
 	CFLAGS   += -O3
 	CLDFLAGS += -O3

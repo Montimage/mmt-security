@@ -14,8 +14,13 @@
  * Detailed definition of FSM
  */
 typedef struct fsm_struct{
+	uint16_t id;
+
 	uint64_t time_min, time_max;
 	uint64_t counter_min, counter_max;
+
+	/** ID of event to be verified */
+	uint16_t current_event_id;
 
    /**  Pointer to the current fsm_state_struct */
    const fsm_state_t *current_state;
@@ -26,33 +31,22 @@ typedef struct fsm_struct{
     * keep track of previous states.
     */
    const fsm_state_t *previous_state;
-   /**
-    *  Pointer to a state that will be entered whenever an error occurs in the machine.
-    *
-    * See #FSM_ERROR_STATE_REACHED for when the machine enters the error state.
-    */
-   const fsm_state_t *error_state;
 
-   /**
-    * Store initial state of the machine.
-    * It is used only in #fsm_reset to restore the #current_state
-    */
    const fsm_state_t *init_state;
+
+   const fsm_state_t *error_state;
 
    const fsm_state_t *incl_state;
 
    const fsm_state_t *success_state;
 
-   uint16_t id;
+
    /**
     * Trace of running FSM
     */
    mmt_array_t *events_trace; //map: <event_id : event_data>
 
    mmt_array_t *messages_trace;
-
-   /** ID of event to be verified */
-   uint16_t current_event_id;
 }_fsm_t;
 
 
@@ -259,7 +253,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	}
 
 	//do not use the message/event if it comes early than time_min
-	if( !(_fsm->time_min <= message_data->timestamp) )
+	if( message_data->timestamp < _fsm->time_min )
 		return FSM_NO_STATE_CHANGE;
 
 	tran = &_fsm->current_state->transitions[ transition_index ];// _get_transition(_fsm, state, event);

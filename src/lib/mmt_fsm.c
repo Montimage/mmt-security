@@ -253,7 +253,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT && _fsm->current_state->delay.time_max != 0 ){
 //		mmt_log( WARN, "Timeout out: %"PRIu64", max: %"PRIu64, timer, _fsm->current_state->delay.time_max);
 		//timeout
-		if( !(message_data->timestamp <= _fsm->time_max ))
+		if( message_data->timestamp > _fsm->time_max )
 			//fire timeout transition
 			return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
 	}

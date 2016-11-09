@@ -269,7 +269,7 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 
 	//if the execution of the transition having index = fsm_ind->index creates a new fsm
 	if( new_fsm != NULL ){
-		//if the new_fsm has been created
+		//if a new_fsm has been created
 		if( fsm == _engine->fsm_bootstrap ){
 			new_fsm_id = _find_an_available_id( _engine );
 			fsm_set_id( new_fsm, new_fsm_id );
@@ -385,7 +385,8 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	//	mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
 	//get from hash table the list of events to be verified
-	for( i=0; i<_engine->max_events_count; i++ ){
+	//event_id start from 1, but hash starts from 0
+	for( i=0; i<_engine->max_events_count - 1; i++ ){
 		event_id = hash[i];
 		//this event does not fire
 		if(  event_id == 0 ) continue;

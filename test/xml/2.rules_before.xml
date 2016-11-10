@@ -23,12 +23,12 @@ static inline int em_check_ip( const char* ip){
            boolean_expression="( ip.src == '61.174.51.233' )"/>
 </property>
  
- <!-- Check if the trigger (occurred) is referenced by the context -->
+ <!--OK: Check if the trigger (occurred) is referenced by the context -->
 <property value="BEFORE" property_id="103" type_property="ATTACK" 
-    description="check every packet" delay_min="0" delay_max="20">
+    description="check every packet" delay_min="0" delay_max="17">
     <event event_id="1"
            description="IP 61"
-           boolean_expression="( #em_check_ip(ip.src) &amp;&amp; (( tcp.flags == 2 ) &amp;&amp; (ip.src == ip.src.1) )"/>
+           boolean_expression="( #em_check_ip(ip.src) &amp;&amp; (( tcp.flags == 2 ) &amp;&amp; (ip.src == ip.src.2) )"/>
     <event event_id="2"
            description="Must exist before IP"
            boolean_expression="( ip.src == '61.174.51.233' )"/>

@@ -269,7 +269,8 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 
 	//if the execution of the transition having index = fsm_ind->index creates a new fsm
 	if( new_fsm != NULL ){
-		//if a new_fsm has been created
+		//the new fsm being created is an instance of #fsm_bootstrap
+		//=> put the new one to a new class
 		if( fsm == _engine->fsm_bootstrap ){
 			new_fsm_id = _find_an_available_id( _engine );
 			fsm_set_id( new_fsm, new_fsm_id );
@@ -307,10 +308,9 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 				break;
 //			case FSM_STATE_CHANGED:
 //			case FSM_NO_STATE_CHANGE:
-//			case FSM_ERR_ARG:
-//				//TODO: reset
-//				mmt_debug( "FSM_ERR_ARG" );
-//				break;
+			case FSM_ERR_ARG:
+				mmt_halt( "FSM_ERR_ARG" );
+				break;
 			default:
 				//add the new_fsm to lists
 				//the #new_fsm does not need to listen to the transition having index = #fsm_ind->index
@@ -351,10 +351,9 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 			_reset_engine_for_instance( _engine, fsm );
 			break;
 //		case FSM_NO_STATE_CHANGE:
-//		case FSM_ERR_ARG:
-//			//TODO: reset
-//			mmt_debug( "FSM_ERR_ARG" );
-//			break;
+		case FSM_ERR_ARG:
+			mmt_halt( "FSM_ERR_ARG" );
+			break;
 		default:
 			break;
 		}

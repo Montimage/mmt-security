@@ -126,16 +126,19 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	size_t i;
 	enum fsm_handle_event_value ret;
 
-	if( _fsm->current_event_id == 0 ){
+	if( unlikely( _fsm->current_event_id == 0 )){
 		mmt_halt( "Not possible");
 	}
 
 	//mmt_debug( "fsm_id = %d (%p), ref = %zu, event_id: %d", _fsm->id, _fsm, mmt_mem_reference_count( event_data), tran->event_type );
+
+	//check if we will override an element of execution trace
 	if( unlikely( _fsm->events_trace->data[ _fsm->current_event_id   ] != NULL ) )
 		mmt_mem_free( _fsm->events_trace->data[ _fsm->current_event_id   ] );
 	if( unlikely( _fsm->messages_trace->data[ _fsm->current_event_id   ] != NULL ) )
 		free_message_t( _fsm->messages_trace->data[ _fsm->current_event_id   ] );
 
+	//store execution log
 	_fsm->events_trace->data[ _fsm->current_event_id   ] = mmt_mem_retain( event_data );
 	_fsm->messages_trace->data[ _fsm->current_event_id ] = retain_message_t( message_data );
 
@@ -227,34 +230,34 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	__check_null( fsm, FSM_ERR_ARG );
 
 	_fsm = (_fsm_t *)fsm;
-	if ( unlikely( !_fsm->current_state )) //unknown current_state
-		return FSM_ERROR_STATE_REACHED;
-	//no outgoing transitions
-	else if ( unlikely( !_fsm->current_state->transitions_count ))
-		return FSM_NO_STATE_CHANGE;
-	else if( unlikely( _fsm->current_state->transitions_count <= transition_index ))
+	if ( unlikely( !_fsm->current_state
+			||  !_fsm->current_state->transitions_count
+			|| _fsm->current_state->transitions_count <= transition_index ))
 		return FSM_ERR_ARG;
 
-//	mmt_debug( "Verify transition: %d of fsm %p", transition_index, fsm );
+	//	mmt_debug( "Verify transition: %d of fsm %p", transition_index, fsm );
+
+	//do not use the message/event if it comes early than time_min
+	if( message_data->timestamp < _fsm->time_min )
+		return FSM_NO_STATE_CHANGE;
+
 	//event_type = FSM_EVENT_TYPE_TIMEOUT when this function is called by #_fire_a_tran
 	//e.g., when no real-transition can be fired
 	//in such a case, event_id will be the last transition that can not be fire
 	if( _fsm->current_state->transitions[ transition_index ].event_type != FSM_EVENT_TYPE_TIMEOUT )
 		_fsm->current_event_id = _fsm->current_state->transitions[ transition_index ].event_type;
 
-	//check if timeout
-	tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
-	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT && _fsm->current_state->delay.time_max != 0 ){
-//		mmt_log( WARN, "Timeout out: %"PRIu64", max: %"PRIu64, timer, _fsm->current_state->delay.time_max);
-		//timeout
-		if( message_data->timestamp > _fsm->time_max )
+
+
+	//check if timeout and not
+	if( message_data->timestamp > _fsm->time_max &&  !_fsm->current_state->is_temporary  ){
+		tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
+		if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT )
 			//fire timeout transition
 			return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
 	}
 
-	//do not use the message/event if it comes early than time_min
-	if( message_data->timestamp < _fsm->time_min )
-		return FSM_NO_STATE_CHANGE;
+
 
 	tran = &_fsm->current_state->transitions[ transition_index ];// _get_transition(_fsm, state, event);
 

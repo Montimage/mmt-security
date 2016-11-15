@@ -278,6 +278,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
 	mmt_sec_handler_t *sec_handler = (mmt_sec_handler_t *) args;
+
 	message_t *msg = _get_packet_info( ipacket );
 
 	//if there is no interested information

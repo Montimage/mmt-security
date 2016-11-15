@@ -69,6 +69,7 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler );
  */
 void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message );
 
+
 /**
  * Get rules attached to a given #handler
  */

@@ -250,7 +250,7 @@ static inline uint16_t _find_an_available_id( _rule_engine_t *_engine ){
 			return i;
 		}
 	//not enough
-	mmt_halt( "Not enough memory %s:%d", __FILE__, __LINE__ );
+	mmt_halt( "Not enough memory slots for instances (%s:%d)", __FILE__, __LINE__ );
 	return 0;
 }
 

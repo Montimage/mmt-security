@@ -19,7 +19,7 @@
 
 #include "../dpi/mmt_dpi.h"
 
-#define MAX_INSTANCE_COUNT 10000
+#define MAX_INSTANCE_COUNT 1000000
 
 const char *mmt_sec_get_version_info(){
 	//define in version.h

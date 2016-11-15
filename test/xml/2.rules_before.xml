@@ -27,7 +27,7 @@ static inline int em_check_ip( const char* ip){
  
  <!--OK: Check if the trigger (occurred) is referenced by the context -->
 <property value="BEFORE" property_id="103" type_property="ATTACK" 
-    description="check every packet" delay_min="0" delay_max="17">
+    description="check every packet" delay_min="0" delay_max="1">
     <event event_id="1"
            description="IP 61"
            boolean_expression="( #em_check_ip(ip.src) &amp;&amp; (( tcp.flags == 2 ) &amp;&amp; (ip.src == ip.dst.2) )"/>

@@ -1,6 +1,6 @@
-/**This code is generated automatically on 2016-1103 10:34:56.*/
- #ifndef MMT_DPI_H_
- #define MMT_DPI_H_
+/**This code is generated automatically on 2016-1115 15:44:30.*/
+ #ifndef ___MMT_DPI_H_
+ #define ___MMT_DPI_H_
  #include <stdint.h>
  #include <stdlib.h>
  #include <string.h>
@@ -12498,43 +12498,35 @@ enum data_types {
 }
  static inline const char* get_protocol_name_by_id( uint32_t p_id ){
 	size_t i;
-	for( i=0; i<DPI_PROTO_SIZE; i++ )
-		if( DPI_PROTO[i].id == p_id )
-			return DPI_PROTO[i].name;
-	return NULL;
+	if( p_id >= DPI_PROTO_SIZE ) return NULL; 
+	return DPI_PROTO[ p_id ].name;
 }
  static inline uint32_t get_attribute_id_by_protocol_id_and_attribute_name( uint32_t p_id, const char*attr_name ){
-	size_t i,j; const struct dpi_proto *proto;
-	for( i=0; i<DPI_PROTO_SIZE; i++ )
-		if( DPI_PROTO[i].id == p_id ){
-			proto = &( DPI_PROTO[i] );
-			for( j=0; j<proto->attributes_count; j++ )
-				if( strcmp(attr_name, proto->attributes[j].name) == 0 )
-					return proto->attributes[j].id;
-		}
+	size_t i; const struct dpi_proto *proto;
+	if( p_id >= DPI_PROTO_SIZE ) return -1; 
+	proto = &( DPI_PROTO[ p_id ] );
+	for( i=0; i<proto->attributes_count; i++ )
+		if( strcmp(attr_name, proto->attributes[i].name) == 0 )
+			return proto->attributes[i].id;
 	return -1;
 }
  static inline const char* get_attribute_name_by_protocol_id_and_attribute_id( uint32_t p_id, uint32_t attr_id ){
-	size_t i,j; const struct dpi_proto *proto;
-	for( i=0; i<DPI_PROTO_SIZE; i++ )
-		if( DPI_PROTO[i].id == p_id ){
-			proto = &( DPI_PROTO[i] );
-			for( j=0; j<proto->attributes_count; j++ )
-				if( proto->attributes[j].id == attr_id )
-					return proto->attributes[j].name;
-		}
+	size_t i; const struct dpi_proto *proto;
+	if( p_id >= DPI_PROTO_SIZE ) return NULL; 
+	proto = &( DPI_PROTO[ p_id ] );
+	for( i=0; i<proto->attributes_count; i++ )
+		if( proto->attributes[i].id == attr_id )
+			return proto->attributes[i].name;
 	return NULL;
 }
 static inline long get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
-	size_t i,j; const struct dpi_proto *proto;
-	for( i=0; i<DPI_PROTO_SIZE; i++ )
-		if( DPI_PROTO[i].id == p_id ){
-			proto = &( DPI_PROTO[i] );
-			for( j=0; j<proto->attributes_count; j++ )
-				if( a_id == proto->attributes[j].id )
-					return proto->attributes[j].data_type;
-		}
+	size_t i; const struct dpi_proto *proto;
+	if( p_id >= DPI_PROTO_SIZE ) return -1; 
+	proto = &( DPI_PROTO[ p_id ] );
+	for( i=0; i<proto->attributes_count; i++ )
+		if( a_id == proto->attributes[i].id )
+			return proto->attributes[i].data_type;
 	return -1;
 }
  #endif
-#endif
+#endif //___MMT_DPI_H_

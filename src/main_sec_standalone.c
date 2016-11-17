@@ -97,15 +97,16 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");
 	fprintf(stderr, "\t-i <interface> : Gives the interface name for live traffic analysis.\n");
+	fprintf(stderr, "\t-n <number>    : Number of threads. Default = 2\n");
 	fprintf(stderr, "\t-l             : Prints the available rules then exit.\n");
 	fprintf(stderr, "\t-h             : Prints this help.\n");
 	exit(1);
 }
 
-size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id) {
-	int opt, optcount = 0;
+size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id, size_t *threads_count ) {
+	int opt, optcount = 0, x;
 	filename[0] = '\0';
-	while ((opt = getopt(argc, argv, "t:i:lh")) != EOF) {
+	while ((opt = getopt(argc, argv, "t:i:n:lh")) != EOF) {
 		switch (opt) {
 		case 't':
 			optcount++;
@@ -122,6 +123,18 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			}
 			strncpy((char *) filename, optarg, MAX_FILENAME_SIZE);
 			*type = LIVE_INTERFACE;
+			break;
+		case 'n':
+			optcount++;
+			if (optcount < 1) {
+				usage(argv[0]);
+			}
+			x = atoi( optarg );
+			if( x >= 0 )
+				*threads_count = x;
+			else
+				usage(argv[0]);
+
 			break;
 		case 'l':
 			print_rules_info();
@@ -340,14 +353,14 @@ int main(int argc, char** argv) {
 	char errbuf[1024];
 	char filename[MAX_FILENAME_SIZE + 1];
 	int type;
-
+	size_t threads_count = 2;
 	struct pkthdr header;
 
 	size_t i, j, size;
 	uint16_t *rules_id_filter;
 	const proto_attribute_t **p_atts;
 
-	parse_options( argc, argv, filename, &type, rules_id_filter );
+	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count );
 
 	signal(SIGINT,  signal_handler);
 	signal(SIGTERM, signal_handler);
@@ -356,7 +369,7 @@ int main(int argc, char** argv) {
 	//get all available rules
 	size = mmt_sec_get_rules_info( &rules_arr );
 	//init mmt-sec to verify the rules
-	mmt_smp_sec_handler = mmt_smp_sec_register( rules_arr, size, 2, print_verdict, NULL );
+	mmt_smp_sec_handler = mmt_smp_sec_register( rules_arr, size, threads_count, print_verdict, NULL );
 
 	//init mmt_dpi extraction
 	init_extraction();

@@ -193,7 +193,7 @@ static inline void *_process_one_thread( void *arg ){
 
 		free_message_t( msg );
 	}
-	mmt_debug("DONE %zu", thread_arg->index );
+
 	mmt_mem_free( thread_arg );
 	return NULL;
 }

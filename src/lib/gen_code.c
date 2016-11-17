@@ -792,7 +792,7 @@ static inline void _gen_hash_function( FILE *fd, const mmt_map_t *events_map, ui
 
 	mmt_map_iterate(event_variables_map, _iterate_events_to_gen_hash_function, &_u_data );
 
-	mmt_map_free_key_and_data( event_variables_map, mmt_mem_free, _free_a_map );
+	mmt_map_free_key_and_data( event_variables_map, (void *)mmt_mem_free, _free_a_map );
 }
 
 static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){

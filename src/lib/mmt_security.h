@@ -28,7 +28,7 @@ const char *mmt_sec_get_version_info();
  */
 size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array );
 
-typedef void *mmt_sec_handler_t;
+typedef void mmt_sec_handler_t;
 
 enum verdict_type {VERDICT_DETECTED, VERDICT_NOT_DETECTED, VERDICT_RESPECTED, VERDICT_NOT_RESPECTED, VERDICT_UNKNOWN};
 static const char* verdict_type_string[] = {"detected", "not_detected", "respected", "not_respected", "unknown"};

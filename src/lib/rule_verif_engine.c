@@ -88,6 +88,7 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
  */
 rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instances_count  ){
 	size_t i;
+	mmt_assert( rule_info != NULL, "rule_info is NULL");
 	_rule_engine_t *_engine = mmt_mem_alloc( sizeof( _rule_engine_t ));
 	_engine->fsm_bootstrap             = rule_info->create_instance();
 	fsm_set_id( _engine->fsm_bootstrap, 0 );
@@ -150,7 +151,7 @@ static inline void _store_valid_execution_trace( _rule_engine_t *_engine, fsm_t 
 	if( _engine->valid_execution_trace != NULL )
 		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );
 
-	_engine->valid_execution_trace = mmt_array_clone( fsm_get_execution_trace( fsm ), (void *)retain_message_t );
+	_engine->valid_execution_trace = mmt_array_clone( fsm_get_execution_trace( fsm ), mmt_mem_retain );
 }
 
 /**

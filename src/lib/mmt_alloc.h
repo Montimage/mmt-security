@@ -32,7 +32,7 @@ void *mmt_mem_alloc( size_t size );
  * Free memory allocated by mmt_malloc
  * Do not use this function to free memory created by malloc
  */
-void  mmt_mem_free( void *ptr );
+size_t  mmt_mem_free( void *ptr );
 
 /**
  * Get information about memory being allocated and freed
@@ -83,6 +83,7 @@ static inline void* mmt_mem_dup( const void *ptr, size_t size ){
  */
 void *mmt_mem_retain( void *ptr );
 
+void *mmt_mem_retains( void *ptr, size_t retains_count );
 /**
  * Return number of pointers pointing to this memory
  */

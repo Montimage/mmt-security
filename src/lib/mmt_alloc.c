@@ -58,21 +58,31 @@ void *mmt_mem_alloc(size_t size){
 }
 
 
-void mmt_mem_free( void *x ){
-	__check_null( x, );
+size_t mmt_mem_free( void *x ){
+	__check_null( x, 0);
 
    _memory_t *mem = _convert_mem( x );
    if( mem->ref_count <= 1 ){
 		freed_memory_size += mem->size;
 		free( mem );
-   }else
+		return 0;
+   }else{
    	mem->ref_count --;
+   	return mem->ref_count;
+   }
 }
 
 void *mmt_mem_retain( void *x ){
 	__check_null( x, NULL );  // nothing to do
    _memory_t *mem = _convert_mem( x );
    mem->ref_count ++;
+   return mem->data;
+}
+
+void *mmt_mem_retains( void *x, size_t retains_count ){
+	__check_null( x, NULL );  // nothing to do
+   _memory_t *mem = _convert_mem( x );
+   mem->ref_count += retains_count;
    return mem->data;
 }
 

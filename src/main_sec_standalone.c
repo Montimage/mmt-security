@@ -35,7 +35,7 @@
 #include "lib/expression.h"
 #include "lib/mmt_lib.h"
 #include "lib/plugin_header.h"
-#include "lib/mmt_security.h"
+#include "lib/mmt_smp_security.h"
 
 
 #define MAX_FILENAME_SIZE 256
@@ -277,7 +277,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  * message to mmt-security.
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
-	mmt_sec_handler_t *sec_handler = (mmt_sec_handler_t *) args;
+	mmt_smp_sec_handler_t *sec_handler = (mmt_smp_sec_handler_t *) args;
 
 	message_t *msg = _get_packet_info( ipacket );
 
@@ -285,7 +285,7 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
 	if( unlikely( msg == NULL )) return 1;
 
-	mmt_sec_process( sec_handler, msg );
+	mmt_smp_sec_process( sec_handler, msg );
 
 	//need to free #msg
 	free_message_t( msg );
@@ -303,7 +303,7 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 	}
 }
 
-static mmt_sec_handler_t *mmt_sec_handler = NULL;
+static mmt_smp_sec_handler_t *mmt_smp_sec_handler = NULL;
 static const rule_info_t **rules_arr = NULL;
 static pcap_t *pcap;
 
@@ -311,11 +311,10 @@ void signal_handler(int signal_type) {
 	struct pcap_stat pcs; /* packet capture filter stats */
 
 	mmt_mem_free( proto_atts );
-	mmt_sec_unregister( mmt_sec_handler );
+	mmt_smp_sec_unregister( mmt_smp_sec_handler, NO );
 	mmt_mem_free( rules_arr );
 	mmt_mem_print_info();
 	mmt_info( "Interrupted by signal %d", signal_type );
-
 
 	pcap_breakloop( pcap );
 
@@ -352,13 +351,12 @@ int main(int argc, char** argv) {
 
 	signal(SIGINT,  signal_handler);
 	signal(SIGTERM, signal_handler);
-	signal(SIGSEGV, signal_handler);
 	signal(SIGABRT, signal_handler);
 
 	//get all available rules
 	size = mmt_sec_get_rules_info( &rules_arr );
 	//init mmt-sec to verify the rules
-	mmt_sec_handler = mmt_sec_register( rules_arr, size, print_verdict, NULL );
+	mmt_smp_sec_handler = mmt_smp_sec_register( rules_arr, size, 2, print_verdict, NULL );
 
 	//init mmt_dpi extraction
 	init_extraction();
@@ -370,7 +368,7 @@ int main(int argc, char** argv) {
 	}
 
 	//register protocols and their attributes using by mmt-sec
-	size = mmt_sec_get_unique_protocol_attributes( mmt_sec_handler, &p_atts );
+	size = mmt_smp_sec_get_unique_protocol_attributes( mmt_smp_sec_handler, &p_atts );
 	proto_atts_count = size;
 
 	proto_atts = mmt_mem_alloc( size * sizeof( message_element_t ));
@@ -384,7 +382,7 @@ int main(int argc, char** argv) {
 	}
 
 	//Register a packet handler, it will be called for every processed packet
-	register_packet_handler(mmt_dpi_handler, 1, packet_handler, (void *)mmt_sec_handler );
+	register_packet_handler(mmt_dpi_handler, 1, packet_handler, (void *)mmt_smp_sec_handler );
 
 	if (type == TRACE_FILE) {
 		mmt_info("Analyzing pcap file %s", filename );
@@ -401,6 +399,8 @@ int main(int argc, char** argv) {
 				mmt_log(ERROR, "Packet data extraction failure.\n");
 			}
 		}
+
+		mmt_smp_sec_stop( mmt_smp_sec_handler, NO );
 	} else {
 		mmt_info("Listening on interface %s", filename );
 
@@ -426,7 +426,7 @@ int main(int argc, char** argv) {
 	pcap_close(pcap);
 
 	//free resources using by mmt-sec
-	mmt_sec_unregister( mmt_sec_handler );
+	mmt_smp_sec_unregister( mmt_smp_sec_handler, NO );
 	mmt_mem_free( rules_arr );
 	mmt_mem_free( proto_atts );
 	//print info about memory using by mmt-sec

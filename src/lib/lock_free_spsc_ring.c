@@ -67,6 +67,11 @@ int  ring_pop ( lock_free_spsc_ring_t *q, void **val ){
 }
 
 
-void ring_wait_for_data( lock_free_spsc_ring_t *q ){
+void ring_wait_for_pushing( lock_free_spsc_ring_t *q ){
+	usleep( 500 );
+}
+
+
+void ring_wait_for_poping( lock_free_spsc_ring_t *q ){
 	usleep( 500 );
 }

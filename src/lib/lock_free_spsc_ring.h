@@ -28,6 +28,7 @@ int  ring_push( lock_free_spsc_ring_t *q, void* val  );
 int  ring_pop ( lock_free_spsc_ring_t *q, void **val );
 void ring_free( lock_free_spsc_ring_t *q );
 
-void ring_wait_for_data( lock_free_spsc_ring_t *q );
+void ring_wait_for_pushing( lock_free_spsc_ring_t *q );
+void ring_wait_for_poping( lock_free_spsc_ring_t *q );
 
 #endif /* SRC_QUEUE_LOCK_FREE_SPSC_RING_H_ */

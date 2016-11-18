@@ -19,10 +19,28 @@ void mmt_print_execution_trace (void) {
   size    = backtrace (array, 10);
   strings = backtrace_symbols (array, size);
 
-  mmt_error("Obtained %zd stack frames:", size);
+  mmt_error("Execution trace:");
 
-  for (i = 0; i < size; i++)
+  for (i = 0; i < size; i++){
      fprintf(stderr, "\t %zu. %s\n", (i+1), strings[i]);
+
+     /* find first occurence of '(' or ' ' in message[i] and assume
+      * everything before that is the file name. (Don't go beyond 0 though
+      * (string terminator)*/
+//     size_t p = 0;
+//     while(strings[i][p] != '(' && strings[i][p] != ' '
+//   		  && strings[i][p] != 0)
+//   	  ++p;
+//
+//     char syscom[256];
+//
+//
+//     sprintf(syscom,"addr2line %p -e %.*s", array[i] , (int)p, strings[i] );
+//     //last parameter is the filename of the symbol
+//
+//     fprintf(stderr, "\n\t    ");
+//     if( system(syscom) ) {}
+  }
 
   free (strings);
 }

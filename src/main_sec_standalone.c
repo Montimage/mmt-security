@@ -320,27 +320,52 @@ static mmt_smp_sec_handler_t *mmt_smp_sec_handler = NULL;
 static const rule_info_t **rules_arr = NULL;
 static pcap_t *pcap;
 
+
 void signal_handler(int signal_type) {
+	static volatile int times_counter = 0;
 	struct pcap_stat pcs; /* packet capture filter stats */
 
-	mmt_mem_free( proto_atts );
-	mmt_smp_sec_unregister( mmt_smp_sec_handler, NO );
-	mmt_mem_free( rules_arr );
-	mmt_mem_print_info();
+	if( times_counter >= 1 ) exit( signal_type );
+
 	mmt_info( "Interrupted by signal %d", signal_type );
 
-	pcap_breakloop( pcap );
-
-	if (pcap_stats(pcap, &pcs) < 0) {
-		(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));
-	}else{
-		(void) fprintf(stderr, "\n%12d packets received by filter\n", pcs.ps_recv);
-		(void) fprintf(stderr, "%12d packets dropped by kernel (%3.2f%%)\n", pcs.ps_drop, pcs.ps_drop * 100.0 / pcs.ps_recv);
-		(void) fprintf(stderr, "%12d packets dropped by interface\n", pcs.ps_ifdrop);
-		fflush(stderr);
+	if( signal_type == SIGINT ){
+		mmt_info("Releasing resource ... (press Ctrl+c again to exit immediately)");
+		signal(SIGINT, signal_handler);
+	}
+	else if( signal_type == SIGSEGV ){
+		mmt_print_execution_trace();
+		exit( signal_type );
 	}
 
+	if( times_counter ==  0 ){
+
+		pcap_breakloop( pcap );
+
+		if (pcap_stats(pcap, &pcs) < 0) {
+			(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));
+		}else{
+			(void) fprintf(stderr, "\n%12d packets received by filter\n", pcs.ps_recv);
+			(void) fprintf(stderr, "%12d packets dropped by kernel (%3.2f%%)\n", pcs.ps_drop, pcs.ps_drop * 100.0 / pcs.ps_recv);
+			(void) fprintf(stderr, "%12d packets dropped by interface\n", pcs.ps_ifdrop);
+			fflush(stderr);
+		}
+
+		mmt_mem_free( proto_atts );
+		mmt_smp_sec_unregister( mmt_smp_sec_handler, NO );
+		mmt_mem_free( rules_arr );
+		mmt_mem_print_info();
+	}
+
+	times_counter ++;
 	exit( signal_type );
+}
+
+void register_signals(){
+	signal(SIGSEGV, signal_handler);
+	signal(SIGINT,  signal_handler);
+	signal(SIGTERM, signal_handler);
+	signal(SIGABRT, signal_handler);
 }
 
 int main(int argc, char** argv) {
@@ -362,9 +387,7 @@ int main(int argc, char** argv) {
 
 	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count );
 
-	signal(SIGINT,  signal_handler);
-	signal(SIGTERM, signal_handler);
-	signal(SIGABRT, signal_handler);
+	register_signals();
 
 	//get all available rules
 	size = mmt_sec_get_rules_info( &rules_arr );

@@ -28,7 +28,7 @@ typedef struct _mmt_smp_sec_handler_struct{
 	size_t proto_atts_count;
 	const proto_attribute_t **proto_atts_array;
 
-	//a shared buffer accessed by all threads in #threads_id
+	//one buffer per thread
 	lock_free_spsc_ring_t **messages_buffers;
 
 }_mmt_smp_sec_handler_t;
@@ -98,13 +98,15 @@ static inline void *_process_one_thread( void *arg ){
 	void *msg;
 	int ret;
 
+	pthread_setcanceltype( PTHREAD_CANCEL_ENABLE, NULL );
+
 	while( 1 ){
 		do{
 			ret = ring_pop( ring, &msg );
 			if( likely( ret == RING_SUCCESS ))
 				break;
 			else
-				ring_wait_for_data( ring );
+				ring_wait_for_pushing( ring );
 		}while( 1 );
 
 
@@ -115,6 +117,7 @@ static inline void *_process_one_thread( void *arg ){
 	}
 
 	mmt_mem_free( thread_arg );
+	mmt_debug("End of thread %zu", thread_arg->index );
 	return NULL;
 }
 
@@ -197,13 +200,14 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t 
 	for( i=0; i<_handler->threads_count; i++ ){
 		//insert msg to a buffer
 		msg = clone_message_t( message );
-		ret = ring_push( _handler->messages_buffers[ i ], msg );
+		do{
+			ret = ring_push( _handler->messages_buffers[ i ], msg );
 
-		if( likely( ret == RING_SUCCESS ))
-			continue;
-
-		//need to free the cloned message in the case it is not inserted into ring
-		free_message_t( msg );
+			if( likely( ret == RING_SUCCESS ))
+				break;
+			else
+				ring_wait_for_poping( _handler->messages_buffers[ i ] );
+		}while( 1 );
 	}
 }
 
@@ -214,13 +218,11 @@ void mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediately  ){
 
 	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *)handler;
 
-	if( stop_immediately )
+	if( stop_immediately ){
 		for( i=0; i<_handler->threads_count; i++ )
 			pthread_cancel( _handler->threads_id[ i ] );
-	else{
-		for( i=0; i<_handler->threads_count; i++ )
-			while( ring_push( _handler->messages_buffers[ i ], NULL ) != RING_SUCCESS )
-				usleep( 1000 );
+	}else{
+		mmt_smp_sec_process( handler, NULL );
 
 		//waiting for all threads finish their job
 		for( i=0; i<_handler->threads_count; i++ )

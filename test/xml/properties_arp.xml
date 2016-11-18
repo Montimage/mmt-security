@@ -42,6 +42,6 @@
              boolean_expression="(arp.ar_op == 2)"/>
     <event value="COMPUTE" event_id="2" 
            description="An arp reply but with different MAC address"
-           boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_sip.4))&amp;&amp;(arp.ar_sha != arp.ar_sha.1))"/>
+           boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_sip.1))&amp;&amp;(arp.ar_sha != arp.ar_sha.1))"/>
 </property>
 </beginning>

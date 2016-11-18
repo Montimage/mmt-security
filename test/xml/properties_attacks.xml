@@ -105,7 +105,7 @@
 </property>
 
 <!-- Property 7: R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK before belonging to the same session.-->
-<property value="THEN" delay_units="s" delay_min="-6" delay_max="6" property_id="37" type_property="ATTACK" 
+<property value="BEFORE" delay_units="s" delay_min="0" delay_max="6" property_id="37" type_property="ATTACK" 
     description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK before belonging to the same session.">
     <event value="COMPUTE" event_id="17"
            description="TCP RST"

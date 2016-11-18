@@ -524,6 +524,27 @@ size_t _get_unique_events_of_rule_node( const rule_node_t *node, mmt_map_t *even
 	return 0;
 }
 
+
+static inline void _iterate_to_check_variables( void *key, void *data, void *user_arg, size_t index, size_t total ){
+	mmt_map_t *map  = (mmt_map_t *)user_arg;
+	variable_t *var = (variable_t *)data;
+	void *ev_ptr = NULL;
+	if( var->ref_index == (uint16_t)UNKNOWN )
+		return;
+
+	ev_ptr = mmt_map_get_data( map, &( var->ref_index) );
+	mmt_assert( ev_ptr != NULL, "Error 13h: Variable \"%s.%s.%d\" references to unknown event %d", var->proto, var->att, var->ref_index, var->ref_index );
+}
+static inline void _iterate_to_check_event_id_in_boolean_expression( void *key, void *data, void *user_arg, size_t index, size_t total ){
+	rule_event_t *ev = (rule_event_t *) data;
+	mmt_map_t *vars_map = NULL;
+
+	//get list of variables
+	get_unique_variables_of_expression( ev->expression, &vars_map, YES );
+	//check
+	mmt_map_iterate( vars_map, _iterate_to_check_variables, user_arg );
+}
+
 /**
  * Public API
  */
@@ -535,6 +556,7 @@ size_t get_unique_events_of_rule( const rule_t *rule, mmt_map_t **events_map ){
 	events_count += _get_unique_events_of_rule_node( rule->trigger, map, &event_index );
 	if( events_count == 0 )
 		mmt_free_and_assign_to_null( map );
+	mmt_map_iterate( map, _iterate_to_check_event_id_in_boolean_expression, map );
 	*events_map = map;
 	return events_count;
 }

@@ -176,18 +176,14 @@ static inline enum verdict_type _get_verdict( int rule_type, enum rule_engine_re
 /**
  * Public API
  */
-void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message ){
+void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	_mmt_sec_handler_t *_handler;
 	size_t i;
 	int verdict;
 	enum rule_engine_result ret = RULE_ENGINE_RESULT_UNKNOWN;
 	const mmt_array_t *execution_trace;
 
-	__check_null( handler, );
-
 	_handler = (_mmt_sec_handler_t *)handler;
-
-	message_t *msg = clone_message_t( message );
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
@@ -217,6 +213,12 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	free_message_t( msg );
 }
 
+void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message ){
+	__check_null( handler, );
+	message_t *msg = clone_message_t( message );
+
+	_mmt_sec_process( handler, msg );
+}
 
 #define MAX_STR_SIZE 50000
 

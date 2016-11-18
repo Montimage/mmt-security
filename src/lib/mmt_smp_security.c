@@ -13,96 +13,8 @@
 
 #define RING_SIZE 100000
 
-#define RING_FULL 1
-#define RING_OK   0
-
-////////////////////////RING////////////////////////
-typedef struct ring_struct{
-	size_t head, tail, capacity, count;
-	void **buffer;
-	pthread_mutex_t mutex_lock;
-	pthread_cond_t thread_cond;
-
-	size_t last_tail;
-}ring_t;
-
-
-static inline ring_t * _ring_init( size_t capacity ){
-	size_t i;
-	ring_t *ring = mmt_mem_alloc( sizeof(ring_t) );
-	ring->capacity   = capacity;
-	ring->count      = 0;
-	ring->head       = ring->tail = ring->last_tail = 0;
-	ring->buffer     = mmt_mem_alloc( sizeof( void * ) * ring->capacity );
-	for( i=0; i< ring->capacity; i++ )
-		ring->buffer[ i ] = NULL;
-
-	pthread_mutex_init( &(ring->mutex_lock), NULL );
-	pthread_cond_init( &( ring->thread_cond), NULL );
-	return ring;
-}
-
-static inline int _ring_push( ring_t *ring, void *data ){
-	pthread_mutex_lock( &( ring->mutex_lock ) );
-
-	//check if ring is full
-	if( ring->count + 1 == ring->capacity ){
-		pthread_mutex_unlock( &( ring->mutex_lock ) );
-		return RING_FULL;
-	}
-
-	ring->buffer[ ring->head ] = data;
-
-	ring->head ++;
-	if( ring->head == ring->capacity )
-		ring->head = 0;
-
-	ring->count ++;
-
-	pthread_mutex_unlock( &( ring->mutex_lock ) );
-
-	//wake up the threads that are using _ring_pop
-	pthread_cond_broadcast( &(ring->thread_cond) );
-	return RING_OK;
-}
-
-static inline void * _ring_pop( ring_t *ring ){
-	size_t ref;
-	pthread_mutex_lock( &( ring->mutex_lock ) );
-
-	//waiting for data if the ring is empty
-	while( ring->count == 0 )
-		pthread_cond_wait( &(ring->thread_cond), &(ring->mutex_lock) );
-
-	void *tail     = ring->buffer[ ring->tail ];
-	if( unlikely( tail == NULL )){
-		pthread_mutex_unlock( &( ring->mutex_lock ) );
-		return NULL;
-	}
-
-	message_t *msg = clone_message_t( tail );
-	ref = free_message_t( tail);
-
-	//all threads access to this data
-	if( ref == 0 ){
-		ring->tail ++;
-		if( ring->tail == ring->capacity )
-			ring->tail = 0;
-		ring->count --;
-	}
-
-	pthread_mutex_unlock( &( ring->mutex_lock ) );
-
-	return msg;
-}
-
-static inline void _ring_free( ring_t *ring ){
-	pthread_mutex_destroy( &(ring->mutex_lock ));
-	pthread_cond_destroy( &( ring->thread_cond) );
-	mmt_mem_free( ring->buffer );
-	mmt_mem_free( ring );
-}
-////////////////////////END RING////////////////////////
+//implemented in mmt_security.c
+void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg );
 
 typedef struct _mmt_smp_sec_handler_struct{
 	size_t threads_count;
@@ -117,7 +29,7 @@ typedef struct _mmt_smp_sec_handler_struct{
 	const proto_attribute_t **proto_atts_array;
 
 	//a shared buffer accessed by all threads in #threads_id
-	ring_t *messages_buffer;
+	lock_free_spsc_ring_t **messages_buffers;
 
 }_mmt_smp_sec_handler_t;
 
@@ -165,7 +77,10 @@ void mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately )
 	for( i=0; i<_handler->threads_count; i++ )
 		mmt_sec_unregister( _handler->mmt_sec_handlers[i] );
 
-	_ring_free( _handler->messages_buffer );
+	for( i=0; i<_handler->threads_count; i++ )
+		ring_free( _handler->messages_buffers[ i ] );
+
+	mmt_mem_free( _handler->messages_buffers );
 
 	mmt_mem_free( _handler->mmt_sec_handlers );
 	mmt_mem_free( _handler->threads_id );
@@ -179,19 +94,24 @@ static inline void *_process_one_thread( void *arg ){
 	struct _thread_arg *thread_arg  = (struct _thread_arg *) arg;
 	_mmt_smp_sec_handler_t *handler = thread_arg->handler;
 	mmt_sec_handler_t *mmt_sec      = handler->mmt_sec_handlers[ thread_arg->index ];
-
-	message_t *msg;
+	lock_free_spsc_ring_t *ring     = handler->messages_buffers[ thread_arg->index ];
+	void *msg;
+	int ret;
 
 	while( 1 ){
-		//insert msg to a buffer
-		msg = (message_t *)_ring_pop( handler->messages_buffer );
+		do{
+			ret = ring_pop( ring, &msg );
+			if( likely( ret == RING_SUCCESS ))
+				break;
+			else
+				ring_wait_for_data( ring );
+		}while( 1 );
+
 
 		if( unlikely( msg == NULL ) )
 			break;
 
-		mmt_sec_process( mmt_sec, msg );
-
-		free_message_t( msg );
+		_mmt_sec_process( mmt_sec, msg );
 	}
 
 	mmt_mem_free( thread_arg );
@@ -219,7 +139,10 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	handler->rules_count     = rules_count;
 	handler->rules_array     = rules_array;
 	handler->threads_count   = threads_count;
-	handler->messages_buffer = _ring_init( RING_SIZE );
+	handler->messages_buffers= mmt_mem_alloc( sizeof( void *) * handler->threads_count );
+	//one buffer per thread
+	for( i=0; i<handler->threads_count; i++)
+		handler->messages_buffers[ i ] = ring_init( RING_SIZE );
 
 	//this is only for get mmt_sec_get_unique_protocol_attributes
 	mmt_sec_handler = mmt_sec_register( rules_array, rules_count, NULL, NULL );
@@ -248,7 +171,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 
 	handler->threads_id = mmt_mem_alloc( sizeof( pthread_t ) * handler->threads_count );
 	for( i=0; i<handler->threads_count; i++ ){
-		thread_arg = mmt_mem_alloc( sizeof( struct _thread_arg ));
+		thread_arg          = mmt_mem_alloc( sizeof( struct _thread_arg ));
 		thread_arg->handler = handler;
 		thread_arg->index   = i;
 		ret = pthread_create( &handler->threads_id[ i ], NULL, _process_one_thread, thread_arg );
@@ -265,18 +188,22 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t 
 	_mmt_smp_sec_handler_t *_handler;
 	size_t i;
 	int ret;
+	message_t *msg;
 
 	__check_null( handler, );
 
 	_handler = (_mmt_smp_sec_handler_t *)handler;
 
-	message_t *msg = clone_message_t( message );
-	msg = mmt_mem_retains( msg, _handler->threads_count - 1 );
+	for( i=0; i<_handler->threads_count; i++ ){
+		//insert msg to a buffer
+		msg = clone_message_t( message );
+		ret = ring_push( _handler->messages_buffers[ i ], msg );
 
-	//insert msg to a buffer
-	ret = _ring_push( _handler->messages_buffer, msg );
-	if( ret == RING_FULL ){
-		while( free_message_t( msg ) > 0 );
+		if( likely( ret == RING_SUCCESS ))
+			continue;
+
+		//need to free the cloned message in the case it is not inserted into ring
+		free_message_t( msg );
 	}
 }
 
@@ -291,8 +218,9 @@ void mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediately  ){
 		for( i=0; i<_handler->threads_count; i++ )
 			pthread_cancel( _handler->threads_id[ i ] );
 	else{
-		while( _ring_push( _handler->messages_buffer, NULL ) != RING_OK )
-			usleep( 1000 );
+		for( i=0; i<_handler->threads_count; i++ )
+			while( ring_push( _handler->messages_buffers[ i ], NULL ) != RING_SUCCESS )
+				usleep( 1000 );
 
 		//waiting for all threads finish their job
 		for( i=0; i<_handler->threads_count; i++ )

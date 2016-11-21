@@ -4,6 +4,7 @@
  *  Created on: Oct 10, 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
+#include <arpa/inet.h>
 
 #include "mmt_security.h"
 #include "base.h"
@@ -17,6 +18,7 @@
 #include "version.h"
 #include "plugin_header.h"
 
+#include "../dpi/types_defs.h"
 #include "../dpi/mmt_dpi.h"
 
 #define MAX_INSTANCE_COUNT 1000000
@@ -42,6 +44,7 @@ typedef struct _mmt_sec_handler_struct{
 	size_t proto_atts_count;
 	const proto_attribute_t **proto_atts_array;
 }_mmt_sec_handler_t;
+
 
 size_t mmt_sec_get_rules(  const mmt_sec_handler_t *handler, const rule_info_t ***rules_array ){
 	__check_null( handler, 0 );
@@ -293,4 +296,123 @@ char* convert_execution_trace_to_json_string( const mmt_array_t *trace ){
 				index == trace->elements_count - 1? "}": ""  );
 	}
 	return (char *) mmt_mem_dup( buffer, strlen( buffer) );
+}
+
+/**
+ * Public API
+ */
+int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type ){
+	double number;
+	char buffer[100], *new_string = NULL;
+	const uint16_t buffer_size = 100;
+	uint16_t size;
+	//does not exist data for this proto_id and att_id
+	__check_null( data, 1 );
+
+	buffer[0] = '\0';
+
+	switch( type ){
+	case MMT_UNDEFINED_TYPE: /**< no type constant value */
+		return 1;
+	case MMT_DATA_CHAR: /**< 1 character constant value */
+		number = *(char *) data;
+		*new_type = NUMERIC;
+		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		return 0;
+
+	case MMT_U8_DATA: /**< unsigned 1-byte constant value */
+		number = *(uint8_t *) data;
+		*new_type = NUMERIC;
+		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		return 0;
+
+	case MMT_DATA_PORT: /**< tcp/udp port constant value */
+	case MMT_U16_DATA: /**< unsigned 2-bytes constant value */
+		number = *(uint16_t *) data;
+		*new_type = NUMERIC;
+		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		return 0;
+
+	case MMT_U32_DATA: /**< unsigned 4-bytes constant value */
+		number = *(uint32_t *) data;
+		*new_type = NUMERIC;
+		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		return 0;
+
+	case MMT_U64_DATA: /**< unsigned 8-bytes constant value */
+		number = *(uint64_t *) data;
+		*new_type = NUMERIC;
+		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		return 0;
+
+	case MMT_DATA_FLOAT: /**< float constant value */
+		number = *(float *) data;
+		*new_type = NUMERIC;
+		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		return 0;
+
+	case MMT_DATA_MAC_ADDR: /**< ethernet mac address constant value */
+		new_string = (char *) data;
+		size = snprintf(buffer , buffer_size, "%02x:%02x:%02x:%02x:%02x:%02x",
+				new_string[0], new_string[1], new_string[2], new_string[3], new_string[4], new_string[5] );
+		*new_type = STRING;
+		*new_data = mmt_mem_dup( buffer, size );
+		return 0;
+
+	case MMT_DATA_IP_NET: /**< ip network address constant value */
+		break;
+
+	case MMT_DATA_IP_ADDR: /**< ip address constant value */
+		inet_ntop(AF_INET, data, buffer, buffer_size );
+		//mmt_debug( "IPv4: %s", string );
+		*new_type = STRING;
+		*new_data = mmt_mem_dup( buffer, strlen( buffer));
+		return 0;
+
+	case MMT_DATA_IP6_ADDR: /**< ip6 address constant value */
+		inet_ntop(AF_INET6, data, buffer, buffer_size );
+		//mmt_debug( "IPv6: %s", string );
+		*new_type = STRING;
+		*new_data = mmt_mem_dup( buffer, strlen( buffer));
+		return 0;
+
+	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
+	case MMT_DATA_PATH: /**< protocol path constant value */
+	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
+	case MMT_DATA_BUFFER: /**< binary buffer content */
+	case MMT_DATA_POINT: /**< point constant value */
+	case MMT_DATA_PORT_RANGE: /**< tcp/udp port range constant value */
+	case MMT_DATA_DATE: /**< date constant value */
+	case MMT_DATA_TIMEARG: /**< time argument constant value */
+	case MMT_DATA_STRING_INDEX: /**< string index constant value (an association between a string and an integer) */
+	case MMT_DATA_LAYERID: /**< Layer ID value */
+	case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
+	case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
+	case MMT_STATS: /**< pointer to MMT Protocol statistics */
+		break;
+
+	case MMT_BINARY_DATA: /**< binary constant value */
+	case MMT_BINARY_VAR_DATA: /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
+	case MMT_STRING_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum BINARY_64DATA_LEN long */
+	case MMT_STRING_LONG_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum STRING_DATA_LEN long */
+		*new_type = STRING;
+		*new_data = mmt_mem_dup( ((mmt_binary_var_data_t *)data)->data, ((mmt_binary_var_data_t *)data)->len );
+		return 0;
+
+	case MMT_HEADER_LINE: /**< string pointer value with a variable size. The string is not necessary null terminating */
+		*new_type = STRING;
+		*new_data = mmt_mem_dup( ((mmt_header_line_t *)data)->ptr, ((mmt_header_line_t *)data)->len );
+		return 0;
+
+	case MMT_STRING_DATA_POINTER: /**< pointer constant value (size is void *). The data pointed to is of type string with null terminating character included */
+		*new_type = STRING;
+		*new_data  = mmt_mem_dup( data, strlen( (char*) data) );
+		return 0;
+
+	default:
+		break;
+	}
+
+	mmt_error("Data type %d has not yet implemented", type);
+	return 1;
 }

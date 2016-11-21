@@ -93,4 +93,17 @@ static inline uint64_t mmt_sec_encode_timeval( const struct timeval *t ){
 	return val;
 }
 
+/**
+ * Convert data encoded in a pcap packet to readable data that is either a double
+ * or a string ending by '\0'.
+ * This function will create a new memory segment to store its result.
+ * - Input:
+ * 	+ data: data to be converted
+ * 	+ type: type of #data
+ * - Output:
+ * 	+ new_data
+ * 	+ new_type: either STRING or NUMERIC
+ */
+int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type );
+
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

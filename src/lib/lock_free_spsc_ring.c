@@ -13,11 +13,13 @@
 #include "mmt_lib.h"
 #include "lock_free_spsc_ring.h"
 
+
 void ring_free( lock_free_spsc_ring_t *q ){
 	if( q == NULL ) return;
 	if( q->_data ) mmt_mem_free( q->_data );
 	mmt_mem_free( q );
 }
+
 lock_free_spsc_ring_t* ring_init( uint32_t size ){
 	lock_free_spsc_ring_t *q = mmt_mem_alloc( sizeof( lock_free_spsc_ring_t ));
 	q->_data = mmt_mem_alloc( sizeof( void *) * size );
@@ -26,6 +28,7 @@ lock_free_spsc_ring_t* ring_init( uint32_t size ){
 	q->_cached_head = q->_cached_tail = 0;
 	return q;
 }
+
 int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
 	uint32_t h;
 	h = q->_head;
@@ -39,13 +42,16 @@ int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
 		 If we still have space left from the last time we read, we don't have to read again. */
 	if( ( h + 3 ) % ( q->_size ) == q->_cached_tail )
 		return RING_FULL;
-
 	//not full
-	q->_data[ h ] = val;
-	atomic_store_explicit( &q->_head, (h +1) % q->_size, memory_order_release );
+	else{
+		q->_data[ h ] = val;
+		atomic_store_explicit( &q->_head, (h +1) % q->_size, memory_order_release );
 
-	return RING_SUCCESS;
+		return RING_SUCCESS;
+	}
 }
+
+
 int  ring_pop ( lock_free_spsc_ring_t *q, void **val ){
 	uint32_t  t;
 	t = q->_tail;
@@ -57,13 +63,14 @@ int  ring_pop ( lock_free_spsc_ring_t *q, void **val ){
 		 If we still have items left from the last time we read, we don't have to read again. */
 	if( q->_cached_head == t )
 		return RING_EMPTY;
+	else{
+		//not empty
+		*val = q->_data[ t ];
 
-	//not empty
-	*val = q->_data[ t ];
+		atomic_store_explicit( &q->_tail, (t+1) % q->_size, memory_order_release );
 
-	atomic_store_explicit( &q->_tail, (t+1) % q->_size, memory_order_release );
-
-	return RING_SUCCESS;
+		return RING_SUCCESS;
+	}
 }
 
 

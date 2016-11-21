@@ -35,7 +35,8 @@ typedef struct _mmt_smp_sec_handler_struct{
 
 struct _thread_arg{
 	size_t index;
-	_mmt_smp_sec_handler_t *handler;
+	mmt_sec_handler_t *mmt_sec;
+	lock_free_spsc_ring_t *ring;
 };
 
 /**
@@ -91,10 +92,10 @@ void mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately )
 
 
 static inline void *_process_one_thread( void *arg ){
-	struct _thread_arg *thread_arg  = (struct _thread_arg *) arg;
-	_mmt_smp_sec_handler_t *handler = thread_arg->handler;
-	mmt_sec_handler_t *mmt_sec      = handler->mmt_sec_handlers[ thread_arg->index ];
-	lock_free_spsc_ring_t *ring     = handler->messages_buffers[ thread_arg->index ];
+	struct _thread_arg *thread_arg = (struct _thread_arg *) arg;
+	mmt_sec_handler_t *mmt_sec     = thread_arg->mmt_sec;
+	lock_free_spsc_ring_t *ring    = thread_arg->ring;
+
 	void *msg;
 	int ret;
 
@@ -177,8 +178,9 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	handler->threads_id = mmt_mem_alloc( sizeof( pthread_t ) * handler->threads_count );
 	for( i=0; i<handler->threads_count; i++ ){
 		thread_arg          = mmt_mem_alloc( sizeof( struct _thread_arg ));
-		thread_arg->handler = handler;
 		thread_arg->index   = i;
+		thread_arg->mmt_sec = handler->mmt_sec_handlers[ i ];
+		thread_arg->ring    = handler->messages_buffers[ i ];
 		ret = pthread_create( &handler->threads_id[ i ], NULL, _process_one_thread, thread_arg );
 		mmt_assert( ret == 0, "Cannot create thread %zu", (i+1) );
 	}

@@ -193,24 +193,23 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
  */
 void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t *message ){
 	_mmt_smp_sec_handler_t *_handler;
-	size_t i;
 	int ret;
 	message_t *msg;
-
+	lock_free_spsc_ring_t **ring;
 	__check_null( handler, );
 
 	_handler = (_mmt_smp_sec_handler_t *)handler;
 
-	for( i=0; i<_handler->threads_count; i++ ){
+	for( ring = _handler->messages_buffers; ring < &(_handler->messages_buffers[ _handler->threads_count ]); ring++ ){
 		//insert msg to a buffer
 		msg = clone_message_t( message );
 		do{
-			ret = ring_push( _handler->messages_buffers[ i ], msg );
+			ret = ring_push( *ring, msg );
 
 			if( likely( ret == RING_SUCCESS ))
 				break;
 			else
-				ring_wait_for_poping( _handler->messages_buffers[ i ] );
+				ring_wait_for_poping( *ring );
 		}while( 1 );
 	}
 }

@@ -9,7 +9,7 @@
 #include "mmt_alloc.h"
 #include "mmt_log.h"
 
-static size_t allocated_memory_size, freed_memory_size;
+//static size_t allocated_memory_size, freed_memory_size;
 
 typedef struct _memory_struct{
 	size_t ref_count;
@@ -26,12 +26,12 @@ const static size_t size_of_memory_t = sizeof( _memory_t );
  */
 void mmt_mem_info( size_t *allocated, size_t *freed ){
 	mmt_assert( allocated != NULL && freed != NULL, "Variables are NULL");
-	*allocated = allocated_memory_size;
-	*freed     = freed_memory_size;
+	*allocated = 0;//allocated_memory_size;
+	*freed     = 0;//freed_memory_size;
 }
 
 void mmt_mem_print_info(){
-	mmt_log(INFO, "MMT allocated: %zu bytes, freed: %zu bytes", allocated_memory_size, freed_memory_size );
+	//mmt_log(INFO, "MMT allocated: %zu bytes, freed: %zu bytes", allocated_memory_size, freed_memory_size );
 }
 
 void *mmt_mem_alloc(size_t size){
@@ -43,7 +43,7 @@ void *mmt_mem_alloc(size_t size){
 	//quit if not enough
 	mmt_assert( mem != NULL, "Not enough memory to allocate %zu bytes", size);
 	//remember size of memory being allocated
-	allocated_memory_size += size;
+	//allocated_memory_size += size;
 
 	//safe string
 	((char *)mem)[ size-1 ] = '\0';
@@ -63,7 +63,7 @@ size_t mmt_mem_free( void *x ){
 
    _memory_t *mem = _convert_mem( x );
    if( mem->ref_count <= 1 ){
-		freed_memory_size += mem->size;
+		//freed_memory_size += mem->size;
 		free( mem );
 		return 0;
    }else{

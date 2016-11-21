@@ -116,8 +116,9 @@ static inline void *_process_one_thread( void *arg ){
 		_mmt_sec_process( mmt_sec, msg );
 	}
 
-	mmt_mem_free( thread_arg );
 	mmt_debug("End of thread %zu", thread_arg->index );
+	mmt_mem_free( thread_arg );
+
 	return NULL;
 }
 
@@ -152,6 +153,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	handler->proto_atts_count = mmt_sec_get_unique_protocol_attributes( mmt_sec_handler, &p_atts );
 	handler->proto_atts_array = mmt_mem_dup( p_atts, sizeof( void *) * handler->proto_atts_count );
 	mmt_sec_unregister( mmt_sec_handler ); //free this handler after getting unique set of proto_atts
+	mmt_sec_handler = NULL;
 	//end of using #mmt_sec_handler
 
 	rules_count_per_thread = rules_count / threads_count;

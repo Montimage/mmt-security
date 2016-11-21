@@ -5,6 +5,9 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
+#include <pthread.h>
 
 #include "mmt_security.h"
 #include "base.h"

@@ -51,7 +51,7 @@ static const rule_info_t **rules_arr = NULL;
 static size_t proto_atts_count = 0;
 static message_element_t *proto_atts = NULL;
 static int connectcnt=0;
-static int nbr_thr_p = 1; //nbr of mmt_sec processing threads
+static int nbr_thr_p = 3; //nbr of mmt_sec processing threads
 static bool recev_s[10]; //identifying the state of each connection (unfinished?)
 static bool notdone; //use notdone to terminate the server
 
@@ -71,7 +71,7 @@ typedef struct report {
     struct report * next;
     struct report * prev;
 } report_t;
-static struct report *report_list;
+static struct report *report_list = NULL;
 
 struct arg_struct{
 	int sock;
@@ -80,8 +80,9 @@ struct arg_struct{
 
 struct {
         pthread_spinlock_t spinlock_cr; //lock to count the reports received
-        pthread_spinlock_t spinlock_processing; //lock for flag concerning each report
+        pthread_spinlock_t spinlock_processing; //lock for processing threads
         pthread_spinlock_t spinlock_r; //lock to insert the reports
+        pthread_spinlock_t spinlock_recv_s; //lock for determining receiving state = YES/NO
         int count_str; //count the reports stored
         int count_rcv; //count the reports received
         } thread_lock;
@@ -106,27 +107,39 @@ int timevalcmp (struct timeval tv1, struct timeval tv2){
 
 /*Pop/Delete last node (FIFO-Queue)*/
 int pop_last(report_t **head)
-{
+{	int i;
+	report_t * last;
 		/*Only one node*/
-	if ((*head)->next==NULL) {
-		if((*head)->timestamp.tv_sec==0) //empty list
-			return 1;
-		else { //one node
-			(*head)->counter=0;
-			(*head)->elements_count=0;
-			(*head)->flag=0;
-			(*head)->next=NULL;
-			(*head)->prev=NULL;
-			(*head)->report_elements=NULL;
-			(*head)->timestamp.tv_sec=0;
-			(*head)->timestamp.tv_usec=0;
+	if (thread_lock.count_str==0) return 1;
+	if (thread_lock.count_str==1) { //one node
+			for (i=0; i< (*head)->elements_count; i++){
+				mmt_mem_free((*head)->report_elements[i].data);
+				(*head)->report_elements[i].data = NULL;
+			}
+			mmt_mem_free((*head)->report_elements);
+			mmt_mem_free(*head);
+			*head = NULL;
 			return 0;
+			}
+	if(thread_lock.count_str==2){ //2 nodes
+		last = (*head)->next;
+		(*head)->next = NULL;
+		(*head)->prev = *head;
+		for (i=0; i< last->elements_count; i++){
+		mmt_mem_free(last->report_elements[i].data);
 		}
+		mmt_mem_free(last->report_elements);
+		mmt_mem_free(last);
+		return 0;
 		}
-    report_t * last;
+   //more than 2 nodes
     last = (*head)->prev;
     last->prev->next = NULL;
     (*head)->prev = last->prev;
+    for (i=0; i< last->elements_count; i++){
+    		mmt_mem_free(last->report_elements[i].data);
+    		}
+    mmt_mem_free(last->report_elements);
     mmt_mem_free(last);
     return 0;
 }
@@ -137,32 +150,23 @@ int pop_last(report_t **head)
 int insert(report_t **head, report_t *report_node)
 {
 	report_t * current, * temp;
-	temp = (report_t *) mmt_mem_alloc(sizeof(report_t));
 
  // The list is empty
-  if (((*head)->next == NULL)&&((*head)->timestamp.tv_sec==0)) {
+  if (thread_lock.count_str==0) {
 	 //mmt_debug("Add the first node\n");
 	 // To calculate execution time
 	 //gettimeofday(&start_t, NULL);
-	 (*head)->flag = 0;
-	 (*head)->timestamp = report_node->timestamp;
-	 (*head)->counter = report_node->counter;
-	 (*head)->elements_count = report_node->elements_count;
-	 (*head)->report_elements = report_node->report_elements;
+	  *head = report_node;
+	 (*head)->prev = report_node;//if the node has only one node, head->prev = head; head->next = NULL
 	 (*head)->next = NULL;
-	 (*head)->prev = NULL;
 	 return 0;
 	 }
 
  // The list contains only one node
- if (((*head)->next == NULL)&&((*head)->report_elements!=NULL)){
+ if (thread_lock.count_str==1){
 	 if (timevalcmp((*head)->timestamp, report_node->timestamp)==0) { //add to the beginning
-		 //mmt_debug("Add to the beginning\n");
-		 temp->flag = 0;
-		 temp->timestamp = report_node->timestamp;
-		 temp->counter = report_node->counter;
-		 temp->elements_count = report_node->elements_count;
-		 temp->report_elements = report_node->report_elements;
+		 //mmt_debug("One node. Add to the beginning\n");
+		 temp = report_node;
 		 (*head)->prev = temp;
 		 temp->next = *head;
 		 temp->prev = *head;
@@ -170,17 +174,10 @@ int insert(report_t **head, report_t *report_node)
 		 return 0;
 		 }
 	 else { //add to the end
-		  //mmt_debug("Add to the end\n");
-		 (*head)->next = (report_t *) mmt_mem_alloc(sizeof(report_t));
-		 (*head)->next->report_elements = mmt_mem_alloc(sizeof(report_element_t));
-		 (*head)->next->next = NULL;
-		 (*head)->next->flag = 0;
-		 (*head)->next->timestamp = report_node->timestamp;
-		 (*head)->next->elements_count = report_node->elements_count;
-		 (*head)->next->counter = report_node->counter;
-		 (*head)->next->report_elements = report_node->report_elements;
-		 (*head)->next->prev = *head;
-		 (*head)->prev = (*head)->next;
+		 //mmt_debug("One node. Add to the end\n");
+		 report_node->prev = *head;
+		 (*head)->next = report_node;
+		 (*head)->prev = report_node;
 		 return 0;
 		 }
 	}
@@ -192,13 +189,9 @@ int insert(report_t **head, report_t *report_node)
                 current = current -> next;
         }
  if (current==*head){ //timestamp is bigger than the first node, add to the beginning
-		 //mmt_debug("Add to the beginning\n");
-		 temp->flag = 0;
-		 temp->timestamp = report_node->timestamp;
-		 temp->counter = report_node->counter;
-		 temp->elements_count = report_node->elements_count;
-		 temp->report_elements = report_node->report_elements;
-		 temp->next = *head;
+		 //mmt_debug("At least two nodes. Add to the beginning\n");
+		 temp = report_node;
+	 	 temp->next = *head;
 		 temp->prev = (*head)->prev;
 		 (*head)->prev = temp;
 		 *head = temp;
@@ -206,29 +199,18 @@ int insert(report_t **head, report_t *report_node)
 	 }
  if (current->next==NULL){
 	 if (timevalcmp(current->timestamp, report_node->timestamp)==1) {//add to the end
-		 //mmt_debug("Add to the end\n");
-		 current->next = (report_t *) mmt_mem_alloc(sizeof(report_t));
-		 current->next->report_elements = mmt_mem_alloc(sizeof(report_element_t));
-		 current->next->next = NULL;
-		 current->next->flag = 0;
-		 current->next->timestamp = report_node->timestamp;
-		 current->next->counter = report_node->counter;
-		 current->next->elements_count = report_node->elements_count;
-		 current->next->report_elements = report_node->report_elements;
-		 current->next->prev = current;
-		 (*head)->prev = current->next;
+		 //mmt_debug("At least two nodes. Add to the end\n");
+		 current->next = report_node;
+		 report_node->prev = current;
+		 (*head)->prev = report_node;
 		 return 0;
 			}
 	 }
  //there exist prev_node and after_node (current) to add new node between them
- //mmt_debug("Add to the middle\n");
+ //mmt_debug("At least two nodes. Add to the middle\n");
+ temp = report_node;
  current->prev->next = temp;
  temp->prev = current->prev;
- temp->flag = 0;
- temp->timestamp = report_node->timestamp;
- temp->counter = report_node->counter;
- temp->elements_count = report_node->elements_count;
- temp->report_elements = report_node->report_elements;
  temp->next = current;
  current->prev = temp;
  return 0;
@@ -460,7 +442,6 @@ static inline message_t* _report_to_msg( const report_t *report_node){
 		//mmt_debug("has_data=YES, return msg");
 		return msg;
 	}
-
 	free_message_t( msg );
 	return NULL;
 }
@@ -498,112 +479,105 @@ void *receiving_thr (void *arg) {
 
 	int length_of_report = 0;
 
-	report_t *report_node;
-	report_node = mmt_mem_alloc(sizeof(report_t));
-	report_node->report_elements = mmt_mem_alloc(sizeof(report_element_t));
-
-
 	while(1){
-		bzero(length_buffer,4);
-		n=read(sock, length_buffer, 4);//Read 4 bytes first to know the length of the report
+			bzero(length_buffer,4);
+			n=read(sock, length_buffer, 4);//Read 4 bytes first to know the length of the report
 
-		if (n < 0) {
-			error("ERROR reading from socket");
-		}
-
-		if (n < 4) break;
-		memcpy(&length_of_report,&length_buffer,4);
-
-		bzero(buffer,256);
-
-		if (length_of_report > 1000 || length_of_report < 30) continue; //1000 = maximum size of the report 30 = size of timeval (16) + 4 + 10
-
-		bzero(buffer,256);
-		n = read(sock,buffer,length_of_report-4);//Read the report
-		if (n < 0) error("ERROR reading from socket");
-
-		if ((int) pthread_spin_lock(&thread_lock.spinlock_cr)) error("thread_lock.spinlock_cr failed");
-		thread_lock.count_rcv++;
-	    pthread_spin_unlock(&thread_lock.spinlock_cr);
-
-
-		buffer[n]='\0';
-		length =0;
-
-
-		int counter = 0;
-
-		//mmt_debug("Report received, length=%d, thread_lock.count_rcv = %d \n", length_of_report, thread_lock.count_rcv);
-		memcpy(&report_node->timestamp,&buffer[length],sizeof(struct timeval));
-		length += sizeof (struct timeval);//16
-		//mmt_debug("Timestamp: %lu.%lu \n", report_node->timestamp.tv_sec, report_node->timestamp.tv_usec);
-
-		while((length_of_report- 4 -length) > 10){
-		memcpy(&report_node->report_elements[counter].proto_id,&buffer[length],4);
-		length += 4;
-		memcpy(&report_node->report_elements[counter].att_id,&buffer[length],4);
-		length += 4;
-		memcpy(&report_node->report_elements[counter].data_len,&buffer[length],2);
-		length += 2;
-		report_node->report_elements[counter].data = mmt_mem_alloc(report_node->report_elements[counter].data_len);
-		memcpy(report_node->report_elements[counter].data,&buffer[length],report_node->report_elements[counter].data_len);
-		//unsigned char * data = (unsigned char*)report_node->report_elements[counter].data;
-		//mmt_debug("proto_ID = %u. att_id = %u. data_len = %u. data = %02x, %02x\n", report_node->report_elements[counter].proto_id,
-				//report_node->report_elements[counter].att_id,
-				//report_node->report_elements[counter].data_len,
-				//buffer[length], data[0]);
-		length += report_node->report_elements[counter].data_len;
-		counter++;
-		}
-		report_node->elements_count = counter;
-		report_node->counter = 0; //TODO
-		report_node->next = NULL;
-		report_node->prev = NULL;
-
-		// Store the received report as a node
-		//void insert(report_t **head, report_t *report_node)
-		int rcr = pthread_spin_lock(&thread_lock.spinlock_r);
-		if (rcr) error("pthread_spin_lock failed");
-		if (insert(&report_list, report_node)!= 0) error("Insert failed");
-		thread_lock.count_str++;
-		if (thread_lock.count_str >= THRESHOLD_SIZE) {
-			if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
+			if (n < 0) {
+				error("ERROR reading from socket");
 			}
-		//if (thread_lock.count_str >= THRESHOLD_SIZE) report_handler((void *) mmt_sec_handler);
-		pthread_spin_unlock(&thread_lock.spinlock_r);
 
-/*
-		if (thread_lock.count_str >10) {
-					mmt_debug("List contains more than 5 elements\n");
-					pop_last(&report_list);
+			if (n < 4) break;
+			memcpy(&length_of_report,&length_buffer,4);
+
+			bzero(buffer,256);
+
+			if (length_of_report > 1000 || length_of_report < 30) continue; //1000 = maximum size of the report 30 = size of timeval (16) + 4 + 10
+
+			bzero(buffer,256);
+			n = read(sock,buffer,length_of_report-4);//Read the report
+			if (n < 0) error("ERROR reading from socket");
+			buffer[n]='\0';
+			length =0;
+
+			if ((int) pthread_spin_lock(&thread_lock.spinlock_cr)) error("thread_lock.spinlock_cr failed");
+			thread_lock.count_rcv++;
+		    pthread_spin_unlock(&thread_lock.spinlock_cr);
+
+			int counter = 0;
+			//mmt_debug("Report received, length=%d, thread_lock.count_rcv = %d \n", length_of_report, thread_lock.count_rcv);
+			report_t *report_node;
+			report_node = mmt_mem_alloc(sizeof(report_t));
+			report_node->flag = 0;
+			report_node->counter = 0; //TODO
+			report_node->next = NULL;
+			report_node->prev = NULL;
+			report_node->elements_count=0;
+			report_node->timestamp.tv_sec=0;
+			report_node->timestamp.tv_usec=0;
+			report_node->report_elements=NULL;
+
+			memcpy(&report_node->elements_count,&buffer[length],1);
+			length += 1;
+			report_node->report_elements = mmt_mem_alloc(report_node->elements_count * sizeof(report_element_t));
+			memcpy(&report_node->timestamp,&buffer[length],sizeof(struct timeval));
+			//mmt_debug("Timestamp: %lu.%lu \n",report_node->timestamp.tv_sec, report_node->timestamp.tv_usec);
+			length += sizeof (struct timeval);//16
+			while((length_of_report- 4 -length) > 10){
+			memcpy(&report_node->report_elements[counter].proto_id,&buffer[length],4);
+			length += 4;
+			memcpy(&report_node->report_elements[counter].att_id,&buffer[length],4);
+			length += 4;
+			memcpy(&report_node->report_elements[counter].data_len,&buffer[length],2);
+			length += 2;
+			report_node->report_elements[counter].data = mmt_mem_alloc(report_node->report_elements[counter].data_len);
+			memcpy(report_node->report_elements[counter].data,&buffer[length],report_node->report_elements[counter].data_len);
+			//unsigned char * data = (unsigned char*)report_node->report_elements[counter].data;
+			//mmt_debug("report_node->elements_count = %d, proto_ID = %u. att_id = %u. data_len = %u. data = %02x, %02x\n", (int) report_node->elements_count, report_node->report_elements[counter].proto_id,
+					//report_node->report_elements[counter].att_id,
+					//report_node->report_elements[counter].data_len,
+					//buffer[length], data[0]);
+			length += report_node->report_elements[counter].data_len;
+			counter++;
+			}
+
+			// Store the received report as a node
+			//void insert(report_t **head, report_t *report_node)
+			if (pthread_spin_lock(&thread_lock.spinlock_r)) error("pthread_spin_lock failed");
+			if (insert(&report_list, report_node)!= 0) error("Insert failed");
+			thread_lock.count_str++;
+
+			if (thread_lock.count_str >= THRESHOLD_SIZE) {
+				if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
 				}
-*/
-		//print_list(report_list);
-		//mmt_debug("%d reports stored", thread_lock.count_str);
-		//pop_last(&report_list);
-	}
+			//if (thread_lock.count_str >= THRESHOLD_SIZE) report_handler((void *) mmt_smp_sec_handler);
+			pthread_spin_unlock(&thread_lock.spinlock_r);
+
+		}
 	close(sock);
 	recev_s[i] = NO;
+	if (pthread_spin_lock(&thread_lock.spinlock_recv_s)) error("pthread_spin_lock failed");
 	if(!receiving_state()) {
 			//mmt_debug("Receiving's done");
 			if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
 			//mmt_debug("Broadcast unlock mutex");
 			}
+	pthread_spin_unlock(&thread_lock.spinlock_recv_s);
 	pthread_exit((void *)NULL);
 }
 
 int report_handler(void *args) {
 	mmt_sec_handler_t *sec_handler = (mmt_sec_handler_t *) args;
 	message_t *msg;
-	msg = mmt_mem_alloc(sizeof(message_t));
-	report_t *last_node;
-	last_node = mmt_mem_alloc(sizeof(report_t));
 
-	if (report_list->timestamp.tv_sec==0) //empty list
+	if (thread_lock.count_str==0) //empty list
 	{
 		return 0;
 	}
-	if (report_list->prev == NULL) //one node
+	//msg = mmt_mem_alloc(sizeof(message_t));
+	report_t *last_node;
+
+	if (thread_lock.count_str==1) //one node
 		{
 		last_node = report_list;
 		}
@@ -636,7 +610,7 @@ void *processing_thr (void *args) {
 				pthread_spin_unlock(&thread_lock.spinlock_r);
 				if(!receiving_state())	{
 					mmt_debug("Stopped receiving");
-					while(report_list->timestamp.tv_sec!=0){
+					while(thread_lock.count_str!=0){
 						if (pthread_spin_lock(&thread_lock.spinlock_processing)) error("pthread_spin_lock failed");
 						report_handler(sec_handler);
 						pthread_spin_unlock(&thread_lock.spinlock_processing);
@@ -684,6 +658,8 @@ int main(int argc, char** argv) {
 	pthread_spin_init(&thread_lock.spinlock_cr, 0);
 	pthread_spin_init(&thread_lock.spinlock_r, 0);
 	pthread_spin_init(&thread_lock.spinlock_processing, 0);
+	pthread_spin_init(&thread_lock.spinlock_recv_s, 0);
+
 	if (pthread_mutex_init(&mutex, NULL) != 0) error("pthread_mutex_init() error");
     if (pthread_cond_init(&cond, NULL) != 0) error("pthread_cond_init() error");
 
@@ -705,19 +681,22 @@ int main(int argc, char** argv) {
 		//if (get_attribute_data_type(p_atts[i]->proto_id, p_atts[i]->att_id) != -1 ) mmt_debug( "get_attribute_data_type failed");
 		//mmt_debug("get_attribute_data_type successes");
 		}
-
+/*
 	//initialization of the head node
-	report_list = mmt_mem_alloc(sizeof(report_t));
-	report_list->report_elements = mmt_mem_alloc(sizeof(report_element_t));
-	report_list->next = NULL;
-	report_list->prev = NULL;
-	report_list->timestamp.tv_sec = 0;
-	report_list->timestamp.tv_usec = 0;
-	report_list->report_elements = NULL;
-	report_list->counter = 0;
-	report_list->flag = 0;
-	report_list->elements_count = 0;
-
+		report_list = mmt_mem_alloc(sizeof(report_t));
+		report_list->report_elements = mmt_mem_alloc(sizeof(report_element_t));
+		report_list->next = NULL;
+		report_list->prev = NULL;
+		report_list->timestamp.tv_sec = 0;
+		report_list->timestamp.tv_usec = 0;
+		report_list->report_elements->proto_id = 0;
+		report_list->report_elements->att_id = 0;
+		report_list->report_elements->data_len = 0;
+		report_list->report_elements->data = NULL;
+		report_list->counter = 0;
+		report_list->flag = 0;
+		report_list->elements_count = 0;
+*/
 	/*Create here threads for reading and processing the stored reports after a suitable delay (in terms of buffer size and timestamp)
 	 * to make the reordering task makes sense.
 	 *
@@ -820,7 +799,8 @@ int main(int argc, char** argv) {
 	  mmt_mem_free( rules_arr );
 	  mmt_mem_free( proto_atts );
 	 //free report buffer
-	  mmt_mem_free(report_list);
+	  //mmt_mem_free(report_list->report_elements);
+	  //mmt_mem_free(report_list);
 
 	  ///free resources using by mmt-sec
 	  mmt_mem_print_info();

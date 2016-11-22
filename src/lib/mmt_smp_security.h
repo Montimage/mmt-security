@@ -3,6 +3,8 @@
  *
  *  Created on: Nov 17, 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
+ *
+ *  Multi-threads version of mmt_security
  */
 
 #ifndef SRC_LIB_MMT_SMP_SECURITY_H_
@@ -17,8 +19,14 @@ typedef void mmt_smp_sec_handler_t;
  * - Input
  * 	+ rules_arr  : array of rules to be validated
  * 	+ rules_count: number of rules in #rules_arr
+ * 	+ threads_count: number of threads
  * 	+ callback   : a function to be called when a rules is validated
  * 	+ user_data  : data will be passed to the #callback
+ * - Return:
+ * 	+ a handler
+ * - Note:
+ * 	The function callback can be called from different threads. (Thus if it accesses
+ * 	to a global variable or a static one, the access to these variables must be synchronous)
  */
 mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		const rule_info_t **rules_arr,

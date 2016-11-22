@@ -85,7 +85,7 @@ compile_rule: src/dpi/mmt_dpi.h $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen
 	
 sec_server: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -ldl
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CLDFLAGS) $^ $(LIBS) -ldl
 	
 sec_server_33: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"

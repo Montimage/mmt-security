@@ -1,0 +1,60 @@
+<!-- 
+   Test rules containing zero delay
+-->
+<beginning>
+
+<embedded_functions><![CDATA[
+#include <string.h>
+//each function name should be prefixed by em_
+//its input can be either a char *, or a double
+static inline int em_check_ip( const char* ip){
+  return strcmp( ip, "61.174.51.233") == 0;
+}
+]]></embedded_functions>
+
+<!--OK: Check if the trigger (occurred) is referenced by the context -->
+<property value="BEFORE" property_id="202" type_property="ATTACK" 
+    description="check every packet" delay_min="0" delay_max="1">
+    <event event_id="1"
+           description="IP 61"
+           boolean_expression="( #em_check_ip(ip.src) &amp;&amp; (( tcp.flags == 2 ) &amp;&amp; (ip.src == ip.dst.2) )"/>
+    <event event_id="2"
+           description="Must exist before IP"
+           boolean_expression="( 1 )"/>
+</property>
+ 
+ <!--OK: Check if the trigger (occurred) is referenced by the context -->
+<property value="BEFORE" property_id="203" type_property="ATTACK" 
+    description="check every packet" delay_min="0" delay_max="1">
+    <event event_id="1"
+           description="IP 61"
+           boolean_expression="( #em_check_ip(ip.src) &amp;&amp; (( tcp.flags == 2 ) &amp;&amp; (ip.src == ip.dst.2) )"/>
+    <event event_id="2"
+           description="Must exist before IP"
+           boolean_expression="( 1 )"/>
+</property>
+
+ <!--OK: Check if the trigger (occurred) is referenced by the context -->
+<property value="BEFORE" property_id="204" type_property="ATTACK" 
+    description="check every packet" delay_min="0" delay_max="1">
+    <event event_id="1"
+           description="IP 61"
+           boolean_expression="( #em_check_ip(ip.src) &amp;&amp; (( tcp.flags == 2 ) &amp;&amp; (ip.src == ip.dst.2) )"/>
+    <event event_id="2"
+           description="Must exist before IP"
+           boolean_expression="( 1 )"/>
+</property>
+
+ <!--OK: Check if the trigger (occurred) is referenced by the context -->
+<property value="BEFORE" property_id="205" type_property="ATTACK" 
+    description="check every packet" delay_min="0" delay_max="1">
+    <event event_id="1"
+           description="IP 61"
+           boolean_expression="( #em_check_ip(ip.src) &amp;&amp; (( tcp.flags == 2 ) &amp;&amp; (ip.src == ip.dst.2) )"/>
+    <event event_id="2"
+           description="Must exist before IP"
+           boolean_expression="( 1 )"/>
+</property>
+
+
+</beginning>

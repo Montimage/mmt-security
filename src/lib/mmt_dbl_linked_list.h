@@ -43,9 +43,23 @@ link_node_t *create_node_of_link_list( void *data );
 link_node_t *append_node_to_link_list( link_node_t *entry, void *data );
 link_node_t *insert_node_to_link_list( link_node_t *entry, void *data );
 
+/**
+ * Remove a node having #data from the list.
+ * If there is no node has #data, the function does not change the list.
+ */
 link_node_t *remove_node_from_link_list( link_node_t *entry, const void *data );
 
+/**
+ * Free a list.
+ * Data of each node is freed if #free_data == YES
+ */
 void free_link_list( link_node_t *head, bool free_data );
+
+/**
+ * Free a list and its data.
+ * Data of each node is freed by function #free_fn.
+ * If #free_fn is NULL, the data will not be freed.
+ */
 void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) );
 
 static inline size_t count_nodes_from_link_list( const link_node_t *entry ){

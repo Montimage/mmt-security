@@ -32,8 +32,21 @@ typedef struct message_struct{
 	message_element_t *elements;
 }message_t;
 
+/**
+ * Clone a message_t.
+ * This function creates new message_t by cloning everything inside #msg.
+ */
 message_t *clone_message_t( const message_t *msg );
 
+/**
+ * Free a message_t
+ * This function reduces the number of references of #msg.
+ * If there does not exist any more any references to #msg, then
+ * its resource will be freed.
+ *
+ * One can increase number of references of a variable by using either
+ * #mmt_mem_retain or #mmt_mem_retains
+ */
 size_t free_message_t( message_t *msg );
 
 #endif /* SRC_LIB_MESSAGE_T_H_ */

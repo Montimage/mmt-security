@@ -3,14 +3,20 @@
  *
  *  Created on: Oct 10, 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
+ *
+ *  One may change #MMT_SEC_PLUGINS_REPOSITORY and #MMT_SEC_PLUGINS_REPOSITORY_OPT from Makefile
  */
 
 #ifndef SRC_LIB_PLUGIN_ENGINE_H_
 #define SRC_LIB_PLUGIN_ENGINE_H_
 
+#ifndef MMT_SEC_PLUGINS_REPOSITORY
+	#define MMT_SEC_PLUGINS_REPOSITORY "rules"
+#endif
+#ifndef MMT_SEC_PLUGINS_REPOSITORY_OPT
+	#define MMT_SEC_PLUGINS_REPOSITORY_OPT "/opt/mmt/security/rules"
+#endif
 
-#define MMT_SEC_PLUGINS_REPOSITORY "rules"
-#define MMT_SEC_PLUGINS_REPOSITORY_OPT "/opt/mmt/security/rules"
 #include "plugin_header.h"
 
 /**

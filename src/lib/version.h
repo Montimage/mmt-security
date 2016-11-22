@@ -3,6 +3,9 @@
  *
  *  Created on: Nov 3, 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
+ *
+ *  Define version of mmt-security
+ *  One may change #VERSION and #GIT_VERSION from Makefile
  */
 
 #ifndef SRC_LIB_VERSION_H_

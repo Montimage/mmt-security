@@ -89,51 +89,6 @@ struct fsm_state_struct;
  * Transitions are triggered by events.
  * If a state has more than one transition with the same type of event (and the
  * same condition), the first transition in the array will be run.
- * An unconditional transition placed last in the transition array of a state can
- * act as a "catch-all".
- * A transition may optionally run an #action,
- * which will have the triggering event passed to it as an argument, along with the
- * current and new states' data.
- *
- * It is perfectly valid for a transition to return to the state it belongs to.
- * Such a transition will not call the states's #entry_action or #exit_action.
- * If there are no transitions for the current event,
- * the state's parent will be handed the event.
- *
- * ### Examples ###
- * - An unguarded transition to a state with no action performed:
- * ~~~{.c}
- * {
- *    .event_type = EVENT_TIMEOUT,
- *    .condition = NULL,
- *    .guard = NULL,
- *    .action = NULL,
- *    .target_state = &main_menu_state,
- * },
- * ~~~
- * - A guarded transition executing an action
- * ~~~{.c}
- * {
- *    .event_type = EVENT_KEYBOARD,
- *    .condition = NULL,
- *    .guard = &ensure_numeric_input,
- *    .action = &addToBuffer,
- *    .target_state = &awaiting_input_state,
- * },
- * ~~~
- * - A guarded transition using a condition
- * ~~~{.c}
- * {
- *    .event_type = EVENT_MOUSE,
- *    .condition = box_limits,
- *    .guard = &coord_limits,
- * },
- * ~~~
- * By using "conditions" a more general guard function can be used,
- * operating on the supplied argument #condition. In this example,
- * #coord_limits checks whether the coordinates in the mouse event
- * are within the limits of the "box".
- *
  */
 typedef struct fsm_transition_struct
 {
@@ -143,20 +98,24 @@ typedef struct fsm_transition_struct
     *  Check if data passed with event fulfills a condition.
     *
     * A transition may be conditional. If so, this function, if non-NULL, will
-    * be called. Its first argument will be supplied with #condition, which
-    * can be compared against the #payload in the #event.
-    * One may choose to use this argument or not.
-    * Only if the result is true, the transition will take place.
+    * be called.
     *
     * - Input:
-    *		+ condition event (data) to compare the incoming event against.
-    * 	+ event the event passed to the fsm_state_struct machine.
-    *		+ fsm the fsm containing this transition
+    * 	+ event: the event passed to the fsm_state_struct machine.
+    *		+ fsm: the fsm containing this transition
     * - Return
     * 	+ YES if the event's data fulfills the condition, otherwise NO.
     */
    int ( *guard )( const void *event_data, const fsm_t *fsm );
 
+   /**
+    * When the #guard is fulfilled, some pre-defined action will be performed.
+    * For instant, the #action can be one of the following:
+    * + FSM_ACTION_DO_NOTHING : nothing to do
+    * + FSM_ACTION_CREATE_INSTANCE: create an instance from the current fsm (that is also an instance).
+    *    The current fsm will not change. The instance is created by cloning the fsm and updating
+    *    its current state to the target state #target_state of this transition.
+    */
    int action;
    /**
     *  The next state
@@ -176,75 +135,6 @@ typedef struct fsm_transition_struct
  * 	and an #entry_action is called when the machine enters a new state.
  * If a state returns to itself, neither #exit_action nor #entry_action
  * will be called.
- *
- * States may be organized in a hierarchy by setting #parent_state.
- * When a group/parent state is entered, the machine is
- * redirected to the group state's #entry_state (if non-NULL).
- * If an event does not trigger any transition in a state and if the
- * state has a parent, the event will be passed to the parent state.
- * This behavior is repeated for all parents. Thus all children of a state
- * have a set of common #transitions. A parent state's #entry_action will not
- * be called if an event is passed on to a child state.
- *
- * The following lists the different types of states that may be created, and
- * how to create them:
- *
- * ### Normal state ###
- * ~~~{.c}
- * fsm_state_t normal_state = {
- *    .parent_state = &group_state,
- *    .entry_state = NULL,
- *    .transition = (fsm_transition_t[]){
- *       { EVENT_KEYBOARD, (void *)(intptr_t)'\n', &compare_char, NULL, &target_state },
- *    },
- *    .transitions_count = 1,
- *    .data = NULL,
- *    .entry_action = &do_sth,
- *    .exit_action = &clean_up,
- * };
- * ~~~
- * In this example, `normal_state` is a child of `group_state`, but the
- * #parent_state value may also be NULL to indicate that it is not a child of
- * any group state.
- *
- * ### Group/parent state ###
- * A state becomes a group/parent state when it is linked to by child states
- * by using #parent_state. No members in the group state need to be set in a
- * particular way.
- * A parent state may also have a parent.
- * ~~~{.c}
- * fsm_state_t group_state = {
- *    .entry_state = &normal_state,
- *    .entry_action = NULL,
- * ~~~
- * If there are any transitions in the machine that lead to a group state,
- * it makes sense to define an entry state in the group. This can be
- * done by using #entry_state, but it is not mandatory. If the #entry_state
- * state has children, the chain of children will be traversed until a child
- * with its #entry_state set to NULL is found.
- *
- * - Note:
- * 	If #entry_state is defined for a group state, the group state's
- * 	#entry_action will not be called (the state pointed to by #entry_state (after
- * 	following the chain of children), however, will have its #entry_action
- * 	called).
- *
- * -Warning:
- * 	The machine cannot detect cycles in parent chains and children chains.
- * 	If such cycles are present, fsm_handle_event() will
- * 	never finish due to never-ending loops.
- *
- * ### Final state ###
- * A final state is a state that terminates the machine. A state is
- * considered as a final one if its #transitions_count is 0:
- * ~~~{.c}
- * fsm_state_t final_state = {
- *    .transitions = NULL,
- *    .transitions_count = 0,
- * ~~~
- * The error state used by the machine to indicate errors should be a final state.
- * Any calls to fsm_handle_event() when the current state is a
- * final one will return #FSM_NO_STATE_CHANGE.
  *
  */
 typedef struct fsm_state_struct{
@@ -281,14 +171,11 @@ typedef struct fsm_state_struct{
 /**
  *  Initialize the machine
  *
- * This function creates and initializes the states. No actions are performed until
+ * This function creates and initializes the machine. No actions are performed until
  * fsm_handle_event() is called.
  *
  * - Note:
  * 	 The #entry_action for #init_state will not be called.
- *
- *		 If init_state is a parent state with its #entry_state defined,
- *		 it will not be entered. One must explicitly set the initial state.
  *
  * - Input:
  * 	+ init_state the initial state of the machine.
@@ -300,7 +187,7 @@ typedef struct fsm_state_struct{
 fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state, size_t events_count );
 
 /**
- * Reset the machine to #init_state and #error_state as being initialized.
+ * Reset the machine as being created.
  *
  * It is safe to call this function numerous
  * times, for instance in order to reset/restart the machine if a final
@@ -346,7 +233,7 @@ enum fsm_handle_event_value{
     * 	this return value should be considered as an error.
     */
 	FSM_NO_STATE_CHANGE,
-   /**  A final state (any but the error state) was reached */
+   /**  A final state was reached */
 	FSM_FINAL_STATE_REACHED,
 
 	/** current_state of #fsm is #incl_state */
@@ -356,21 +243,33 @@ enum fsm_handle_event_value{
 /**
  *  Pass an event to the machine
  *
- * The event will be passed to the current state, and possibly to the current
- * state's parent states (if any). If the event triggers a transition, a new
- * state will be entered. If the transition has an action defined,
- * it will be called. If the transition is to a state other
+ * The event will be passed to the current state.
+ * If the event triggers a transition, a new state will be entered.
+ * If the transition has an action defined, it will be called.
+ * If the transition is to a state other
  * than the current state, the current state's exit_action
  * is called (if defined). Likewise, if the state is a new
  * state, the new state's "entry action" is called (if defined).
  *
- * The returned value is negative if an error occurs.
- *
  * - Input:
- * 	+ fsm_struct the state machine to pass an event to.
- * 	+ event the event to be handled.
+ * 	+ fsm: the state machine to pass an event to.
+ * 	+ transition_index: indicates the transition T at index #transition_index of
+ * 		the current state of #fsm will be verified to fire.
+ * 	+ message_data: data to be stored in the execution trace of the machine if T fired.
+ * 	+ event_data: is a representation of #message_data. In fact #event_data is generated
+ * 		from #message_data by a convert function defined in each rule (being encoded in file .so).
+ * 		#event_data will be stored in execution history of the machine if T fired.
+ * - Output:
+ * 	+ new_fsm: points to a new instance of #fsm if the #action of the transition T
+ * 		is #FSM_ACTION_CREATE_INSTANCE and the transition has been fired, otherwise
+ * 		#new_fsm = NULL
  *	- Return:
  * 	+ fsm_handle_event_value
+ *
+ * - Note:
+ * 	From the current state of #fsm, any transition having type == #FSM_EVENT_TYPE_TIMEOUT will
+ * 	be verified firstly, before the transition having index == #transition_index. Thus if one of them
+ * 	can fire, the machine will fire that transition, not the one having index == #transition_index
  */
 enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data, fsm_t **new_fsm );
 

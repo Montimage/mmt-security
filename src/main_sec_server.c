@@ -39,10 +39,9 @@
 # define __FAVOR_BSD
 #endif
 
-#define MAX_FILENAME_SIZE 256
-#define MTU_BIG (16 * 1024)
+
 #define THRESHOLD_SIZE 200 //start mmt-sec processing from this number of reports
-#define THRESHOLD_TS 3 //start mmt-sec processing from this difference in timestamp
+#define THRESHOLD_TS 3000000 //start mmt-sec processing from this difference in timestamp
 
 
 //struct timeval start_t, end_t;
@@ -55,7 +54,7 @@ static int connectcnt=0;
 static int nbr_thr_p = 1; //nbr of mmt_sec processing threads
 static bool recev_s[10]; //identifying the state of each connection (unfinished?)
 static bool notdone; //use notdone to terminate the server
-static mmt_sec_config_struct_t mmt_sec_config_struct;
+static mmt_sec_config_struct_t *mmt_sec_config_struct;
 
 typedef struct report_element{
 	uint32_t proto_id;
@@ -78,6 +77,8 @@ static struct report *report_list = NULL;
 struct arg_struct{
 	int sock;
 	int index;
+	uint16_t threshold_size;
+	uint16_t threshold_time;
 };
 
 struct {
@@ -298,6 +299,11 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id) {
 		}
 	}
 	mmt_sec_config_struct = get_mmt_sec_config(config_file);
+	if (mmt_sec_config_struct==NULL)
+		{
+		fprintf(stderr, "Invalid configuration file: %s\n", config_file);
+		exit(1);
+		}
 	return 0;
 }
 
@@ -431,17 +437,11 @@ static inline message_t* _report_to_msg( const report_t *report_node){
 	msg->elements_count = proto_atts_count;
 	msg->elements       = mmt_mem_dup( proto_atts, proto_atts_count * sizeof( message_element_t));
 
-	//mmt_debug("Size = %d", (int) size);
 	for( i=0; i<proto_atts_count; i++ ){
 		data = _get_data_from_report(report_node, &proto_atts[i], &type);
-		//mmt_debug("Data:%s", (unsigned char *) data);
-		//mmt_debug("Type of data:%d",type);
 		if( data != NULL ){
 			//mmt_debug("has data = YES");
 			has_data = YES;
-
-		//msg->elements[i].proto_id  = arr[i]->proto_id;
-		//msg->elements[i].att_id    = arr[i]->att_id;
 		msg->elements[i].data      = data;
 		msg->elements[i].data_type = type;
 		}
@@ -557,8 +557,7 @@ void *receiving_thr (void *arg) {
 			if (pthread_spin_lock(&thread_lock.spinlock_r)) error("pthread_spin_lock failed");
 			if (insert(&report_list, report_node)!= 0) error("Insert failed");
 			thread_lock.count_str++;
-
-			if (thread_lock.count_str >= THRESHOLD_SIZE) {
+			if (thread_lock.count_str >= thr_recv_struct->threshold_size || time_diff(report_list->prev->timestamp, report_list->timestamp)>thr_recv_struct->threshold_time) {
 				if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
 				}
 			//if (thread_lock.count_str >= THRESHOLD_SIZE) report_handler((void *) mmt_smp_sec_handler);
@@ -626,7 +625,7 @@ void *processing_thr (void *args) {
 						report_handler(sec_handler);
 						pthread_spin_unlock(&thread_lock.spinlock_processing);
 					}
-					mmt_debug("Processing threads finished analyzing the reports. Still ON for the next possible connections");
+					printf("Processing threads finished analyzing the reports. Still ON for the next possible connections\n");
 				}
 				if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
 		}
@@ -660,10 +659,12 @@ int main(int argc, char** argv) {
 	thread_lock.count_str = 0;
 
 	parse_options(argc, argv, rules_id_filter);
-	portno = mmt_sec_config_struct.portno;
-	nb_thr_sec = mmt_sec_config_struct.nb_thr_sec;
-	//mmt_debug("%u.%u.%u.%u", mmt_sec_config_struct.nb_thr_sec, mmt_sec_config_struct.portno, mmt_sec_config_struct.threshold_size, mmt_sec_config_struct.threshold_time);
-		/*
+	mmt_debug("%u.%u.%u.%u", mmt_sec_config_struct->nb_thr_sec, mmt_sec_config_struct->portno, mmt_sec_config_struct->threshold_size, mmt_sec_config_struct->threshold_time);
+	portno = mmt_sec_config_struct->portno;
+	nb_thr_sec = mmt_sec_config_struct->nb_thr_sec;
+	thr_recv_arg.threshold_size = mmt_sec_config_struct->threshold_size;
+	thr_recv_arg.threshold_time = mmt_sec_config_struct->threshold_time;
+			/*
 		signal(SIGINT,  signal_handler);
 		signal(SIGTERM, signal_handler);
 		signal(SIGSEGV, signal_handler);
@@ -798,6 +799,7 @@ int main(int argc, char** argv) {
 	  mmt_smp_sec_unregister( mmt_smp_sec_handler, NO);
 	  mmt_mem_free( rules_arr );
 	  mmt_mem_free( proto_atts );
+	  free(mmt_sec_config_struct);
 	 //free report buffer
 	  //mmt_mem_free(report_list->report_elements);
 	  //mmt_mem_free(report_list);

@@ -10,16 +10,17 @@
 #include <inttypes.h>
 #include "mmt_sec_config.h"
 
-mmt_sec_config_struct_t get_mmt_sec_config(char *filename)
+void * get_mmt_sec_config(char *filename)
 {
-        mmt_sec_config_struct_t configstruct;
-        FILE *file = fopen (filename, "r");
+        mmt_sec_config_struct_t *configstruct;
 
+        FILE *file = fopen (filename, "r");
+		if (file==NULL) return NULL;
         if (file != NULL)
         {
 			char line[256];
 			int linenum = 0;
-
+            configstruct = malloc(sizeof(mmt_sec_config_struct_t));
                 while(fgets(line, 256, file) != NULL)
                 {
 					   char para[256];
@@ -29,12 +30,12 @@ mmt_sec_config_struct_t get_mmt_sec_config(char *filename)
 							fprintf(stderr, "Syntax error, line: %d\n", linenum);
 							continue;
 							}
-					    if(linenum==0) configstruct.nb_thr_sec =  val;
-					    else if(linenum==1) configstruct.portno = val;
-					    else if(linenum==2) configstruct.threshold_size = val;
-					    else if(linenum==3) configstruct.threshold_time =  val;
+					    if(linenum==0) configstruct->nb_thr_sec =  val;
+					    else if(linenum==1) configstruct->portno =  val;
+					    else if(linenum==2) configstruct->threshold_size = val;
+					    else if(linenum==3) configstruct->threshold_time = val;
 					    linenum++;
-                 } // End while
+                } // End while
 
         } // End if file
        fclose(file);

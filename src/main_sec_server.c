@@ -33,6 +33,7 @@
 #include "lib/mmt_smp_security.h"
 #include "dpi/mmt_dpi.h"
 #include "dpi/types_defs.h"
+#include "lib/mmt_sec_config.h"
 
 #ifndef __FAVOR_BSD
 # define __FAVOR_BSD
@@ -54,6 +55,7 @@ static int connectcnt=0;
 static int nbr_thr_p = 1; //nbr of mmt_sec processing threads
 static bool recev_s[10]; //identifying the state of each connection (unfinished?)
 static bool notdone; //use notdone to terminate the server
+static mmt_sec_config_struct_t mmt_sec_config_struct;
 
 typedef struct report_element{
 	uint32_t proto_id;
@@ -277,16 +279,25 @@ void usage(const char * prg_name) {
 
 size_t parse_options(int argc, char ** argv, uint16_t *rules_id) {
 	int opt, optcount = 0;
+	char * config_file;
 
-	while ((opt = getopt(argc, argv, "l:h")) != EOF) {
+	while ((opt = getopt(argc, argv, "c:lh")) != EOF) {
 		switch (opt) {
+		case 'c': 
+			optcount++;
+			if (optcount > 1) {
+							usage(argv[0]);
+							 }
+			config_file = optarg;
+			break;
 		case 'l':
 			print_rules_info();
 			exit( 0 );
-		case 'h': usage(argv[0]);
-		default: exit(1);
+		case 'h': 
+		default: usage(argv[0]);
 		}
 	}
+	mmt_sec_config_struct = get_mmt_sec_config(config_file);
 	return 0;
 }
 
@@ -626,8 +637,10 @@ void *processing_thr (void *args) {
 int main(int argc, char** argv) {
 	uint16_t *rules_id_filter;
 	const proto_attribute_t **p_atts;
+	uint32_t portno;
+	uint8_t nb_thr_sec;
 
-	int parentfd, childfd, portno, i;
+	int parentfd, childfd, i;
 
 	char buffer[256];
 	struct sockaddr_in serv_addr, cli_addr;
@@ -638,7 +651,7 @@ int main(int argc, char** argv) {
 
 	on = 1;
 	notdone = YES;
-	portno = 5001;
+
 	pthread_t thr_r[10];
 	pthread_t thr_p[3];
 
@@ -647,6 +660,9 @@ int main(int argc, char** argv) {
 	thread_lock.count_str = 0;
 
 	parse_options(argc, argv, rules_id_filter);
+	portno = mmt_sec_config_struct.portno;
+	nb_thr_sec = mmt_sec_config_struct.nb_thr_sec;
+	//mmt_debug("%u.%u.%u.%u", mmt_sec_config_struct.nb_thr_sec, mmt_sec_config_struct.portno, mmt_sec_config_struct.threshold_size, mmt_sec_config_struct.threshold_time);
 		/*
 		signal(SIGINT,  signal_handler);
 		signal(SIGTERM, signal_handler);
@@ -666,7 +682,7 @@ int main(int argc, char** argv) {
 	//get all available rules
 	size = mmt_sec_get_rules_info( &rules_arr );
 	//init mmt-sec to verify the rules
-	mmt_smp_sec_handler = mmt_smp_sec_register( rules_arr, size, 3, print_verdict, NULL );
+	mmt_smp_sec_handler = mmt_smp_sec_register( rules_arr, size, nb_thr_sec, print_verdict, NULL );
 
 	//register protocols and their attributes using by mmt-sec
 	size = mmt_smp_sec_get_unique_protocol_attributes( mmt_smp_sec_handler, &p_atts );

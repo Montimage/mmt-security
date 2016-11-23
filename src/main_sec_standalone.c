@@ -242,6 +242,11 @@ static mmt_smp_sec_handler_t *mmt_smp_sec_handler = NULL;
 static const rule_info_t **rules_arr = NULL;
 static pcap_t *pcap;
 
+void signal_handler_seg(int signal_type) {
+	mmt_print_execution_trace();
+	usleep( 50 );
+	exit( signal_type );
+}
 
 void signal_handler(int signal_type) {
 	static volatile int times_counter = 0;
@@ -249,15 +254,11 @@ void signal_handler(int signal_type) {
 
 	if( times_counter >= 1 ) exit( signal_type );
 
-	mmt_info( "Interrupted by signal %d", signal_type );
+	mmt_error( "Interrupted by signal %d", signal_type );
 
 	if( signal_type == SIGINT ){
-		mmt_info("Releasing resource ... (press Ctrl+c again to exit immediately)");
+		mmt_error("Releasing resource ... (press Ctrl+c again to exit immediately)");
 		signal(SIGINT, signal_handler);
-	}
-	else if( signal_type == SIGSEGV ){
-		mmt_print_execution_trace();
-		exit( signal_type );
 	}
 
 	if( times_counter ==  0 ){
@@ -284,7 +285,7 @@ void signal_handler(int signal_type) {
 }
 
 void register_signals(){
-	signal(SIGSEGV, signal_handler);
+	//signal(SIGSEGV, signal_handler_seg );
 	signal(SIGINT,  signal_handler);
 	signal(SIGTERM, signal_handler);
 	signal(SIGABRT, signal_handler);

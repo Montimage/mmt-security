@@ -10,7 +10,7 @@
 #include <pthread.h>
 #include "mmt_smp_security.h"
 #include <unistd.h>
-
+#include "system_info.h"
 #define RING_SIZE 100000
 
 //implemented in mmt_security.c
@@ -98,9 +98,13 @@ static inline void *_process_one_thread( void *arg ){
 
 	void *msg;
 	int ret;
+	long cpus_count = get_number_of_online_processors() - 1;
 
 	pthread_setcanceltype( PTHREAD_CANCEL_ENABLE, NULL );
 
+	if( cpus_count > 1 )
+		if( move_the_current_thread_to_a_processor( thread_arg->index % cpus_count + 1, -10 )) //cpu[0] is used for dispatching
+			mmt_error("Cannot move thread %d to cpu[%ld]", gettid(), thread_arg->index % cpus_count + 1  );
 	while( 1 ){
 		do{
 			ret = ring_pop( ring, &msg );
@@ -184,6 +188,9 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 		ret = pthread_create( &handler->threads_id[ i ], NULL, _process_one_thread, thread_arg );
 		mmt_assert( ret == 0, "Cannot create thread %zu", (i+1) );
 	}
+
+	if( move_the_current_thread_to_a_processor(0, -15 ) )
+		mmt_error("Cannot move thread %d to cpu[0]", gettid() );
 
 	return (mmt_smp_sec_handler_t *)handler;
 }

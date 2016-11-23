@@ -10,6 +10,10 @@
 
 #include <stdint.h>
 
+#ifdef SPIN_LOCK
+#include <pthread.h>
+#endif
+
 #define RING_EMPTY  -1
 #define RING_FULL   -2
 #define RING_SUCCESS 0
@@ -25,6 +29,10 @@ typedef struct lock_free_spsc_ring_struct
     uint32_t _size;
 
     void **_data;
+
+	#ifdef SPIN_LOCK
+   pthread_spinlock_t spin_lock;
+	#endif
 }lock_free_spsc_ring_t;
 
 /**

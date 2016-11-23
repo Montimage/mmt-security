@@ -68,9 +68,8 @@ MAIN_SEC_SERVER_V = mmt_sec_server_v
 
 LIB_NAME = libmmt_security
 
-all: $(MMT_DPI_HEADER) $(LIB_OBJS) $(MAIN_OBJS)
-	@echo "[COMPILE] $(OUTPUT)"
-	$(QUIET) $(CC) -o $(OUTPUT) $(CLDFLAGS)  $^ $(LIBS)
+all: standalone compile_rule rule_info sec_server
+
 %.o: %.c src/dpi/mmt_dpi.h
 	@echo "[COMPILE] $(notdir $@)"
 	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -c -o $@ $<

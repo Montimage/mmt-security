@@ -554,7 +554,8 @@ void *receiving_thr (void *arg) {
 			if (insert(&report_list, report_node)!= 0) error("Insert failed");
 			thread_lock.count_str++;
 			if (thread_lock.count_str >= thr_recv_struct->threshold_size || time_diff(report_list->prev->timestamp, report_list->timestamp)>thr_recv_struct->threshold_time) {
-				if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
+				//if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
+				report_handler(mmt_smp_sec_handler);
 				}
 			//if (thread_lock.count_str >= THRESHOLD_SIZE) report_handler((void *) mmt_smp_sec_handler);
 			pthread_spin_unlock(&thread_lock.spinlock_r);
@@ -592,6 +593,13 @@ int report_handler(void *args) {
 		}
 	msg =_report_to_msg(last_node);
 	if (pop_last(&report_list)==0) thread_lock.count_str--;
+	/*
+	if ( thread_lock.count_str==0){
+						gettimeofday(&end_t, NULL);
+						fprintf(stderr, "Processing threads finished analyzing the reports. Still ON for the next possible connections\n");
+						fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
+						}
+	*/
 	if(unlikely(msg == NULL)) return 1;
 	/* for debugging
 	int n_msge=0;
@@ -611,20 +619,19 @@ void *processing_thr (void *args) {
 	while(notdone){
 				if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
 				if (pthread_cond_wait(&cond, &mutex)!= 0) error("pthread_cond_wait failed");
-				if (pthread_spin_lock(&thread_lock.spinlock_r)) error("pthread_spin_lock failed");
-				report_handler(sec_handler);
-				pthread_spin_unlock(&thread_lock.spinlock_r);
-				if(!receiving_state())	{
+				//if (pthread_spin_lock(&thread_lock.spinlock_r)) error("pthread_spin_lock failed");
+				//pthread_spin_unlock(&thread_lock.spinlock_r);
+				//if(!receiving_state())	{
 					mmt_debug("Stopped receiving");
 					while(thread_lock.count_str!=0){
-						if (pthread_spin_lock(&thread_lock.spinlock_processing)) error("pthread_spin_lock failed");
+						//if (pthread_spin_lock(&thread_lock.spinlock_processing)) error("pthread_spin_lock failed");
 						report_handler(sec_handler);
-						pthread_spin_unlock(&thread_lock.spinlock_processing);
+						//pthread_spin_unlock(&thread_lock.spinlock_processing);
 					}
 					gettimeofday(&end_t, NULL);
 					fprintf(stderr, "Processing threads finished analyzing the reports. Still ON for the next possible connections\n");
 					fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
-				}
+				//}
 				if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
 		}
 	pthread_exit((void *)NULL);
@@ -788,6 +795,7 @@ int main(int argc, char** argv) {
 	    }
 	  }
 	  printf("Terminating server.\n");
+	  fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
 	  printf("Nb of reports received: %d\n", thread_lock.count_rcv);
 	  printf("Nb of reports lost: %d\n", thread_lock.count_str);
 	  close(parentfd);

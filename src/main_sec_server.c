@@ -1,5 +1,5 @@
 /*
- * main_server_receiving_report.c
+ * main_sec_server.c
  *
  *  Created on: Nov 3, 2016
  *      Author: vinh
@@ -103,6 +103,17 @@ int timevalcmp (struct timeval tv1, struct timeval tv2){
 	return 0;
 	}
 
+int free_report_t(report_t *node){
+	int i;
+	if (node==NULL) return 1; //nothing to do
+	for (i=0; i<node->elements_count; i++){
+		mmt_mem_free(node->report_elements[i].data);
+		}
+    	mmt_mem_free(node->report_elements);
+    	mmt_mem_free(node);
+    return 0;
+}
+
 /*Pop/Delete last node (FIFO-Queue)*/
 int pop_last(report_t **head)
 {	int i;
@@ -110,12 +121,7 @@ int pop_last(report_t **head)
 		/*Only one node*/
 	if (thread_lock.count_str==0) return 1;
 	if (thread_lock.count_str==1) { //one node
-			for (i=0; i< (*head)->elements_count; i++){
-				mmt_mem_free((*head)->report_elements[i].data);
-				(*head)->report_elements[i].data = NULL;
-			}
-			mmt_mem_free((*head)->report_elements);
-			mmt_mem_free(*head);
+			free_report_t(*head);
 			*head = NULL;
 			return 0;
 			}
@@ -123,22 +129,14 @@ int pop_last(report_t **head)
 		last = (*head)->next;
 		(*head)->next = NULL;
 		(*head)->prev = *head;
-		for (i=0; i< last->elements_count; i++){
-		mmt_mem_free(last->report_elements[i].data);
-		}
-		mmt_mem_free(last->report_elements);
-		mmt_mem_free(last);
+		free_report_t(last);
 		return 0;
 		}
    //more than 2 nodes
     last = (*head)->prev;
     last->prev->next = NULL;
     (*head)->prev = last->prev;
-    for (i=0; i< last->elements_count; i++){
-    		mmt_mem_free(last->report_elements[i].data);
-    		}
-    mmt_mem_free(last->report_elements);
-    mmt_mem_free(last);
+    free_report_t(last);
     return 0;
 }
 
@@ -152,8 +150,6 @@ int insert(report_t **head, report_t *report_node)
  // The list is empty
   if (thread_lock.count_str==0) {
 	 //mmt_debug("Add the first node\n");
-	 // To calculate execution time
-	 gettimeofday(&start_t, NULL);
 	  *head = report_node;
 	 (*head)->prev = report_node;//if the node has only one node, head->prev = head; head->next = NULL
 	 (*head)->next = NULL;
@@ -226,6 +222,7 @@ void print_list(report_t *head)
                 printf("\n");
         }
 }
+
 
 void print_rules_info(){
 	const rule_info_t **rules_arr;
@@ -485,6 +482,7 @@ void *receiving_thr (void *arg) {
 	unsigned char length_buffer[4];
 
 	int length_of_report = 0;
+	report_t *last_node;
 
 	while(1){
 			bzero(length_buffer,4);
@@ -555,15 +553,17 @@ void *receiving_thr (void *arg) {
 			thread_lock.count_str++;
 			if (thread_lock.count_str >= thr_recv_struct->threshold_size || time_diff(report_list->prev->timestamp, report_list->timestamp)>thr_recv_struct->threshold_time) {
 				//if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
-				report_handler(mmt_smp_sec_handler);
-				}
+			last_node = report_list->prev;//mmt_mem_dup(report_list->prev, sizeof(report_t));
+			report_handler(mmt_smp_sec_handler, last_node);
+			if (pop_last(&report_list)==0) thread_lock.count_str--;
+			//free_report_t(last_node);
+			}
 			//if (thread_lock.count_str >= THRESHOLD_SIZE) report_handler((void *) mmt_smp_sec_handler);
 			pthread_spin_unlock(&thread_lock.spinlock_r);
-
 		}
 	close(sock);
-	recev_s[i] = NO;
 	if (pthread_spin_lock(&thread_lock.spinlock_recv_s)) error("pthread_spin_lock failed");
+	recev_s[i] = NO;
 	if(!receiving_state()) {
 			//mmt_debug("Receiving's done");
 			if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
@@ -573,42 +573,12 @@ void *receiving_thr (void *arg) {
 	pthread_exit((void *)NULL);
 }
 
-int report_handler(void *args) {
+int report_handler(void *args, report_t *last_node) {
 	mmt_smp_sec_handler_t *sec_handler = (mmt_smp_sec_handler_t *) args;
 	message_t *msg;
 
-	if (thread_lock.count_str==0) //empty list
-	{
-		return 0;
-	}
-	//msg = mmt_mem_alloc(sizeof(message_t));
-	report_t *last_node;
-
-	if (thread_lock.count_str==1) //one node
-		{
-		last_node = report_list;
-		}
-	else{
-		last_node = report_list->prev;
-		}
 	msg =_report_to_msg(last_node);
-	if (pop_last(&report_list)==0) thread_lock.count_str--;
-	/*
-	if ( thread_lock.count_str==0){
-						gettimeofday(&end_t, NULL);
-						fprintf(stderr, "Processing threads finished analyzing the reports. Still ON for the next possible connections\n");
-						fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
-						}
-	*/
 	if(unlikely(msg == NULL)) return 1;
-	/* for debugging
-	int n_msge=0;
-	for(i=0;i<msg->elements_count;i++){
-		n_msge++;
-		//mmt_debug("Msg not null:%d,%d,%d,%s", msg->elements[i].proto_id, msg->elements[i].att_id, msg->elements[i].data_type, (unsigned char *) msg->elements[i].data);
-		}
-	mmt_debug("Nb msg_elem: %d", n_msge); */
-
 	mmt_smp_sec_process(sec_handler, msg);
 	free_message_t( msg );
 	return 0;
@@ -616,16 +586,20 @@ int report_handler(void *args) {
 
 void *processing_thr (void *args) {
 	mmt_smp_sec_handler_t *sec_handler = (mmt_smp_sec_handler_t *) args;
+	report_t * last;
 	while(notdone){
 				if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
 				if (pthread_cond_wait(&cond, &mutex)!= 0) error("pthread_cond_wait failed");
 				//if (pthread_spin_lock(&thread_lock.spinlock_r)) error("pthread_spin_lock failed");
 				//pthread_spin_unlock(&thread_lock.spinlock_r);
+				//report_handler(mmt_smp_sec_handler);
 				//if(!receiving_state())	{
 					mmt_debug("Stopped receiving");
 					while(thread_lock.count_str!=0){
+						last = report_list->prev;
 						//if (pthread_spin_lock(&thread_lock.spinlock_processing)) error("pthread_spin_lock failed");
-						report_handler(sec_handler);
+						report_handler(sec_handler, last);
+						if (pop_last(&report_list)==0) thread_lock.count_str--;
 						//pthread_spin_unlock(&thread_lock.spinlock_processing);
 					}
 					gettimeofday(&end_t, NULL);
@@ -788,6 +762,8 @@ int main(int argc, char** argv) {
 		error("ERROR on accept");
 	    thr_recv_arg.sock = (intptr_t) childfd;
 	    thr_recv_arg.index = connectcnt;
+	    // To calculate execution time
+	    if (connectcnt==0)gettimeofday(&start_t, NULL);
 	    if (pthread_create(&thr_r[connectcnt], NULL, receiving_thr,(void*) &thr_recv_arg)) error("Can't create threads for reading");
 	    connectcnt++;
 	    //mmt_debug("Created receiving thread with thr_recv_arg.index =%d", thr_recv_arg.index);

@@ -39,12 +39,7 @@
 # define __FAVOR_BSD
 #endif
 
-
-#define THRESHOLD_SIZE 200 //start mmt-sec processing from this number of reports
-#define THRESHOLD_TS 3000000 //start mmt-sec processing from this difference in timestamp
-
-
-//struct timeval start_t, end_t;
+struct timeval start_t, end_t;
 
 static mmt_smp_sec_handler_t *mmt_smp_sec_handler = NULL;
 static const rule_info_t **rules_arr = NULL;
@@ -158,7 +153,7 @@ int insert(report_t **head, report_t *report_node)
   if (thread_lock.count_str==0) {
 	 //mmt_debug("Add the first node\n");
 	 // To calculate execution time
-	 //gettimeofday(&start_t, NULL);
+	 gettimeofday(&start_t, NULL);
 	  *head = report_node;
 	 (*head)->prev = report_node;//if the node has only one node, head->prev = head; head->next = NULL
 	 (*head)->next = NULL;
@@ -273,6 +268,7 @@ void print_verdict( const rule_info_t *rule,		//id of rule
 void usage(const char * prg_name) {
 	fprintf(stderr, "%s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
+	fprintf(stderr, "\t-c <config file>: Start MMT-SEC server\n");
 	fprintf(stderr, "\t-l: Prints the available rules then exit.\n");
 	fprintf(stderr, "\t-h: Prints this help.\n");
 	exit(1);
@@ -625,7 +621,9 @@ void *processing_thr (void *args) {
 						report_handler(sec_handler);
 						pthread_spin_unlock(&thread_lock.spinlock_processing);
 					}
-					printf("Processing threads finished analyzing the reports. Still ON for the next possible connections\n");
+					gettimeofday(&end_t, NULL);
+					fprintf(stderr, "Processing threads finished analyzing the reports. Still ON for the next possible connections\n");
+					fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
 				}
 				if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
 		}
@@ -790,7 +788,6 @@ int main(int argc, char** argv) {
 	    }
 	  }
 	  printf("Terminating server.\n");
-	  //printf("\n\nExecution time = %d\n", time_diff(start_t, end_t));
 	  printf("Nb of reports received: %d\n", thread_lock.count_rcv);
 	  printf("Nb of reports lost: %d\n", thread_lock.count_str);
 	  close(parentfd);

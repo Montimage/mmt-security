@@ -76,7 +76,7 @@ all: standalone compile_rule rule_info sec_server
 	
 test.%: $(MMT_DPI_HEADER) $(LIB_OBJS) test/%.o
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(OUTPUT) $(CLDFLAGS)  $^ $(LIBS)
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $@ $(CLDFLAGS)  $^ $(LIBS)
 
 compile_rule: src/dpi/mmt_dpi.h $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
 	@echo "[COMPILE] $(MAIN_GEN_PLUGIN)"

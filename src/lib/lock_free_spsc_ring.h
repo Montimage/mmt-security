@@ -9,10 +9,7 @@
 #define SRC_LOCK_FREE_SPSC_RING_H_
 
 #include <stdint.h>
-
-#ifdef SPIN_LOCK
 #include <pthread.h>
-#endif
 
 #define RING_EMPTY  -1
 #define RING_FULL   -2
@@ -29,6 +26,9 @@ typedef struct lock_free_spsc_ring_struct
     uint32_t _size;
 
     void **_data;
+
+    //pthread_mutex_t mutex_wait_pushing, mutex_wait_poping;
+    //pthread_cond_t cond_wait_pushing, cond_wait_poping;
 
 	#ifdef SPIN_LOCK
    pthread_spinlock_t spin_lock;

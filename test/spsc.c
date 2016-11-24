@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <time.h>
 #include "../src/lib/system_info.h"
+#include <locale.h>
 
 void *_consumer_fn( void *arg ){
 	size_t total = 0, i;
@@ -32,7 +33,7 @@ void *_consumer_fn( void *arg ){
 			break;
 
 		//small calculation
-		for( i=0; i<1000; i++ ) total += i;
+		//for( i=0; i<1000; i++ ) total += i;
 
 	}while( 1 );
 	mmt_info("Thread %d: %zu", gettid(), total );
@@ -41,7 +42,7 @@ void *_consumer_fn( void *arg ){
 
 int main( int argc, char **args ){
 	size_t consumers_count = 2;
-	size_t loops_count     = 1*1000*1000;
+	size_t loops_count     = 10*1000*1000;
 	size_t ring_size       = 1000;
 	size_t i,j;
 	lock_free_spsc_ring_t **rings;
@@ -56,8 +57,8 @@ int main( int argc, char **args ){
 		ring_size       = atoll( args[ 3 ] );
 	mmt_info( "Usage: %s consumers_count loops_count ring_size", args[ 0 ] );
 	mmt_info( "Number of online processors: %ld", get_number_of_online_processors() );
-
-	mmt_info( "Running %zu loops with 1 producer and %zu consumers. Size of each ring is %zu",
+	setlocale(LC_ALL,"");
+	mmt_info( "Running %'zu loops with 1 producer and %zu consumers. Size of each ring is %zu",
 			loops_count, consumers_count, ring_size );
 
 	rings = mmt_mem_alloc( sizeof( void *) * consumers_count );

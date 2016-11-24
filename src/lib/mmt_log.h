@@ -26,6 +26,7 @@ typedef enum {
 void mmt_log( log_level_t level, const char *format, ... )
 	__attribute__((format (printf, 2, 3)));
 
+#define mmt_warn( ... )  mmt_log( WARN, __VA_ARGS__ )
 #define mmt_info( ... )  mmt_log( INFO, __VA_ARGS__ )
 #define mmt_error( ... ) mmt_log( ERROR, __VA_ARGS__ )
 

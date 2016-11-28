@@ -34,7 +34,9 @@
 #include "dpi/mmt_dpi.h"
 #include "dpi/types_defs.h"
 #include "lib/mmt_sec_config.h"
+#include "lib/system_info.h"
 
+#define REPORT_SIZE 2000
 #ifndef __FAVOR_BSD
 # define __FAVOR_BSD
 #endif
@@ -46,7 +48,7 @@ static const rule_info_t **rules_arr = NULL;
 static size_t proto_atts_count = 0;
 static message_element_t *proto_atts = NULL;
 static int connectcnt=0;
-static int nbr_thr_p = 1; //nbr of mmt_sec processing threads
+//static int nbr_thr_p = 1; //nbr of mmt_sec processing threads
 static bool recev_s[10]; //identifying the state of each connection (unfinished?)
 static bool notdone = YES; //use notdone to terminate the server
 static bool receiv_s_glob = YES;
@@ -478,7 +480,7 @@ for (i=0; i<connectcnt; i++){
 }
 return NO;
 }
-
+/*
 void *processing_thr_rest (void *args){
 mmt_smp_sec_handler_t *sec_handler = (mmt_smp_sec_handler_t *) args;
 report_t *last;
@@ -488,10 +490,10 @@ while(thread_lock.count_str!=0){
 						report_handler(sec_handler, last);
 						}
 						gettimeofday(&end_t, NULL);
-						fprintf(stderr, "Processing threads finished analyzing the reports. Still ON for the next possible connections\n");
 						fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
+pthread_exit((void *)NULL);
 }
-
+*/
 void *receiving_thr (void *arg) {
 	struct thr_r_arg_struct *thr_recv_struct = (struct thr_r_arg_struct *) arg;
 	int sock = (intptr_t) thr_recv_struct->sock;
@@ -501,37 +503,26 @@ void *receiving_thr (void *arg) {
 	int n,on;
 	int length=0;
 	int total_length=0;
-	unsigned char buffer[256];
-	unsigned char length_buffer[4];
+	uint8_t buffer[ REPORT_SIZE ]; //utf-8
 
-	int length_of_report = 0;
+	uint32_t length_of_report = 0;
 	//int nb_rp_buff = 0;
-	report_t *last_node;
 
 	while(1){
-			bzero(length_buffer,4);
-			n=read(sock, length_buffer, 4);//Read 4 bytes first to know the length of the report
+			n = recv(sock, &length_of_report, 4, MSG_WAITALL);//Read 4 bytes first to know the length of the report
+			if (n == 0)	break;
+			if( length_of_report > REPORT_SIZE ){
+			   		mmt_warn("Overflow: length_of_report = %d", length_of_report );
+			   		length_of_report = REPORT_SIZE;
+			   	}else if( length_of_report < 31 )
+			   		continue;
+			   	else if( length_of_report < 0 )
+			   		mmt_info("Impossible len = %d", length_of_report );
 
-			if (n < 0) {
-				error("ERROR reading from socket");
-			}
-
-			if (n < 4) break;
-			memcpy(&length_of_report,&length_buffer,4);
-
-			bzero(buffer,256);
-
-			if (length_of_report > 1000 || length_of_report < 30) continue; //1000 = maximum size of the report 30 = size of timeval (16) + 4 + 10
-
-			bzero(buffer,256);
-			n = read(sock,buffer,length_of_report-4);//Read the report
-			if (n < 0) error("ERROR reading from socket");
-
-
-
-			buffer[n]='\0';
+			n = recv( sock, buffer, length_of_report-4, MSG_WAITALL );
+			   	if( n == 0 ) break;
+			   	if( n < 27 ) error("Report in bad format");
 			length =0;
-
 			if ((int) pthread_spin_lock(&thread_lock.spinlock_cr)) error("thread_lock.spinlock_cr failed");
 			thread_lock.count_rcv++;
 		    pthread_spin_unlock(&thread_lock.spinlock_cr);
@@ -581,9 +572,6 @@ void *receiving_thr (void *arg) {
 			thread_lock.count_str++;
 			//if (thread_lock.count_str >= thr_recv_struct->threshold_size) { //|| time_diff(report_list->prev->timestamp, report_list->timestamp)>thr_recv_struct->threshold_time
 			//if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
-			//last_node = report_list->prev;//mmt_mem_dup(report_list->prev, sizeof(report_t));
-			//if (pop_last(&report_list)==0) thread_lock.count_str--;
-			//report_handler(mmt_smp_sec_handler, last_node);
 			//}
 			//pthread_mutex_unlock(&thread_lock.mutex_str);
 			condition_v[i] = NO;
@@ -594,8 +582,12 @@ void *receiving_thr (void *arg) {
 	if (pthread_mutex_lock(&thread_lock.mutex_recv_s)) error("pthread_mutex_lock failed");
 	recev_s[i] = NO;
 	receiv_s_glob = receiving_state();
-	//if(!receiving_state()) if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex;
-	if (pthread_create(&thr_p_rest, NULL, processing_thr_rest,(void*) mmt_smp_sec_handler)) error("Can't create threads for processing the rest of buffer");
+	if (!receiv_s_glob){
+		condition_v[i] = NO;
+		pthread_cond_signal(&cond[i]);
+		//if(!receiving_state()) if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex;
+		//if (pthread_create(&thr_p_rest, NULL, processing_thr_rest,(void*) mmt_smp_sec_handler)) error("Can't create threads for processing the rest of buffer");
+		}
 	pthread_mutex_unlock(&thread_lock.mutex_recv_s);
 	pthread_exit((void *)NULL);
 }
@@ -624,7 +616,7 @@ void *processing_thr (void *args) {
 				if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
 				while(condition_v[i]) if (pthread_cond_wait(&cond[i], &mutex)!= 0) error("pthread_cond_wait failed");
 				nb_rp_buff = thread_lock.count_str;
-				if (nb_rp_buff < mmt_sec_config_struct->threshold_size){
+				if ((nb_rp_buff < mmt_sec_config_struct->threshold_size) && receiv_s_glob){
 					condition_v[i] = YES;
 					pthread_cond_signal(&cond[i]);
 					if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
@@ -638,7 +630,18 @@ void *processing_thr (void *args) {
 					if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
 					report_handler(sec_handler, last);
 				}
-				if(!receiv_s_glob && nb_rp_buff < mmt_sec_config_struct->threshold_size) break;
+				if(!receiv_s_glob){//break;
+				while(thread_lock.count_str!=0){
+							if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
+							last = report_list->prev;
+							if (pop_last(&report_list)==0) thread_lock.count_str--;
+							if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
+							report_handler(sec_handler, last);
+						}
+				gettimeofday(&end_t, NULL);
+				fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
+				break;
+				}
 		}
 	pthread_exit((void *)NULL);
 }
@@ -665,7 +668,7 @@ int main(int argc, char** argv) {
 	recev_s[0] = YES;
 
 	pthread_t thr_r[10];
-	pthread_t thr_p[3];
+	pthread_t thr_p[10];
 
 	size_t size;
 	thread_lock.count_rcv = 0;
@@ -790,8 +793,7 @@ int main(int argc, char** argv) {
 	       */
 	    childfd = accept(parentfd,
 			       (struct sockaddr *) &cli_addr, &socklen);
-	    if (childfd < 0)
-		error("ERROR on accept");
+	    if (childfd < 0) error("ERROR on accept");
 	    thr_recv_arg.sock = (intptr_t) childfd;
 	    thr_recv_arg.index = connectcnt;
 	    // To calculate execution time

@@ -38,7 +38,6 @@ void* processing (void *arg ) {
    uint8_t buffer[ REPORT_SIZE ]; //utf-8
 
    do{
-   	len = 0;
    	ret = recv( sock, &len, 4, MSG_WAITALL);
    	if( ret == 0 ) break;
 

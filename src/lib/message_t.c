@@ -21,6 +21,12 @@ __attribute__((destructor)) void _destructor () {
 	pthread_spin_destroy ( &spin_lock );
 }
 
+message_t *parse_message_t( const uint8_t *data, uint32_t len ){
+	message_t *msg = (message_t *) mmt_mem_dup( data, len );
+
+	return msg;
+}
+
 /**
  * Public API
  */

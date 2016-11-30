@@ -151,9 +151,6 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	handler->rules_array     = rules_array;
 	handler->threads_count   = threads_count;
 	handler->messages_buffers= mmt_mem_alloc( sizeof( void *) * handler->threads_count );
-	//one buffer per thread
-	for( i=0; i<handler->threads_count; i++)
-		handler->messages_buffers[ i ] = ring_init( RING_SIZE );
 
 	//this is only for get mmt_sec_get_unique_protocol_attributes
 	mmt_sec_handler = mmt_sec_register( rules_array, rules_count, NULL, NULL );
@@ -162,6 +159,10 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	mmt_sec_unregister( mmt_sec_handler ); //free this handler after getting unique set of proto_atts
 	mmt_sec_handler = NULL;
 	//end of using #mmt_sec_handler
+
+	//one buffer per thread
+	for( i=0; i<handler->threads_count; i++)
+		handler->messages_buffers[ i ] = ring_init( RING_SIZE );
 
 	rules_count_per_thread = rules_count / threads_count;
 

@@ -63,8 +63,8 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 		tran     = &( state->transitions[ i ] );
 		event_id = tran->event_type;
 
-		if( event_id == FSM_EVENT_TYPE_TIMEOUT )
-			continue;
+		//if( event_id == FSM_EVENT_TYPE_TIMEOUT )
+		//	continue;
 
 //d = count_nodes_from_link_list( _engine->fsm_by_expecting_event_id[ event_id ]);
 //mmt_assert( d<= 300, "Stop here, total ins: %zu", _engine->total_instances_count );
@@ -373,7 +373,7 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	size_t i;
 	void *data           = _engine->rule_info->convert_message( message );
 	const uint16_t *hash = _engine->rule_info->hash_message( data );
-	uint8_t event_id;
+	uint8_t event_id = 0;
 	link_node_t *node;
 	_fsm_tran_index_t *fsm_ind;
 	enum rule_engine_result ret = RULE_ENGINE_RESULT_UNKNOWN;;
@@ -387,7 +387,7 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	for( i=0; i<_engine->max_events_count; i++ )
 		_engine->tmp_fsm_by_expecting_event_id[ i ] = _engine->fsm_by_expecting_event_id[ i ];
 
-	//	mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
+	//mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
 	//get from hash table the list of events to be verified
 	//event_id start from 1, but hash starts from 0
@@ -416,6 +416,27 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 				mmt_mem_free( data );
 				return ret;
 			}
+		}
+	}
+
+	//check timeout
+	//verify instances that are waiting for event_id
+	node = _engine->tmp_fsm_by_expecting_event_id[ FSM_EVENT_TYPE_TIMEOUT ];
+	//for each instance
+	while( node != NULL ){
+
+		fsm_ind = (_fsm_tran_index_t *)node->data;
+		node = node->next;
+
+		//put this after node = node->next
+		// because #node can be freed( or inserted a new node) in the function #_fire_transition
+		ret = _fire_transition( fsm_ind, event_id, message, data, _engine );
+
+		//get only one verdict per packet
+		if( ret != RULE_ENGINE_RESULT_UNKNOWN ){
+			//must free #data before returning
+			mmt_mem_free( data );
+			return ret;
 		}
 	}
 

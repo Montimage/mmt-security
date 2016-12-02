@@ -35,8 +35,18 @@
 #define LIVE_INTERFACE 2
 #define SNAP_LEN 65355
 
-static size_t proto_atts_count = 0;
+static size_t proto_atts_count       = 0;
 static message_element_t *proto_atts = NULL;
+//Statistic
+static size_t total_received_reports = 0;
+
+typedef struct _sec_handler_struct{
+	void *handler;
+
+	void (*process_fn)( const void *, const message_t *);
+
+	int threads_count;
+}_sec_handler_t;
 
 /**
  * Print information of the rules existing.
@@ -212,7 +222,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  * message to mmt-security.
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
-	mmt_smp_sec_handler_t *sec_handler = (mmt_smp_sec_handler_t *) args;
+	_sec_handler_t *sec_handler = (_sec_handler_t *) args;
 
 	message_t *msg = _get_packet_info( ipacket );
 
@@ -220,7 +230,9 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
 	if( unlikely( msg == NULL )) return 1;
 
-	mmt_smp_sec_process( sec_handler, msg );
+	sec_handler->process_fn( sec_handler->handler, msg );
+
+	total_received_reports ++;
 
 	//need to free #msg
 	free_message_t( msg );
@@ -238,9 +250,37 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 	}
 }
 
-static mmt_smp_sec_handler_t *mmt_smp_sec_handler = NULL;
+
+
+static _sec_handler_t _sec_handler;
 static const rule_info_t **rules_arr = NULL;
 static pcap_t *pcap;
+
+static inline void termination(){
+	struct pcap_stat pcs; /* packet capture filter stats */
+
+	pcap_breakloop( pcap );
+
+	if (pcap_stats(pcap, &pcs) < 0) {
+		(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));
+	}else{
+		(void) fprintf(stderr, "\n%12d packets received by filter\n", pcs.ps_recv);
+		(void) fprintf(stderr, "%12d packets dropped by interface\n", pcs.ps_ifdrop);
+		(void) fprintf(stderr, "%12d packets dropped by kernel (%3.2f%%)\n", pcs.ps_drop, pcs.ps_drop * 100.0 / pcs.ps_recv);
+		fflush(stderr);
+	}
+
+	fprintf(stderr, "Received totally %zu reports\n", total_received_reports );
+	mmt_mem_free( proto_atts );
+
+	if( _sec_handler.threads_count > 1 )
+		mmt_smp_sec_unregister( _sec_handler.handler, NO );
+	else
+		mmt_sec_unregister( _sec_handler.handler );
+
+	mmt_mem_free( rules_arr );
+	mmt_mem_print_info();
+}
 
 void signal_handler_seg(int signal_type) {
 	mmt_print_execution_trace();
@@ -250,9 +290,9 @@ void signal_handler_seg(int signal_type) {
 
 void signal_handler(int signal_type) {
 	static volatile int times_counter = 0;
-	struct pcap_stat pcs; /* packet capture filter stats */
 
 	if( times_counter >= 1 ) exit( signal_type );
+	times_counter ++;
 
 	mmt_error( "Interrupted by signal %d", signal_type );
 
@@ -260,29 +300,11 @@ void signal_handler(int signal_type) {
 		mmt_error("Releasing resource ... (press Ctrl+c again to exit immediately)");
 		signal(SIGINT, signal_handler);
 	}
-
-	if( times_counter ==  0 ){
-
-		pcap_breakloop( pcap );
-
-		if (pcap_stats(pcap, &pcs) < 0) {
-			(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));
-		}else{
-			(void) fprintf(stderr, "\n%12d packets received by filter\n", pcs.ps_recv);
-			(void) fprintf(stderr, "%12d packets dropped by kernel (%3.2f%%)\n", pcs.ps_drop, pcs.ps_drop * 100.0 / pcs.ps_recv);
-			(void) fprintf(stderr, "%12d packets dropped by interface\n", pcs.ps_ifdrop);
-			fflush(stderr);
-		}
-
-		mmt_mem_free( proto_atts );
-		mmt_smp_sec_unregister( mmt_smp_sec_handler, NO );
-		mmt_mem_free( rules_arr );
-		mmt_mem_print_info();
-	}
-
-	times_counter ++;
+	termination();
 	exit( signal_type );
 }
+
+
 
 void register_signals(){
 	//signal(SIGSEGV, signal_handler_seg );
@@ -294,7 +316,6 @@ void register_signals(){
 int main(int argc, char** argv) {
 	mmt_handler_t *mmt_dpi_handler;
 	char mmt_errbuf[1024];
-
 
 	const unsigned char *data;
 	struct pcap_pkthdr p_pkthdr;
@@ -314,8 +335,19 @@ int main(int argc, char** argv) {
 
 	//get all available rules
 	size = mmt_sec_get_rules_info( &rules_arr );
+
+	_sec_handler.threads_count = threads_count;
+
 	//init mmt-sec to verify the rules
-	mmt_smp_sec_handler = mmt_smp_sec_register( rules_arr, size, threads_count, print_verdict, NULL );
+	if( _sec_handler.threads_count == 1 ){
+		_sec_handler.handler    = mmt_sec_register( rules_arr, size, print_verdict, NULL );
+		_sec_handler.process_fn = mmt_sec_process;
+		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
+	}else{
+		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, threads_count, print_verdict, NULL );
+		_sec_handler.process_fn = mmt_smp_sec_process;
+		size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
+	}
 
 	//init mmt_dpi extraction
 	init_extraction();
@@ -327,7 +359,6 @@ int main(int argc, char** argv) {
 	}
 
 	//register protocols and their attributes using by mmt-sec
-	size = mmt_smp_sec_get_unique_protocol_attributes( mmt_smp_sec_handler, &p_atts );
 	proto_atts_count = size;
 
 	proto_atts = mmt_mem_alloc( size * sizeof( message_element_t ));
@@ -341,7 +372,7 @@ int main(int argc, char** argv) {
 	}
 
 	//Register a packet handler, it will be called for every processed packet
-	register_packet_handler(mmt_dpi_handler, 1, packet_handler, (void *)mmt_smp_sec_handler );
+	register_packet_handler(mmt_dpi_handler, 1, packet_handler, (void *)&_sec_handler );
 
 	if (type == TRACE_FILE) {
 		mmt_info("Analyzing pcap file %s", filename );
@@ -359,7 +390,6 @@ int main(int argc, char** argv) {
 			}
 		}
 
-		mmt_smp_sec_stop( mmt_smp_sec_handler, NO );
 	} else {
 		mmt_info("Listening on interface %s", filename );
 
@@ -377,19 +407,7 @@ int main(int argc, char** argv) {
 		(void)pcap_loop( pcap, -1, &live_capture_callback, (u_char*)mmt_dpi_handler );
 	}
 
-	//free resources using by mmt-dpi
-	mmt_close_handler(mmt_dpi_handler);
-	close_extraction();
-
-	//free resources using by libpcap
-	pcap_close(pcap);
-
-	//free resources using by mmt-sec
-	mmt_smp_sec_unregister( mmt_smp_sec_handler, NO );
-	mmt_mem_free( rules_arr );
-	mmt_mem_free( proto_atts );
-	//print info about memory using by mmt-sec
-	//mmt_mem_print_info();
+	termination();
 
 	return EXIT_SUCCESS;
 }

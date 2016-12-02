@@ -249,7 +249,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 
 
-	//check if timeout and not
+	//check if timeout or not
 	if( message_data->timestamp > _fsm->time_max &&  !_fsm->current_state->is_temporary  ){
 		tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
 		if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT )

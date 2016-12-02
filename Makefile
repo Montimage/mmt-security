@@ -12,8 +12,8 @@ OUTPUT   = security
 INSTALL_DIR = /opt/mmt/security
 
 #get git version abbrev
-GIT_VERSION := $(shell git describe --abbrev=7 --always)
-VERSION     := 1.0
+GIT_VERSION := $(shell git log --format="%h" -n 1)
+VERSION     := 1.0.0
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2
@@ -66,6 +66,8 @@ MAIN_SEC_SERVER_03 = mmt_sec_server_03
 
 MAIN_SEC_SERVER_V = mmt_sec_server_v
 
+MAIN_SEC_SERVER_NO_REORDER = mmt_sec_no_reordering
+
 LIB_NAME = libmmt_security
 
 all: standalone compile_rule rule_info sec_server
@@ -86,6 +88,10 @@ sec_server: src/dpi/mmt_dpi.h $(LIB_OBJS)
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CLDFLAGS) $^ $(LIBS) -ldl
 	
+sec_server_no_reorder: src/dpi/mmt_dpi.h $(LIB_OBJS) 
+	@echo "[COMPILE] $@"
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER_NO_REORDER) $(SRCDIR)/main_sec_no_reordering.c  $(CLDFLAGS) $^ $(LIBS) -ldl
+		
 sec_server_33: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER_33) $(SRCDIR)/main_sec_server_33.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -ldl

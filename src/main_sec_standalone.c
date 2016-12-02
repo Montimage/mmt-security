@@ -35,8 +35,10 @@
 #define LIVE_INTERFACE 2
 #define SNAP_LEN 65355
 
-static size_t proto_atts_count = 0;
+static size_t proto_atts_count       = 0;
 static message_element_t *proto_atts = NULL;
+//Statistic
+static size_t total_received_reports = 0;
 
 typedef struct _sec_handler_struct{
 	void *handler;
@@ -230,6 +232,8 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	sec_handler->process_fn( sec_handler->handler, msg );
 
+	total_received_reports ++;
+
 	//need to free #msg
 	free_message_t( msg );
 	return 0;
@@ -266,6 +270,7 @@ static inline void termination(){
 		fflush(stderr);
 	}
 
+	fprintf(stderr, "Received totally %zu reports\n", total_received_reports );
 	mmt_mem_free( proto_atts );
 
 	if( _sec_handler.threads_count > 1 )

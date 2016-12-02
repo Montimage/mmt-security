@@ -387,7 +387,7 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	for( i=0; i<_engine->max_events_count; i++ )
 		_engine->tmp_fsm_by_expecting_event_id[ i ] = _engine->fsm_by_expecting_event_id[ i ];
 
-	//	mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
+	//mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
 	//get from hash table the list of events to be verified
 	//event_id start from 1, but hash starts from 0

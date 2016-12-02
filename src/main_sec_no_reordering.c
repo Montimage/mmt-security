@@ -54,9 +54,6 @@ static message_element_t *proto_atts = NULL;
 //id of socket
 static int socket_fd                 = 0;
 static volatile bool is_stop_processing = NO;
-//for statistic
-static size_t total_received_reports = 0;
-
 
 static inline double time_diff(struct timeval t1, struct timeval t2) {
 	return (double)(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)/1000000.0;
@@ -254,7 +251,6 @@ static inline size_t receiving_reports( int sock ) {
 		free_message_t( msg );
 
 		reports_count ++;
-		total_received_reports ++;
 	}
 
 	gettimeofday( &end_time, NULL );
@@ -266,7 +262,6 @@ static inline size_t receiving_reports( int sock ) {
 }
 
 static inline void termination(){
-	mmt_info( "Received totally %zu reports", total_received_reports );
 
 	close( socket_fd );
 	mmt_mem_free( proto_atts );
@@ -320,7 +315,7 @@ int main( int argc, char** argv ) {
 
 	uint16_t *rules_id_filter;
 	const proto_attribute_t **p_atts;
-	int childfd, i;
+	int childfd, pid, i;
 
 	char str_buffer[256];
 	const size_t str_buffer_size = 256;
@@ -380,7 +375,7 @@ int main( int argc, char** argv ) {
 	 * process will go in sleep mode and will wait
 	 * for the incoming connection
 	 */
-	listen( socket_fd, 1 );//int listen(int socket, int backlog);  limit the number of outstanding connections in the socket's listen queue
+	listen( socket_fd, 5 );//int listen(int socket, int backlog);  limit the number of outstanding connections in the socket's listen queue
 
 	socklen = sizeof( cli_addr );
 
@@ -398,7 +393,28 @@ int main( int argc, char** argv ) {
 			inet_ntop(AF_INET, &cli_addr.sin_addr.s_addr, str_buffer, str_buffer_size );
 			mmt_info("A new connection is coming from %s:%d ...", str_buffer, cli_addr.sin_port );
 
-			receiving_reports( childfd );
+			/* Create child process */
+			pid = fork();
+			if (pid < 0) error("ERROR on fork");
+
+			if (pid == 0) {
+				/* This is the child process */
+				close(socket_fd);
+				//do processing
+				receiving_reports( childfd );
+				//finish
+				termination();
+				exit( EXIT_SUCCESS );
+			}
+			else {
+				/* pid > 0. This is the parent process.
+				 * The child process handles the connection,
+				 * so we don't need our copy of the connected socket descriptor.
+				 * Close it.  Then continue with the loop and accept another connection.
+				 */
+				close( childfd );
+			}
+
 	}
 
 	termination();

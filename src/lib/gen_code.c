@@ -60,12 +60,14 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 
 	_gen_code_line( fd );
 	//TODO: not need to check before validate the guard's boolean expression ?
-//	fprintf( fd, "\n\t if( unlikely( %s->%s_%s == NULL )) return 0;",
-//					( var->ref_index == (uint16_t)UNKNOWN )? "ev_data" : "his_data",
-//					var->proto, var->att
-//	);
+	//YES, still need to check NULL in the case 2 events occurs in the same time
+	//in such a case, the hash function can ensure only the first event is not NULL
+	fprintf( fd, "\n\t if( unlikely( %s->%s_%s == NULL )) return 0;",
+					( var->ref_index == (uint16_t)UNKNOWN )? "ev_data" : "his_data",
+					var->proto, var->att
+	);
 
-	//TODO: when proto starts by a number
+	//TODO: what happen if a proto's name starts by a number
 	fprintf( fd, "\n\t %s%s = %s %s->%s_%s %s;",
 			((var->data_type == NUMERIC)? "double " : "const char *"),
 			str,
@@ -903,5 +905,6 @@ int compile_gen_code( const char *lib_file, const char *code_file, const char *i
 #endif
 			code_file, lib_file, incl_dir );
 
+	mmt_debug("Compile rules: %s", cmd_str );
 	return system ( cmd_str );
 }

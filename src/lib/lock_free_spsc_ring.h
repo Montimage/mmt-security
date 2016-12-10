@@ -74,6 +74,8 @@ int  ring_push( lock_free_spsc_ring_t *q, void* val  );
  */
 int  ring_pop ( lock_free_spsc_ring_t *q, void **val );
 
+int ring_pop_bulk( lock_free_spsc_ring_t *q, void **val_arr );
+
 /**
  * Free a buffer.
  * This function frees resource using by the buffer and also the pointer #q

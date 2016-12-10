@@ -307,7 +307,7 @@ char* convert_execution_trace_to_json_string( const mmt_array_t *trace ){
  * Public API
  */
 int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type ){
-	double number;
+	double number = 0;
 	char buffer[100], *new_string = NULL;
 	const uint16_t buffer_size = 100;
 	uint16_t size;
@@ -382,6 +382,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		return 0;
 
 	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
+		return 0;
 	case MMT_DATA_PATH: /**< protocol path constant value */
 	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
 	case MMT_DATA_BUFFER: /**< binary buffer content */
@@ -418,6 +419,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		break;
 	}
 
+	*new_data = NULL;
 	mmt_error("Data type %d has not yet implemented", type);
 	return 1;
 }

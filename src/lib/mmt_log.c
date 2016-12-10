@@ -27,7 +27,6 @@ void mmt_print_execution_trace (void) {
      /* find first occurence of '(' or ' ' in message[i] and assume
       * everything before that is the file name. (Don't go beyond 0 though
       * (string terminator)*/
-#ifdef DEBUG_MODE
      size_t p = 0;
      while(strings[i][p] != '(' && strings[i][p] != ' '
    		  && strings[i][p] != 0)
@@ -39,9 +38,8 @@ void mmt_print_execution_trace (void) {
      sprintf(syscom,"addr2line %p -e %.*s", array[i] , (int)p, strings[i] );
      //last parameter is the filename of the symbol
 
-     fprintf(stderr, "\n\t    ");
+     fprintf(stderr, "\t    ");
      if( system(syscom) ) {}
-#endif
   }
 
   free (strings);

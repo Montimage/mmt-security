@@ -1,4 +1,4 @@
-/**This code is generated automatically on 2016-1118 10:34:55.*/
+/**This code is generated automatically on 2016-1209 18:03:39.*/
  #ifndef ___MMT_DPI_H_
  #define ___MMT_DPI_H_
  #include <stdint.h>
@@ -12447,8 +12447,53 @@
 	 { .id = 4110, .data_type = 11, .name = "last_packet_time"},
 	 { .id = 4111, .data_type = 24, .name = "stats"}},
 	 .attributes_count = 16
+ },
+ {.id = 631, .name = "mp2t", .attributes = (struct dpi_attribute[]){ 
+	 { .id = 1, .data_type = 3, .name = "retransmission_count"},
+	 { .id = 2, .data_type = 3, .name = "out_of_order"},
+	 { .id = 4096, .data_type = 5, .name = "p_hdr"},
+	 { .id = 4097, .data_type = 5, .name = "p_data"},
+	 { .id = 4098, .data_type = 5, .name = "p_payload"},
+	 { .id = 4099, .data_type = 4, .name = "packet_count"},
+	 { .id = 4100, .data_type = 4, .name = "data_count"},
+	 { .id = 4101, .data_type = 4, .name = "payload_count"},
+	 { .id = 4102, .data_type = 4, .name = "ip_frag_packets_count"},
+	 { .id = 4103, .data_type = 4, .name = "ip_frag_data_volume"},
+	 { .id = 4104, .data_type = 4, .name = "ip_df_packets_count"},
+	 { .id = 4105, .data_type = 4, .name = "ip_df_data_volume"},
+	 { .id = 4106, .data_type = 4, .name = "session_count"},
+	 { .id = 4107, .data_type = 4, .name = "a_session_count"},
+	 { .id = 4108, .data_type = 4, .name = "t_session_count"},
+	 { .id = 4109, .data_type = 11, .name = "first_packet_time"},
+	 { .id = 4110, .data_type = 11, .name = "last_packet_time"},
+	 { .id = 4111, .data_type = 24, .name = "stats"}},
+	 .attributes_count = 18
+ },
+ {.id = 632, .name = "m3u8", .attributes = (struct dpi_attribute[]){ 
+	 { .id = 1, .data_type = 4, .name = "version"},
+	 { .id = 2, .data_type = 4, .name = "media_sequence"},
+	 { .id = 3, .data_type = 4, .name = "allow_cache"},
+	 { .id = 4, .data_type = 4, .name = "target_duration"},
+	 { .id = 5, .data_type = 5, .name = "segment_info"},
+	 { .id = 4096, .data_type = 5, .name = "p_hdr"},
+	 { .id = 4097, .data_type = 5, .name = "p_data"},
+	 { .id = 4098, .data_type = 5, .name = "p_payload"},
+	 { .id = 4099, .data_type = 4, .name = "packet_count"},
+	 { .id = 4100, .data_type = 4, .name = "data_count"},
+	 { .id = 4101, .data_type = 4, .name = "payload_count"},
+	 { .id = 4102, .data_type = 4, .name = "ip_frag_packets_count"},
+	 { .id = 4103, .data_type = 4, .name = "ip_frag_data_volume"},
+	 { .id = 4104, .data_type = 4, .name = "ip_df_packets_count"},
+	 { .id = 4105, .data_type = 4, .name = "ip_df_data_volume"},
+	 { .id = 4106, .data_type = 4, .name = "session_count"},
+	 { .id = 4107, .data_type = 4, .name = "a_session_count"},
+	 { .id = 4108, .data_type = 4, .name = "t_session_count"},
+	 { .id = 4109, .data_type = 11, .name = "first_packet_time"},
+	 { .id = 4110, .data_type = 11, .name = "last_packet_time"},
+	 { .id = 4111, .data_type = 24, .name = "stats"}},
+	 .attributes_count = 21
  }};
- #define DPI_PROTO_SIZE 631
+ #define DPI_PROTO_SIZE 633
  
  #ifndef TYPES_DEFS_H
  #define TYPES_DEFS_H

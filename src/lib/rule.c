@@ -194,7 +194,7 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 		delay->counter_min  += counter_min_sign;
 		delay->counter_max  += counter_max_sign;
 
-		mmt_assert( !(delay->time_min == delay->time_max && delay->time_max == 0), "Delay must not be zero!");
+		//mmt_assert( !(delay->time_min == delay->time_max && delay->time_max == 0), "Delay must not be zero!");
 	}
 	return delay;
 }

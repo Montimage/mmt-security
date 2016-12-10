@@ -12,10 +12,14 @@
 #include "./lib/rule.h"
 #include "./lib/gen_code.h"
 
+#define MAX_STRING_LEN 10000
+
 int main( int argc, char** argv ){
 	rule_t **rule_list;
 	size_t rule_count, i;
-	char c_file[10000];
+	char c_file[MAX_STRING_LEN];
+	char gcc_param[MAX_STRING_LEN];
+
 	const char* xml_file, *output_file;
 	char *embedded_functions;
 	int ret;
@@ -27,7 +31,7 @@ int main( int argc, char** argv ){
 		fprintf( stderr, "\n - option        : ");
 		fprintf( stderr, "\n      + \"-c\"   : generate only code c" );
 		fprintf( stderr, "\n      + otherwise: generate code c, then compile to .so file.");
-		fprintf( stderr, "\n                   This option gives a path to -I option of gcc. If it is ignored, the default path is \"./src/lib\" and \"/opt/mmt/security/include\"");
+		fprintf( stderr, "\n                   This option will be transfered to gcc.");
 		fprintf( stderr, "\n");
 		return 1;
 	}
@@ -62,9 +66,12 @@ int main( int argc, char** argv ){
 	}else{
 		//compile code file
 		if( argc == 3 )
-			ret = compile_gen_code(output_file, c_file, "./src/lib -I/opt/mmt/security/include" );
-		else
-			ret = compile_gen_code(output_file, c_file, argv[3] );
+			ret = compile_gen_code(output_file, c_file,"./src/lib -I/opt/mmt/security/include" );
+		else{
+			gcc_param[0] = '\0';
+			snprintf( gcc_param, MAX_STRING_LEN - 1, "./src/lib -I/opt/mmt/security/include %s", argv[3] );
+			ret = compile_gen_code(output_file, c_file, gcc_param );
+		}
 
 		//mmt_debug( "ret = %d", ret );
 		if( ret == 0 ){

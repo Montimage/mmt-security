@@ -3,6 +3,185 @@
 <!-- MMT_Security Copyright (C) 2014  Montimage Description: Detection of attacks in BGPost honeypot-->
 <beginning>
 
+
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+
+static inline int check_ip_options(const char *op2, const char *op1){
+  int handle = 0;
+  
+  int i2 = *((int*)op2);
+  int i1 = *((int*)op1);
+  int bit2 = (i2 >> 1) & 1;
+  int bit1 = (i1 >> 1) & 1;
+//  if(bit2 == 1 || bit1 == 1){
+      if(i2 != i1) handle = 1;
+//  }
+  return handle;
+}
+
+
+int check_port(int i){
+  
+  //printf("Port:%d\n", i);
+  //according to: 
+  //https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+  //and
+  //https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
+
+  if(i<1023) return 0;
+  if(i>49151 && i< 65536) return 0;
+  if(i>65535) return 1;
+
+  if(i>2193 && i<2197) return 1;
+  if(i>4488 && i<4500) return 1;
+  if(i>4953 && i<4969) return 1;
+  if(i>5569 && i<5573) return 1;
+  if(i>5646 && i<5670) return 1;
+  if(i>6657 && i<6665) return 1;
+  if(i>7491 && i<7500) return 1;
+  if(i>7784 && i<7790) return 1;
+  if(i>27999 && i<28119) return 1;
+  if(i>5554 && i<5558) return 1;
+  if(i>5999 && i<6064) return 1;
+  if(i>8615 && i<8665) return 1;
+  if(i>8801 && i<8804) return 1;
+  if(i>8887 && i<8891) return 1;
+  if(i>11430 && i<11489) return 1;
+  if(i>11623 && i<11720) return 1;
+  if(i>27009 && i<27345) return 1;
+  if(i>41797 && i<42508) return 1;
+  if(i>44444 && i<44544) return 1;
+  switch (i) {
+    case 78:
+    case 79:
+    case 100:
+    case 106:
+    case 787:
+    case 1053:
+    case 1491:
+    case 2662:
+    case 3060:
+    case 3131:
+    case 3145:
+    case 3300:
+    case 3301:
+    case 4045:
+    case 4315:
+    case 4443:
+    case 4967:
+    case 5151:
+    case 5152:
+    case 5162:
+    case 5444:
+    case 5555:
+    case 5556:
+    case 6100:
+    case 6200:
+    case 6501:
+    case 8882:
+    case 9001:
+    case 6632:
+    case 7001:
+    case 7002:
+    case 7005:
+    case 7011:
+    case 7012:
+    case 7501:
+    case 7777:
+    case 8001:
+    case 16000:
+    case 49151:
+      return 1;
+    default:
+      return 0;
+  }
+  return 0;
+}
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int check_URI(const char *uri_str){
+  int handle = 0;
+  if(uri_str == NULL){
+    return 2;
+  }
+ 
+  const char *x = uri_str;
+  
+  //fprintf(stderr, "%s\n",x);
+  while (*x != '\0'){
+      //octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+      if(*x < 32 || *x == 92 || *x == '"' || *x == '<' || *x == '>' || *x == '[' || *x == ']' || *x == '^' || *x == '`' || *x == '{' || 
+         *x == '|' || *x == '}' || *x == '%' || *x > 126) {
+              handle = 1;
+              break;
+      }
+      x = x+1;
+  }
+  //detect directory traversal attack
+  char *s0, *s1, *s2, *s3;
+  s0 = strstr(uri_str, ".."); //find the first occurrence of string ".." in string
+  s1 = strstr(uri_str, "./"); //find the first occurrence of string "./" in string
+  s2 = strstr(uri_str, "//"); //find the first occurrence of string "//" in string
+  s3 = strstr(uri_str, "/."); //find the first occurrence of string "//" in string
+  
+  if ((s0 !=NULL) || (s1 !=NULL) || (s2 !=NULL) || (s3 !=NULL))  
+   handle = 1;
+   
+//#ifdef DEBUG
+//  fprintf(stderr, "executing ceck_URI with parameters:h=%d:nb=%u:a1=%o:a2=%o\n", 
+//                                           handle, *(char*)(BLOC3+6),*(char*)(BLOC3+9));
+//#endif
+  return handle;
+}
+
+/*
+ * Nikto 
+ */
+static inline bool check_UA( const char *user_agent){
+   //find the first occurrence of string "Nikto" in string
+   return (strstr(user_agent, "Nikto") != NULL);     
+}
+
+int check_sql_injection(const char *str, double pl){
+   return 0;
+   int handle = 0;
+ 
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+
+   char *s1, *s2, *s3, *s4, *s5, *s6;
+   s1 = strstr(str, "DROP");  //find the first occurrence of string "DROP" in string
+   s2 = strstr(str, "UNION"); //find the first occurrence of string "UNION" in string
+   s3 = strstr(str, "SELECT"); //find the first occurrence of string "SELECT" in string
+   s4 = strstr(str, "CHAR"); //find the first occurrence of string "CHAR" in string  
+   s5 = strstr(str, "DELETE"); //find the first occurrence of string "CHAR" in string
+   s6 = strstr(str, "INSERT"); //find the first occurrence of string "CHAR" in string
+     
+   if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL))  {
+      //printf ("SQL injection detected\n");
+      handle = 1;   
+   }
+
+  return handle;
+ 
+}
+
+]]></embedded_functions>
+
 <!-- Property 1: Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).-->
 <property value="THEN" delay_units="m" delay_min="0+" delay_max="1" property_id="1" type_property="ATTACK" 
     description="Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).">
@@ -33,11 +212,11 @@
              boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port == 22))"/>
       <event value="COMPUTE" event_id="2" 
              description="SYN ACK reply"
-             boolean_expression="((tcp.flags == 18)&amp;&amp;((tcp.src_port == 22)&amp;&amp;((ip.dst == ip.src.5)&amp;&amp;(ip.src == ip.dst.5))))"/>
+             boolean_expression="((tcp.flags == 18)&amp;&amp;((tcp.src_port == 22)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;(ip.src == ip.dst.1))))"/>
     </operator>
     <event value="COMPUTE" event_id="3" 
            description="RST reset"
-           boolean_expression="((tcp.flags == 4)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.dst == ip.dst.5)&amp;&amp;(ip.src == ip.src.5))))"/>
+           boolean_expression="((tcp.flags == 4)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
 </property>
 
 <!-- Property 3: Several TCP SYN requests without SYN ACK. Source address is spoofed, infected machine or attacker. Note: done on port 445.-->
@@ -50,7 +229,7 @@
            boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port == 445))"/>
     <event value="COMPUTE" event_id="2" 
            description="SYN ACK reply"
-           boolean_expression="((tcp.flags == 18)&amp;&amp;(ip.src == ip.dst.8))"/>
+           boolean_expression="((tcp.flags == 18)&amp;&amp;(ip.src == ip.dst.1))"/>
 </property>
 
 <!-- These properties analyse ARP messages using the following packet fields:
@@ -103,7 +282,7 @@
            boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;((ip.src == ip.src)&amp;&amp;(tcp.seq_nb == tcp.seq_nb))))"/>
     <event value="COMPUTE" event_id="2" 
            description="TCP ACK"
-           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.src.15)&amp;&amp;((ip.src == ip.dst.15)&amp;&amp;(((tcp.ack_nb - tcp.seq_nb.15) == 791101)||((tcp.seq_nb.15 - tcp.ack_nb) == 791101)))))"/>
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((ip.src == ip.dst.1)&amp;&amp;(((tcp.ack_nb - tcp.seq_nb.1) == 791101)||((tcp.seq_nb.1 - tcp.ack_nb) == 791101)))))"/>
 </property>
 
 <!-- Property 7: R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb .-->
@@ -118,14 +297,14 @@
            boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.dst.17)&amp;&amp;((ip.src == ip.src.17)&amp;&amp;((tcp.src_port == tcp.src_port.17)&amp;&amp;(tcp.dst_port == tcp.dst_port.17)))))"/>
 </property>
 -->
-<property value="BEFORE" delay_units="s" delay_min="0" delay_max="6" property_id="7" type_property="SECURITY" 
+<property value="BEFORE" delay_units="s" delay_min="0+" delay_max="6" property_id="7" type_property="SECURITY" 
     description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb.">
     <event value="COMPUTE" event_id="1"
            description="Context: TCP RST"
            boolean_expression="((tcp.rst == 1)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;((ip.src == ip.src)&amp;&amp;((tcp.src_port == tcp.src_port)&amp;&amp;(tcp.dest_port == tcp.dest_port)))))"/>
     <event value="COMPUTE" event_id="2" 
            description="Trigger: the last TCP ACK packets have different seg_nb and ack_nb"
-           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.dst.17)&amp;&amp;((ip.src == ip.src.17)&amp;&amp;((tcp.src_port == tcp.src_port.17)&amp;&amp;((tcp.dest_port == tcp.dest_port.17)&amp;&amp;((tcp.seq_nb == tcp.seq_nb.17)&amp;&amp;(tcp.ack_nb == tcp.ack_nb.17)))))))"/>
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((tcp.src_port == tcp.src_port.1)&amp;&amp;((tcp.dest_port == tcp.dest_port.1)&amp;&amp;((tcp.seq_nb == tcp.seq_nb.1)&amp;&amp;(tcp.ack_nb == tcp.ack_nb.1)))))))"/>
 </property>
 
 
@@ -147,7 +326,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
            boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.options == ip.options)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src))))"/>
     <event value="COMPUTE" event_id="2" 
            description="IP options"
-           boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.src == ip.src.19)&amp;&amp;((ip.dst == ip.dst.19)&amp;&amp;(#check_ip_options(ip.options,ip.options.19) == 1))))"/>
+           boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#check_ip_options(ip.options,ip.options.1) == 1))))"/>
 </property>
 
 <!-- Property 9: C4_Analyse_03h : La taille minimum d un fragment IP est 28 bytes. Pour un IP fragment de offset 0 c est 40.-->
@@ -158,7 +337,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
            boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.tot_len &lt; 28)||((ip.frag_offset == 0)&amp;&amp;(ip.tot_len &lt; 40))))"/>
     <event value="COMPUTE" event_id="2" 
            description="IP segment"
-           boolean_expression="(ip.mf_flag &gt; 0)"/>
+           boolean_expression="(1)"/>
 </property>
 
 <!-- Property 10: C4_Analyse_03f : HTTP detecte avec un port different de 80 et 3000.-->
@@ -169,7 +348,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
            boolean_expression="((http.method == http.method)&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP packet"
-           boolean_expression="(http.method == http.method)"/>
+           boolean_expression="(1)"/>
 </property>
 
 <!-- Property 11: C4_Analyse_03h : La taille d un IP incorrect (tronque).-->
@@ -196,7 +375,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
            boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP packet"
-           boolean_expression="(http.method == http.method)"/>
+           boolean_expression="(1)"/>
 </property>
 
 <!-- Property 13: C4_Analyse_3b : Data in SYN packet.-->
@@ -249,7 +428,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
            boolean_expression="(tcp.flags == 2)"/>
     <event value="COMPUTE" event_id="2" 
            description="SYN request"
-           boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst != ip.dst.34)&amp;&amp;(ip.src == ip.src.34)))"/>
+           boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst != ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
 </property>
 
 <!-- Property 17: C4_Decod_01 : SMTP detection.-->
@@ -262,7 +441,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
            boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port ==25))"/>
     <event value="COMPUTE" event_id="2" 
            description="ip check"
-           boolean_expression="(ip.src == ip.src.8)"/>
+           boolean_expression="(ip.src == ip.src.1)"/>
 </property>
 
 <!-- Property 18: C4_Analyse_03l : Invalid GRE version detection.-->
@@ -275,7 +454,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
            boolean_expression="(gre.proto &gt; 0)"/>
     <event value="COMPUTE" event_id="2" 
            description="Trigger: Invalid GRE version"
-           boolean_expression="(gre.version != 0)"/>
+           boolean_expression="(1)"/>
 </property>
 
 <!-- Property 19: C4_Analyse_04g : SQL Injection detection.-->
@@ -311,15 +490,15 @@ it is nice to have an automated method of redirect expiration.
            boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src)))"/>
    <event value="COMPUTE" event_id="2" 
            description="Trigger: 2nd consecutive ICMP redirect packet"
-           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.42)&amp;&amp;(ip.src == ip.src.42)))"/>
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
    </operator>
    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
    <event value="COMPUTE" event_id="3" 
            description="Trigger: 3rd consecutive ICMP redirect packet"
-           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.42)&amp;&amp;(ip.src == ip.src.42)))"/>
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
    <event value="COMPUTE" event_id="4" 
            description="Trigger: 4th consecutive ICMP redirect packet"
-           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.42)&amp;&amp;(ip.src == ip.src.42)))"/>
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
    </operator>
 </property>
 

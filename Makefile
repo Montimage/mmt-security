@@ -16,7 +16,7 @@ GIT_VERSION := $(shell git log --format="%h" -n 1)
 VERSION     := 1.0.0
 
 #set of library
-LIBS     = -ldl -lpthread -lxml2
+LIBS     = -ldl -lpthread -lxml2 -lhiredis
 
 CFLAGS   = -fPIC -Wall -DVERSION=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
 CLDFLAGS = 
@@ -70,7 +70,7 @@ MAIN_SEC_SERVER_NO_REORDER = mmt_sec_no_reordering
 
 LIB_NAME = libmmt_security
 
-all: standalone compile_rule rule_info sec_server
+all: standalone sec_server_no_reorder compile_rule rule_info sec_server
 
 %.o: %.c src/dpi/mmt_dpi.h
 	@echo "[COMPILE] $(notdir $@)"
@@ -133,7 +133,8 @@ $(INSTALL_DIR):
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/rules
 uninstall:
 	$(QUIET) $(RM) $(INSTALL_DIR)
-install: uninstall $(INSTALL_DIR) clean standalone rule_info compile_rule lib
+	
+install: uninstall $(INSTALL_DIR) clean sec_server_no_reorder standalone rule_info compile_rule lib
 	
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/include
 	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(INSTALL_DIR)/include/

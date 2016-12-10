@@ -104,7 +104,7 @@ static inline void *_process_one_thread( void *arg ){
 
 	if( cpus_count > 1 )
 		if( move_the_current_thread_to_a_processor( thread_arg->index % cpus_count + 1, -10 )) //cpu[0] is used for dispatching
-			mmt_warn("Cannot move thread %d to cpu[%ld]", gettid(), thread_arg->index % cpus_count + 1  );
+			mmt_warn("Cannot set affinity of thread %d on cpu[%ld]", gettid(), thread_arg->index % cpus_count + 1  );
 	while( 1 ){
 		do{
 			ret = ring_pop( ring, &msg );
@@ -193,7 +193,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	}
 
 	if( move_the_current_thread_to_a_processor(0, -15 ) )
-		mmt_warn("Cannot move thread %d to cpu[0]", gettid() );
+		mmt_warn("Cannot set affinity of thread %d on cpu[0]", gettid() );
 
 	return (mmt_smp_sec_handler_t *)handler;
 }

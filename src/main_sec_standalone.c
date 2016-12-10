@@ -262,7 +262,7 @@ static inline void termination(){
 	pcap_breakloop( pcap );
 
 	if (pcap_stats(pcap, &pcs) < 0) {
-		(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));
+//		(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));//Statistics aren't available from savefiles
 	}else{
 		(void) fprintf(stderr, "\n%12d packets received by filter\n", pcs.ps_recv);
 		(void) fprintf(stderr, "%12d packets dropped by interface\n", pcs.ps_ifdrop);
@@ -283,6 +283,7 @@ static inline void termination(){
 }
 
 void signal_handler_seg(int signal_type) {
+	mmt_error( "Interrupted by signal %d", signal_type );
 	mmt_print_execution_trace();
 	usleep( 50 );
 	exit( signal_type );
@@ -307,7 +308,7 @@ void signal_handler(int signal_type) {
 
 
 void register_signals(){
-	//signal(SIGSEGV, signal_handler_seg );
+	signal(SIGSEGV, signal_handler_seg );
 	signal(SIGINT,  signal_handler);
 	signal(SIGTERM, signal_handler);
 	signal(SIGABRT, signal_handler);

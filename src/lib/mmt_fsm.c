@@ -230,10 +230,18 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	__check_null( fsm, FSM_ERR_ARG );
 
 	_fsm = (_fsm_t *)fsm;
-	if ( unlikely( !_fsm->current_state
-			||  !_fsm->current_state->transitions_count
-			|| _fsm->current_state->transitions_count <= transition_index ))
-		return FSM_ERR_ARG;
+	if ( unlikely( !_fsm->current_state ))
+		mmt_halt( "Not found current state of fsm %d", _fsm->id );
+
+	/* If the target state is a final one, notify user that the machine has stopped */
+	if (_fsm->current_state == _fsm->error_state){
+		return FSM_ERROR_STATE_REACHED;
+	}else if (_fsm->current_state == _fsm->incl_state){
+		return FSM_INCONCLUSIVE_STATE_REACHED;
+	}else if ( _fsm->current_state == _fsm->success_state ){
+		return FSM_FINAL_STATE_REACHED;
+	}else if( _fsm->current_state->transitions_count == 0 )
+		return FSM_ERROR_STATE_REACHED;
 
 	//	mmt_debug( "Verify transition: %d of fsm %p", transition_index, fsm );
 

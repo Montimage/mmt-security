@@ -307,11 +307,11 @@ enum rule_engine_result _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t e
 				//mmt_debug("INCL");
 				_reset_engine_for_instance( _engine, new_fsm );
 				break;
-//			case FSM_STATE_CHANGED:
-//			case FSM_NO_STATE_CHANGE:
 			case FSM_ERR_ARG:
 				mmt_halt( "FSM_ERR_ARG" );
 				break;
+//			case FSM_STATE_CHANGED:
+//			case FSM_NO_STATE_CHANGE:
 			default:
 				//add the new_fsm to lists
 				//the #new_fsm does not need to listen to the transition having index = #fsm_ind->index
@@ -420,7 +420,7 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 	}
 
 	//check timeout
-	//verify instances that are waiting for event_id
+	//verify instances that are waiting for timeout
 	node = _engine->tmp_fsm_by_expecting_event_id[ FSM_EVENT_TYPE_TIMEOUT ];
 	//for each instance
 	while( node != NULL ){

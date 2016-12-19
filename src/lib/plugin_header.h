@@ -16,6 +16,7 @@
 #include <sys/time.h>
 
 #include "message_t.h"
+#include "mmt_array_t.h"
 
 typedef struct proto_attribute_struct{
 	const char *proto;
@@ -50,6 +51,10 @@ typedef struct rule_info_struct{
 	size_t proto_atts_count;
 	/** Array of protocols and their attributes being used in this rule */
 	const proto_attribute_t *proto_atts;
+	/**
+	 * Each array represents detail protocols and their attributes of each event.
+	 */
+	const mmt_array_t *proto_atts_events;
 
 	/** Create a FSM instance */
 	void* (* create_instance )();

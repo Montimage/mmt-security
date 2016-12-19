@@ -577,7 +577,7 @@ void _iterate_variables_to_gen_array_proto_att( void *key, void *data, void *use
 			var->proto, var->proto_id,
 			var->att, var->att_id,
 			var->data_type,
-			index == total-1? "};\n": ","
+			index == total-1? "}":","
 	);
 }
 
@@ -674,6 +674,7 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 		fprintf( fd, "\n\t\t\t .events_count     = EVENTS_COUNT_%d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .proto_atts_count = PROTO_ATTS_COUNT_%d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .proto_atts       = proto_atts_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .proto_atts_events= proto_atts_events_%d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .description      = %c%s%c,",
 						_string( rules[i]->description, 'N', "UL", 'L', '"', rules[i]->description, '"') );
 		fprintf( fd, "\n\t\t\t .if_satisfied     = %c%s%c,",
@@ -709,6 +710,42 @@ static inline void _iterate_event_to_get_unique_variables( void *key, void *data
 	get_unique_variables_of_expression( ev->expression, &map, NO );
 	mmt_map_iterate( map, _iterate_variable_to_add_to_a_new_map, user_data );
 	mmt_map_free( map, NO );
+}
+
+
+void _iterate_variables_to_gen_pointer_proto_att( void *key, void *data, void *user_data, size_t index, size_t total ){
+	struct _user_data *u_data = (struct _user_data *) user_data;
+
+	fprintf( u_data->file, "%c &proto_atts_%d[ %d ] %s",
+			index == 0 ? '{':' ',
+			u_data->uint32_val,
+			u_data->uint16_val ++,
+			index == total-1? "}":","
+	);
+}
+
+static inline void _iterate_events_to_gen_array_proto_att( void *key, void *data, void *user_data, size_t index, size_t total ){
+	rule_event_t *ev = (rule_event_t *)data;
+	mmt_map_t *map;
+	size_t vars_count;
+
+	struct _user_data *u_data = (struct _user_data *)user_data;
+
+	//each event
+	fprintf( u_data->file, "\n\t {//event_%d", ev->id );
+
+	//variables of each event
+	vars_count = get_unique_variables_of_expression( ev->expression, &map, NO );
+	fprintf( u_data->file, "\n\t\t .elements_count = %zu,", vars_count );
+
+	fprintf( u_data->file, "\n\t\t .data = (void* []) " );
+	if( vars_count > 0 )
+		mmt_map_iterate( map, _iterate_variables_to_gen_pointer_proto_att, user_data );
+	else
+		fprintf( u_data->file, "{}");
+	mmt_map_free( map, NO );
+
+	fprintf( u_data->file, "\n\t }%c", index + 1 == total ? ' ':',' );
 }
 
 static inline void _iterate_event_to_verify_id( void *key, void *data, void *user_data, size_t index, size_t total ){
@@ -825,12 +862,24 @@ static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 	fprintf( fd, "\n\n //======================================RULE %d======================================", rule->id );
 	fprintf( fd, "\n #define EVENTS_COUNT_%d %zu\n", rule->id, events_count );
 	fprintf( fd, "\n #define PROTO_ATTS_COUNT_%d %zu\n", rule->id, variables_count );
+
+	_gen_comment( fd, "Proto_atts for rule %d", rule->id );
 	fprintf( fd, "\n static proto_attribute_t proto_atts_%d[ PROTO_ATTS_COUNT_%d ] = ", rule->id, rule->id );
 	if( variables_count > 0 )
 		mmt_map_iterate(variables_map, _iterate_variables_to_gen_array_proto_att, fd );
 	else
 		//there is no variables
-		fprintf( fd, "{};");
+		fprintf( fd, "{}");
+	fprintf( fd, ";");
+
+	_gen_comment( fd, "Detail of proto_atts for each event");
+	_u_data.uint16_val = 0;
+	//first element having index = 0 is null as event_id starts from 1
+	fprintf( fd, "\n static mmt_array_t proto_atts_events_%d[ %zu ] = { {.elements_count = 0, .data = NULL}, ",
+			rule->id, events_count + 1 );
+	mmt_map_iterate(events_map, _iterate_events_to_gen_array_proto_att, &_u_data );
+	fprintf( fd, "\n };//end proto_atts_events_\n" );
+
 
 	//define a structure using in guard functions
 	if( variables_count > 0 )

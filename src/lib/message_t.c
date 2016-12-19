@@ -36,7 +36,7 @@ size_t free_message_t( message_t *msg ){
 
 	//pthread_spin_lock( &spin_lock );
 	//free message only when there is one reference to its father
-	if( mmt_mem_reference_count( msg ) == 1 ){
+	if( mmt_mem_reference_count( msg ) <= 1 ){
 		for( i=0; i<msg->elements_count; i++ )
 			mmt_mem_free( msg->elements[i].data );
 

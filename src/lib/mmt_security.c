@@ -24,6 +24,8 @@
 #include "../dpi/types_defs.h"
 #include "../dpi/mmt_dpi.h"
 
+#define MAX_MSG_SIZE 100000
+
 #ifndef MAX_INSTANCE_COUNT
 	#define MAX_INSTANCE_COUNT 1000000
 #endif
@@ -156,9 +158,9 @@ static inline enum verdict_type _get_verdict( int rule_type, enum rule_engine_re
 	case RULE_TYPE_SECURITY:
 		switch( result ){
 		case RULE_ENGINE_RESULT_ERROR:
-			return VERDICT_NOT_RESPECTED;
+			return VERDICT_UNKNOWN;//VERDICT_NOT_RESPECTED;
 		case RULE_ENGINE_RESULT_VALIDATE:
-			return VERDICT_UNKNOWN; //VERDICT_RESPECTED;
+			return VERDICT_RESPECTED;
 		default:
 			return VERDICT_UNKNOWN;
 		}
@@ -230,36 +232,41 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 
 #define MAX_STR_SIZE 50000
 
-char* convert_execution_trace_to_json_string( const mmt_array_t *trace ){
-	char buffer[ MAX_STR_SIZE ];
-	char *string = buffer;
-	size_t size, i, total_len, index;
+char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
+	char buffer[ MAX_STR_SIZE + 1 ];
+	char *str_ptr;
+	size_t size, i, j, total_len, index;
 	const message_t *msg;
 	const message_element_t *me;
 	char *tmp;
 	constant_t expr_const;
 	bool is_first;
+	struct timeval time;
+	const mmt_array_t *proto_atts_event; //proto_att of an event
+	const proto_attribute_t *pro_ptr;
 
 	__check_null( trace, NULL );
 
 	buffer[0] = '\0';
 
+	//number of elements in traces <= number of real events + timeout event
+	mmt_assert( trace->elements_count <= rule->events_count + 1,
+			"Impossible: elements_count > events_count (%zu > %d + 1)", trace->elements_count, rule->events_count);
 
-
-	total_len = strlen( string );
-	string += total_len;
+	total_len = MAX_STR_SIZE;
+	str_ptr   = buffer;
 
 	for( index=0; index<trace->elements_count; index ++ ){
 		msg = trace->data[ index ];
 		if( msg == NULL ) continue;
 
+		time = mmt_sec_decode_timeval( msg->timestamp );
 
-
-		size = sprintf( string, "%s\"event_%zu\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
-				index == 0 ? "{": " ,",
+		size = snprintf( str_ptr, total_len, "%s\"event_%zu\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
+						total_len == MAX_STR_SIZE ? "{": " ,",
 						index,
-						msg->timestamp / 1000000, //timestamp: second
-						(int)(msg->timestamp % 1000000), //timestamp: microsecond
+						(uint64_t)time.tv_sec, //timestamp: second
+						(int)time.tv_usec, //timestamp: microsecond
 						msg->counter );
 
 		is_first = YES;
@@ -268,6 +275,18 @@ char* convert_execution_trace_to_json_string( const mmt_array_t *trace ){
 			me = &msg->elements[i];
 
 			if( me->data == NULL ) continue;
+
+			//get array of proto_att used in the event having #index
+			proto_atts_event = &rule->proto_atts_events[ index ];
+			//check if #me is used in this event of the rule #rule
+			for( j=0; j<proto_atts_event->elements_count; j++ ){
+				pro_ptr = (proto_attribute_t *)proto_atts_event->data[ j ];
+				if( pro_ptr->att_id == me->att_id && pro_ptr->proto_id == me->proto_id )
+					break;
+			}
+			//not found any variable/proto_att in this event using "me"
+			if( j>= proto_atts_event->elements_count )
+				continue;
 
 			//convert me->data to string
 			expr_const.data = me->data;
@@ -279,26 +298,27 @@ char* convert_execution_trace_to_json_string( const mmt_array_t *trace ){
 
 			if( expr_stringify_constant( &tmp, &expr_const ) ){
 
-				total_len += size;
-				if( unlikely( total_len >= MAX_STR_SIZE )) break;
+				total_len -= size;
+				if( unlikely( total_len <= 0 )) break;
 
-				string += size;
-				size = sprintf( string, "%s{\"%s.%s\":%s}",
+				str_ptr += size;
+				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":%s}",
 						(is_first? "":","),
-						get_protocol_name_by_id( me->proto_id ),
-						get_attribute_name_by_protocol_id_and_attribute_id( me->proto_id, me->att_id ),
+						pro_ptr->proto,
+						pro_ptr->att,
 						tmp);
 				mmt_mem_free( tmp );
 				is_first = NO;
 			}
 		}
 
-		total_len += size;
-		if( unlikely( total_len >= MAX_STR_SIZE )) break;
+		total_len -= size;
+		if( unlikely( total_len <= 0 )) break;
 
-		string += size;
-		sprintf( string, "]}%s", //end attributes, end event_
-				index == trace->elements_count - 1? "}": ""  );
+		str_ptr += size;
+		snprintf( str_ptr, total_len, "]}%s", //end attributes, end event_
+				(index == trace->elements_count - 1)? "}": ""  );
+
 	}
 	return (char *) mmt_mem_dup( buffer, strlen( buffer) );
 }
@@ -422,4 +442,37 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 	*new_data = NULL;
 	mmt_error("Data type %d has not yet implemented", type);
 	return 1;
+}
+
+
+void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
+		enum verdict_type verdict,
+		uint64_t timestamp,  //moment the rule is validated
+		uint32_t counter,
+		const mmt_array_t *const trace,
+		void *user_data )
+{
+	int len;
+	char message[ MAX_MSG_SIZE + 1 ];
+	struct timeval now;
+	gettimeofday(&now, NULL);
+
+	char *string = convert_execution_trace_to_json_string( trace, rule );
+
+//	len = snprintf( message, MAX_MSG_SIZE, "{\"timestamp\":%ld.%ld,\"pid\":%"PRIu32",\"verdict\":\"%s\",\"type\":\"%s\",\"cause\":\"%s\",\"history\":%s},",
+//			now.tv_sec, now.tv_usec,
+//			rule->id, verdict_type_string[verdict],  rule->type_string,  rule->description, string );
+
+	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld.%06ld,%"PRIu64",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
+			(uint64_t) now.tv_sec, (uint64_t)now.tv_usec,
+			0l, //index of alarm, not used, appear just for being compatible with format of other report types of mmt-probe
+			rule->id,
+			verdict_type_string[verdict],
+			rule->type_string,
+			rule->description, string );
+
+	message[ len ] = '\0';
+	verdict_printer_send( message );
+
+	mmt_mem_free( string );
 }

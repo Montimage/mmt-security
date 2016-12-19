@@ -16,6 +16,7 @@
 
 #include "plugin_header.h"
 #include "mmt_array_t.h"
+#include "verdict_printer.h"
 
 /**
  * Get the current version information of mmt-sec
@@ -83,7 +84,7 @@ size_t mmt_sec_get_unique_protocol_attributes( const mmt_sec_handler_t *handler,
 /**
  * Convert a given execution trace to a JSON string
  */
-char* convert_execution_trace_to_json_string( const mmt_array_t *trace );
+char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule );
 
 /**
  * Encode a #timeval to an uint64_t value
@@ -92,6 +93,14 @@ static inline uint64_t mmt_sec_encode_timeval( const struct timeval *t ){
 	uint64_t val = t->tv_sec * 1000000 + t->tv_usec;
 	return val;
 }
+
+static inline struct timeval mmt_sec_decode_timeval( uint64_t val ){
+	struct timeval time;
+	time.tv_sec  = val / 1000000;     //timestamp: second
+	time.tv_usec = val - time.tv_sec; //timestamp: microsecond
+	return time;
+}
+
 
 /**
  * Convert data encoded in a pcap packet to readable data that is either a double
@@ -105,5 +114,16 @@ static inline uint64_t mmt_sec_encode_timeval( const struct timeval *t ){
  * 	+ new_type: either STRING or NUMERIC
  */
 int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type );
+
+/**
+ * Print verdict to the screen.
+ * This function is called each time a verdict being detected.
+ */
+void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
+		enum verdict_type verdict,
+		uint64_t timestamp,  //moment the rule is validated
+		uint32_t counter,
+		const mmt_array_t *const trace,
+		void *user_data );
 
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

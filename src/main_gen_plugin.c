@@ -29,7 +29,7 @@ int main( int argc, char** argv ){
 		fprintf( stderr, "\n - output_file   : path of file containing result that can be either a .c file or .so file");
 		fprintf( stderr, "\n - property_file : path to property file to read");
 		fprintf( stderr, "\n - option        : ");
-		fprintf( stderr, "\n      + \"-c\"   : generate only code c" );
+		fprintf( stderr, "\n      + \"-c\"     : generate only code c" );
 		fprintf( stderr, "\n      + otherwise: generate code c, then compile to .so file.");
 		fprintf( stderr, "\n                   This option will be transfered to gcc.");
 		fprintf( stderr, "\n");

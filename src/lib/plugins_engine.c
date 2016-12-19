@@ -73,7 +73,7 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 			if( mmt_map_set_data( plugins_set, (void *)key, (void *)tmp_array[j], NO ) == NULL){
 				plugins_array[ index ++ ] = tmp_array[ j ];
 			}else{
-				mmt_info( "Rule %d in file %s uses an existing id", *key, path);
+				mmt_warn( "Rule %d in file %s uses an existing id", *key, path);
 			}
 		}
 		free( entry );

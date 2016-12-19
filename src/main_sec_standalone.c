@@ -28,9 +28,10 @@
 #include "lib/mmt_lib.h"
 #include "lib/plugin_header.h"
 #include "lib/mmt_smp_security.h"
+#include "lib/verdict_printer.h"
 
 
-#define MAX_FILENAME_SIZE 256
+#define MAX_FILENAME_SIZE 500
 #define TRACE_FILE 1
 #define LIVE_INTERFACE 2
 #define SNAP_LEN 65355
@@ -40,6 +41,10 @@ static message_element_t *proto_atts = NULL;
 //Statistic
 static size_t total_received_reports = 0;
 
+
+static const rule_info_t **rules_arr = NULL;
+static pcap_t *pcap;
+
 typedef struct _sec_handler_struct{
 	void *handler;
 
@@ -47,6 +52,8 @@ typedef struct _sec_handler_struct{
 
 	int threads_count;
 }_sec_handler_t;
+
+static _sec_handler_t _sec_handler;
 
 /**
  * Print information of the rules existing.
@@ -70,36 +77,16 @@ void print_rules_info(){
 	mmt_mem_free( rules_arr );
 }
 
-/**
- * Print verdict to the screen.
- * This function is called each time a verdict being detected.
- */
-void print_verdict( const rule_info_t *rule,		//id of rule
-		enum verdict_type verdict,
-		uint64_t timestamp,  //moment the rule is validated
-		uint32_t counter,
-		const mmt_array_t *const trace,
-		void *user_data ){
-
-	struct timeval now;
-	gettimeofday(&now, NULL);
-
-	char *string = convert_execution_trace_to_json_string( trace );
-
-	printf( "{\"timestamp\":%ld.%ld,\"pid\":%"PRIu32",\"verdict\":\"%s\",\"type\":\"%s\",\"cause\":\"%s\",\"history\":%s},\n",
-			now.tv_sec, now.tv_usec,
-			rule->id, verdict_type_string[verdict],  rule->type_string,  rule->description, string );
-
-	mmt_mem_free( string );
-}
 
 void usage(const char * prg_name) {
-	fprintf(stderr, "MMT-Security version %s\n", mmt_sec_get_version_info() );
+	fprintf(stderr, "MMT-Security version %s using DPI version %s\n", mmt_sec_get_version_info(), mmt_version() );
 	fprintf(stderr, "%s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");
 	fprintf(stderr, "\t-i <interface> : Gives the interface name for live traffic analysis.\n");
 	fprintf(stderr, "\t-n <number>    : Number of threads. Default = 2\n");
+	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
+	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-l             : Prints the available rules then exit.\n");
 	fprintf(stderr, "\t-h             : Prints this help.\n");
 	exit(1);
@@ -107,8 +94,11 @@ void usage(const char * prg_name) {
 
 size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id, size_t *threads_count ) {
 	int opt, optcount = 0, x;
+	char file_string[MAX_FILENAME_SIZE]  = {0};
+	char redis_string[MAX_FILENAME_SIZE] = {0};
+
 	filename[0] = '\0';
-	while ((opt = getopt(argc, argv, "t:i:n:lh")) != EOF) {
+	while ((opt = getopt(argc, argv, "t:i:n:f:r:lh")) != EOF) {
 		switch (opt) {
 		case 't':
 			optcount++;
@@ -125,6 +115,20 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			}
 			strncpy((char *) filename, optarg, MAX_FILENAME_SIZE);
 			*type = LIVE_INTERFACE;
+			break;
+		case 'f':
+			optcount++;
+			if (optcount <= 1) {
+				usage(argv[0]);
+			}
+			strncpy((char *) file_string, optarg, MAX_FILENAME_SIZE);
+			break;
+		case 'r':
+			optcount++;
+			if (optcount <= 1) {
+				usage(argv[0]);
+			}
+			strncpy((char *) redis_string, optarg, MAX_FILENAME_SIZE);
 			break;
 		case 'n':
 			optcount++;
@@ -156,6 +160,8 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 		}
 		usage(argv[0]);
 	}
+
+	verdict_printer_init( file_string, redis_string );
 	return 0;
 }
 
@@ -222,15 +228,13 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  * message to mmt-security.
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
-	_sec_handler_t *sec_handler = (_sec_handler_t *) args;
-
 	message_t *msg = _get_packet_info( ipacket );
 
 	//if there is no interested information
 	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
 	if( unlikely( msg == NULL )) return 1;
 
-	sec_handler->process_fn( sec_handler->handler, msg );
+	_sec_handler.process_fn( _sec_handler.handler, msg );
 
 	total_received_reports ++;
 
@@ -251,13 +255,10 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 }
 
 
-
-static _sec_handler_t _sec_handler;
-static const rule_info_t **rules_arr = NULL;
-static pcap_t *pcap;
-
 static inline void termination(){
 	struct pcap_stat pcs; /* packet capture filter stats */
+
+	verdict_printer_free();
 
 	pcap_breakloop( pcap );
 
@@ -308,7 +309,9 @@ void signal_handler(int signal_type) {
 
 
 void register_signals(){
+#ifndef DEBUG_MODE
 	signal(SIGSEGV, signal_handler_seg );
+#endif
 	signal(SIGINT,  signal_handler);
 	signal(SIGTERM, signal_handler);
 	signal(SIGABRT, signal_handler);
@@ -337,16 +340,16 @@ int main(int argc, char** argv) {
 	//get all available rules
 	size = mmt_sec_get_rules_info( &rules_arr );
 
-	_sec_handler.threads_count = threads_count;
+	_sec_handler.threads_count = 1; //threads_count;
 
 	//init mmt-sec to verify the rules
 	if( _sec_handler.threads_count == 1 ){
-		_sec_handler.handler    = mmt_sec_register( rules_arr, size, print_verdict, NULL );
-		_sec_handler.process_fn = mmt_sec_process;
+		_sec_handler.handler    = mmt_sec_register( rules_arr, size, mmt_sec_print_verdict, NULL );
+		_sec_handler.process_fn = &mmt_sec_process;
 		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}else{
-		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, threads_count, print_verdict, NULL );
-		_sec_handler.process_fn = mmt_smp_sec_process;
+		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count, mmt_sec_print_verdict, NULL );
+		_sec_handler.process_fn = &mmt_smp_sec_process;
 		size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}
 
@@ -373,7 +376,7 @@ int main(int argc, char** argv) {
 	}
 
 	//Register a packet handler, it will be called for every processed packet
-	register_packet_handler(mmt_dpi_handler, 1, packet_handler, (void *)&_sec_handler );
+	register_packet_handler(mmt_dpi_handler, 1, packet_handler, NULL );
 
 	if (type == TRACE_FILE) {
 		mmt_info("Analyzing pcap file %s", filename );

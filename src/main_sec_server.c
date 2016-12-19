@@ -68,8 +68,8 @@ typedef struct report {
 	size_t elements_count;
 	struct timeval timestamp;
 	report_element_t *report_elements;
-    struct report * next;
-    struct report * prev;
+	struct report * next;
+	struct report * prev;
 } report_t;
 static struct report *report_list = NULL;
 //static struct report *head_queue = NULL;
@@ -83,25 +83,25 @@ struct thr_r_arg_struct{
 struct thr_p_arg_struct{
 	mmt_smp_sec_handler_t *mmt_smp_sec_handl;
 	int index;
-
 };
 
 struct {
-        pthread_spinlock_t spinlock_cr; //lock to count the reports received
-        pthread_spinlock_t spinlock_processing; //lock for processing threads
-        pthread_mutex_t mutex_str; //lock to insert the reports
-        pthread_mutex_t mutex_recv_s; //lock for determining receiving state = YES/NO
-        int count_str; //count the reports stored
-        int count_rcv; //count the reports received
-        } thread_lock;
+	pthread_spinlock_t spinlock_cr; //lock to count the reports received
+	pthread_spinlock_t spinlock_processing; //lock for processing threads
+	pthread_mutex_t mutex_str; //lock to insert the reports
+	pthread_mutex_t mutex_recv_s; //lock for determining receiving state = YES/NO
+	int count_str; //count the reports stored
+	int count_rcv; //count the reports received
+} thread_lock;
+
 pthread_cond_t cond[10];
 pthread_mutex_t mutex;
 pthread_t thr_p_rest;
 
 void error(const char *msg)
 {
-    perror(msg);
-    exit(1);
+	perror(msg);
+	exit(1);
 }
 
 int time_diff(struct timeval t1, struct timeval t2) {
@@ -112,43 +112,43 @@ int timevalcmp (struct timeval tv1, struct timeval tv2){
 	if ((int) tv1.tv_sec > (int) tv2.tv_sec) return 1;
 	if (((int) tv1.tv_sec == (int) tv2.tv_sec) && ((int) tv1.tv_usec > (int) tv2.tv_usec)) return 1;
 	return 0;
-	}
+}
 
 int free_report_t(report_t *node){
 	int i;
 	if (node==NULL) return 1; //nothing to do
 	for (i=0; i<node->elements_count; i++){
 		mmt_mem_free(node->report_elements[i].data);
-		}
-    	mmt_mem_free(node->report_elements);
-    	mmt_mem_free(node);
-    return 0;
+	}
+	mmt_mem_free(node->report_elements);
+	mmt_mem_free(node);
+	return 0;
 }
 
 /*Pop/Delete last node (FIFO-Queue)*/
 int pop_last(report_t **head)
 {	int i;
-	report_t * last;
-		/*Only one node*/
-	if (thread_lock.count_str==0) return 1;
-	if (thread_lock.count_str==1) { //one node
-			//free_report_t(*head);
-			*head = NULL;
-			return 0;
-			}
-	if(thread_lock.count_str==2){ //2 nodes
-		last = (*head)->next;
-		(*head)->next = NULL;
-		(*head)->prev = *head;
-		//free_report_t(last);
-		return 0;
-		}
-   //more than 2 nodes
-    last = (*head)->prev;
-    last->prev->next = NULL;
-    (*head)->prev = last->prev;
-    //free_report_t(last);
-    return 0;
+report_t * last;
+/*Only one node*/
+if (thread_lock.count_str==0) return 1;
+if (thread_lock.count_str==1) { //one node
+	//free_report_t(*head);
+	*head = NULL;
+	return 0;
+}
+if(thread_lock.count_str==2){ //2 nodes
+	last = (*head)->next;
+	(*head)->next = NULL;
+	(*head)->prev = *head;
+	//free_report_t(last);
+	return 0;
+}
+//more than 2 nodes
+last = (*head)->prev;
+last->prev->next = NULL;
+(*head)->prev = last->prev;
+//free_report_t(last);
+return 0;
 }
 
 /*Insert a new node to the double linked list that was
@@ -158,67 +158,67 @@ int insert(report_t **head, report_t *report_node)
 {
 	report_t * current, * temp;
 
- // The list is empty
-  if (thread_lock.count_str==0) {
-	 //mmt_debug("Add the first node\n");
-	  *head = report_node;
-	 (*head)->prev = report_node;//if the node has only one node, head->prev = head; head->next = NULL
-	 (*head)->next = NULL;
-	 return 0;
-	 }
-
- // The list contains only one node
- if (thread_lock.count_str==1){
-	 if (timevalcmp((*head)->timestamp, report_node->timestamp)==0) { //add to the beginning
-		 //mmt_debug("One node. Add to the beginning\n");
-		 temp = report_node;
-		 (*head)->prev = temp;
-		 temp->next = *head;
-		 temp->prev = *head;
-		 *head = temp;
-		 return 0;
-		 }
-	 else { //add to the end
-		 //mmt_debug("One node. Add to the end\n");
-		 report_node->prev = *head;
-		 (*head)->next = report_node;
-		 (*head)->prev = report_node;
-		 return 0;
-		 }
+	// The list is empty
+	if (thread_lock.count_str==0) {
+		//mmt_debug("Add the first node\n");
+		*head = report_node;
+		(*head)->prev = report_node;//if the node has only one node, head->prev = head; head->next = NULL
+		(*head)->next = NULL;
+		return 0;
 	}
 
-// The list contains at least two nodes
- current = *head;
-        while((timevalcmp(current->timestamp,report_node->timestamp))&&(current->next!=NULL))
-        {
-                current = current -> next;
-        }
- if (current==*head){ //timestamp is bigger than the first node, add to the beginning
-		 //mmt_debug("At least two nodes. Add to the beginning\n");
-		 temp = report_node;
-	 	 temp->next = *head;
-		 temp->prev = (*head)->prev;
-		 (*head)->prev = temp;
-		 *head = temp;
-		 return 0;
-	 }
- if (current->next==NULL){
-	 if (timevalcmp(current->timestamp, report_node->timestamp)==1) {//add to the end
-		 //mmt_debug("At least two nodes. Add to the end\n");
-		 current->next = report_node;
-		 report_node->prev = current;
-		 (*head)->prev = report_node;
-		 return 0;
-			}
-	 }
- //there exist prev_node and after_node (current) to add new node between them
- //mmt_debug("At least two nodes. Add to the middle\n");
- temp = report_node;
- current->prev->next = temp;
- temp->prev = current->prev;
- temp->next = current;
- current->prev = temp;
- return 0;
+	// The list contains only one node
+	if (thread_lock.count_str==1){
+		if (timevalcmp((*head)->timestamp, report_node->timestamp)==0) { //add to the beginning
+			//mmt_debug("One node. Add to the beginning\n");
+			temp = report_node;
+			(*head)->prev = temp;
+			temp->next = *head;
+			temp->prev = *head;
+			*head = temp;
+			return 0;
+		}
+		else { //add to the end
+			//mmt_debug("One node. Add to the end\n");
+			report_node->prev = *head;
+			(*head)->next = report_node;
+			(*head)->prev = report_node;
+			return 0;
+		}
+	}
+
+	// The list contains at least two nodes
+	current = *head;
+	while((timevalcmp(current->timestamp,report_node->timestamp))&&(current->next!=NULL))
+	{
+		current = current -> next;
+	}
+	if (current==*head){ //timestamp is bigger than the first node, add to the beginning
+		//mmt_debug("At least two nodes. Add to the beginning\n");
+		temp = report_node;
+		temp->next = *head;
+		temp->prev = (*head)->prev;
+		(*head)->prev = temp;
+		*head = temp;
+		return 0;
+	}
+	if (current->next==NULL){
+		if (timevalcmp(current->timestamp, report_node->timestamp)==1) {//add to the end
+			//mmt_debug("At least two nodes. Add to the end\n");
+			current->next = report_node;
+			report_node->prev = current;
+			(*head)->prev = report_node;
+			return 0;
+		}
+	}
+	//there exist prev_node and after_node (current) to add new node between them
+	//mmt_debug("At least two nodes. Add to the middle\n");
+	temp = report_node;
+	current->prev->next = temp;
+	temp->prev = current->prev;
+	temp->next = current;
+	current->prev = temp;
+	return 0;
 }
 
 
@@ -226,12 +226,12 @@ int insert(report_t **head, report_t *report_node)
 void print_list(report_t *head)
 {
 	report_t * current = head;
-        while(current != NULL)
-        {
-				printf("Timestamp: %lu.%lu",current->timestamp.tv_sec, current->timestamp.tv_usec);
-                current = current->next;
-                printf("\n");
-        }
+	while(current != NULL)
+	{
+		printf("Timestamp: %lu.%lu",current->timestamp.tv_sec, current->timestamp.tv_usec);
+		current = current->next;
+		printf("\n");
+	}
 }
 
 
@@ -264,7 +264,7 @@ void print_verdict( const rule_info_t *rule,		//id of rule
 	struct timeval now;
 	gettimeofday(&now, NULL);
 
-	char *string = convert_execution_trace_to_json_string( trace );
+	char *string = convert_execution_trace_to_json_string( trace, rule );
 
 	printf( "{\"timestamp\":%ld.%ld,\"pid\":%"PRIu32",\"verdict\":\"%s\",\"type\":\"%s\",\"cause\":\"%s\",\"history\":%s},\n",
 			now.tv_sec, now.tv_usec,
@@ -291,8 +291,8 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id) {
 		case 'c': 
 			optcount++;
 			if (optcount > 1) {
-							usage(argv[0]);
-							 }
+				usage(argv[0]);
+			}
 			config_file = optarg;
 			break;
 		case 'l':
@@ -304,10 +304,10 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id) {
 	}
 	mmt_sec_config_struct = get_mmt_sec_config(config_file);
 	if (mmt_sec_config_struct==NULL)
-		{
+	{
 		fprintf(stderr, "Invalid configuration file: %s\n", config_file);
 		exit(1);
-		}
+	}
 	return 0;
 }
 
@@ -326,14 +326,14 @@ static inline void* _get_data_from_report( const report_t *report_node, message_
 	int i=0;
 
 	for (i=0; i<report_node->elements_count;i++){
-			//mmt_debug("Report_node->report_elements[i].proto_id:%d. me->proto_id:%d", report_node->report_elements[i].proto_id, me->proto_id);
-			//mmt_debug("report data %s", (unsigned char *)report_node->report_elements[i].data);
+		//mmt_debug("Report_node->report_elements[i].proto_id:%d. me->proto_id:%d", report_node->report_elements[i].proto_id, me->proto_id);
+		//mmt_debug("report data %s", (unsigned char *)report_node->report_elements[i].data);
 		if ((report_node->report_elements[i].proto_id==me->proto_id) && (report_node->report_elements[i].att_id==me->att_id)){
 			//mmt_debug("Found the proto and att");
 			data = (uint8_t *) report_node->report_elements[i].data;
 			break;
-			}
 		}
+	}
 	//mmt_debug("Not found the proto and att");
 	//does not exist data for this proto_id and att_id
 	if( data == NULL ) return NULL;
@@ -447,8 +447,8 @@ static inline message_t* _report_to_msg( const report_t *report_node){
 		if( data != NULL ){
 			//mmt_debug("has data = YES");
 			has_data = YES;
-		msg->elements[i].data      = data;
-		msg->elements[i].data_type = type;
+			msg->elements[i].data      = data;
+			msg->elements[i].data_type = type;
 		}
 	}
 
@@ -473,12 +473,12 @@ void signal_handler(int signal_type) {
 }
 
 bool receiving_state(){
-int i;
-if (connectcnt==0) return YES;
-for (i=0; i<connectcnt; i++){
-	if (recev_s[i]==YES) return YES;
-}
-return NO;
+	int i;
+	if (connectcnt==0) return YES;
+	for (i=0; i<connectcnt; i++){
+		if (recev_s[i]==YES) return YES;
+	}
+	return NO;
 }
 /*
 void *processing_thr_rest (void *args){
@@ -493,7 +493,7 @@ while(thread_lock.count_str!=0){
 						fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
 pthread_exit((void *)NULL);
 }
-*/
+ */
 void *receiving_thr (void *arg) {
 	struct thr_r_arg_struct *thr_recv_struct = (struct thr_r_arg_struct *) arg;
 	int sock = (intptr_t) thr_recv_struct->sock;
@@ -509,44 +509,44 @@ void *receiving_thr (void *arg) {
 	//int nb_rp_buff = 0;
 
 	while(1){
-			n = recv(sock, &length_of_report, 4, MSG_WAITALL);//Read 4 bytes first to know the length of the report
-			if (n == 0)	break;
-			if( length_of_report > REPORT_SIZE ){
-			   		mmt_warn("Overflow: length_of_report = %d", length_of_report );
-			   		length_of_report = REPORT_SIZE;
-			   	}else if( length_of_report < 31 )
-			   		continue;
-			   	else if( length_of_report < 0 )
-			   		mmt_info("Impossible len = %d", length_of_report );
+		n = recv(sock, &length_of_report, 4, MSG_WAITALL);//Read 4 bytes first to know the length of the report
+		if (n == 0)	break;
+		if( length_of_report > REPORT_SIZE ){
+			mmt_warn("Overflow: length_of_report = %d", length_of_report );
+			length_of_report = REPORT_SIZE;
+		}else if( length_of_report < 31 )
+			continue;
+		else if( length_of_report < 0 )
+			mmt_info("Impossible len = %d", length_of_report );
 
-			n = recv( sock, buffer, length_of_report-4, MSG_WAITALL );
-			   	if( n == 0 ) break;
-			   	if( n < 27 ) error("Report in bad format");
-			length =0;
-			if ((int) pthread_spin_lock(&thread_lock.spinlock_cr)) error("thread_lock.spinlock_cr failed");
-			thread_lock.count_rcv++;
-		    pthread_spin_unlock(&thread_lock.spinlock_cr);
+		n = recv( sock, buffer, length_of_report-4, MSG_WAITALL );
+		if( n == 0 ) break;
+		if( n < 27 ) error("Report in bad format");
+		length =0;
+		if ((int) pthread_spin_lock(&thread_lock.spinlock_cr)) error("thread_lock.spinlock_cr failed");
+		thread_lock.count_rcv++;
+		pthread_spin_unlock(&thread_lock.spinlock_cr);
 
-			int counter = 0;
-			//mmt_debug("Report received, length=%d, thread_lock.count_rcv = %d \n", length_of_report, thread_lock.count_rcv);
-			report_t *report_node;
-			report_node = mmt_mem_alloc(sizeof(report_t));
-			report_node->flag = 0;
-			report_node->counter = 0; //TODO
-			report_node->next = NULL;
-			report_node->prev = NULL;
-			report_node->elements_count=0;
-			report_node->timestamp.tv_sec=0;
-			report_node->timestamp.tv_usec=0;
-			report_node->report_elements=NULL;
+		int counter = 0;
+		//mmt_debug("Report received, length=%d, thread_lock.count_rcv = %d \n", length_of_report, thread_lock.count_rcv);
+		report_t *report_node;
+		report_node = mmt_mem_alloc(sizeof(report_t));
+		report_node->flag = 0;
+		report_node->counter = 0; //TODO
+		report_node->next = NULL;
+		report_node->prev = NULL;
+		report_node->elements_count=0;
+		report_node->timestamp.tv_sec=0;
+		report_node->timestamp.tv_usec=0;
+		report_node->report_elements=NULL;
 
-			memcpy(&report_node->elements_count,&buffer[length],1);
-			length += 1;
-			report_node->report_elements = mmt_mem_alloc(report_node->elements_count * sizeof(report_element_t));
-			memcpy(&report_node->timestamp,&buffer[length],sizeof(struct timeval));
-			//mmt_debug("Timestamp: %lu.%lu \n",report_node->timestamp.tv_sec, report_node->timestamp.tv_usec);
-			length += sizeof (struct timeval);//16
-			while((length_of_report- 4 -length) > 10){
+		memcpy(&report_node->elements_count,&buffer[length],1);
+		length += 1;
+		report_node->report_elements = mmt_mem_alloc(report_node->elements_count * sizeof(report_element_t));
+		memcpy(&report_node->timestamp,&buffer[length],sizeof(struct timeval));
+		//mmt_debug("Timestamp: %lu.%lu \n",report_node->timestamp.tv_sec, report_node->timestamp.tv_usec);
+		length += sizeof (struct timeval);//16
+		while((length_of_report- 4 -length) > 10){
 			memcpy(&report_node->report_elements[counter].proto_id,&buffer[length],4);
 			length += 4;
 			memcpy(&report_node->report_elements[counter].att_id,&buffer[length],4);
@@ -557,27 +557,27 @@ void *receiving_thr (void *arg) {
 			memcpy(report_node->report_elements[counter].data,&buffer[length],report_node->report_elements[counter].data_len);
 			//unsigned char * data = (unsigned char*)report_node->report_elements[counter].data;
 			//mmt_debug("report_node->elements_count = %d, proto_ID = %u. att_id = %u. data_len = %u. data = %02x, %02x\n", (int) report_node->elements_count, report_node->report_elements[counter].proto_id,
-					//report_node->report_elements[counter].att_id,
-					//report_node->report_elements[counter].data_len,
-					//buffer[length], data[0]);
+			//report_node->report_elements[counter].att_id,
+			//report_node->report_elements[counter].data_len,
+			//buffer[length], data[0]);
 			length += report_node->report_elements[counter].data_len;
 			counter++;
-			}
+		}
 
-			// Store the received report as a node
-			//if (pthread_mutex_lock(&thread_lock.mutex_str)) error("pthread_mutex_lock failed");
-			if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
-			while(!condition_v[i]) if (pthread_cond_wait(&cond[i], &mutex)!= 0) error("pthread_cond_wait failed");
-			if (insert(&report_list, report_node)!= 0) error("Insert failed");
-			thread_lock.count_str++;
-			//if (thread_lock.count_str >= thr_recv_struct->threshold_size) { //|| time_diff(report_list->prev->timestamp, report_list->timestamp)>thr_recv_struct->threshold_time
-			//if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
-			//}
-			//pthread_mutex_unlock(&thread_lock.mutex_str);
-			condition_v[i] = NO;
-			pthread_cond_signal(&cond[i]);
-			if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
-			}
+		// Store the received report as a node
+		//if (pthread_mutex_lock(&thread_lock.mutex_str)) error("pthread_mutex_lock failed");
+		if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
+		while(!condition_v[i]) if (pthread_cond_wait(&cond[i], &mutex)!= 0) error("pthread_cond_wait failed");
+		if (insert(&report_list, report_node)!= 0) error("Insert failed");
+		thread_lock.count_str++;
+		//if (thread_lock.count_str >= thr_recv_struct->threshold_size) { //|| time_diff(report_list->prev->timestamp, report_list->timestamp)>thr_recv_struct->threshold_time
+		//if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex
+		//}
+		//pthread_mutex_unlock(&thread_lock.mutex_str);
+		condition_v[i] = NO;
+		pthread_cond_signal(&cond[i]);
+		if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
+	}
 	close(sock);
 	if (pthread_mutex_lock(&thread_lock.mutex_recv_s)) error("pthread_mutex_lock failed");
 	recev_s[i] = NO;
@@ -587,7 +587,7 @@ void *receiving_thr (void *arg) {
 		pthread_cond_signal(&cond[i]);
 		//if(!receiving_state()) if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");//broadcast unlock mutex;
 		//if (pthread_create(&thr_p_rest, NULL, processing_thr_rest,(void*) mmt_smp_sec_handler)) error("Can't create threads for processing the rest of buffer");
-		}
+	}
 	pthread_mutex_unlock(&thread_lock.mutex_recv_s);
 	pthread_exit((void *)NULL);
 }
@@ -613,36 +613,36 @@ void *processing_thr (void *args) {
 	mmt_smp_sec_handler_t *sec_handler = thr_proc_struct->mmt_smp_sec_handl;
 
 	while(notdone){
-				if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
-				while(condition_v[i]) if (pthread_cond_wait(&cond[i], &mutex)!= 0) error("pthread_cond_wait failed");
-				nb_rp_buff = thread_lock.count_str;
-				if ((nb_rp_buff < mmt_sec_config_struct->threshold_size) && receiv_s_glob){
-					condition_v[i] = YES;
-					pthread_cond_signal(&cond[i]);
-					if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
-					continue;
-				}
-				else { //start processing
-					last = report_list->prev;
-					if (pop_last(&report_list)==0) thread_lock.count_str--;
-					condition_v[i] = YES;
-					pthread_cond_signal(&cond[i]);
-					if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
-					report_handler(sec_handler, last);
-				}
-				if(!receiv_s_glob){//break;
-				while(thread_lock.count_str!=0){
-							if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
-							last = report_list->prev;
-							if (pop_last(&report_list)==0) thread_lock.count_str--;
-							if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
-							report_handler(sec_handler, last);
-						}
-				gettimeofday(&end_t, NULL);
-				fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
-				break;
-				}
+		if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
+		while(condition_v[i]) if (pthread_cond_wait(&cond[i], &mutex)!= 0) error("pthread_cond_wait failed");
+		nb_rp_buff = thread_lock.count_str;
+		if ((nb_rp_buff < mmt_sec_config_struct->threshold_size) && receiv_s_glob){
+			condition_v[i] = YES;
+			pthread_cond_signal(&cond[i]);
+			if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
+			continue;
 		}
+		else { //start processing
+			last = report_list->prev;
+			if (pop_last(&report_list)==0) thread_lock.count_str--;
+			condition_v[i] = YES;
+			pthread_cond_signal(&cond[i]);
+			if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
+			report_handler(sec_handler, last);
+		}
+		if(!receiv_s_glob){//break;
+			while(thread_lock.count_str!=0){
+				if(pthread_mutex_lock(&mutex)!=0) error("pthread_mutex_lock failed");
+				last = report_list->prev;
+				if (pop_last(&report_list)==0) thread_lock.count_str--;
+				if(pthread_mutex_unlock(&mutex)!=0) error("pthread_mutex_unlock failed");
+				report_handler(sec_handler, last);
+			}
+			gettimeofday(&end_t, NULL);
+			fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
+			break;
+		}
+	}
 	pthread_exit((void *)NULL);
 }
 
@@ -680,12 +680,12 @@ int main(int argc, char** argv) {
 	nb_thr_sec = mmt_sec_config_struct->nb_thr_sec;
 	thr_recv_arg.threshold_size = mmt_sec_config_struct->threshold_size;
 	thr_recv_arg.threshold_time = mmt_sec_config_struct->threshold_time;
-			/*
+	/*
 		signal(SIGINT,  signal_handler);
 		signal(SIGTERM, signal_handler);
 		signal(SIGSEGV, signal_handler);
 		signal(SIGABRT, signal_handler);
-		*/
+	 */
 
 	//pthread_spin_init(&thread_lock.spinlock_cs, 0);
 	pthread_spin_init(&thread_lock.spinlock_cr, 0);
@@ -719,14 +719,14 @@ int main(int argc, char** argv) {
 	/*for (i=0; i<nbr_thr_p; i++){
 				if (pthread_create(&thr_p[nbr_thr_p], NULL, processing_thr,(void*) mmt_smp_sec_handler)) error("Can't create threads for processing");
 				}
-	*/
+	 */
 	/* First call to socket() function */
 	parentfd = socket(AF_INET, SOCK_STREAM, 0);
 
 	if( parentfd < 0) error("ERROR opening socket");
 
 	if (setsockopt( parentfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on) )<0)
-			error("setsockopt(SO_REUSEADDR) failed");
+		error("setsockopt(SO_REUSEADDR) failed");
 
 	/* Initialize socket structure */
 	bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -750,81 +750,81 @@ int main(int argc, char** argv) {
 
 	printf("Server is running\n");
 	/*
-	   * Loop: wait for connection request or stdin command.
-	   * If connection request, then create a thread for each connection for receiving the report.
-	   * If command, then process command.
-	   */
-	  while (notdone) {
-	    /*
-	     * select: Has the user typed something to stdin or
-	     * has a connection request arrived?
-	     */
-	    FD_ZERO(&readfds);          /* initialize the fd set */
-	    FD_SET(parentfd, &readfds); /* add socket fd */
-	    FD_SET(0, &readfds);        /* add stdin fd (0) */
-	    if (select(parentfd+1, &readfds, 0, 0, 0) < 0) {
-	      error("ERROR in select");
-	    }
+	 * Loop: wait for connection request or stdin command.
+	 * If connection request, then create a thread for each connection for receiving the report.
+	 * If command, then process command.
+	 */
+	while (notdone) {
+		/*
+		 * select: Has the user typed something to stdin or
+		 * has a connection request arrived?
+		 */
+		FD_ZERO(&readfds);          /* initialize the fd set */
+		FD_SET(parentfd, &readfds); /* add socket fd */
+		FD_SET(0, &readfds);        /* add stdin fd (0) */
+		if (select(parentfd+1, &readfds, 0, 0, 0) < 0) {
+			error("ERROR in select");
+		}
 
-	    /* if the user has entered a command, process it */
-	    if (FD_ISSET(0, &readfds)) {
-	    if(fgets(buffer, 256, stdin))
-	      switch (buffer[0]) {
-	      case 'i': /* print the connection cnt */
-		printf("Received %d connection requests so far.\n", connectcnt);
-		printf("Type i for printing the number of connections, q for quitting\n");
-		printf("server> ");
-		fflush(stdout);
-		break;
-	      case 'q': /* terminate the server */
-		notdone = NO;
-		break;
-	      default: /* bad input */
-		printf("ERROR: unknown command. Type i for printing the number of connections, q for quitting\n");
-		printf("server> ");
-		fflush(stdout);
-	      }
-	    }
+		/* if the user has entered a command, process it */
+		if (FD_ISSET(0, &readfds)) {
+			if(fgets(buffer, 256, stdin))
+				switch (buffer[0]) {
+				case 'i': /* print the connection cnt */
+					printf("Received %d connection requests so far.\n", connectcnt);
+					printf("Type i for printing the number of connections, q for quitting\n");
+					printf("server> ");
+					fflush(stdout);
+					break;
+				case 'q': /* terminate the server */
+					notdone = NO;
+					break;
+				default: /* bad input */
+					printf("ERROR: unknown command. Type i for printing the number of connections, q for quitting\n");
+					printf("server> ");
+					fflush(stdout);
+				}
+		}
 
-	    /* if a connection request has arrived, process it */
-	    if (FD_ISSET(parentfd, &readfds)) {
-	      /*
-	       * accept: wait for a connection request
-	       */
-	    childfd = accept(parentfd,
-			       (struct sockaddr *) &cli_addr, &socklen);
-	    if (childfd < 0) error("ERROR on accept");
-	    thr_recv_arg.sock = (intptr_t) childfd;
-	    thr_recv_arg.index = connectcnt;
-	    // To calculate execution time
-	    if (connectcnt==0)gettimeofday(&start_t, NULL);
-	    if (pthread_create(&thr_r[connectcnt], NULL, receiving_thr,(void*) &thr_recv_arg)) error("Can't create threads for reading");
-	    thr_proc_arg.mmt_smp_sec_handl = mmt_smp_sec_handler;
-	    thr_proc_arg.index = connectcnt;
-	    condition_v[connectcnt] = NO;
-	    if (pthread_cond_init(&cond[connectcnt], NULL) != 0) error("pthread_cond_init() error");
-	    if (pthread_create(&thr_p[connectcnt], NULL, processing_thr,(void*) &thr_proc_arg)) error("Can't create threads for processing");
-	    connectcnt++;
-	    //mmt_debug("Created receiving thread with thr_recv_arg.index =%d", thr_recv_arg.index);
-	    //if(connectcnt==1){if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");}
-	    }
-	  }
-	  printf("Terminating server.\n");
-	  fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
-	  printf("Nb of reports received: %d\n", thread_lock.count_rcv);
-	  printf("Nb of reports lost: %d\n", thread_lock.count_str);
-	  close(parentfd);
+		/* if a connection request has arrived, process it */
+		if (FD_ISSET(parentfd, &readfds)) {
+			/*
+			 * accept: wait for a connection request
+			 */
+			childfd = accept(parentfd,
+					(struct sockaddr *) &cli_addr, &socklen);
+			if (childfd < 0) error("ERROR on accept");
+			thr_recv_arg.sock = (intptr_t) childfd;
+			thr_recv_arg.index = connectcnt;
+			// To calculate execution time
+			if (connectcnt==0)gettimeofday(&start_t, NULL);
+			if (pthread_create(&thr_r[connectcnt], NULL, receiving_thr,(void*) &thr_recv_arg)) error("Can't create threads for reading");
+			thr_proc_arg.mmt_smp_sec_handl = mmt_smp_sec_handler;
+			thr_proc_arg.index = connectcnt;
+			condition_v[connectcnt] = NO;
+			if (pthread_cond_init(&cond[connectcnt], NULL) != 0) error("pthread_cond_init() error");
+			if (pthread_create(&thr_p[connectcnt], NULL, processing_thr,(void*) &thr_proc_arg)) error("Can't create threads for processing");
+			connectcnt++;
+			//mmt_debug("Created receiving thread with thr_recv_arg.index =%d", thr_recv_arg.index);
+			//if(connectcnt==1){if (pthread_cond_broadcast(&cond) != 0) error("pthread_cond_broadcast() error");}
+		}
+	}
+	printf("Terminating server.\n");
+	fprintf(stderr, "\nExecution time = %d microseconds\n", time_diff(start_t, end_t));
+	printf("Nb of reports received: %d\n", thread_lock.count_rcv);
+	printf("Nb of reports lost: %d\n", thread_lock.count_str);
+	close(parentfd);
 
-	  //free resources using by mmt-sec
-	  mmt_smp_sec_unregister( mmt_smp_sec_handler, NO);
-	  mmt_mem_free( rules_arr );
-	  mmt_mem_free( proto_atts );
-	  free(mmt_sec_config_struct);
-	 //free report buffer
-	  //mmt_mem_free(report_list->report_elements);
-	  //mmt_mem_free(report_list);
+	//free resources using by mmt-sec
+	mmt_smp_sec_unregister( mmt_smp_sec_handler, NO);
+	mmt_mem_free( rules_arr );
+	mmt_mem_free( proto_atts );
+	free(mmt_sec_config_struct);
+	//free report buffer
+	//mmt_mem_free(report_list->report_elements);
+	//mmt_mem_free(report_list);
 
-	  ///free resources using by mmt-sec
-	  mmt_mem_print_info();
-	     return EXIT_SUCCESS;
+	///free resources using by mmt-sec
+	mmt_mem_print_info();
+	return EXIT_SUCCESS;
 }

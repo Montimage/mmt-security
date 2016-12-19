@@ -79,25 +79,6 @@ void print_rules_info(){
 }
 
 
-void print_verdict( const rule_info_t *rule,		//id of rule
-		enum verdict_type verdict,
-		uint64_t timestamp,  //moment the rule is validated
-		uint32_t counter,
-		const mmt_array_t *const trace,
-		void *user_data ){
-
-	struct timeval now;
-	gettimeofday(&now, NULL);
-
-	char *string = convert_execution_trace_to_json_string( trace );
-
-	printf( "{\"timestamp\":%ld.%ld,\"pid\":%"PRIu32",\"verdict\":\"%s\",\"type\":\"%s\",\"cause\":\"%s\",\"history\":%s},\n",
-			now.tv_sec, now.tv_usec,
-			rule->id, verdict_type_string[verdict],  rule->type_string,  rule->description, string );
-
-	mmt_mem_free( string );
-}
-
 void usage(const char * prg_name) {
 	fprintf(stderr, "%s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
@@ -337,11 +318,11 @@ int main( int argc, char** argv ) {
 
 	//init mmt-sec to verify the rules
 	if( _sec_handler.threads_count == 1 ){
-		_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, print_verdict, NULL );
+		_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, mmt_sec_print_verdict, NULL );
 		_sec_handler.process_fn = &mmt_sec_process;
 		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}else{
-		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, nb_thr_sec, print_verdict, NULL );
+		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, nb_thr_sec, mmt_sec_print_verdict, NULL );
 		_sec_handler.process_fn = &mmt_smp_sec_process;
 		size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<beginning>
+
+<!-- Property 7: R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb .-->
+<!--
+<property value="THEN" delay_units="s" delay_min="-6" delay_max="6" property_id="7" type_property="ATTACK" 
+    description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK before belonging to the same session.">
+    <event value="COMPUTE" event_id="1"#
+           description="TCP RST"
+           boolean_expression="((tcp.flags == 4)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;((ip.src == ip.src)&amp;&amp;((tcp.src_port == tcp.src_port)&amp;&amp;(tcp.dst_port == tcp.dst_port)))))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="TCP ACK"
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.dst.17)&amp;&amp;((ip.src == ip.src.17)&amp;&amp;((tcp.src_port == tcp.src_port.17)&amp;&amp;(tcp.dst_port == tcp.dst_port.17)))))"/>
+</property>
+-->
+
+<property value="THEN" delay_units="s" delay_min="-6" delay_max="6" property_id="7" type_property="ATTACK" 
+    description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK before belonging to the same session.">
+    <event value="COMPUTE" event_id="17"
+           description="TCP RST"
+           boolean_expression="((tcp.flags == 4)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;((ip.src == ip.src)&amp;&amp;((tcp.src_port == tcp.src_port)&amp;&amp;(tcp.dst_port == tcp.dst_port)))))"/>
+    <event value="COMPUTE" event_id="18" 
+           description="TCP ACK"
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.dst.17)&amp;&amp;((ip.src == ip.src.17)&amp;&amp;((tcp.src_port == tcp.src_port.17)&amp;&amp;(tcp.dst_port == tcp.dst_port.17)))))"/>
+</property>
+
+</beginning>

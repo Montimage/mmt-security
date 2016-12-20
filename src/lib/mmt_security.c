@@ -30,6 +30,8 @@
 	#define MAX_INSTANCE_COUNT 1000000
 #endif
 
+static uint64_t total_alerts = 0;
+
 const char *mmt_sec_get_version_info(){
 	//define in version.h
 	return MMT_SEC_VERSION;
@@ -184,7 +186,7 @@ static inline enum verdict_type _get_verdict( int rule_type, enum rule_engine_re
 
 
 /**
- * Public API
+ * Public API (used by mmt_sec_smp)
  */
 void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	_mmt_sec_handler_t *_handler;
@@ -207,6 +209,9 @@ void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 			verdict = _get_verdict( _handler->rules_array[i]->type_id, ret );
 
 			if( verdict != VERDICT_UNKNOWN ){
+
+				__sync_add_and_fetch(&total_alerts, 1);
+
 				//call user-callback function
 				_handler->callback(
 						_handler->rules_array[i],
@@ -465,7 +470,7 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 
 	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld.%06ld,%"PRIu64",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
 			(uint64_t) now.tv_sec, (uint64_t)now.tv_usec,
-			0l, //index of alarm, not used, appear just for being compatible with format of other report types of mmt-probe
+			total_alerts, //index of alarm, not used, appear just for being compatible with format of other report types of mmt-probe
 			rule->id,
 			verdict_type_string[verdict],
 			rule->type_string,
@@ -475,4 +480,8 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 	verdict_printer_send( message );
 
 	mmt_mem_free( string );
+}
+
+uint64_t mmt_sec_get_total_alerts(){
+	return total_alerts;
 }

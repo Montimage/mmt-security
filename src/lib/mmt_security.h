@@ -126,4 +126,5 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 		const mmt_array_t *const trace,
 		void *user_data );
 
+uint64_t mmt_sec_get_total_alerts();
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

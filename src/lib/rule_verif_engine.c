@@ -421,7 +421,10 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 
 	//check timeout
 	//verify instances that are waiting for timeout
-	node = _engine->tmp_fsm_by_expecting_event_id[ FSM_EVENT_TYPE_TIMEOUT ];
+	//not use #tmp_fsm_by_expecting_event_id as this variable is not updated by the above checking (line 394)
+	//#fsm_by_expecting_event_id was modified by the above checking
+	//=> their fsm may be timeout
+	node = _engine->fsm_by_expecting_event_id[ FSM_EVENT_TYPE_TIMEOUT ];
 	//for each instance
 	while( node != NULL ){
 

@@ -271,7 +271,9 @@ static inline void termination(){
 		fflush(stderr);
 	}
 
-	fprintf(stderr, "Received totally %zu reports\n", total_received_reports );
+	fprintf(stderr, "%12zu reports received\n", total_received_reports );
+	fprintf(stderr, "%12"PRIu64" alerts generated\n", mmt_sec_get_total_alerts() );
+
 	mmt_mem_free( proto_atts );
 
 	if( _sec_handler.threads_count > 1 )

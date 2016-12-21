@@ -24,7 +24,7 @@
 struct _user_data{
 	uint16_t uint16_val;
 	uint32_t uint32_val;
-	mmt_map_t *events_map;
+	mmt_map_t *map;
 	FILE *file;
 };
 
@@ -429,7 +429,7 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 		fprintf( fd, " s_%d_%zu = {", rule_id, state->index );
 		if( state->delay == NULL ){
 			fprintf( fd, "\n\t .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},");
-			fprintf( fd, "\n\t .is_temporary = %d,", state != s_init && state != s_fail && state != s_incl && state != s_pass );
+			fprintf( fd, "\n\t .is_temporary = %d,//init or final states", state != s_init && state != s_fail && state != s_incl && state != s_pass );
 		}else{
 			fprintf( fd, "\n\t .delay        = {.time_min = %"PRIu64"LL, .time_max = %"PRIu64"LL, .counter_min = %"PRIu64"LL, .counter_max = %"PRIu64"LL},",
 					state->delay->time_min,    state->delay->time_max,
@@ -715,35 +715,38 @@ static inline void _iterate_event_to_get_unique_variables( void *key, void *data
 
 void _iterate_variables_to_gen_pointer_proto_att( void *key, void *data, void *user_data, size_t index, size_t total ){
 	struct _user_data *u_data = (struct _user_data *) user_data;
+	mmt_map_t *variables_map  = (mmt_map_t *)  u_data->map;
+	variable_t *var           = (variable_t *) data;
+
+	int val = mmt_map_get_index( variables_map, var );
+
+	mmt_assert( val >= 0, "Variable %s.%s must be defined before!", var->proto, var->att );
 
 	fprintf( u_data->file, "%c &proto_atts_%d[ %d ] %s",
 			index == 0 ? '{':' ',
 			u_data->uint32_val,
-			u_data->uint16_val ++,
+			val,
 			index == total-1? "}":","
 	);
 }
 
 static inline void _iterate_events_to_gen_array_proto_att( void *key, void *data, void *user_data, size_t index, size_t total ){
-	rule_event_t *ev = (rule_event_t *)data;
-	mmt_map_t *map;
-	size_t vars_count;
-
 	struct _user_data *u_data = (struct _user_data *)user_data;
+	mmt_map_t *variables_map = (mmt_map_t *)data;
+	uint16_t event_id = * (uint16_t *)key;
+	size_t variables_count = mmt_map_count( variables_map);
 
 	//each event
-	fprintf( u_data->file, "\n\t {//event_%d", ev->id );
+	fprintf( u_data->file, "\n\t {//event_%d", event_id );
 
 	//variables of each event
-	vars_count = get_unique_variables_of_expression( ev->expression, &map, NO );
-	fprintf( u_data->file, "\n\t\t .elements_count = %zu,", vars_count );
+	fprintf( u_data->file, "\n\t\t .elements_count = %zu,", variables_count );
 
 	fprintf( u_data->file, "\n\t\t .data = (void* []) " );
-	if( vars_count > 0 )
-		mmt_map_iterate( map, _iterate_variables_to_gen_pointer_proto_att, user_data );
+	if( variables_count > 0 )
+		mmt_map_iterate( variables_map, _iterate_variables_to_gen_pointer_proto_att, user_data );
 	else
 		fprintf( u_data->file, "{}");
-	mmt_map_free( map, NO );
 
 	fprintf( u_data->file, "\n\t }%c", index + 1 == total ? ' ':',' );
 }
@@ -769,12 +772,12 @@ static inline void _iterate_variable_to_add_to_a_new_map_2( void *key, void *dat
 	if( ref == (uint16_t)UNKNOWN )
 		ref = _u_data->uint16_val;
 
-	map = mmt_map_get_data( _u_data->events_map, &ref );
+	map = mmt_map_get_data( _u_data->map, &ref );
 
 	//create a new entry to store all variables belonging to an event
 	if( map == NULL ){
 		map = mmt_map_init( compare_variable_name );
-		mmt_map_set_data( _u_data->events_map, mmt_mem_dup( &ref, sizeof( ref ) ), map, NO );
+		mmt_map_set_data( _u_data->map, mmt_mem_dup( &ref, sizeof( ref ) ), map, NO );
 	}
 
 	mmt_map_set_data( map, var, var, NO );
@@ -786,7 +789,7 @@ static inline void _iterate_events_to_get_variables_of_each_event( void *key, vo
 	uint16_t *ev_id_ptr;
 	struct _user_data _u_data;
 	_u_data.uint16_val = ev->id;
-	_u_data.events_map = (mmt_map_t *)user_data;
+	_u_data.map = (mmt_map_t *)user_data;
 
 	//map stores a set of variables using in event #ev
 	var_count = get_unique_variables_of_expression( ev->expression, &map, YES );
@@ -800,8 +803,8 @@ static inline void _iterate_events_to_get_variables_of_each_event( void *key, vo
 	else{
 		//this event has no variable
 		//insert a dummy
-		if( mmt_map_get_data( _u_data.events_map, &(ev->id) ) == NULL )
-			mmt_map_set_data( _u_data.events_map, mmt_mem_dup( &(ev->id), sizeof( ev->id) ), mmt_map_init( compare_variable_name ), NO );
+		if( mmt_map_get_data( _u_data.map, &(ev->id) ) == NULL )
+			mmt_map_set_data( _u_data.map, mmt_mem_dup( &(ev->id), sizeof( ev->id) ), mmt_map_init( compare_variable_name ), NO );
 	}
 
 	mmt_map_free( map, NO );
@@ -811,27 +814,12 @@ static inline void _free_a_map( void *v ){
 	mmt_map_free( (mmt_map_t *) v, NO );
 }
 
-static inline void _gen_hash_function( FILE *fd, const mmt_map_t *events_map, uint32_t rule_id ){
+static inline void _gen_hash_function( FILE *fd, const mmt_map_t *event_variables_map, uint32_t rule_id ){
 	struct _user_data _u_data;
 	_u_data.uint32_val = rule_id;
 	_u_data.file       = fd;
 
-	/**
-	 * List of variables (proto, att) need by each event,
-	 * e.g., if we have boolean_expression of event 1: (ip.src == ip.dst.2)
-	 *   then, #event_variables_map will contain 2 entries:
-	 *     - for event1: ip.src
-	 *     - for event2: ip.dst
-	 * <event, map_of_variables>
-	 */
-	mmt_map_t *event_variables_map = mmt_map_init( compare_uint16_t );
-
-	//get a set of variables for each event
-	mmt_map_iterate( events_map, _iterate_events_to_get_variables_of_each_event, event_variables_map );
-
 	mmt_map_iterate(event_variables_map, _iterate_events_to_gen_hash_function, &_u_data );
-
-	mmt_map_free_key_and_data( event_variables_map, (void *)mmt_mem_free, _free_a_map );
 }
 
 static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
@@ -849,6 +837,17 @@ static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 	 * <variable,variable>
 	 */
 	mmt_map_t *variables_map =  mmt_map_init( compare_variable_name );
+
+	/**
+	 * List of variables (proto, att) need by each event,
+	 * e.g., if we have boolean_expression of event 1: (ip.src == ip.dst.2)
+	 *   then, #event_variables_map will contain 2 entries:
+	 *     - for event1: ip.src
+	 *     - for event2: ip.dst
+	 * <event, map_of_variables>
+	 */
+	mmt_map_t *event_variables_map = mmt_map_init( compare_uint16_t );
+
 
 	events_count = get_unique_events_of_rule( rule, &events_map );
 	if( events_count == 0 ) return;
@@ -872,12 +871,17 @@ static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 		fprintf( fd, "{}");
 	fprintf( fd, ";");
 
+	//get a set of variables for each event
+	mmt_map_iterate( events_map, _iterate_events_to_get_variables_of_each_event, event_variables_map );
+
 	_gen_comment( fd, "Detail of proto_atts for each event");
-	_u_data.uint16_val = 0;
+	//mmt_map_iterate( event_variables_map, _iterate_events_to_gen_proto_att, &_u_data );
+
 	//first element having index = 0 is null as event_id starts from 1
 	fprintf( fd, "\n static mmt_array_t proto_atts_events_%d[ %zu ] = { {.elements_count = 0, .data = NULL}, ",
 			rule->id, events_count + 1 );
-	mmt_map_iterate(events_map, _iterate_events_to_gen_array_proto_att, &_u_data );
+	_u_data.map = variables_map;
+	mmt_map_iterate(event_variables_map, _iterate_events_to_gen_array_proto_att, &_u_data );
 	fprintf( fd, "\n };//end proto_atts_events_\n" );
 
 
@@ -895,13 +899,14 @@ static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 	else
 		fprintf( fd, "\n void* convert_message_to_event_%d(const message_t *msg){ return NULL; }", rule->id );
 
-	_gen_hash_function( fd, events_map, rule->id );
+	_gen_hash_function( fd, event_variables_map, rule->id );
 
 	mmt_map_iterate(events_map, _iterate_event_to_gen_guards, &_u_data );
 
 	_gen_fsm_state_for_a_rule( fd, rule );
 
 	//free mmt_map
+	mmt_map_free_key_and_data( event_variables_map, (void *)mmt_mem_free, _free_a_map );
 	mmt_map_free( events_map, NO );
 	mmt_map_free( variables_map, NO );
 }

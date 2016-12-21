@@ -305,10 +305,10 @@ static inline int check_sql_injection(const char *str, double pl){
     description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb.">
     <event value="COMPUTE" event_id="1"
            description="Context: TCP RST"
-           boolean_expression="((tcp.rst == 1)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;((tcp.ack_nb.2 != tcp.seq_nb)&amp;&amp;((ip.src.2 == ip.dst)&amp;&amp;(ip.dst.2 == ip.src)))))"/>
+           boolean_expression="((tcp.rst == 1)&amp;&amp;((tcp.ack_nb.2 != tcp.seq_nb)&amp;&amp;((ip.src.2 == ip.dst)&amp;&amp;(ip.dst.2 == ip.src))))"/>
     <event value="COMPUTE" event_id="2" 
            description="Trigger: the last TCP ACK packets have different seg_nb and ack_nb"
-           boolean_expression="((tcp.flags == 16)&amp;&amp;((tcp.ack_nb == tcp.ack_nb)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;(ip.src != ip.dst))))"/>
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;(ip.src != ip.dst)))"/>
 </property>
 
 
@@ -488,7 +488,7 @@ Since ICMP redirects are dynamic and may not reflect the most current topology
 it is nice to have an automated method of redirect expiration.
 -->
 
-<property value="THEN" delay_units="s" delay_min="0" delay_max="6" property_id="20" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="6" property_id="20" type_property="ATTACK" 
     description="4 consecutive ICMP redirect packets. Possibly ICMP redirect flood."
     >
    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
@@ -497,15 +497,15 @@ it is nice to have an automated method of redirect expiration.
            boolean_expression="((icmp.type == 5)&amp;&amp;(ip.dst != ip.src))"/>
    <event value="COMPUTE" event_id="2" 
            description="Trigger: 2nd consecutive ICMP redirect packet"
-           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.2)&amp;&amp;(ip.src == ip.src.2)))"/>
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
    </operator>
    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
    <event value="COMPUTE" event_id="3" 
            description="Trigger: 3rd consecutive ICMP redirect packet"
-           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.2)&amp;&amp;(ip.src == ip.src.2)))"/>
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
    <event value="COMPUTE" event_id="4" 
            description="Trigger: 4th consecutive ICMP redirect packet"
-           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.2)&amp;&amp;(ip.src == ip.src.2)))"/>
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
    </operator>
 </property>
 

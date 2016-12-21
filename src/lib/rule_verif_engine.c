@@ -400,6 +400,9 @@ enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *m
 		//verify instances that are waiting for event_id
 		node = _engine->tmp_fsm_by_expecting_event_id[ event_id ];
 
+		//these fsm waiting for event #event_id have been checked (also their timeout)
+		_engine->tmp_fsm_by_expecting_event_id[ event_id ] = NULL;
+
 		//for each instance
 		while( node != NULL ){
 

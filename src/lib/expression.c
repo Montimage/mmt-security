@@ -637,10 +637,10 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 	if( expr->data_type == NUMERIC ){
 		d = *(double *)expr->data;
 		//integer
-		if(  d- (int)d == 0 )
-			size = sprintf(buff, "%d", (int) d);
-		else
-			size = sprintf(buff, "%.2f", d);
+		size = sprintf(buff, "%.2f", d);
+		//remove zero at the end, e.g., 10.00 ==> 10
+		while( size > 1 && ( buff[ size - 1 ] == '0' || buff[ size - 1 ] == '.' ))
+			size --;
 
 	}else
 		size = snprintf( buff, MAX_STR_SIZE, "\"%s\"", (char *)expr->data );

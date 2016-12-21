@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<beginning>
+
+<!-- Property 3: Several TCP SYN requests without SYN ACK. Source address is spoofed, infected machine or attacker. Note: done on port 445.-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="6" property_id="3" type_property="ATTACK" 
+    description="TCP SYN requests on microsoft-ds port 445 with SYN ACK."
+    >
+    <!--if_not_satisfied="py_createstix(3_BGPOST_TCP_SYN_request_without_SYN_ACK_could_be_a_spoofed_address, ip.src.8)"-->
+    <event value="COMPUTE" event_id="1"
+           description="SYN request"
+           boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 445)&amp;&amp;(ip.src != ip.dst)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="SYN ACK reply"
+           boolean_expression="((tcp.flags == 18)&amp;&amp;(ip.src == ip.dst.1))"/>
+</property>
+
+
+</beginning>

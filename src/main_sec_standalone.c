@@ -136,7 +136,7 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 				usage(argv[0]);
 			}
 			x = atoi( optarg );
-			if( x >= 0 )
+			if( x > 0 )
 				*threads_count = x;
 			else
 				usage(argv[0]);
@@ -240,7 +240,7 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	//need to free #msg
 	free_message_t( msg );
-	return 0;
+	return 1;
 }
 
 void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, const u_char *data ){

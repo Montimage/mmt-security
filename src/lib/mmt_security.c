@@ -24,8 +24,10 @@
 #include "../dpi/types_defs.h"
 #include "../dpi/mmt_dpi.h"
 
+//string size of an alert in JSON format
 #define MAX_MSG_SIZE 100000
 
+//number of fsm instances of one rule
 #ifndef MAX_INSTANCE_COUNT
 	#define MAX_INSTANCE_COUNT 1000000
 #endif
@@ -160,7 +162,7 @@ static inline enum verdict_type _get_verdict( int rule_type, enum rule_engine_re
 	case RULE_TYPE_SECURITY:
 		switch( result ){
 		case RULE_ENGINE_RESULT_ERROR:
-			return VERDICT_UNKNOWN;//VERDICT_NOT_RESPECTED;
+			return VERDICT_NOT_RESPECTED;
 		case RULE_ENGINE_RESULT_VALIDATE:
 			return VERDICT_RESPECTED;
 		default:
@@ -210,6 +212,7 @@ void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 
 			if( verdict != VERDICT_UNKNOWN ){
 
+				//lock-free
 				__sync_add_and_fetch(&total_alerts, 1);
 
 				//call user-callback function
@@ -265,13 +268,13 @@ char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const ru
 		msg = trace->data[ index ];
 		if( msg == NULL ) continue;
 
-		time = mmt_sec_decode_timeval( msg->timestamp );
+		mmt_sec_decode_timeval( msg->timestamp, &time );
 
-		size = snprintf( str_ptr, total_len, "%s\"event_%zu\":{\"timestamp\":%"PRIu64".%06d,\"counter\":%"PRIu64",\"attributes\":[",
+		size = snprintf( str_ptr, total_len, "%s\"event_%zu\":{\"timestamp\":%"PRIu64".%06lu,\"counter\":%"PRIu64",\"attributes\":[",
 						total_len == MAX_STR_SIZE ? "{": " ,",
 						index,
-						(uint64_t)time.tv_sec, //timestamp: second
-						(int)time.tv_usec, //timestamp: microsecond
+						time.tv_sec, //timestamp: second
+						time.tv_usec, //timestamp: microsecond
 						msg->counter );
 
 		is_first = YES;
@@ -407,7 +410,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		return 0;
 
 	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
-		return 0;
+		break;
 	case MMT_DATA_PATH: /**< protocol path constant value */
 	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
 	case MMT_DATA_BUFFER: /**< binary buffer content */

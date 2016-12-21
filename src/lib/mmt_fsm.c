@@ -190,12 +190,12 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 
 	//update deadline
 	//outgoing from init state
-	if( unlikely(_fsm->previous_state == _fsm->init_state) ){
-		_fsm->counter_min += new_state->delay.counter_min + message_data->counter;
-		_fsm->time_min    += new_state->delay.time_min    + message_data->timestamp;
+	if( _fsm->previous_state == _fsm->init_state ){
+		_fsm->counter_min = new_state->delay.counter_min + message_data->counter;
+		_fsm->time_min    = new_state->delay.time_min    + message_data->timestamp;
 
-		_fsm->counter_max += new_state->delay.counter_max + message_data->counter;
-		_fsm->time_max    += new_state->delay.time_max    + message_data->timestamp;
+		_fsm->counter_max = new_state->delay.counter_max + message_data->counter;
+		_fsm->time_max    = new_state->delay.time_max    + message_data->timestamp;
 	}else{
 		val = new_state->delay.counter_min + message_data->counter;
 		if( val > _fsm->counter_min ) _fsm->counter_min = val;
@@ -232,17 +232,6 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	_fsm = (_fsm_t *)fsm;
 	if ( unlikely( !_fsm->current_state ))
 		mmt_halt( "Not found current state of fsm %d", _fsm->id );
-	/* If the target state is a final one, notify user that the machine has stopped */
-	/*
-	else if (_fsm->current_state == _fsm->error_state){
-		return FSM_ERROR_STATE_REACHED;
-	}else if (_fsm->current_state == _fsm->incl_state){
-		return FSM_INCONCLUSIVE_STATE_REACHED;
-	}else if ( _fsm->current_state == _fsm->success_state ){
-		return FSM_FINAL_STATE_REACHED;
-	}else if( _fsm->current_state->transitions_count == 0 )
-		return FSM_ERROR_STATE_REACHED;
-	*/
 
 	//	mmt_debug( "Verify transition: %d of fsm %p", transition_index, fsm );
 
@@ -256,19 +245,21 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	if( _fsm->current_state->transitions[ transition_index ].event_type != FSM_EVENT_TYPE_TIMEOUT )
 		_fsm->current_event_id = _fsm->current_state->transitions[ transition_index ].event_type;
 
-
-
-	//check if timeout or not
-	if( message_data->timestamp > _fsm->time_max &&  !_fsm->current_state->is_temporary  ){
+	//check if timeout or not (even we are checking a real event)
+	//check only for the state other than init_state
+	if( _fsm->current_state != _fsm->init_state && message_data->timestamp > _fsm->time_max &&  !_fsm->current_state->is_temporary  ){
 		tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
 		if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT )
 			//fire timeout transition
 			return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
 	}
 
-
-
 	tran = &_fsm->current_state->transitions[ transition_index ];// _get_transition(_fsm, state, event);
+
+	//if we intend to check TIMEOUT but fsm is not timeout => stop checking
+	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT )
+		return FSM_NO_STATE_CHANGE;
+
 
 	//must not be null
 //	if( tran == NULL ) return FSM_NO_STATE_CHANGE;

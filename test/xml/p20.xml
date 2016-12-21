@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<beginning>
+
+
+
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="6" property_id="20" type_property="ATTACK" 
+    description="4 consecutive ICMP redirect packets. Possibly ICMP redirect flood."
+    >
+   <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+   <event value="COMPUTE" event_id="1" 
+           description="Context: ICMP redirect"
+           boolean_expression="((icmp.type == 5)&amp;&amp;(ip.dst != ip.src))"/>
+   <event value="COMPUTE" event_id="2" 
+           description="Trigger: 2nd consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+   </operator>
+   <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+   <event value="COMPUTE" event_id="3" 
+           description="Trigger: 3rd consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+   <event value="COMPUTE" event_id="4" 
+           description="Trigger: 4th consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+   </operator>
+</property>
+
+</beginning>

@@ -175,6 +175,37 @@ void *mmt_map_get_data( const mmt_map_t *map, const void *key ){
 	return _mmt_map_get_data( _tree->compare_function, _tree->root, key );
 }
 
+struct tmp_struct{
+	int index;
+	int (*fun)(const void*, const void*);
+	const void *key;
+};
+
+static inline void _iterate_to_compare( void *key, void *data, void *user_data, size_t index, size_t total ){
+	struct tmp_struct *_user_data = (struct tmp_struct *) user_data;
+	if( _user_data->fun( key, _user_data->key ) == 0 )
+		_user_data->index = index;
+}
+
+int mmt_map_get_index( const mmt_map_t *map, const void *key ){
+	__check_null( map, -1 );
+	__check_null( key, -1 );
+
+	_mmt_map_t *_tree = (_mmt_map_t*) map;
+
+	__check_null( _tree->root, -1 );
+
+	struct tmp_struct data;
+
+	data.index = -1;
+	data.fun   = _tree->compare_function;
+	data.key   = key;
+	//use _tree->size to store index of founding key
+	mmt_map_iterate( map, _iterate_to_compare, &data );
+
+	return data.index;
+}
+
 
 void _mmt_map_node_iterate( const _mmt_map_node_t *node, void (*map_iterate_function)( void *_key, void *_data, void *_user_data, size_t _index, size_t _total ), void *user_data, size_t *index, size_t total ){
 	if( node->left != NULL )
@@ -261,4 +292,21 @@ mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_f
 
 	((_mmt_map_t *)new_map)->size = mmt_map_count( map );
 	return new_map;
+}
+
+static inline void _iterate_to_update_array( void *key, void *data, void *user_data, size_t index, size_t total ){
+	mmt_array_t *array = (mmt_array_t *)user_data;
+	array->data[ index ] = data;
+}
+
+mmt_array_t *mmt_map_convert_to_array( const mmt_map_t *map ){
+	__check_null( map, NULL );
+	size_t count = mmt_map_count( map );
+	mmt_array_t *array = mmt_mem_alloc( sizeof( mmt_array_t));
+	array->elements_count = count;
+	array->data = mmt_mem_alloc( sizeof( void *) * count );
+
+	mmt_map_iterate( map, _iterate_to_update_array, array );
+
+	return array;
 }

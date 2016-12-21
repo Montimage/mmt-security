@@ -15,7 +15,7 @@
 #define SRC_LIB_MMT_MAP_T_H_
 
 #include <inttypes.h>
-
+#include "mmt_array_t.h"
 
 enum compare_result {CMP_LESS = -1, CMP_EQUAL = 0, CMP_GREATER = 1};
 
@@ -104,6 +104,8 @@ void * mmt_map_set_data( mmt_map_t *map, void *key, void *data, bool override_if
  */
 void *mmt_map_get_data( const mmt_map_t *map, const void *key );
 
+
+int mmt_map_get_index( const mmt_map_t *map, const void *key );
 /**
  * free the map and its keys-data
  */
@@ -148,4 +150,5 @@ mmt_map_t* mmt_map_clone( const mmt_map_t *map );
  */
 mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_fn)( void *), void* (*clone_data_fn)( void *)  );
 
+mmt_array_t *mmt_map_convert_to_array( const mmt_map_t *map );
 #endif /* SRC_LIB_MMT_MAP_T_H_ */

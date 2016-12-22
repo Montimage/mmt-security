@@ -19,7 +19,7 @@
 #include "mmt_log.h"
 
 enum data_type{
-	NUMERIC, STRING
+	NUMERIC, STRING, VOID
 };
 /**
  * Constant

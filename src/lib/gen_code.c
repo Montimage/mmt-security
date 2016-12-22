@@ -69,7 +69,7 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 
 	//TODO: what happen if a proto's name starts by a number
 	fprintf( fd, "\n\t %s%s = %s %s->%s_%s %s;",
-			((var->data_type == NUMERIC)? "double " : "const char *"),
+			((var->data_type == NUMERIC)? "double " : ((var->data_type == STRING)? "const char *" : "const void *") ),
 			str,
 			((var->data_type == NUMERIC)? "*(" : ""),
 			( var->ref_index == (uint16_t)UNKNOWN )? "ev_data" : "his_data",
@@ -209,7 +209,7 @@ static inline void _gen_transition_then( _meta_state_t *s_init,  _meta_state_t *
 	new_state->index = (*index)++;
 	states_list  = append_node_to_link_list( states_list, new_state );
 	//gen for trigger
-	_gen_transition_rule( new_state, s_pass, s_fail, s_fail, states_list, trigger, index, rule, tran_action );
+	_gen_transition_rule( new_state, s_pass, s_fail, s_fail, states_list, trigger, index, rule, FSM_ACTION_RESET_TIMER );
 }
 
 /**
@@ -357,8 +357,10 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 	uint32_t rule_id = rule->id;
 
 	static const char *fsm_action_string[] = {
-			"FSM_ACTION_DO_NOTHING",
-			"FSM_ACTION_CREATE_INSTANCE",
+			"FSM_ACTION_DO_NOTHING",      //0
+			"FSM_ACTION_CREATE_INSTANCE", //1
+			"FSM_ACTION_RESET_TIMER",     //2
+			"FSM_ACTION_CREATE_INSTANCE | FSM_ACTION_RESET_TIMER" //3
 	};
 
 	states_count = 0;
@@ -371,11 +373,13 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 	s_init->description = rule->description;
 	s_init->exit_action = FSM_ACTION_CREATE_INSTANCE;
 
-	sprintf(s_pass->comment, "final state");
+	sprintf(s_pass->comment, "pass state");
 	//s_pass->entry_action = rule->if_satisfied;
 
 	sprintf( s_fail->comment, "timeout/error state");
 	//s_fail->entry_action = rule->if_not_satisfied;
+
+	sprintf( s_incl->comment, "inconclusive state");
 
 	states_list = append_node_to_link_list(states_list, s_init );
 	states_list = append_node_to_link_list(states_list, s_fail );
@@ -559,7 +563,7 @@ void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data
 		fprintf( fd, "\n\t uint64_t counter;//index of packet");
 	}
 	fprintf( fd, "\n\t %s%s_%s;",
-			(var->data_type == NUMERIC? "const double *":"const char *"),
+			(var->data_type == NUMERIC? "const double *": (var->data_type == STRING ? "const char *" : "const void *" ) ),
 			var->proto, var->att);
 
 	//last element
@@ -642,7 +646,7 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 
 	fprintf( fd, "\n\t\t\t\t new_msg->%s_%s = %s msg->elements[i].data;",
 			var->proto, var->att,
-			var->data_type == NUMERIC? "(double *)" : "(char *)");
+			var->data_type == NUMERIC? "(double *)" : (var->data_type == STRING? "(char *)" : "(void *)" ));
 	fprintf( fd, "\n\t\t\t\t break;");
 
 	//last element
@@ -695,7 +699,7 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 
 	_gen_comment(fd, "Moment the rules being encoded");
 	string = get_current_date_time_string("%Y-%m-%d %H:%M:%S");
-	fprintf( fd, "\n const char * __get_generated_date(){ return \"%s, version %s\";};", string, MMT_SEC_VERSION );
+	fprintf( fd, "\n const char * __get_generated_date(){ return \"%s, mmt-security version %s\";};", string, MMT_SEC_VERSION );
 	mmt_mem_free( string );
 }
 

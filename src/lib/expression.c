@@ -32,29 +32,30 @@ inline enum data_type convert_data_type( int type ){
 
 	case MMT_DATA_MAC_ADDR:
 	case MMT_STRING_DATA:
-	case MMT_DATA_PATH:
 	case MMT_STRING_LONG_DATA:
 	case MMT_BINARY_VAR_DATA:
 	case MMT_BINARY_DATA:
 	case MMT_HEADER_LINE:
-	case MMT_DATA_TIMEVAL:
 	case MMT_DATA_IP_ADDR:
 	case MMT_DATA_IP6_ADDR:
+	case MMT_STRING_DATA_POINTER:
+		return STRING;
+
+	case MMT_DATA_POINTER:
+	case MMT_DATA_PATH:
+	case MMT_DATA_TIMEVAL:
+	case MMT_DATA_BUFFER:
+	case MMT_DATA_POINT:
 	case MMT_DATA_PORT_RANGE:
 	case MMT_DATA_DATE:
 	case MMT_DATA_TIMEARG:
+	case MMT_DATA_STRING_INDEX:
 	case MMT_DATA_IP_NET:
 	case MMT_DATA_LAYERID:
-	case MMT_DATA_POINT:
 	case MMT_DATA_FILTER_STATE:
-	case MMT_DATA_POINTER:
-	case MMT_DATA_BUFFER:
-	case MMT_DATA_STRING_INDEX:
 	case MMT_DATA_PARENT:
 	case MMT_STATS:
-	case MMT_STRING_DATA_POINTER:
-	case MMT_UNDEFINED_TYPE:
-		return STRING;
+		return VOID;
 	default:
 		return UNKNOWN;
 	}
@@ -639,11 +640,13 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 		//integer
 		size = sprintf(buff, "%.2f", d);
 		//remove zero at the end, e.g., 10.00 ==> 10
-		while( size > 1 && ( buff[ size - 1 ] == '0' || buff[ size - 1 ] == '.' ))
-			size --;
-
-	}else
+		while( size > 1 && buff[ size - 1 ] == '0' )
+				size --;
+		if( buff[ size - 1 ] == '.' ) size --;
+	}else if( expr->data_type == STRING )
 		size = snprintf( buff, MAX_STR_SIZE, "\"%s\"", (char *)expr->data );
+	else
+		size = sprintf( buff, "\"__na__\"");
 
 	*string = mmt_mem_dup( buff, size );
 

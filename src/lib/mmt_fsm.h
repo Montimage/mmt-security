@@ -55,8 +55,9 @@ typedef void fsm_t;
 #define FSM_EVENT_TYPE_TIMEOUT 0
 
 enum fsm_action_type {
-	FSM_ACTION_DO_NOTHING,
-	FSM_ACTION_CREATE_INSTANCE,
+	FSM_ACTION_DO_NOTHING      = 0,
+	FSM_ACTION_CREATE_INSTANCE = 1,
+	FSM_ACTION_RESET_TIMER     = 2
 };
 
 /**

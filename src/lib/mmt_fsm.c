@@ -190,7 +190,7 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 
 	//update deadline
 	//outgoing from init state
-	if( _fsm->previous_state == _fsm->init_state ){
+	if( tran->action == FSM_ACTION_RESET_TIMER || _fsm->previous_state == _fsm->init_state ){
 		_fsm->counter_min = new_state->delay.counter_min + message_data->counter;
 		_fsm->time_min    = new_state->delay.time_min    + message_data->timestamp;
 

@@ -13,20 +13,15 @@
 
 #include "mmt_lib.h"
 #include "plugin_header.h"
+#include "mmt_security.h"
 
 typedef void rule_engine_t;
-
-enum rule_engine_result {
-	RULE_ENGINE_RESULT_UNKNOWN,  //do not known yet result
-	RULE_ENGINE_RESULT_ERROR,    //reach error state
-	RULE_ENGINE_RESULT_VALIDATE  //reach valid state
-};
 
 //max number of events in a rule
 //max number of instances of a rule at any moment
 rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instances_count );
 
-enum rule_engine_result rule_engine_process( rule_engine_t *engine, message_t *message );
+enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message );
 
 void rule_engine_free( rule_engine_t *engine );
 

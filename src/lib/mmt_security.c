@@ -156,37 +156,6 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	mmt_mem_free( _handler );
 }
 
-static inline enum verdict_type _get_verdict( int rule_type, enum rule_engine_result result ){
-	switch ( rule_type ) {
-	case RULE_TYPE_TEST:
-	case RULE_TYPE_SECURITY:
-		switch( result ){
-		case RULE_ENGINE_RESULT_ERROR:
-			return VERDICT_NOT_RESPECTED;
-		case RULE_ENGINE_RESULT_VALIDATE:
-			return VERDICT_RESPECTED;
-		default:
-			return VERDICT_UNKNOWN;
-		}
-		break;
-	case RULE_TYPE_ATTACK:
-	case RULE_TYPE_EVASION:
-		switch( result ){
-		case RULE_ENGINE_RESULT_ERROR:
-			return VERDICT_UNKNOWN; //VERDICT_NOT_DETECTED;
-		case RULE_ENGINE_RESULT_VALIDATE:
-			return VERDICT_DETECTED;
-		default:
-			return VERDICT_UNKNOWN;
-		}
-		break;
-	default:
-		mmt_halt("Error 22: Property type should be a security rule or an attack.\n");
-	}//end of switch
-	return VERDICT_UNKNOWN;
-}
-
-
 /**
  * Public API (used by mmt_sec_smp)
  */
@@ -194,7 +163,6 @@ void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	_mmt_sec_handler_t *_handler;
 	size_t i;
 	int verdict;
-	enum rule_engine_result ret = RULE_ENGINE_RESULT_UNKNOWN;
 	const mmt_array_t *execution_trace;
 
 	_handler = (_mmt_sec_handler_t *)handler;
@@ -202,29 +170,24 @@ void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
 		//mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
-		ret = rule_engine_process( _handler->engines[i], msg );
+		verdict = rule_engine_process( _handler->engines[i], msg );
 
 		//find a validated/invalid trace
-		if( ret != RULE_ENGINE_RESULT_UNKNOWN ){
+		if( verdict != VERDICT_UNKNOWN ){
 			//get execution trace
 			execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
-			verdict = _get_verdict( _handler->rules_array[i]->type_id, ret );
 
-			if( verdict != VERDICT_UNKNOWN ){
+			//lock-free
+			__sync_add_and_fetch(&total_alerts, 1);
 
-				//lock-free
-				__sync_add_and_fetch(&total_alerts, 1);
-
-				//call user-callback function
-				_handler->callback(
-						_handler->rules_array[i],
-						verdict,
-						msg->timestamp,
-						msg->counter,
-						execution_trace,
-						_handler->user_data_for_callback );
-
-			}
+			//call user-callback function
+			_handler->callback(
+					_handler->rules_array[i],
+					verdict,
+					msg->timestamp,
+					msg->counter,
+					execution_trace,
+					_handler->user_data_for_callback );
 		}
 	}
 
@@ -346,7 +309,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 
 	switch( type ){
 	case MMT_UNDEFINED_TYPE: /**< no type constant value */
-		return 1;
+		break;
 	case MMT_DATA_CHAR: /**< 1 character constant value */
 		number = *(char *) data;
 		*new_type = NUMERIC;
@@ -392,9 +355,6 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		*new_data = mmt_mem_dup( buffer, size );
 		return 0;
 
-	case MMT_DATA_IP_NET: /**< ip network address constant value */
-		break;
-
 	case MMT_DATA_IP_ADDR: /**< ip address constant value */
 		inet_ntop(AF_INET, data, buffer, buffer_size );
 		//mmt_debug( "IPv4: %s", string );
@@ -410,7 +370,6 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		return 0;
 
 	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
-		break;
 	case MMT_DATA_PATH: /**< protocol path constant value */
 	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
 	case MMT_DATA_BUFFER: /**< binary buffer content */
@@ -419,11 +378,14 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 	case MMT_DATA_DATE: /**< date constant value */
 	case MMT_DATA_TIMEARG: /**< time argument constant value */
 	case MMT_DATA_STRING_INDEX: /**< string index constant value (an association between a string and an integer) */
+	case MMT_DATA_IP_NET: /**< ip network address constant value */
 	case MMT_DATA_LAYERID: /**< Layer ID value */
 	case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
 	case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
 	case MMT_STATS: /**< pointer to MMT Protocol statistics */
-		break;
+		*new_type = VOID;
+		*new_data = (void *)data;
+		return 0;
 
 	case MMT_BINARY_DATA: /**< binary constant value */
 	case MMT_BINARY_VAR_DATA: /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
@@ -448,7 +410,11 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 	}
 
 	*new_data = NULL;
+
+#ifdef DEBUG_MODE
 	mmt_error("Data type %d has not yet implemented", type);
+#endif
+
 	return 1;
 }
 

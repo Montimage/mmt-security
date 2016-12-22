@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<beginning>
+
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+
+static inline int check_sql_injection(const void *p_payload, double payload_len){
+   int handle = 0;
+   size_t len = payload_len;
+   char *str  = malloc( len + 1 );
+   memcpy( str, p_payload, len );
+   str[ len ] = '\0';
+   
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+
+   char *s1, *s2, *s3, *s4, *s5, *s6;
+   s1 = strstr(str, "DROP"   ); //find the first occurrence of string "DROP" in string
+   s2 = strstr(str, "UNION"  ); //find the first occurrence of string "UNION" in string
+   s3 = strstr(str, "SELECT" ); //find the first occurrence of string "SELECT" in string
+   s4 = strstr(str, "CHAR"   ); //find the first occurrence of string "CHAR" in string  
+   s5 = strstr(str, "DELETE" ); //find the first occurrence of string "CHAR" in string
+   s6 = strstr(str, "INSERT" ); //find the first occurrence of string "CHAR" in string
+     
+   if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL))  {
+      //printf ("SQL injection detected\n");
+      handle = 1;   
+   }
+   
+   free( str );
+   return handle;
+ 
+}
+
+]]></embedded_functions>
+
+<!-- Property 19: C4_Analyse_04g : SQL Injection detection.-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="19" type_property="ATTACK" 
+    description="SQL Injection detected"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a TCP segment"
+           boolean_expression="((tcp.payload_len &gt; 0)&amp;&amp;(#check_sql_injection(tcp.p_payload, tcp.payload_len) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: SQL Injection in the payload"
+           boolean_expression="((ip.src != ip.dst) &amp;&amp; (tcp.p_payload == tcp.p_payload))"/>
+</property>
+
+</beginning>

@@ -342,7 +342,7 @@ int main(int argc, char** argv) {
 	//get all available rules
 	size = mmt_sec_get_rules_info( &rules_arr );
 
-	_sec_handler.threads_count = 1; //threads_count;
+	_sec_handler.threads_count = threads_count;
 
 	//init mmt-sec to verify the rules
 	if( _sec_handler.threads_count == 1 ){

@@ -31,21 +31,23 @@ typedef struct _rule_engine_struct{
  * the #fsm will fire the #index-th transition of its current state
  */
 typedef struct _fsm_tran_index_struct{
-	size_t index;
-	fsm_t *fsm;
+	size_t index;         //index of the transition of the current state of #fsm to be verified
+	fsm_t *fsm;           //fsm to be verified
+	uint64_t counter;     //index of the last verified message
 }_fsm_tran_index_t ;
 
-static inline _fsm_tran_index_t* _create_fsm_tran_index_t( size_t index, fsm_t *fsm){
+static inline _fsm_tran_index_t* _create_fsm_tran_index_t( size_t index, fsm_t *fsm, uint64_t counter){
 	_fsm_tran_index_t *ret = mmt_mem_alloc( sizeof( _fsm_tran_index_t));
-	ret->index = index;
-	ret->fsm   = fsm;
+	ret->index   = index;
+	ret->fsm     = fsm;
+	ret->counter = counter;
 	return ret;
 }
 
 /**
  * Index the transitions of #fsm that can be fired in the next event.
  */
-static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm, bool is_add_timeout ){
+static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm, bool is_add_timeout, uint64_t counter ){
 	size_t i;
 	uint16_t event_id;
 	const fsm_transition_t *tran;
@@ -63,7 +65,7 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 		tran     = &( state->transitions[ i ] );
 		event_id = tran->event_type;
 
-		if( event_id == FSM_EVENT_TYPE_TIMEOUT && !is_add_timeout )
+		if( !is_add_timeout && event_id == FSM_EVENT_TYPE_TIMEOUT )
 			continue;
 
 //d = count_nodes_from_link_list( _engine->fsm_by_expecting_event_id[ event_id ]);
@@ -78,7 +80,7 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 		// then #fsm will fire the i-th transition from its current state
 		_engine->fsm_by_expecting_event_id[ event_id ] =
 				insert_node_to_link_list( _engine->fsm_by_expecting_event_id[ event_id],
-													_create_fsm_tran_index_t( i, fsm ) );
+													_create_fsm_tran_index_t( i, fsm, counter ) );
 
 	}
 }
@@ -130,12 +132,12 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 	_engine->instances_count           = 1; //fsm_bootstrap
 	//linked-list of fsm instances indexed by their expected event_id
 	_engine->tmp_fsm_by_expecting_event_id = mmt_mem_alloc( _engine->max_events_count * sizeof( void *) );
-	_engine->fsm_by_expecting_event_id = mmt_mem_alloc( _engine->max_events_count * sizeof( void *) );
+	_engine->fsm_by_expecting_event_id     = mmt_mem_alloc( _engine->max_events_count * sizeof( void *) );
 	for( i=0; i<_engine->max_events_count; i++ )
 		_engine->fsm_by_expecting_event_id[ i ] = NULL;
 
 	//add fsm_bootstrap to the list
-	_set_expecting_events_id( _engine, _engine->fsm_bootstrap, YES );
+	_set_expecting_events_id( _engine, _engine->fsm_bootstrap, NO, 0 );
 
 	//linked-list of fsm instances
 	_engine->fsm_by_instance_id = mmt_mem_alloc( _engine->max_instances_count * sizeof( void *) );
@@ -237,7 +239,7 @@ static inline void _reset_engine_for_fsm( _rule_engine_t *_engine, fsm_t *fsm ){
 	_engine->fsm_by_instance_id[ fsm_id ] = NULL;
 }
 /**
- * Remove only one instance from (1) list of expecting events and (2) list of instances
+ * Remove only one instance from (1) list of expecting events and from (2) list of instances
  */
 static inline void _reset_engine_for_instance( _rule_engine_t *_engine, fsm_t *fsm ){
 	size_t i;
@@ -254,7 +256,7 @@ static inline void _reset_engine_for_instance( _rule_engine_t *_engine, fsm_t *f
 			ptr = node->next;
 			fsm_ind = (_fsm_tran_index_t *) node->data;
 
-			//found a node containing fsm
+			//found a node containing #fsm
 			if( fsm_ind->fsm == fsm ){
 
 				//head?
@@ -286,7 +288,7 @@ static inline uint16_t _find_an_available_id( _rule_engine_t *_engine ){
 			return i;
 		}
 	//not enough
-	mmt_halt( "Not enough memory slots for instances (%s:%d)", __FILE__, __LINE__ );
+	mmt_halt( "Not enough memory slots for fsm instances when verifying rule %d (%s:%d)", _engine->rule_info->id, __FILE__, __LINE__ );
 	return 0;
 }
 
@@ -332,6 +334,7 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
 			//mmt_debug( "FSM_STATE_CHANGED" );
 
 			//remove from old list
+			//=> the #fsm_ind->fsm does not wait for the #event_id any more
 			_engine->fsm_by_expecting_event_id[ event_id ] =
 					remove_node_from_link_list( _engine->fsm_by_expecting_event_id[ event_id ], (void *)fsm_ind );
 
@@ -343,7 +346,7 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
 	case FSM_STATE_CHANGED:
 		//mmt_debug( "FSM_STATE_CHANGED" );
 		//add to new list(s) that waiting for a new event
-		_set_expecting_events_id( _engine, fsm , new_fsm_id != 0 );
+		_set_expecting_events_id( _engine, fsm, new_fsm_id != 0,  message_data->counter );
 		break;
 
 	//a final state that is either valid state or invalid one
@@ -388,7 +391,7 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	void *data           = _engine->rule_info->convert_message( message );
 	const uint16_t *hash = _engine->rule_info->hash_message( data );
 	uint8_t event_id = 0;
-	link_node_t *node, *node_zero;
+	link_node_t *node;
 	_fsm_tran_index_t *fsm_ind;
 	enum verdict_type ret = VERDICT_UNKNOWN;;
 	//insert #message pointer to head of #data;
@@ -400,8 +403,6 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	 */
 	for( i=0; i<_engine->max_events_count; i++ )
 		_engine->tmp_fsm_by_expecting_event_id[ i ] = _engine->fsm_by_expecting_event_id[ i ];
-
-	node_zero = _engine->fsm_by_expecting_event_id[ FSM_EVENT_TYPE_TIMEOUT ];
 
 	//mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
@@ -429,6 +430,9 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 			// because #node can be freed( or inserted a new node) in the function #_fire_transition
 			ret = _fire_transition( fsm_ind, event_id, message, data, _engine );
 
+			//mark this #fsm_ind verified the #message for both timeout and real events
+			fsm_ind->counter = message->counter;
+
 			//get only one verdict per packet
 			if( ret != VERDICT_UNKNOWN ){
 				//must free #data before returning
@@ -440,18 +444,21 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 
 	//check timeout
 	//verify instances that are waiting for timeout
-	//not use #tmp_fsm_by_expecting_event_id as this variable is not updated by the above checking (line 394)
-	//#fsm_by_expecting_event_id was modified by the above checking
-	//=> their fsm may be timeout
-	//for each instance
-	while( node_zero != NULL ){
+	node = _engine->fsm_by_expecting_event_id[ FSM_EVENT_TYPE_TIMEOUT ];
+	//mmt_debug( "Zero-nodes count: %zu", count_nodes_from_link_list(node));
 
-		fsm_ind = (_fsm_tran_index_t *)node_zero->data;
-		node_zero = node_zero->next;
+	while( node != NULL ){
+
+		fsm_ind = (_fsm_tran_index_t *)node->data;
+		node    = node->next;
+
+		//check whether the #fsm_ind was verified above
+		if( fsm_ind->counter == message->counter )
+			continue;
 
 		//put this after node = node->next
 		// because #node can be freed( or inserted a new node) in the function #_fire_transition
-		ret = _fire_transition( fsm_ind, event_id, message, data, _engine );
+		ret = _fire_transition( fsm_ind, FSM_EVENT_TYPE_TIMEOUT, message, data, _engine );
 
 		//get only one verdict per packet
 		if( ret != VERDICT_UNKNOWN ){

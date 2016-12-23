@@ -516,35 +516,31 @@ void _iterate_events_to_gen_hash_function( void *key, void *data, void *user_dat
 	mmt_map_t *variables_map = NULL;
 	uint16_t event_id = * (uint16_t *)key;
 	size_t size;
+	uint64_t hash = 0;
 
 	//first element
 	if( index == 0 ){
 		_gen_comment( fd, "Public API" );
-		fprintf( fd, "static const uint16_t* hash_message_%d( const void *data ){", rule_id );
-		fprintf( fd, "\n\t static uint16_t hash_table[ EVENTS_COUNT_%d ];", rule_id );
+		fprintf( fd, "static uint64_t hash_message_%d( const void *data ){", rule_id );
+		fprintf( fd, "\n\t uint64_t hash = 0;" );
 		fprintf( fd, "\n\t size_t i;\t _msg_t_%d *msg = (_msg_t_%d *) data;", rule_id, rule_id );
 
-		fprintf( fd, "\n\t for( i=0; i<EVENTS_COUNT_%d; i++) hash_table[i] = 0;", rule_id );
-		_gen_comment_line(fd, "Rest hash_table. This is call for every executions");
-
-		fprintf( fd, "\n\t //if( msg == NULL ) return hash_table;\n");
+		fprintf( fd, "\n\t //if( msg == NULL ) return hash;\n");
 	}
 
 	//body
 
 	//create a new map that contains unique variables (2 variables are differed by its #proto and #att)
 	variables_map = (mmt_map_t *)data;
-	if( mmt_map_count( variables_map) > 0 ){
+	if( mmt_map_count( variables_map) > 0 )
 		mmt_map_iterate( variables_map, _iterate_variable_to_print_hash_function_body, fd );
-		fprintf( fd, "\n\t\t hash_table[ %zu ] = %d;", index, event_id );
-	}else{
+	else
 		fprintf(fd, "\n\t//always need to check the event %d", event_id );
-		fprintf( fd, "\n\t hash_table[ %zu ] = %d;", index, event_id );
-	}
+	fprintf( fd, "\n\t\t hash  |= %"PRIu64"; //event_id = %d", BIT_SET(hash, event_id), event_id );
 
 	//last
 	if( index == total-1 ){
-		fprintf( fd, "\n\t return hash_table;");
+		fprintf( fd, "\n\t return hash;");
 		fprintf( fd, "\n }");//end function
 	}
 }

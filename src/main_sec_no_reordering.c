@@ -32,10 +32,14 @@
 #include "lib/system_info.h"
 
 //maximum length of a report sent from mmt-probe
-#define REPORT_SIZE 256
+#define REPORT_SIZE 100000
+//maximum length of file name storing alerts
+#define MAX_FILENAME_SIZE 500
+
+#define VOID 2
 
 #ifndef __FAVOR_BSD
-# define __FAVOR_BSD
+#define __FAVOR_BSD
 #endif
 
 typedef struct _sec_handler_struct{
@@ -59,31 +63,13 @@ static inline double time_diff(struct timeval t1, struct timeval t2) {
 	return (double)(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)/1000000.0;
 }
 
-void print_rules_info(){
-	const rule_info_t **rules_arr;
-	size_t i, n  = 0;
-
-	n = load_mmt_sec_rules( &rules_arr );
-
-	printf("Found %zu rule%s", n, n<=1? ".": "s." );
-
-	for( i=0; i<n; i++ ){
-		printf("\n%zu - Rule id: %d", (i+1), rules_arr[i]->id );
-		printf("\n\t- type            : %s",  rules_arr[i]->type_string );
-		printf("\n\t- description     : %s",  rules_arr[i]->description );
-		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
-		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
-	}
-	printf("\n");
-	mmt_mem_free( rules_arr );
-}
-
-
 void usage(const char * prg_name) {
 	fprintf(stderr, "%s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-p <number>: Port number. Default = 5000\n");
 	fprintf(stderr, "\t-n <number>: Number of threads. Default = 1\n");
+	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
+	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-l         : Prints the available rules then exit.\n");
 	fprintf(stderr, "\t-h         : Prints this help.\n");
 	exit(1);
@@ -91,9 +77,10 @@ void usage(const char * prg_name) {
 
 size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, size_t *threads_count ) {
 	int opt, optcount = 0, x;
-	char * config_file;
+	char file_string[MAX_FILENAME_SIZE]  = {0};
+	char redis_string[MAX_FILENAME_SIZE] = {0};
 
-	while ((opt = getopt(argc, argv, "p:n:lh")) != EOF) {
+	while ((opt = getopt(argc, argv, "p:n:f:r:lh")) != EOF) {
 		switch (opt) {
 		case 'p':
 			optcount++;
@@ -105,6 +92,14 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, s
 				*port_no = x;
 			else
 				usage(argv[0]);
+			break;
+		case 'f':
+			optcount++;
+			strncpy((char *) file_string, optarg, MAX_FILENAME_SIZE);
+			break;
+		case 'r':
+			optcount++;
+			strncpy((char *) redis_string, optarg, MAX_FILENAME_SIZE);
 			break;
 		case 'n':
 			optcount++;
@@ -118,13 +113,14 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, s
 				usage(argv[0]);
 			break;
 		case 'l':
-			print_rules_info();
+			mmt_sec_print_rules_info();
 			exit( 0 );
 		case 'h':
 		default: usage(argv[0]);
 		}
 	}
 
+	verdict_printer_init( file_string, redis_string );
 	return 0;
 }
 
@@ -212,9 +208,11 @@ static inline size_t receiving_reports( int sock ) {
 
 			//data
 			el_data_type = _get_data_type( el_ptr->proto_id, el_ptr->att_id );
-			if( el_data_type != -1 )
+			if( el_data_type != -1 ){
 				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
-			else
+
+				if( el_ptr->data_type == VOID ) el_ptr->data = NULL;
+			}else
 				el_ptr->data = NULL;
 
 			index += el_data_length;
@@ -235,8 +233,10 @@ static inline size_t receiving_reports( int sock ) {
 	}
 
 	gettimeofday( &end_time, NULL );
-	fprintf( stderr, "  received %zu reports, processed in  %.2fs\n",
-			reports_count, time_diff( start_time, end_time ));
+	fprintf( stderr, " received %9zu reports, processed in %4.2fs, generated %7"PRIu64" alerts\n",
+			reports_count, time_diff( start_time, end_time ),
+			mmt_sec_get_total_alerts()
+	);
 
 	close( sock );
 	return reports_count;
@@ -258,6 +258,7 @@ static inline void termination(){
 
 
 void signal_handler_seg(int signal_type) {
+	mmt_error( "Interrupted by signal %d", signal_type );
 	is_stop_processing = YES;
 	mmt_print_execution_trace();
 	usleep( 50 );
@@ -283,7 +284,9 @@ void signal_handler(int signal_type) {
 
 
 void register_signals(){
+//#ifndef DEBUG_MODE
 	signal(SIGSEGV, signal_handler_seg );
+//#endif
 	signal(SIGINT,  signal_handler);
 	signal(SIGTERM, signal_handler);
 	signal(SIGABRT, signal_handler);

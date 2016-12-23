@@ -55,29 +55,6 @@ typedef struct _sec_handler_struct{
 
 static _sec_handler_t _sec_handler;
 
-/**
- * Print information of the rules existing.
- */
-void print_rules_info(){
-	const rule_info_t **rules_arr;
-	size_t i, n  = 0;
-
-	n = mmt_sec_get_rules_info( &rules_arr );
-
-	printf("Found %zu rule%s", n, n<=1? ".": "s." );
-
-	for( i=0; i<n; i++ ){
-		printf("\n%zu - Rule id: %d", (i+1), rules_arr[i]->id );
-		printf("\n\t- type            : %s",  rules_arr[i]->type_string );
-		printf("\n\t- description     : %s",  rules_arr[i]->description );
-		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
-		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
-	}
-	printf("\n");
-	mmt_mem_free( rules_arr );
-}
-
-
 void usage(const char * prg_name) {
 	fprintf(stderr, "MMT-Security version %s using DPI version %s\n", mmt_sec_get_version_info(), mmt_version() );
 	fprintf(stderr, "%s [<option>]\n", prg_name);
@@ -143,7 +120,7 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 
 			break;
 		case 'l':
-			print_rules_info();
+			mmt_sec_print_rules_info();
 			exit( 0 );
 		case 'h':
 		default:

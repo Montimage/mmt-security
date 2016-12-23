@@ -30,9 +30,6 @@ typedef struct lock_free_spsc_ring_struct
     //pthread_mutex_t mutex_wait_pushing, mutex_wait_poping;
     //pthread_cond_t cond_wait_pushing, cond_wait_poping;
 
-	#ifdef SPIN_LOCK
-   pthread_spinlock_t spin_lock;
-	#endif
 }lock_free_spsc_ring_t;
 
 /**

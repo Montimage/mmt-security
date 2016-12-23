@@ -33,16 +33,6 @@ lock_free_spsc_ring_t* ring_init( uint32_t size ){
 	q->_head = q->_tail = 0;
 	q->_cached_head = q->_cached_tail = 0;
 
-//	pthread_mutex_init( &( q->mutex_wait_pushing), NULL );
-//	pthread_mutex_init( &( q->mutex_wait_poping), NULL );
-//
-//	pthread_cond_init( &( q->cond_wait_pushing), NULL );
-//	pthread_cond_init( &( q->cond_wait_poping), NULL );
-
-	#ifdef SPIN_LOCK
-		pthread_spin_init( &(q->spin_lock), PTHREAD_PROCESS_SHARED );
-	#endif
-
 	return q;
 }
 
@@ -53,15 +43,8 @@ int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
 	//I always let 2 available elements between head -- tail
 	//1 empty element for future inserting, 1 element being reading by the consumer
 	if( ( h + 3 ) % ( q->_size ) == q->_cached_tail )
-#ifdef SPIN_LOCK
-		if( pthread_spin_lock( &(q->spin_lock) ) == 0){
-			q->_cached_tail = q->_tail;
-			pthread_spin_unlock( &(q->spin_lock) );
-		}
-#else
-		q->_cached_tail = atomic_load_explicit( &q->_tail, memory_order_acquire );
-#endif
 
+	q->_cached_tail = atomic_load_explicit( &q->_tail, memory_order_acquire );
 
 	/* tail can only increase since the last time we read it, which means we can only get more space to push into.
 		 If we still have space left from the last time we read, we don't have to read again. */
@@ -71,14 +54,7 @@ int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
 	else{
 		q->_data[ h ] = val;
 
-#ifdef SPIN_LOCK
-		if( pthread_spin_lock( &(q->spin_lock) ) == 0){
-			q->_head = (h +1) % q->_size;
-			pthread_spin_unlock( &(q->spin_lock) );
-		}
-#else
 		atomic_store_explicit( &q->_head, (h +1) % q->_size, memory_order_release );
-#endif
 
 		//pthread_cond_signal( &(q->cond_wait_pushing) );
 
@@ -92,14 +68,7 @@ int  ring_pop ( lock_free_spsc_ring_t *q, void **val ){
 	t = q->_tail;
 
 	if( q->_cached_head == t )
-#ifdef SPIN_LOCK
-		if( pthread_spin_lock( &(q->spin_lock) ) == 0){
-			q->_cached_head = q->_head;
-			pthread_spin_unlock( &(q->spin_lock) );
-		}
-#else
 		q->_cached_head = atomic_load_explicit ( &q->_head, memory_order_acquire );
-#endif
 
 	 /* head can only increase since the last time we read it, which means we can only get more items to pop from.
 		 If we still have items left from the last time we read, we don't have to read again. */
@@ -109,20 +78,7 @@ int  ring_pop ( lock_free_spsc_ring_t *q, void **val ){
 		//not empty
 		*val = q->_data[ t ];
 
-#ifdef SPIN_LOCK
-		if( pthread_spin_lock( &(q->spin_lock) ) == 0){
-			q->_tail = (t +1) % q->_size;
-			pthread_spin_unlock( &(q->spin_lock) );
-		}
-#else
 		atomic_store_explicit( &q->_tail, (t+1) % q->_size, memory_order_release );
-#endif
-
-		//too slow
-		//if( pthread_mutex_lock( & q->mutex_wait_poping ) == 0 ){
-		//	pthread_cond_signal( &(q->cond_wait_poping ) );
-		//	pthread_mutex_unlock( & q->mutex_wait_poping );
-		//}
 
 		return RING_SUCCESS;
 	}
@@ -130,12 +86,10 @@ int  ring_pop ( lock_free_spsc_ring_t *q, void **val ){
 
 
 void ring_wait_for_pushing( lock_free_spsc_ring_t *q ){
-	nanosleep( (const struct timespec[]){{0, 100000L}}, NULL );
-	//pthread_cond_wait( &( q->cond_wait_pushing), &(q->mutex_wait_pushing) );
+	nanosleep( (const struct timespec[]){{0, 1000L}}, NULL );
 }
 
 
 void ring_wait_for_poping( lock_free_spsc_ring_t *q ){
-	nanosleep( (const struct timespec[]){{0, 100000L}}, NULL );
-	//pthread_cond_wait( &( q->cond_wait_poping), &(q->mutex_wait_poping) );
+	nanosleep( (const struct timespec[]){{0, 1000L}}, NULL );
 }

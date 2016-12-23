@@ -558,5 +558,9 @@ size_t get_unique_events_of_rule( const rule_t *rule, mmt_map_t **events_map ){
 		mmt_free_and_assign_to_null( map );
 	mmt_map_iterate( map, _iterate_to_check_event_id_in_boolean_expression, map );
 	*events_map = map;
+
+	if( events_count > 63 + 1 ) //real events + timeout
+		mmt_halt("Cannot hold more than 64 events in a property");
+
 	return events_count;
 }

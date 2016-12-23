@@ -64,9 +64,9 @@ typedef struct rule_info_struct{
 
 	/**
 	 * - Return:
-	 * 	+ An array (size #events_count) of number.
+	 * 	+ a hash number.
 	 */
-	const uint16_t* (* hash_message )( const void *data );
+	uint64_t (* hash_message )( const void *data );
 }rule_info_t;
 
 /**

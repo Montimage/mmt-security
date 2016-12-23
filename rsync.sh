@@ -11,6 +11,6 @@ RUN="make standalone $DEBUG"
 
 #RUN="make test.tcp_server; ./copy test.tcp_server"
 #RUN="make test.receiving_report; ./copy test.receiving_report"
-#RUN="make sec_server_no_reorder $DEBUG "
+RUN="make sec_server_no_reorder $DEBUG; ./copy mmt_sec_no_reordering "
 
 ssh -p 2222 mmt@localhost "cd /home/mmt/mmt-security; $RUN"

@@ -409,6 +409,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		break;
 	}
 
+	*new_type = VOID;
 	*new_data = NULL;
 
 #ifdef DEBUG_MODE
@@ -453,4 +454,51 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 
 uint64_t mmt_sec_get_total_alerts(){
 	return total_alerts;
+}
+
+
+void mmt_sec_print_rules_info(){
+	const rule_info_t **rules_arr;
+	size_t i, j, k, n  = 0, size;
+	const mmt_array_t *proto_atts;
+	const proto_attribute_t *proto;
+
+	char string[ 100000 ], *ch_ptr, tmp_string[ 1000 ];
+	string[ 0 ] = '\0';
+	ch_ptr = &string[ 0 ];
+
+	n = load_mmt_sec_rules( &rules_arr );
+
+	printf("Found %zu rule%s", n, n<=1? ".": "s." );
+
+	for( i=0; i<n; i++ ){
+		printf("\n%zu - Rule id: %d", (i+1), rules_arr[i]->id );
+		printf("\n\t- type            : %s",  rules_arr[i]->type_string );
+		printf("\n\t- description     : %s",  rules_arr[i]->description );
+		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
+		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
+		//for each event
+		for(j=0; j<rules_arr[i]->events_count; j++ ){
+			printf("\n\t- event %2zu        ", j+1 );
+			//visite each proto/att of one event
+			proto_atts = &(rules_arr[i]->proto_atts_events[ j+1 ]);
+			for( k=0; k<proto_atts->elements_count; k++ ){
+				proto = proto_atts->data[k];
+				printf("%c %s.%s", k==0?':':',', proto->proto, proto->att );
+
+				//add to unique set
+				sprintf( tmp_string, "%s.%s", proto->proto, proto->att );
+				if( strstr( string, tmp_string ) == NULL )
+					ch_ptr += sprintf( ch_ptr, "\"%s.%s\",", proto->proto, proto->att );
+			}
+		}
+	}
+
+	//remove the last comma
+	size = strlen( string );
+	if( size > 0 ) string[ size - 1 ] = '\0';
+
+	printf("\n\nProtocols and their attributes using in these rules:\n\t %s\n\n", string );
+
+	mmt_mem_free( rules_arr );
 }

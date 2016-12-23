@@ -132,4 +132,10 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
  * This is the times of calling the callback function in #mmt_sec_register
  */
 uint64_t mmt_sec_get_total_alerts();
+
+/**
+ * Print information of the rules existing.
+ */
+void mmt_sec_print_rules_info();
+
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

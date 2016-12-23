@@ -107,13 +107,13 @@ static inline void *_process_one_thread( void *arg ){
 			mmt_warn("Cannot set affinity of thread %d on cpu[%ld]", gettid(), thread_arg->index % cpus_count + 1  );
 	while( 1 ){
 		do{
+			msg = NULL;
 			ret = ring_pop( ring, &msg );
 			if( likely( ret == RING_SUCCESS ))
 				break;
 			else
 				ring_wait_for_pushing( ring );
 		}while( 1 );
-
 
 		if( unlikely( msg == NULL ) )
 			break;
@@ -142,8 +142,10 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	__check_null( rules_array, NULL );
 
 	//number of threads <= number of rules
-	if( rules_count < threads_count )
+	if( rules_count < threads_count ){
+		mmt_warn( "Number of threads is greater than number of rules (%d > %zu). Use %zu threads.", threads_count, rules_count, rules_count );
 		threads_count = rules_count;
+	}
 
 	_mmt_smp_sec_handler_t *handler = mmt_mem_alloc( sizeof( _mmt_smp_sec_handler_t ));
 

@@ -352,7 +352,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
     description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
     <event value="COMPUTE" event_id="1" 
         description="HTTP packet using a port different from 80 and 8080"
-           boolean_expression="((http.method == http.method)&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP packet"
            boolean_expression="(ip.src != ip.dst)"/>
@@ -617,7 +617,7 @@ it is nice to have an automated method of redirect expiration.
              boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.3)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
     </operator>
 </property>
-
+ 
     <!-- Property 10: XMAS s00can : TCP with all flags FIN, URG, PSH active.-->
     <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="28" type_property="ATTACK"
          description="XMAS scan : TCP with all flags FIN, URG, PSH active.">

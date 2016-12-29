@@ -185,7 +185,7 @@ static inline void _store_valid_execution_trace( _rule_engine_t *_engine, fsm_t 
 	if( _engine->valid_execution_trace != NULL )
 		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );
 
-	_engine->valid_execution_trace = mmt_array_clone( fsm_get_execution_trace( fsm ), mmt_mem_retain );
+	_engine->valid_execution_trace = mmt_array_clone( fsm_get_execution_trace( fsm ), (void*) retain_message_t );
 }
 
 /**
@@ -397,8 +397,10 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	enum verdict_type ret = VERDICT_UNKNOWN;;
 	//insert #message pointer to head of #data;
 
-	if( hash == 0 )
+	if( hash == 0 ){
+		mmt_mem_free( data );
 		return VERDICT_UNKNOWN;
+	}
 
 	/**
 	 * We need to store the head of each entry in #fsm_by_expecting_event_id

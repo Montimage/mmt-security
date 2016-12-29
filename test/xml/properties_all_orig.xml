@@ -126,7 +126,7 @@
     description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb.">
     <event value="COMPUTE" event_id="17"
            description="Context: TCP RST"
-           boolean_expression="((tcp.rst == 1)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;((tcp.ack_nb.18 != tcp.seq_nb)&amp;&amp;((ip.src.18 == ip.dst)&amp;&amp;(ip.dst.18 == ip.src)))))"/>
+           boolean_expression="((tcp.rst == 1)&amp;&amp;((tcp.ack_nb &gt; tcp.window.18)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;((tcp.ack_nb.18 != tcp.seq_nb)&amp;&amp;((ip.src.18 == ip.dst)&amp;&amp;(ip.dst.18 == ip.src))))))"/>
     <event value="COMPUTE" event_id="18" 
            description="Trigger: the last TCP ACK packets have different seg_nb and ack_nb"
            boolean_expression="((tcp.flags == 16)&amp;&amp;((tcp.ack_nb == tcp.ack_nb)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;(ip.src != ip.dst))))"/>
@@ -200,7 +200,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
            boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
     <event value="COMPUTE" event_id="28" 
            description="HTTP packet"
-           boolean_expression="(ip.src != ip.dst)"/>
+           boolean_expression="((ip.src != ip.dst)&amp;&amp;((tcp.p_payload == tcp.p_payload)&amp;&amp;(tcp.payload_len == tcp.payload_len)))"/>
 </property>
 
 <!-- Property 13: C4_Analyse_3b : Data in SYN packet.-->
@@ -222,10 +222,10 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 -->
 <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="14" type_property="EVASION" 
     description="C4_Analyse_3f bis: Unauthorized port number.">
-      <event value="COMPUTE" event_id="30" 
+      <event value="COMPUTE" event_id="31" 
              description="TCP packet with non-authorized port number."
              boolean_expression="((#check_port(tcp.dest_port) == 1)||(#check_port(tcp.src_port) == 1))"/>
-      <event value="COMPUTE" event_id="31" 
+      <event value="COMPUTE" event_id="32" 
              description="TCP packet"
              boolean_expression="((ip.src != ip.dst)&amp;&amp;((tcp.dest_port + tcp.src_port) != 0))"/>
 </property>
@@ -235,10 +235,10 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 -->
 <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="15" type_property="ATTACK" 
      description="Nikto detection" >
-   <event event_id="32" value="COMPUTE" 
+   <event event_id="33" value="COMPUTE" 
            description="Context: an  user agent in the HTTP header"
            boolean_expression="((http.user_agent == http.user_agent)&amp;&amp;(#check_UA(http.user_agent) == 1))"/>
-   <event event_id="33" value="COMPUTE" 
+   <event event_id="34" value="COMPUTE" 
            description="Trigger: Nikto detected. "
            boolean_expression="(ip.src != ip.dst)"/>
  </property>
@@ -246,16 +246,16 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 
  <!-- Property 16: C4_Analyse_02 : Two successive TCP SYN requests but with different destination addresses.-->
 
-<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="16" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="100" property_id="16" type_property="ATTACK" 
     description="Two successive TCP SYN requests but with different destination addresses."
     >
     <!--if_satisfied="py_createstix(5_two_successive_TCP_SYN_requests_could_be_a_spoofed_address, ip.src.12)"-->
-    <event value="COMPUTE" event_id="34" 
-           description="SYN request"
-           boolean_expression="((tcp.flags == 2)&amp;&amp;(ip.src != ip.dst))"/>
     <event value="COMPUTE" event_id="35" 
            description="SYN request"
-           boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst != ip.dst.34)&amp;&amp;(ip.src == ip.src.34)))"/>
+           boolean_expression="((tcp.flags == 2)&amp;&amp;(ip.src != ip.dst))"/>
+    <event value="COMPUTE" event_id="36" 
+           description="SYN request"
+           boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst != ip.dst.35)&amp;&amp;(ip.src == ip.src.35)))"/>
 </property>
 
 <!-- Property 17: C4_Decod_01 : SMTP detection.-->
@@ -263,10 +263,10 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="17" type_property="SECURITY_PROPERTY" 
     description="SMTP detected"
     >
-   <event value="COMPUTE" event_id="36" 
+   <event value="COMPUTE" event_id="37" 
            description="SYN request"
            boolean_expression="(smtp.packet_count &gt; 0)"/>
-    <event value="COMPUTE" event_id="37" 
+    <event value="COMPUTE" event_id="38" 
            description="ip check"
            boolean_expression="(ip.src != ip.dst)"/>
 </property>
@@ -277,10 +277,10 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="18" type_property="ATTACK" 
     description="Invalid GRE version detected"
     >
-   <event value="COMPUTE" event_id="38" 
+   <event value="COMPUTE" event_id="39" 
            description="Context: Gre protocol"
            boolean_expression="((gre.proto &gt; 0)&amp;&amp;(gre.version != 0))"/>
-    <event value="COMPUTE" event_id="39" 
+    <event value="COMPUTE" event_id="40" 
            description="Trigger: Invalid GRE version"
            boolean_expression="(ip.src != ip.dst)"/>
 </property>
@@ -290,12 +290,12 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="19" type_property="ATTACK" 
     description="SQL Injection detected"
     >
-   <event value="COMPUTE" event_id="40" 
+   <event value="COMPUTE" event_id="41" 
            description="Context: Here it is a TCP segment"
            boolean_expression="((tcp.payload_len &gt; 0)&amp;&amp;(#check_sql_injection(tcp.p_payload, tcp.payload_len) == 1))"/>
-    <event value="COMPUTE" event_id="41" 
+    <event value="COMPUTE" event_id="42" 
            description="Trigger: SQL Injection in the payload"
-           boolean_expression="((ip.src != ip.dst) &amp;&amp; (tcp.p_payload == tcp.p_payload))"/>
+           boolean_expression="((ip.src != ip.dst)&amp;&amp;(tcp.p_payload == tcp.p_payload))"/>
 </property>
 
 <!-- Property 20: C4_Analyse_04i: ICMP redirect flood detection-->
@@ -313,32 +313,32 @@ it is nice to have an automated method of redirect expiration.
     description="4 consecutive ICMP redirect packets. Possibly ICMP redirect flood."
     >
    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
-   <event value="COMPUTE" event_id="42" 
+   <event value="COMPUTE" event_id="43" 
            description="Context: ICMP redirect"
            boolean_expression="((icmp.type == 5)&amp;&amp;(ip.dst != ip.src))"/>
-   <event value="COMPUTE" event_id="43" 
+   <event value="COMPUTE" event_id="44" 
            description="Trigger: 2nd consecutive ICMP redirect packet"
-           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.42)&amp;&amp;(ip.src == ip.src.42)))"/>
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.43)&amp;&amp;(ip.src == ip.src.43)))"/>
    </operator>
    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
-   <event value="COMPUTE" event_id="44" 
-           description="Trigger: 3rd consecutive ICMP redirect packet"
-           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.42)&amp;&amp;(ip.src == ip.src.42)))"/>
    <event value="COMPUTE" event_id="45" 
+           description="Trigger: 3rd consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.43)&amp;&amp;(ip.src == ip.src.43)))"/>
+   <event value="COMPUTE" event_id="46" 
            description="Trigger: 4th consecutive ICMP redirect packet"
-           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.42)&amp;&amp;(ip.src == ip.src.42)))"/>
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.43)&amp;&amp;(ip.src == ip.src.43)))"/>
    </operator>
 </property>
 
 <!-- Property 1: IP fragmentation : fragments with offset always = 0 (allowed but could be an evasion).-->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="21" type_property="EVASION" 
     description="IP fragmentation : fragments with offset always = 0 (allowed but could be an evasion).">
-      <event value="COMPUTE" event_id="46" 
+      <event value="COMPUTE" event_id="47" 
              description="IP fragment with offset = 0 followed by another"
              boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst))))"/>
-      <event value="COMPUTE" event_id="47" 
+      <event value="COMPUTE" event_id="48" 
              description="IP fragment with same identification and an offset = 0"
-             boolean_expression="((ip.identification == ip.identification.46)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst)))"/>
+             boolean_expression="((ip.identification == ip.identification.47)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst)))"/>
 </property>
 <!--
              boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.1)&amp;&amp;((((ip.frag_offset - ip.frag_offset.1) &lt; 101)&amp;&amp;ip.src != ip.dst))))"/>
@@ -347,45 +347,45 @@ it is nice to have an automated method of redirect expiration.
 <!-- Property 1: IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).-->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="22" type_property="EVASION" 
     description="IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).">
-      <event value="COMPUTE" event_id="48" 
+      <event value="COMPUTE" event_id="49" 
              description="IP fragment followed by another"
              boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
-      <event value="COMPUTE" event_id="49" 
+      <event value="COMPUTE" event_id="50" 
              description="IP fragment with same identification and an offset less than 9 bytes"
-             boolean_expression="((ip.identification == ip.identification.48)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.48)&amp;&amp;(((ip.frag_offset - ip.frag_offset.48) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
+             boolean_expression="((ip.identification == ip.identification.49)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.49)&amp;&amp;(((ip.frag_offset - ip.frag_offset.49) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
 </property>
 
 <!-- Property 2: Out of order IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).-->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="23" type_property="EVASION" 
     description="Out of order IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).">
-      <event value="COMPUTE" event_id="50" 
+      <event value="COMPUTE" event_id="51" 
              description="IP fragment followed by another"
              boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
-      <event value="COMPUTE" event_id="51" 
+      <event value="COMPUTE" event_id="52" 
              description="IP fragment with same identification and an offset less than 9 bytes"
-             boolean_expression="((ip.identification == ip.identification.50)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.50)&amp;&amp;(((ip.frag_offset.50 - ip.frag_offset) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
+             boolean_expression="((ip.identification == ip.identification.51)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.51)&amp;&amp;(((ip.frag_offset.51 - ip.frag_offset) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
 </property>
 
 <!-- Property 3: Overlapping IP fragmentation : difference in offset of concomitant fragments < fragment length (allowed but could be an evasion).-->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="24" type_property="EVASION" 
     description="Overlapping IP fragmentation : difference in offset of concomitant fragments less than fragment length (allowed but could be an evasion).">
-      <event value="COMPUTE" event_id="52" 
+      <event value="COMPUTE" event_id="53" 
              description="IP fragment followed by another"
              boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
-      <event value="COMPUTE" event_id="53" 
+      <event value="COMPUTE" event_id="54" 
              description="IP fragment with same identification and diffenrences in offsets less than length"
-             boolean_expression="((ip.identification == ip.identification.52)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.52)&amp;&amp;(((ip.frag_offset - ip.frag_offset.52) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
+             boolean_expression="((ip.identification == ip.identification.53)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.53)&amp;&amp;(((ip.frag_offset - ip.frag_offset.53) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
 </property>
 
 <!-- Property 4: Overlapping unordered IP fragmentation : difference in offset of concomitant fragments < fragment length (allowed but could be an evasion).-->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="25" type_property="EVASION" 
     description="Overlapping unordered IP fragmentation : difference in offset of concomitant fragments less than fragment length (allowed but could be an evasion).">
-      <event value="COMPUTE" event_id="54" 
+      <event value="COMPUTE" event_id="55" 
              description="IP fragment followed by another"
              boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
-      <event value="COMPUTE" event_id="55" 
+      <event value="COMPUTE" event_id="56" 
              description="IP fragment with same identification and diffenrences in offsets less than length"
-             boolean_expression="((ip.identification == ip.identification.54)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.54)&amp;&amp;(((ip.frag_offset.54 - ip.frag_offset) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
+             boolean_expression="((ip.identification == ip.identification.55)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.55)&amp;&amp;(((ip.frag_offset.55 - ip.frag_offset) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
 </property>
 
 <!-- Property 1: Probable IP protocol scan (4 different attempts in a row on different protocols).
@@ -395,20 +395,20 @@ it is nice to have an automated method of redirect expiration.
     description="Probable IP protocol scan (4 different attempts in a row on different protocols)."
     >
     <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
-      <event value="COMPUTE" event_id="56" 
+      <event value="COMPUTE" event_id="57" 
           description="IP packet header with the eight-bit IP protocol field set (1)"
              boolean_expression="((ip.proto_id != 0)&amp;&amp;(ip.src != ip.dst))"/>
-      <event value="COMPUTE" event_id="57" 
+      <event value="COMPUTE" event_id="58" 
              description="IP packet header with another eight-bit IP protocol field set (2)"
-             boolean_expression="((ip.proto_id != ip.proto_id.56)&amp;&amp;((ip.dst == ip.dst.56)&amp;&amp;(ip.src == ip.src.1)))"/>
+             boolean_expression="((ip.proto_id != ip.proto_id.57)&amp;&amp;((ip.dst == ip.dst.57)&amp;&amp;(ip.src == ip.src.57)))"/>
     </operator>
     <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
-      <event value="COMPUTE" event_id="58" 
-             description="IP packet header with another eight-bit IP protocol field set (3)"
-             boolean_expression="((ip.proto_id != ip.proto_id.57)&amp;&amp;((ip.proto_id != ip.proto_id.56)&amp;&amp;((ip.dst == ip.dst.56)&amp;&amp;(ip.src == ip.src.56))))"/>
       <event value="COMPUTE" event_id="59" 
+             description="IP packet header with another eight-bit IP protocol field set (3)"
+             boolean_expression="((ip.proto_id != ip.proto_id.58)&amp;&amp;((ip.proto_id != ip.proto_id.57)&amp;&amp;((ip.dst == ip.dst.57)&amp;&amp;(ip.src == ip.src.57))))"/>
+      <event value="COMPUTE" event_id="60" 
              description="IP packet header with another eight-bit IP protocol field set (4)"
-             boolean_expression="((ip.proto_id != ip.proto_id.58)&amp;&amp;((ip.proto_id != ip.proto_id.56)&amp;&amp;((ip.dst == ip.dst.56)&amp;&amp;(ip.src == ip.src.56))))"/>
+             boolean_expression="((ip.proto_id != ip.proto_id.59)&amp;&amp;((ip.proto_id != ip.proto_id.57)&amp;&amp;((ip.dst == ip.dst.57)&amp;&amp;(ip.src == ip.src.57))))"/>
     </operator>
 </property>
 
@@ -419,30 +419,30 @@ it is nice to have an automated method of redirect expiration.
     description="Probable UDP protocol scan (4 different attempts in a row on different ports)."
     >
     <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
-      <event value="COMPUTE" event_id="60" 
+      <event value="COMPUTE" event_id="61" 
              description="UDP packet header with a destination port field set (1)"
              boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != 0)&amp;&amp;(ip.src != ip.dst)))"/>
-      <event value="COMPUTE" event_id="61" 
+      <event value="COMPUTE" event_id="62" 
              description="UDP packet header with another destination port field set (2)"
-             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.60)&amp;&amp;((ip.dst == ip.dst.60)&amp;&amp;(ip.src == ip.src.60))))"/>
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.61)&amp;&amp;((ip.dst == ip.dst.61)&amp;&amp;(ip.src == ip.src.61))))"/>
     </operator>
     <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
-      <event value="COMPUTE" event_id="62" 
+      <event value="COMPUTE" event_id="63" 
              description="UDP packet header with another destination port field set (3)"
-             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.61)&amp;&amp;((udp.dest_port != udp.dest_port.60)&amp;&amp;((ip.dst == ip.dst.60)&amp;&amp;(ip.src == ip.src.60)))))"/>
-      <event value="COMPUTE" event_id="63"
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.62)&amp;&amp;((udp.dest_port != udp.dest_port.61)&amp;&amp;((ip.dst == ip.dst.61)&amp;&amp;(ip.src == ip.src.61)))))"/>
+      <event value="COMPUTE" event_id="64"
              description="UDP packet header with another destination port field set (4)"
-             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.62)&amp;&amp;((udp.dest_port != udp.dest_port.60)&amp;&amp;((ip.dst == ip.dst.60)&amp;&amp;(ip.src == ip.src.60)))))"/>
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.63)&amp;&amp;((udp.dest_port != udp.dest_port.61)&amp;&amp;((ip.dst == ip.dst.61)&amp;&amp;(ip.src == ip.src.61)))))"/>
     </operator>
 </property>
 
     <!-- Property 10: XMAS s00can : TCP with all flags FIN, URG, PSH active.-->
     <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="28" type_property="ATTACK"
          description="XMAS scan : TCP with all flags FIN, URG, PSH active.">
-    <event value="COMPUTE" event_id="64"
+    <event value="COMPUTE" event_id="65"
          description="TCP packet with flag FIN active"
          boolean_expression="(tcp.urg == 1)"/>
-    <event value="COMPUTE" event_id="65"
+    <event value="COMPUTE" event_id="66"
          description="TCP packet with flags URG and PSH active"
          boolean_expression="((tcp.fin == 1)&amp;&amp;(tcp.psh == 1))"/>
     </property>

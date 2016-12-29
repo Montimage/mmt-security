@@ -239,6 +239,11 @@ static inline void termination(){
 
 	pcap_breakloop( pcap );
 
+	if( _sec_handler.threads_count > 1 )
+		mmt_smp_sec_unregister( _sec_handler.handler, NO );
+	else
+		mmt_sec_unregister( _sec_handler.handler );
+
 	if (pcap_stats(pcap, &pcs) < 0) {
 //		(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));//Statistics aren't available from savefiles
 	}else{
@@ -253,10 +258,7 @@ static inline void termination(){
 
 	mmt_mem_free( proto_atts );
 
-	if( _sec_handler.threads_count > 1 )
-		mmt_smp_sec_unregister( _sec_handler.handler, NO );
-	else
-		mmt_sec_unregister( _sec_handler.handler );
+
 
 	mmt_mem_free( rules_arr );
 	mmt_mem_print_info();

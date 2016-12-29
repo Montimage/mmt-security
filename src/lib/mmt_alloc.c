@@ -9,17 +9,7 @@
 #include "mmt_alloc.h"
 #include "mmt_log.h"
 
-//static size_t allocated_memory_size, freed_memory_size;
-
-typedef struct _memory_struct{
-	size_t ref_count;
-	size_t  size;
-	void *  data;
-}_memory_t;
-
-const static size_t size_of_memory_t = sizeof( _memory_t );
-
-#define _convert_mem( x ) (_memory_t *) ( (uint8_t*)x - size_of_memory_t )
+const static size_t size_of_mmt_memory_t = sizeof( mmt_memory_t );
 
 /**
  * Public API
@@ -37,8 +27,8 @@ void mmt_mem_print_info(){
 void *mmt_mem_alloc(size_t size){
 	if( unlikely( size == 0 )) return NULL;
 
-	size = size_of_memory_t + size + 1;
-	_memory_t *mem = malloc( size );
+	size = size_of_mmt_memory_t + size + 1;
+	mmt_memory_t *mem = malloc( size );
 
 	//quit if not enough
 	mmt_assert( mem != NULL, "Not enough memory to allocate %zu bytes", size);
@@ -48,7 +38,7 @@ void *mmt_mem_alloc(size_t size){
 	//safe string
 	((char *)mem)[ size-1 ] = '\0';
 
-	//mem->data points to the memory segment after sizeof( _memory_t )
+	//mem->data points to the memory segment after sizeof( mmt_memory_t )
 	mem->data = mem + 1;
 	//store size to head of the memory segment
 	mem->size      = size;
@@ -61,7 +51,7 @@ void *mmt_mem_alloc(size_t size){
 size_t mmt_mem_free( void *x ){
 	__check_null( x, 0);
 
-   _memory_t *mem = _convert_mem( x );
+   mmt_memory_t *mem = mmt_mem_revert( x );
    if( mem->ref_count <= 1 ){
 		//freed_memory_size += mem->size;
 		free( mem );
@@ -74,14 +64,15 @@ size_t mmt_mem_free( void *x ){
 
 void *mmt_mem_retain( void *x ){
 	__check_null( x, NULL );  // nothing to do
-   _memory_t *mem = _convert_mem( x );
+   mmt_memory_t *mem = mmt_mem_revert( x );
    mem->ref_count ++;
    return mem->data;
 }
 
+
 void *mmt_mem_retains( void *x, size_t retains_count ){
 	__check_null( x, NULL );  // nothing to do
-   _memory_t *mem = _convert_mem( x );
+   mmt_memory_t *mem = mmt_mem_revert( x );
    mem->ref_count += retains_count;
    return mem->data;
 }
@@ -89,12 +80,12 @@ void *mmt_mem_retains( void *x, size_t retains_count ){
 size_t mmt_mem_size( const void *x ){
 	__check_null( x, 0 );  // nothing to do
 
-   _memory_t *mem = _convert_mem( x );
+   mmt_memory_t *mem = mmt_mem_revert( x );
    return mem->size;
 }
 
 size_t mmt_mem_reference_count( void *x ){
 	if( x == NULL ) return 0; // nothing to do
-	_memory_t *mem = _convert_mem( x );
+	mmt_memory_t *mem = mmt_mem_revert( x );
 	return mem->ref_count;
 }

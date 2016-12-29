@@ -15,6 +15,16 @@
 #include <stdint.h>
 #include <string.h>
 
+//static size_t allocated_memory_size, freed_memory_size;
+
+typedef struct mmt_memory_struct{
+	size_t ref_count;
+	size_t  size;
+	void *  data;
+}mmt_memory_t;
+
+#define mmt_mem_revert( x ) (mmt_memory_t *) ( (uint8_t*)x - sizeof( mmt_memory_t ) )
+
 /**
  * A wrapper of malloc
  * Allocate a new segment of memory having the given size.
@@ -83,6 +93,7 @@ static inline void* mmt_mem_dup( const void *ptr, size_t size ){
 void *mmt_mem_retain( void *ptr );
 
 void *mmt_mem_retains( void *ptr, size_t retains_count );
+
 /**
  * Return number of pointers pointing to this memory
  */

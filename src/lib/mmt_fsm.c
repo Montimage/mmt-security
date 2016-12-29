@@ -97,7 +97,7 @@ static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
 	_fsm_t *new_fsm = mmt_mem_dup( _fsm, sizeof( _fsm_t) );
 
 	new_fsm->events_trace    = mmt_array_clone( _fsm->events_trace,   mmt_mem_retain );
-	new_fsm->messages_trace  = mmt_array_clone( _fsm->messages_trace, mmt_mem_retain );
+	new_fsm->messages_trace  = mmt_array_clone( _fsm->messages_trace, (void *)retain_message_t );
 
 	return new_fsm;
 }
@@ -140,7 +140,7 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 
 	//store execution log
 	_fsm->events_trace->data[ _fsm->current_event_id   ] = mmt_mem_retain( event_data );
-	_fsm->messages_trace->data[ _fsm->current_event_id ] = mmt_mem_retain( message_data );
+	_fsm->messages_trace->data[ _fsm->current_event_id ] = retain_message_t( message_data );
 
 //	/* Run exit action
 //	 * (even if it returns to itself) */

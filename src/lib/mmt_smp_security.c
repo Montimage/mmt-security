@@ -11,6 +11,8 @@
 #include "mmt_smp_security.h"
 #include <unistd.h>
 #include "system_info.h"
+#include "lock_free_spsc_ring.h"
+
 #define RING_SIZE 100000
 
 //implemented in mmt_security.c
@@ -96,8 +98,8 @@ static inline void *_process_one_thread( void *arg ){
 	mmt_sec_handler_t *mmt_sec     = thread_arg->mmt_sec;
 	lock_free_spsc_ring_t *ring    = thread_arg->ring;
 
-	void *msg;
-	int ret;
+	void **arr;
+	size_t size, i;
 	long cpus_count = get_number_of_online_processors() - 1;
 
 	pthread_setcanceltype( PTHREAD_CANCEL_ENABLE, NULL );
@@ -105,23 +107,33 @@ static inline void *_process_one_thread( void *arg ){
 	if( cpus_count > 1 )
 		if( move_the_current_thread_to_a_processor( thread_arg->index % cpus_count + 1, -10 )) //cpu[0] is used for dispatching
 			mmt_warn("Cannot set affinity of thread %d on cpu[%ld]", gettid(), thread_arg->index % cpus_count + 1  );
+
 	while( 1 ){
-		do{
-			msg = NULL;
-			ret = ring_pop( ring, &msg );
-			if( likely( ret == RING_SUCCESS ))
+
+		size = ring_pop_brust( ring, &arr );
+
+		if( size == 0 )
+			ring_wait_for_pushing( ring );
+		else{
+
+			//do not process the last msg in the for
+			size -= 1;
+			for( i=0; i< size; i++ ){
+				_mmt_sec_process( mmt_sec, arr[i] );
+			}
+
+			//only the last msg can be NULL
+			if( unlikely( arr[ size ] == NULL ) ){
+				mmt_mem_free( arr );
 				break;
-			else
-				ring_wait_for_pushing( ring );
-		}while( 1 );
+			}else{
+				_mmt_sec_process( mmt_sec, arr[size] );
+			}
 
-		if( unlikely( msg == NULL ) )
-			break;
-
-		_mmt_sec_process( mmt_sec, msg );
+			mmt_mem_free( arr );
+		}
 	}
 
-	mmt_debug("End of thread %zu", thread_arg->index );
 	mmt_mem_free( thread_arg );
 
 	return NULL;
@@ -132,7 +144,7 @@ static inline void *_process_one_thread( void *arg ){
  */
 mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, size_t rules_count, uint8_t threads_count,
 		mmt_sec_callback callback, void *user_data){
-	size_t i, rules_count_per_thread;
+	size_t i, j, rules_count_per_thread;
 	mmt_sec_handler_t *mmt_sec_handler;
 	const proto_attribute_t **p_atts;
 	const rule_info_t **rule_ptr;
@@ -166,23 +178,27 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	for( i=0; i<handler->threads_count; i++)
 		handler->messages_buffers[ i ] = ring_init( RING_SIZE );
 
-	rules_count_per_thread = rules_count / threads_count;
-
 	handler->mmt_sec_handlers = mmt_mem_alloc( sizeof( mmt_sec_handler_t *) * handler->threads_count );
 	rule_ptr = rules_array;
 
 	//each handler manages #rules_count_per_thread
 	//e.g., if we have 10 rules and 3 threads
 	// => each thread will manage 3 rules unless the last thread manages 4 rules
-	for( i=0; i<handler->threads_count-1; i++ ){
+	for( i=0; i<handler->threads_count; i++ ){
+		rules_count_per_thread = rules_count / threads_count;
+
+#ifdef DEBUG_MODE
+		printf("Thread %2zu processes %zu rules:", i, rules_count_per_thread );
+		for( j=0; j<rules_count_per_thread; j++ )
+			printf(" %d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? '\n':',' );
+#endif
+
 		handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, callback, user_data );
 
 		rule_ptr    += rules_count_per_thread;
 		rules_count -= rules_count_per_thread; //number of remaining rules
+		threads_count --;//number of remaining threads
 	}
-
-	//the last thread will manages the remaining rules that can be less/greater than #rules_count_per_thread
-	handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count, callback, user_data );
 
 	handler->threads_id = mmt_mem_alloc( sizeof( pthread_t ) * handler->threads_count );
 	for( i=0; i<handler->threads_count; i++ ){
@@ -206,7 +222,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t *message ){
 	_mmt_smp_sec_handler_t *_handler;
 	int ret;
-	message_t *msg;
+	message_t *msg = clone_message_t( message );
 	lock_free_spsc_ring_t **ring;
 	__check_null( handler, );
 
@@ -214,7 +230,7 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t 
 
 	for( ring = _handler->messages_buffers; ring < &(_handler->messages_buffers[ _handler->threads_count ]); ring++ ){
 		//insert msg to a buffer
-		msg = clone_message_t( message );
+		msg = retain_message_t( msg );
 		do{
 			ret = ring_push( *ring, msg );
 

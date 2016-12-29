@@ -10,6 +10,11 @@
 
 #include <stdint.h>
 #include <pthread.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdatomic.h>
+#include <time.h>
+#include "mmt_lib.h"
 
 #define RING_EMPTY  -1
 #define RING_FULL   -2
@@ -56,7 +61,32 @@ lock_free_spsc_ring_t* ring_init( uint32_t size );
  * 	If one stills want to insert #val, thus need to call #ring_wait_for_poping then
  * 	try to push again by calling #ring_push
  */
-int  ring_push( lock_free_spsc_ring_t *q, void* val  );
+static inline int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
+	uint32_t h;
+	h = q->_head;
+
+	//I always let 2 available elements between head -- tail
+	//1 empty element for future inserting, 1 element being reading by the consumer
+	if( ( h + 3 ) % ( q->_size ) == q->_cached_tail )
+
+	q->_cached_tail = atomic_load_explicit( &q->_tail, memory_order_acquire );
+
+	/* tail can only increase since the last time we read it, which means we can only get more space to push into.
+		 If we still have space left from the last time we read, we don't have to read again. */
+	if( ( h + 3 ) % ( q->_size ) == q->_cached_tail )
+		return RING_FULL;
+	//not full
+	else{
+		q->_data[ h ] = val;
+
+		atomic_store_explicit( &q->_head, (h +1) % q->_size, memory_order_release );
+
+		//pthread_cond_signal( &(q->cond_wait_pushing) );
+
+		return RING_SUCCESS;
+	}
+}
+
 
 /**
  * Pop an element of buffer.
@@ -69,9 +99,68 @@ int  ring_push( lock_free_spsc_ring_t *q, void* val  );
  * 	+ RING_SUCCESS if everything is OK
  * 	+ RING_EMPTY if the buffer is empty
  */
-int  ring_pop ( lock_free_spsc_ring_t *q, void **val );
 
-int ring_pop_bulk( lock_free_spsc_ring_t *q, void **val_arr );
+static inline int  ring_pop ( lock_free_spsc_ring_t *q, void **val ){
+	uint32_t  t;
+	t = q->_tail;
+
+	if( q->_cached_head == t )
+		q->_cached_head = atomic_load_explicit ( &q->_head, memory_order_acquire );
+
+	 /* head can only increase since the last time we read it, which means we can only get more items to pop from.
+		 If we still have items left from the last time we read, we don't have to read again. */
+	if( q->_cached_head == t )
+		return RING_EMPTY;
+	else{
+		//not empty
+		*val = q->_data[ t ];
+
+		atomic_store_explicit( &q->_tail, (t+1) % q->_size, memory_order_release );
+
+		return RING_SUCCESS;
+	}
+}
+
+/**
+ * Pop all elements of buffer.
+ * This function can be called only by consumer
+ * - Input:
+ * 	+q: ring to pop
+ * - Ouput:
+ * 	+ val_arr: array of pointers points to data
+ * - Return:
+ * 	- number of elements popped successfully
+ * - Note:
+ * 	In the case this function can pop at least one element, it will create a
+ * 	new array, pointed by #val_arr, to contain the elements.
+ * 	Therefore one need to free this array by calling mmt_mem_free( val_arr ) after
+ * 	using the array.
+ */
+static inline size_t ring_pop_brust( lock_free_spsc_ring_t *q, void ***val_arr ){
+	int size, j;
+	uint32_t t = q->_tail;
+
+	if( q->_cached_head == t ){
+		q->_cached_head = atomic_load_explicit ( &q->_head, memory_order_acquire );
+
+	 /* head can only increase since the last time we read it, which means we can only get more items to pop from.
+		 If we still have items left from the last time we read, we don't have to read again. */
+		if( q->_cached_head == t ) return 0;
+	}
+
+	//not empty
+	if( q->_cached_head > t ){
+		size = q->_cached_head - t;
+	}else{
+		size = q->_size - t;
+	}
+
+	*val_arr = mmt_mem_dup( &(q->_data[t]), size * sizeof( void *) );
+
+	atomic_store_explicit( &q->_tail, (t + size) % q->_size, memory_order_release );
+
+	return size;
+}
 
 /**
  * Free a buffer.
@@ -82,7 +171,13 @@ void ring_free( lock_free_spsc_ring_t *q );
 /**
  *
  */
-void ring_wait_for_pushing( lock_free_spsc_ring_t *q );
-void ring_wait_for_poping( lock_free_spsc_ring_t *q );
+static inline void ring_wait_for_pushing( lock_free_spsc_ring_t *q ){
+	nanosleep( (const struct timespec[]){{0, 1000L}}, NULL );
+}
+
+
+static inline void ring_wait_for_poping( lock_free_spsc_ring_t *q ){
+	nanosleep( (const struct timespec[]){{0, 1000L}}, NULL );
+}
 
 #endif /* SRC_QUEUE_LOCK_FREE_SPSC_RING_H_ */

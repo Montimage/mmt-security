@@ -33,37 +33,42 @@ message_t *parse_message_t( const uint8_t *data, uint32_t len ){
 size_t free_message_t( message_t *msg ){
 	size_t i, ret;
 	__check_null( msg, 0 );  // nothing to do
+	mmt_memory_t *mem = mmt_mem_revert( msg );
 
-	//pthread_spin_lock( &spin_lock );
+	ret = __sync_fetch_and_sub( &mem->ref_count, 1);
+
 	//free message only when there is one reference to its father
-	if( mmt_mem_reference_count( msg ) <= 1 ){
+	if( ret == 1 ){
 		for( i=0; i<msg->elements_count; i++ )
 			if( msg->elements[i].data != NULL && msg->elements[i].data_type != VOID )
 				mmt_mem_free( msg->elements[i].data );
 
 		mmt_mem_free( msg->elements );
 		mmt_mem_free( msg );
-		ret = 0;
+		return 0;
 	}
-	else
-		ret = mmt_mem_free( msg );
-	//pthread_spin_unlock( &spin_lock );
+	else if( ret < 1 ){
+		return 0;
+	}else
+		return ret;
+}
 
-	return ret;
+message_t *retain_message_t( message_t *msg ){
+	__check_null( msg, NULL );
+
+	mmt_memory_t *mem = mmt_mem_revert( msg );
+	__sync_add_and_fetch( &mem->ref_count, 1);
+
+	return mem->data;
 }
 
 /**
  * Public API
  */
 message_t *clone_message_t( const message_t *msg ){
-	message_t *new_msg;
-	size_t i;
 	__check_null( msg, NULL );
-
-//	pthread_spin_lock( &spin_lock );
-//	new_msg = mmt_mem_retain( (void *) msg );
-//	pthread_spin_unlock( &spin_lock );
-//	return new_msg;
+	size_t i;
+	message_t *new_msg;
 
 	new_msg = mmt_mem_dup( msg, sizeof( message_t) );
 

@@ -32,23 +32,15 @@ typedef struct message_struct{
 	message_element_t *elements;
 }message_t;
 
-/**
- * Create a new message from data
- * The result message is a continuous memory segment.
- * - Input:
- * 	+ data:
- * 	+ len : length of #data
- * - Return:
- * 	+ NULL if data is mal-formatted
- * 	+ a pointer of type #message_t
- */
-message_t *parse_message_t( const uint8_t *data, uint32_t len );
 
 /**
  * Clone a message_t.
  * This function creates new message_t by cloning everything inside #msg.
  */
 message_t *clone_message_t( const message_t *msg );
+
+
+message_t *retain_message_t( message_t *msg );
 
 /**
  * Free a message_t

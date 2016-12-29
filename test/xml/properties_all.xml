@@ -278,11 +278,11 @@ static inline int check_sql_injection(const void *p_payload, double payload_len)
 -->
 
 <!-- Property 6: 4_Analyse_03b : TCP SYN scan to detect SYNFUL compromise) (|ack - seq| == 0xC123D ou 791101). -->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="6" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="100" property_id="6" type_property="EVASION" 
     description="4_Analyse_03b : SYN and ACK paquets with a 0xC123D delta between TCP sequence numbers (scan done by SYNFUL attack).">
     <event value="COMPUTE" event_id="1"
            description="TCP SYN"
-           boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;((ip.src == ip.src)&amp;&amp;(tcp.seq_nb == tcp.seq_nb))))"/>
+           boolean_expression="(tcp.flags == 2)"/>
     <event value="COMPUTE" event_id="2" 
            description="TCP ACK"
            boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((ip.src == ip.dst.1)&amp;&amp;(((tcp.ack_nb - tcp.seq_nb.1) == 791101)||((tcp.seq_nb.1 - tcp.ack_nb) == 791101)))))"/>
@@ -311,7 +311,7 @@ static inline int check_sql_injection(const void *p_payload, double payload_len)
            boolean_expression="((tcp.rst == 1)&amp;&amp;((tcp.ack_nb.2 != tcp.seq_nb)&amp;&amp;((ip.src.2 == ip.dst)&amp;&amp;(ip.dst.2 == ip.src))))"/>
     <event value="COMPUTE" event_id="2" 
            description="Trigger: the last TCP ACK packets have different seg_nb and ack_nb"
-           boolean_expression="((tcp.flags == 16)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;(ip.src != ip.dst)))"/>
+           boolean_expression="((tcp.flags == 16)&amp;&amp;(ip.src != ip.dst))"/>
 </property>
 
 
@@ -326,11 +326,11 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 -->
 
 <!-- Property 8: C4_Analyse_03g : Le champ Options doit etre homogene dans tous les fragments IP.-->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="8" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="100" property_id="8" type_property="EVASION" 
     description="C4_Analyse_03g: The IP options field must be homogeneous in all IP fragments.">
     <event value="COMPUTE" event_id="1" 
            description="IP segment"
-           boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.options == ip.options)&amp;&amp;(ip.src != ip.dst)))"/>
+           boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;(ip.src != ip.dst))"/>
     <event value="COMPUTE" event_id="2" 
            description="IP options"
            boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#check_ip_options(ip.options,ip.options.1) == 1))))"/>
@@ -477,7 +477,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
            boolean_expression="((tcp.payload_len &gt; 0)&amp;&amp;(#check_sql_injection(tcp.p_payload, tcp.payload_len) == 1))"/>
     <event value="COMPUTE" event_id="2" 
            description="Trigger: SQL Injection in the payload"
-           boolean_expression="((ip.src != ip.dst) &amp;&amp; (tcp.p_payload == tcp.p_payload))"/>
+           boolean_expression="(ip.src != ip.dst )"/>
 </property>
 
 <!-- Property 20: C4_Analyse_04i: ICMP redirect flood detection-->
@@ -573,10 +573,10 @@ it is nice to have an automated method of redirect expiration.
 <!-- Property 1: Probable IP protocol scan (4 different attempts in a row on different protocols).
 -->
 
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="26" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="26" type_property="ATTACK" 
     description="Probable IP protocol scan (4 different attempts in a row on different protocols)."
     >
-    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
       <event value="COMPUTE" event_id="1" 
           description="IP packet header with the eight-bit IP protocol field set (1)"
              boolean_expression="((ip.proto_id != 0)&amp;&amp;(ip.src != ip.dst))"/>
@@ -584,7 +584,7 @@ it is nice to have an automated method of redirect expiration.
              description="IP packet header with another eight-bit IP protocol field set (2)"
              boolean_expression="((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
     </operator>
-    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
       <event value="COMPUTE" event_id="3" 
              description="IP packet header with another eight-bit IP protocol field set (3)"
              boolean_expression="((ip.proto_id != ip.proto_id.2)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
@@ -597,7 +597,7 @@ it is nice to have an automated method of redirect expiration.
 <!-- Property 2: Probable UDP protocol scan (4 different attempts in a row on different ports).
 -->
 
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="27" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="27" type_property="ATTACK" 
     description="Probable UDP protocol scan (4 different attempts in a row on different ports)."
     >
     <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">

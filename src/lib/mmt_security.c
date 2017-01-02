@@ -384,7 +384,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 	case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
 	case MMT_STATS: /**< pointer to MMT Protocol statistics */
 		*new_type = VOID;
-		*new_data = NULL;//(void *)data;
+		*new_data = (void *)data;
 		return 0;
 
 	case MMT_BINARY_DATA: /**< binary constant value */

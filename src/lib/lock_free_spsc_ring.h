@@ -149,6 +149,8 @@ static inline size_t ring_pop_brust( lock_free_spsc_ring_t *q, void ***val_arr )
 	}
 
 	//not empty
+	//this condition ensures that we get a continues memory segment
+	//=> to use memcpy
 	if( q->_cached_head > t ){
 		size = q->_cached_head - t;
 	}else{

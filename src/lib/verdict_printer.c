@@ -19,6 +19,7 @@ void send_message_to_redis(const char*);
 void init_file();
 void send_message_to_file(const char*);
 void close_file();
+void reset_file();
 
 enum output_mode{
 	OUTPUT_NONE  = 0,
@@ -93,4 +94,10 @@ void verdict_printer_send( const char* msg ){
 void verdict_printer_free( ){
 	if( output_mode & OUTPUT_FILE )
 		close_file();
+}
+
+
+void verdict_printer_reset( ){
+	if( output_mode & OUTPUT_FILE )
+		reset_file();
 }

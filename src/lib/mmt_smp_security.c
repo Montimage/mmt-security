@@ -8,6 +8,7 @@
 #include "base.h"
 #include "mmt_lib.h"
 #include <pthread.h>
+#include <errno.h>
 #include "mmt_smp_security.h"
 #include <unistd.h>
 #include "system_info.h"
@@ -104,9 +105,9 @@ static inline void *_process_one_thread( void *arg ){
 
 	pthread_setcanceltype( PTHREAD_CANCEL_ENABLE, NULL );
 
-	if( cpus_count > 1 )
-		if( move_the_current_thread_to_a_processor( thread_arg->index % cpus_count + 1, -10 )) //cpu[0] is used for dispatching
-			mmt_warn("Cannot set affinity of thread %d on cpu[%ld]", gettid(), thread_arg->index % cpus_count + 1  );
+//	if( cpus_count > 1 )
+//		if( move_the_current_thread_to_a_processor( thread_arg->index % cpus_count, -10 )) //the last cpu is used for dispatching
+//			mmt_warn("Cannot set affinity of thread %d on cpu[%ld]", gettid(), thread_arg->index % cpus_count  );
 
 	while( 1 ){
 
@@ -150,6 +151,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	const rule_info_t **rule_ptr;
 	int ret;
 	struct _thread_arg *thread_arg;
+	long cpus_count = get_number_of_online_processors() - 1;
 
 	__check_null( rules_array, NULL );
 
@@ -188,7 +190,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 		rules_count_per_thread = rules_count / threads_count;
 
 #ifdef DEBUG_MODE
-		printf("Thread %2zu processes %zu rules:", i, rules_count_per_thread );
+		printf("Thread %2zu processes %zu rules:", i + 1, rules_count_per_thread );
 		for( j=0; j<rules_count_per_thread; j++ )
 			printf(" %d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? '\n':',' );
 #endif
@@ -210,8 +212,8 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 		mmt_assert( ret == 0, "Cannot create thread %zu", (i+1) );
 	}
 
-	if( move_the_current_thread_to_a_processor(0, -15 ) )
-		mmt_warn("Cannot set affinity of thread %d on cpu[0]", gettid() );
+//	if( cpus_count > 0 && move_the_current_thread_to_a_processor( cpus_count, -15 ) )
+//		mmt_warn("Cannot set affinity of thread %d on cpu[ %ld ]", gettid(), cpus_count );
 
 	return (mmt_smp_sec_handler_t *)handler;
 }
@@ -245,6 +247,7 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t 
 
 void mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediately  ){
 	size_t i;
+	int ret;
 	__check_null( handler, );
 
 	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *)handler;
@@ -253,10 +256,26 @@ void mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediately  ){
 		for( i=0; i<_handler->threads_count; i++ )
 			pthread_cancel( _handler->threads_id[ i ] );
 	}else{
+		//insert NULL message at the end of ring
 		mmt_smp_sec_process( handler, NULL );
 
 		//waiting for all threads finish their job
-		for( i=0; i<_handler->threads_count; i++ )
-			pthread_join( _handler->threads_id[ i ], NULL );
+		for( i=0; i<_handler->threads_count; i++ ){
+			ret = pthread_join( _handler->threads_id[ i ], NULL );
+			switch( ret ){
+			case EDEADLK:
+				mmt_halt("A deadlock was detected or thread specifies the calling thread");
+				break;
+			case EINVAL:
+				mmt_halt("Thread is not a joinable thread.");
+				break;
+//			case EINVAL:
+//				mmt_halt("Another thread is already waiting to join with this thread.");
+//				break;
+			case  ESRCH:
+				mmt_halt("No thread with the ID thread could be found.");
+				break;
+			}
+		}
 	}
 }

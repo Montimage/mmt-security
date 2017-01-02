@@ -235,8 +235,6 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 static inline void termination(){
 	struct pcap_stat pcs; /* packet capture filter stats */
 
-	verdict_printer_free();
-
 	pcap_breakloop( pcap );
 
 	if( _sec_handler.threads_count > 1 )
@@ -256,9 +254,9 @@ static inline void termination(){
 	fprintf(stderr, "%12zu reports received\n", total_received_reports );
 	fprintf(stderr, "%12"PRIu64" alerts generated\n", mmt_sec_get_total_alerts() );
 
+	verdict_printer_free();
+
 	mmt_mem_free( proto_atts );
-
-
 
 	mmt_mem_free( rules_arr );
 	mmt_mem_print_info();
@@ -290,9 +288,9 @@ void signal_handler(int signal_type) {
 
 
 void register_signals(){
-#ifndef DEBUG_MODE
+//#ifndef DEBUG_MODE
 	signal(SIGSEGV, signal_handler_seg );
-#endif
+//#endif
 	signal(SIGINT,  signal_handler);
 	signal(SIGTERM, signal_handler);
 	signal(SIGABRT, signal_handler);

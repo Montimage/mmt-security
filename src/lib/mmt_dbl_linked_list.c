@@ -10,7 +10,7 @@
 
 ///////////////////////////////////////Linked-list////////////////////////////////////////////
 /** Public API */
-link_node_t *create_node_of_link_list( void *data ){
+inline link_node_t *create_node_of_link_list( void *data ){
 	link_node_t *new_node = mmt_mem_alloc( sizeof( link_node_t ));
 	new_node->data = data;
 	new_node->prev = new_node->next = NULL;

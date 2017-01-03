@@ -248,7 +248,7 @@ static inline void _reset_engine_for_instance( _rule_engine_t *_engine, fsm_t *f
 	_fsm_tran_index_t *fsm_ind;
 	uint16_t fsm_id = fsm_get_id( fsm );
 
-	//remove fsm from the list #fsm_by_expecting_event_id
+	//(1) - remove fsm from the list #fsm_by_expecting_event_id
 
 	//for each entry (that is a list) of expecting event i
 	for( i=0; i<_engine->max_events_count; i++ ){
@@ -275,7 +275,8 @@ static inline void _reset_engine_for_instance( _rule_engine_t *_engine, fsm_t *f
 			node = ptr;
 		}
 	}
-	//remove fsm from the list of instances
+
+	//(2) - remove fsm from the list of instances
 	//TODO: refine
 //	_engine->total_instances_count -= count_nodes_from_link_list( _engine->fsm_by_instance_id[ fsm_id ] );
 	_engine->fsm_by_instance_id[ fsm_id ] = remove_node_from_link_list(  _engine->fsm_by_instance_id[ fsm_id ], fsm );
@@ -340,6 +341,7 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
 			_engine->fsm_by_expecting_event_id[ event_id ] =
 					remove_node_from_link_list( _engine->fsm_by_expecting_event_id[ event_id ], (void *)fsm_ind );
 
+			//free the node
 			mmt_mem_free( fsm_ind );
 		}
 	}
@@ -397,6 +399,7 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	enum verdict_type ret = VERDICT_UNKNOWN;;
 	//insert #message pointer to head of #data;
 
+	//there are no transitions that can receive the message
 	if( hash == 0 ){
 		mmt_mem_free( data );
 		return VERDICT_UNKNOWN;
@@ -407,8 +410,9 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	 * as when verifying one event, a new fsm instance can be created and inserted
 	 * to the head of one entry
 	 */
-	for( event_id=0; event_id<_engine->max_events_count; event_id++ )
-		_engine->tmp_fsm_by_expecting_event_id[ event_id ] = _engine->fsm_by_expecting_event_id[ event_id ];
+	//for( event_id=0; event_id<_engine->max_events_count; event_id++ )
+	//	_engine->tmp_fsm_by_expecting_event_id[ event_id ] = _engine->fsm_by_expecting_event_id[ event_id ];
+	memcpy( _engine->tmp_fsm_by_expecting_event_id, _engine->fsm_by_expecting_event_id, _engine->max_events_count * sizeof( void *) );
 
 	//mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );

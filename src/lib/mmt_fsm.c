@@ -133,10 +133,11 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	//mmt_debug( "fsm_id = %d (%p), ref = %zu, event_id: %d", _fsm->id, _fsm, mmt_mem_reference_count( event_data), tran->event_type );
 
 	//check if we will override an element of execution trace
-	if( unlikely( _fsm->events_trace->data[ _fsm->current_event_id   ] != NULL ) )
+	if( unlikely( _fsm->events_trace->data[ _fsm->current_event_id   ] != NULL ) ){
 		mmt_mem_free( _fsm->events_trace->data[ _fsm->current_event_id   ] );
-	if( unlikely( _fsm->messages_trace->data[ _fsm->current_event_id   ] != NULL ) )
+	//if( unlikely( _fsm->messages_trace->data[ _fsm->current_event_id   ] != NULL ) )
 		free_message_t( _fsm->messages_trace->data[ _fsm->current_event_id   ] );
+	}
 
 	//store execution log
 	_fsm->events_trace->data[ _fsm->current_event_id   ] = mmt_mem_retain( event_data );
@@ -249,7 +250,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	//check only for the state other than init_state
 	if( _fsm->current_state != _fsm->init_state && message_data->timestamp > _fsm->time_max &&  !_fsm->current_state->is_temporary  ){
 		tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
-		if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT )
+		if( likely( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ))
 			//fire timeout transition
 			return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
 	}

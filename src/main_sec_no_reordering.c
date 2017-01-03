@@ -228,15 +228,17 @@ static inline size_t receiving_reports( int sock ) {
 			else
 				buf_ptr = &buffer[index];
 
+
 			if( el_data_type != -1 )
 				mmt_sec_convert_data( buf_ptr, el_data_type, &el_ptr->data, &el_ptr->data_type );
 			else
 				el_ptr->data = NULL;
 
+
 			index += el_data_length;
 
 			if( unlikely( index >= length_of_report )){
-				mmt_warn( "Data format is not correct." );
+				mmt_halt( "Data format received from mmt-probe is not correct." );
 				break;
 			}
 		}

@@ -1,0 +1,1018 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) 2016-->
+<beginning>
+
+
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int check_URI(const char *uri_str){
+  int handle = 0;
+  if(uri_str == NULL){
+    return 0;
+  }
+ 
+  const char *x = uri_str;
+  
+  //fprintf(stderr, "%s\n",x);
+  while (*x != '\0'){
+      //octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+      if(*x < 32 || *x == 92 || *x == '"' || *x == '<' || *x == '>' || *x == '[' || *x == ']' || *x == '^' || *x == '`' || *x == '{' || 
+         *x == '|' || *x == '}' || *x == '%' || *x > 126) {
+              handle = 1;
+              break;
+      }
+      x = x+1;
+  }
+  //detect directory traversal attack
+  char *s0, *s1, *s2, *s3;
+  s0 = strstr(uri_str, ".."); //find the first occurrence of string ".." in string
+  if( s0 != NULL ) return 1;
+  s1 = strstr(uri_str, "./"); //find the first occurrence of string "./" in string
+  if( s1 != NULL ) return 1;
+  s2 = strstr(uri_str, "//"); //find the first occurrence of string "//" in string
+  if( s2 != NULL ) return 1;
+  s3 = strstr(uri_str, "/."); //find the first occurrence of string "//" in string
+  if( s3 != NULL ) return 1;
+  //if ((s0 !=NULL) || (s1 !=NULL) || (s2 !=NULL) || (s3 !=NULL))  
+  // handle = 1;
+   
+//#ifdef DEBUG
+//  fprintf(stderr, "executing ceck_URI with parameters:h=%d:nb=%u:a1=%o:a2=%o\n", 
+//                                           handle, *(char*)(BLOC3+6),*(char*)(BLOC3+9));
+//#endif
+  return handle;
+}
+
+/*
+ * Nikto 
+ */
+static inline bool check_UA( const char *user_agent){
+   //find the first occurrence of string "Nikto" in string
+   return (strstr(user_agent, "Nikto") != NULL);     
+}
+
+]]></embedded_functions>
+
+
+<!-- Property 10: C4_Analyse_03f : HTTP detecte avec un port different de 80 et 8080.-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="101" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+
+<!-- Property 12: C4_Analyse_03c|d|e : l URI d un paquet HTTP contient des caracteres non authorises.-->
+<!-- URN invalid character set:
+     octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="102" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+
+<!-- Property 15: C4_Analyse_02 : Web scan with Nikto. User-Agent based detection
+           boolean_expression="((http.user_agent == '')||(#check_UA(http.user_agent) == 1))"/>
+-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="103" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="104" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="105" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="106" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+ 
+ <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="107" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="108" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="109" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1010" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1011" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1012" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1013" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1014" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1015" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1016" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1017" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1018" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1019" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1020" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1021" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1022" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1023" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1024" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1025" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1026" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1027" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1028" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1029" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1030" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1031" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1032" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1033" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1034" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1035" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1036" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1037" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1038" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1039" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1040" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1041" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1042" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1043" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1044" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1045" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1046" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1047" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1048" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+ 
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1049" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1050" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1051" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1052" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1053" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1054" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1055" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1056" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1057" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1058" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1059" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1060" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1061" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1062" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1063" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1064" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1065" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1066" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1067" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1068" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1069" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1070" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1071" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1072" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1073" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1074" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1075" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1076" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1077" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1078" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1079" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1080" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1081" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1082" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1083" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1084" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1085" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1086" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1087" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1088" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1089" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1090" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1091" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1092" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1093" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1094" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1095" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1096" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1097" type_property="EVASION" 
+    description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1098" type_property="EVASION" 
+    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1099" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an  user agent in the HTTP header"
+           boolean_expression="(#check_UA(http.user_agent) == 1)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ 
+</beginning>

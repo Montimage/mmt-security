@@ -77,7 +77,7 @@ size_t mmt_sec_get_unique_protocol_attributes( const mmt_sec_handler_t *handler,
 static inline void _iterate_proto_atts( void *key, void *data, void *user_data, size_t index, size_t total ){
 	void **array = user_data;
 	array[ index ] = data;
-	//free the key being created on line 73
+	//free the key being created on line 97
 	mmt_mem_free( key );
 }
 

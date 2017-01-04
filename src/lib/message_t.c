@@ -40,11 +40,11 @@ size_t free_message_t( message_t *msg ){
 	//free message only when there is one reference to its father
 	if( ret == 1 ){
 		for( i=0; i<msg->elements_count; i++ )
-			if( msg->elements[i].data != NULL && msg->elements[i].data_type != VOID )
+			if( likely( msg->elements[i].data_type != VOID ))
 				mmt_mem_free( msg->elements[i].data );
 
 		mmt_mem_free( msg->elements );
-		mmt_mem_free( msg );
+		mmt_mem_force_free( msg );
 		return 0;
 	}
 	else if( ret < 1 ){
@@ -61,6 +61,17 @@ message_t *retain_message_t( message_t *msg ){
 
 	return mem->data;
 }
+
+
+message_t *retain_many_message_t( message_t *msg, size_t count ){
+	__check_null( msg, NULL );
+
+	mmt_memory_t *mem = mmt_mem_revert( msg );
+	__sync_add_and_fetch( &mem->ref_count, count );
+
+	return mem->data;
+}
+
 
 /**
  * Public API

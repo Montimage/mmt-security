@@ -61,21 +61,22 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");
 	fprintf(stderr, "\t-i <interface> : Gives the interface name for live traffic analysis.\n");
-	fprintf(stderr, "\t-n <number>    : Number of threads. Default = 2\n");
+	fprintf(stderr, "\t-c <string>    : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
 	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
+	fprintf(stderr, "\t-v             : Verbose.\n");
 	fprintf(stderr, "\t-l             : Prints the available rules then exit.\n");
 	fprintf(stderr, "\t-h             : Prints this help.\n");
 	exit(1);
 }
 
-size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id, size_t *threads_count ) {
+size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id, size_t *threads_count, uint8_t **core_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
 	char file_string[MAX_FILENAME_SIZE]  = {0};
 	char redis_string[MAX_FILENAME_SIZE] = {0};
-
+	*verbose = NO;
 	filename[0] = '\0';
-	while ((opt = getopt(argc, argv, "t:i:n:f:r:lh")) != EOF) {
+	while ((opt = getopt(argc, argv, "t:i:f:r:c:lhv")) != EOF) {
 		switch (opt) {
 		case 't':
 			optcount++;
@@ -84,6 +85,12 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			}
 			strncpy((char *) filename, optarg, MAX_FILENAME_SIZE);
 			*type = TRACE_FILE;
+			break;
+		case 'c':
+			optcount++;
+			*threads_count = expand_number_range( optarg, core_mask );
+			if( *threads_count == 0 )
+				usage(argv[0]);
 			break;
 		case 'i':
 			optcount++;
@@ -107,21 +114,13 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			}
 			strncpy((char *) redis_string, optarg, MAX_FILENAME_SIZE);
 			break;
-		case 'n':
-			optcount++;
-			if (optcount < 1) {
-				usage(argv[0]);
-			}
-			x = atoi( optarg );
-			if( x > 0 )
-				*threads_count = x;
-			else
-				usage(argv[0]);
-
-			break;
 		case 'l':
 			mmt_sec_print_rules_info();
 			exit( 0 );
+		case 'v':
+			optcount++;
+			*verbose = YES;
+			break;
 		case 'h':
 		default:
 			usage(argv[0]);
@@ -304,15 +303,18 @@ int main(int argc, char** argv) {
 	struct pcap_pkthdr p_pkthdr;
 	char errbuf[1024];
 	char filename[MAX_FILENAME_SIZE + 1];
+	size_t core_size;
+	uint8_t *core_mask = NULL;
 	int type;
-	size_t threads_count = 2;
+	size_t threads_count = 1;
+	bool verbose;
 	struct pkthdr header;
 
 	size_t i, j, size;
 	uint16_t *rules_id_filter;
 	const proto_attribute_t **p_atts;
 
-	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count );
+	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count, &core_mask, &verbose );
 
 	register_signals();
 
@@ -326,12 +328,21 @@ int main(int argc, char** argv) {
 		_sec_handler.handler    = mmt_sec_register( rules_arr, size, mmt_sec_print_verdict, NULL );
 		_sec_handler.process_fn = &mmt_sec_process;
 		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
-	}else{
-		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count, mmt_sec_print_verdict, NULL );
+	}else if( _sec_handler.threads_count > 1 ){
+		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count - 1, core_mask, verbose, mmt_sec_print_verdict, NULL );
 		_sec_handler.process_fn = &mmt_smp_sec_process;
 		size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
+	}else{
+		usage( argv[0] );
 	}
 
+	if( core_mask != NULL ){
+		//main thread on the last core
+		if( move_the_current_thread_to_a_processor( core_mask[ threads_count - 1 ], -15 ) )
+			mmt_warn("Cannot set affinity of process %d on lcore %d", gettid(), core_mask[ threads_count - 1 ] );
+
+		mmt_mem_free( core_mask );
+	}
 	//init mmt_dpi extraction
 	init_extraction();
 	//Initialize dpi handler

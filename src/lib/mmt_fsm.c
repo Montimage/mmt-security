@@ -228,7 +228,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 	//set the
 	*new_fsm = NULL;
-	__check_null( fsm, FSM_ERR_ARG );
+	//__check_null( fsm, FSM_ERR_ARG );
 
 	_fsm = (_fsm_t *)fsm;
 	if ( unlikely( !_fsm->current_state ))

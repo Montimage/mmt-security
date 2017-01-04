@@ -44,6 +44,8 @@ void *mmt_mem_alloc( size_t size );
  */
 size_t  mmt_mem_free( void *ptr );
 
+size_t  mmt_mem_force_free( void *ptr );
+
 /**
  * Get information about memory being allocated and freed
  * - Input:

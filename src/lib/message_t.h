@@ -42,6 +42,8 @@ message_t *clone_message_t( const message_t *msg );
 
 message_t *retain_message_t( message_t *msg );
 
+message_t *retain_many_message_t( message_t *msg, size_t count );
+
 /**
  * Free a message_t
  * This function reduces the number of references of #msg.

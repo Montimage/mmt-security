@@ -62,6 +62,14 @@ size_t mmt_mem_free( void *x ){
    }
 }
 
+size_t mmt_mem_force_free( void *x ){
+	__check_null( x, 0);
+
+   mmt_memory_t *mem = mmt_mem_revert( x );
+   free( mem );
+	return 0;
+}
+
 void *mmt_mem_retain( void *x ){
 	__check_null( x, NULL );  // nothing to do
    mmt_memory_t *mem = mmt_mem_revert( x );

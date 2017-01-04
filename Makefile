@@ -60,17 +60,9 @@ MAIN_STAND_ALONE = mmt_sec_standalone
 
 MAIN_SEC_SERVER = mmt_sec_server
 
-MAIN_SEC_SERVER_33 = mmt_sec_server_33
-
-MAIN_SEC_SERVER_03 = mmt_sec_server_03
-
-MAIN_SEC_SERVER_V = mmt_sec_server_v
-
-MAIN_SEC_SERVER_NO_REORDER = mmt_sec_no_reordering
-
 LIB_NAME = libmmt_security
 
-all: standalone sec_server_no_reorder compile_rule rule_info sec_server
+all: standalone compile_rule rule_info sec_server
 
 %.o: %.c src/dpi/mmt_dpi.h
 	@echo "[COMPILE] $(notdir $@)"
@@ -88,25 +80,9 @@ sec_server: src/dpi/mmt_dpi.h $(LIB_OBJS)
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CLDFLAGS) $^ $(LIBS) -ldl
 	
-sec_server_no_reorder: src/dpi/mmt_dpi.h $(LIB_OBJS) 
-	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER_NO_REORDER) $(SRCDIR)/main_sec_no_reordering.c  $(CLDFLAGS) $^ $(LIBS) -ldl
-		
-sec_server_33: src/dpi/mmt_dpi.h $(LIB_OBJS) 
-	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER_33) $(SRCDIR)/main_sec_server_33.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -ldl
-
-sec_server_v: src/dpi/mmt_dpi.h $(LIB_OBJS) 
-	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER_V) $(SRCDIR)/main_sec_server_v.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -ldl
-
 standalone: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
-
-sec_server_03: src/dpi/mmt_dpi.h $(LIB_OBJS) 
-	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER_03) $(SRCDIR)/main_sec_server_03.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -ldl
 
 rule_info: src/dpi/mmt_dpi.h $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"
@@ -120,7 +96,6 @@ gen_dpi src/dpi/mmt_dpi.h:
 $(LIB_NAME).a: $(LIB_OBJS)
 	$(QUIET) echo "[ARCHIVE] $(notdir $@)"
 	$(QUIET) $(AR) $(LIB_NAME).a  $(LIB_OBJS)
-
 
 $(LIB_NAME).so: $(LIB_OBJS)
 	@echo "[LIBRARY] $(notdir $@)"
@@ -159,4 +134,4 @@ dist-clean: uninstall
 	@echo "Removed mmt-security from $(INSTALL_DIR)"
 	
 clean:
-	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER) $(MAIN_SEC_SERVER_33) $(MAIN_SEC_SERVER_V) $(MAIN_SEC_SERVER_03)
+	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)

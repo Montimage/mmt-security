@@ -17,11 +17,13 @@ typedef void mmt_smp_sec_handler_t;
 /**
  * Register some rules to validate
  * - Input
- * 	+ rules_arr  : array of rules to be validated
- * 	+ rules_count: number of rules in #rules_arr
+ * 	+ rules_arr    : array of rules to be validated
+ * 	+ rules_count  : number of rules in #rules_arr
  * 	+ threads_count: number of threads
- * 	+ callback   : a function to be called when a rules is validated
- * 	+ user_data  : data will be passed to the #callback
+ * 	+ core_mask    : a string indicating logical cores to be used,
+ * 						  e.g., "1-8,11-12,19" => we use cores 1,2,..,8,11,12,19
+ * 	+ callback     : a function to be called when a rules is validated
+ * 	+ user_data    : data will be passed to the #callback
  * - Return:
  * 	+ a handler
  * - Note:
@@ -32,6 +34,8 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		const rule_info_t **rules_arr,
 		size_t rules_count,
 		uint8_t threads_count,
+		const uint8_t *core_mask,
+		bool verbose,
 		mmt_sec_callback callback,
 		void *user_data);
 

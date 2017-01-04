@@ -38,6 +38,7 @@ typedef struct _mmt_smp_sec_handler_struct{
 
 struct _thread_arg{
 	size_t index;
+	size_t lcore;
 	mmt_sec_handler_t *mmt_sec;
 	lock_free_spsc_ring_t *ring;
 };
@@ -101,13 +102,11 @@ static inline void *_process_one_thread( void *arg ){
 
 	void **arr;
 	size_t size, i;
-	long cpus_count = get_number_of_online_processors() - 1;
 
 	pthread_setcanceltype( PTHREAD_CANCEL_ENABLE, NULL );
 
-//	if( cpus_count > 1 )
-//		if( move_the_current_thread_to_a_processor( thread_arg->index % cpus_count, -10 )) //the last cpu is used for dispatching
-//			mmt_warn("Cannot set affinity of thread %d on cpu[%ld]", gettid(), thread_arg->index % cpus_count  );
+	if( move_the_current_thread_to_a_processor( thread_arg->lcore, -14 ))
+		mmt_warn("Cannot set affinity of thread %d on lcore %zu", gettid(), thread_arg->lcore  );
 
 	while( 1 ){
 
@@ -140,10 +139,12 @@ static inline void *_process_one_thread( void *arg ){
 	return NULL;
 }
 
+
 /**
  * Public API
  */
-mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, size_t rules_count, uint8_t threads_count,
+mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, size_t rules_count,
+		uint8_t threads_count, const uint8_t *core_mask, bool verbose,
 		mmt_sec_callback callback, void *user_data){
 	size_t i, j, rules_count_per_thread;
 	mmt_sec_handler_t *mmt_sec_handler;
@@ -189,11 +190,11 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	for( i=0; i<handler->threads_count; i++ ){
 		rules_count_per_thread = rules_count / threads_count;
 
-#ifdef DEBUG_MODE
-		printf("Thread %2zu processes %zu rules:", i + 1, rules_count_per_thread );
-		for( j=0; j<rules_count_per_thread; j++ )
-			printf(" %d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? '\n':',' );
-#endif
+		if( verbose){
+			printf("Thread %2zu processes %zu rules: ", i + 1, rules_count_per_thread );
+			for( j=0; j<rules_count_per_thread; j++ )
+				printf("%d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? '\n':',' );
+		}
 
 		handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, callback, user_data );
 
@@ -206,14 +207,12 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	for( i=0; i<handler->threads_count; i++ ){
 		thread_arg          = mmt_mem_alloc( sizeof( struct _thread_arg ));
 		thread_arg->index   = i;
+		thread_arg->lcore   = core_mask[ i ];
 		thread_arg->mmt_sec = handler->mmt_sec_handlers[ i ];
 		thread_arg->ring    = handler->messages_buffers[ i ];
 		ret = pthread_create( &handler->threads_id[ i ], NULL, _process_one_thread, thread_arg );
 		mmt_assert( ret == 0, "Cannot create thread %zu", (i+1) );
 	}
-
-//	if( cpus_count > 0 && move_the_current_thread_to_a_processor( cpus_count, -15 ) )
-//		mmt_warn("Cannot set affinity of thread %d on cpu[ %ld ]", gettid(), cpus_count );
 
 	return (mmt_smp_sec_handler_t *)handler;
 }
@@ -226,13 +225,19 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t 
 	int ret;
 	message_t *msg = clone_message_t( message );
 	lock_free_spsc_ring_t **ring;
-	__check_null( handler, );
+
+	//__check_null( handler, );
 
 	_handler = (_mmt_smp_sec_handler_t *)handler;
 
+	//retain message for each thread
+	//-1 since msg was cloned from message -> it has ref_count = 1
+	//=> we need to increase ref_count only ( _handler->threads_count - 1)
+	if( likely( _handler->threads_count > 1 ))
+		msg = retain_many_message_t( msg,  _handler->threads_count - 1 );
+
 	for( ring = _handler->messages_buffers; ring < &(_handler->messages_buffers[ _handler->threads_count ]); ring++ ){
 		//insert msg to a buffer
-		msg = retain_message_t( msg );
 		do{
 			ret = ring_push( *ring, msg );
 

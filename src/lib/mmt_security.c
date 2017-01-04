@@ -201,6 +201,21 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message
 	_mmt_sec_process( handler, msg );
 }
 
+static inline void _remove_special_character( char * tmp ){
+	while( *tmp != '\0' ){
+		switch( *tmp ){
+		case '"':
+		case '\t':
+		case '\n':
+			*tmp = '_';
+			break;
+		}
+
+		tmp ++;
+	}
+
+}
+
 #define MAX_STR_SIZE 50000
 
 char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
@@ -271,6 +286,8 @@ char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const ru
 
 				total_len -= size;
 				if( unlikely( total_len <= 0 )) break;
+
+				_remove_special_character( tmp );
 
 				str_ptr += size;
 				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":%s}",

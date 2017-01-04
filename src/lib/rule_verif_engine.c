@@ -192,7 +192,7 @@ static inline void _store_valid_execution_trace( _rule_engine_t *_engine, fsm_t 
  * Public API
  */
 const mmt_array_t* rule_engine_get_valide_trace( const rule_engine_t *engine ){
-	__check_null( engine, NULL );
+	//__check_null( engine, NULL );
 	_rule_engine_t *_engine = ( _rule_engine_t *)engine;
 	return _engine->valid_execution_trace;
 }
@@ -387,8 +387,8 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
  * Public API
  */
 enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message ){
-	__check_null( engine,  VERDICT_UNKNOWN );
-	__check_null( message, VERDICT_UNKNOWN );
+	//__check_null( engine,  VERDICT_UNKNOWN );
+	//__check_null( message, VERDICT_UNKNOWN );
 
 	_rule_engine_t *_engine = ( _rule_engine_t *) engine;
 	void *data    = _engine->rule_info->convert_message( message );

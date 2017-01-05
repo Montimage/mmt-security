@@ -17,8 +17,6 @@
 #define RING_SIZE 100000
 
 //implemented in mmt_security.c
-void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg );
-
 typedef struct _mmt_smp_sec_handler_struct{
 	size_t threads_count;
 
@@ -67,20 +65,56 @@ size_t mmt_smp_sec_get_unique_protocol_attributes( const mmt_smp_sec_handler_t *
 	return _handler->proto_atts_count;
 }
 
-/**
- * Public API
- */
-void mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately ){
+void _mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediately  ){
 	size_t i;
+	int ret;
 	__check_null( handler, );
 
 	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *)handler;
 
-	mmt_smp_sec_stop( handler, stop_immediately );
+	if( stop_immediately ){
+		for( i=0; i<_handler->threads_count; i++ )
+			pthread_cancel( _handler->threads_id[ i ] );
+	}else{
+		//insert NULL message at the end of ring
+		mmt_smp_sec_process( handler, NULL );
+
+		//waiting for all threads finish their job
+		for( i=0; i<_handler->threads_count; i++ ){
+			ret = pthread_join( _handler->threads_id[ i ], NULL );
+			switch( ret ){
+			case EDEADLK:
+				mmt_halt("A deadlock was detected or thread specifies the calling thread");
+				break;
+			case EINVAL:
+				mmt_halt("Thread is not a joinable thread.");
+				break;
+//			case EINVAL:
+//				mmt_halt("Another thread is already waiting to join with this thread.");
+//				break;
+			case  ESRCH:
+				mmt_halt("No thread with the ID thread could be found.");
+				break;
+			}
+		}
+	}
+}
+
+/**
+ * Public API
+ */
+size_t mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately ){
+	size_t i, alerts_count = 0;
+
+	__check_null( handler, 0);
+
+	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *)handler;
+
+	_mmt_smp_sec_stop( handler, stop_immediately );
 
 	//free data elements of _handler
 	for( i=0; i<_handler->threads_count; i++ )
-		mmt_sec_unregister( _handler->mmt_sec_handlers[i] );
+		alerts_count += mmt_sec_unregister( _handler->mmt_sec_handlers[i] );
 
 	for( i=0; i<_handler->threads_count; i++ )
 		ring_free( _handler->messages_buffers[ i ] );
@@ -92,6 +126,7 @@ void mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately )
 
 	mmt_mem_free( _handler->proto_atts_array );
 	mmt_mem_free( _handler );
+	return alerts_count;
 }
 
 
@@ -119,7 +154,7 @@ static inline void *_process_one_thread( void *arg ){
 			//do not process the last msg in the for
 			size -= 1;
 			for( i=0; i< size; i++ ){
-				_mmt_sec_process( mmt_sec, arr[i] );
+				mmt_sec_process( mmt_sec, arr[i] );
 			}
 
 			//only the last msg can be NULL
@@ -127,7 +162,7 @@ static inline void *_process_one_thread( void *arg ){
 				mmt_mem_free( arr );
 				break;
 			}else{
-				_mmt_sec_process( mmt_sec, arr[size] );
+				mmt_sec_process( mmt_sec, arr[size] );
 			}
 
 			mmt_mem_free( arr );
@@ -220,10 +255,9 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 /**
  * Public API
  */
-void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t *message ){
+void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg ){
 	_mmt_smp_sec_handler_t *_handler;
 	int ret;
-	message_t *msg = clone_message_t( message );
 	lock_free_spsc_ring_t **ring;
 
 	//__check_null( handler, );
@@ -249,38 +283,10 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t 
 	}
 }
 
-
-void mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediately  ){
+void mmt_smp_sec_count_verdicts( mmt_smp_sec_handler_t *handler  ){
 	size_t i;
 	int ret;
 	__check_null( handler, );
 
 	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *)handler;
-
-	if( stop_immediately ){
-		for( i=0; i<_handler->threads_count; i++ )
-			pthread_cancel( _handler->threads_id[ i ] );
-	}else{
-		//insert NULL message at the end of ring
-		mmt_smp_sec_process( handler, NULL );
-
-		//waiting for all threads finish their job
-		for( i=0; i<_handler->threads_count; i++ ){
-			ret = pthread_join( _handler->threads_id[ i ], NULL );
-			switch( ret ){
-			case EDEADLK:
-				mmt_halt("A deadlock was detected or thread specifies the calling thread");
-				break;
-			case EINVAL:
-				mmt_halt("Thread is not a joinable thread.");
-				break;
-//			case EINVAL:
-//				mmt_halt("Another thread is already waiting to join with this thread.");
-//				break;
-			case  ESRCH:
-				mmt_halt("No thread with the ID thread could be found.");
-				break;
-			}
-		}
-	}
 }

@@ -47,18 +47,19 @@
 typedef struct _sec_handler_struct{
 	void *handler;
 
-	void (*process_fn)( const void *, const message_t *);
+	void (*process_fn)( const void *, message_t *);
 
 	int threads_count;
 }_sec_handler_t;
 
-
+//print out detailed message
+static bool verbose                     = NO;
 static _sec_handler_t _sec_handler;
-static const rule_info_t **rules_arr = NULL;
-static size_t proto_atts_count       = 0;
-static message_element_t *proto_atts = NULL;
+static const rule_info_t **rules_arr    = NULL;
+static size_t proto_atts_count          = 0;
+static message_element_t *proto_atts    = NULL;
 //id of socket
-static int socket_fd                    = 0;
+static int socket_server                = 0;
 static volatile bool is_stop_processing = NO;
 
 static char output_file_string[MAX_FILENAME_SIZE]  = {0};
@@ -179,8 +180,10 @@ static inline size_t receiving_reports( int sock ) {
 			mmt_warn("Overflow: length_of_report = %d", length_of_report );
 			length_of_report = REPORT_SIZE;
 		}
-		else if( length_of_report < 0 )
+		else if( length_of_report < 0 ){
 			mmt_info( "Impossible len = %d", length_of_report );
+			continue;
+		}
 
 		n = recv( sock, buffer, length_of_report-4, MSG_WAITALL );
 
@@ -229,13 +232,11 @@ static inline size_t receiving_reports( int sock ) {
 				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
 				el_ptr->data_type = STRING;
 			}
-			else{
+			else if( el_data_type != -1 )
+				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
+			else
+				el_ptr->data = NULL;
 
-				if( el_data_type != -1 )
-					mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
-				else
-					el_ptr->data = NULL;
-			}
 
 			index += el_data_length;
 
@@ -248,31 +249,27 @@ static inline size_t receiving_reports( int sock ) {
 		//call mmt_security
 		_sec_handler.process_fn( _sec_handler.handler, msg );
 
-		//free msg after using
-		free_message_t( msg );
-
 		reports_count ++;
 	}
 
-	close( sock );
 	return reports_count;
 }
 
-static inline void termination(){
+static inline size_t termination(){
+	size_t alerts_count = 0;
 
-	close( socket_fd );
 	mmt_mem_free( proto_atts );
 
 	if( _sec_handler.threads_count > 1 )
-		mmt_smp_sec_unregister( _sec_handler.handler, NO );
+		alerts_count = mmt_smp_sec_unregister( _sec_handler.handler, NO );
 	else
-		mmt_sec_unregister( _sec_handler.handler );
+		alerts_count = mmt_sec_unregister( _sec_handler.handler );
 
-
-	verdict_printer_free();
 
 	mmt_mem_free( rules_arr );
 	mmt_mem_print_info();
+
+	return alerts_count;
 }
 
 
@@ -286,7 +283,11 @@ void signal_handler_seg(int signal_type) {
 
 void signal_handler(int signal_type) {
 	static volatile int times_counter = 0;
+	size_t alerts_count;
 	is_stop_processing = YES;
+
+	close( socket_server );
+
 	if( times_counter >= 1 ) exit( signal_type );
 	times_counter ++;
 
@@ -297,7 +298,10 @@ void signal_handler(int signal_type) {
 		signal(SIGINT, signal_handler);
 	}
 	sleep( 1 );//waiting for everything finish
-	termination();
+	alerts_count = termination();
+
+	if( verbose )
+		mmt_info("Process %d generated %zu alerts", getpid(), alerts_count );
 	exit( signal_type );
 }
 
@@ -318,17 +322,15 @@ int main( int argc, char** argv ) {
 
 	uint16_t *rules_id_filter;
 	const proto_attribute_t **p_atts;
-	int childfd, pid, i;
+	int client_socket, pid, i;
 
 	char str_buffer[256];
 	const size_t str_buffer_size = 256;
-
 	struct sockaddr_in serv_addr, cli_addr;
 	socklen_t socklen;
 	struct timeval start_time, end_time;
-	size_t size, rules_count, cores_count = 0, clients_count;
+	size_t size, rules_count, cores_count = 0, clients_count = 0, alerts_count = 0;
 	uint8_t *core_mask = NULL, *core_mask_ptr;
-	bool verbose = NO;
 
 	parse_options(argc, argv, rules_id_filter, &port_number, &threads_count, &cores_count, &core_mask, &verbose );
 
@@ -344,9 +346,9 @@ int main( int argc, char** argv ) {
 
 
 	/* First call to socket() function */
-	socket_fd = socket( AF_INET, SOCK_STREAM, 0 );
+	socket_server = socket( AF_INET, SOCK_STREAM, 0 );
 
-	if( socket_fd < 0) mmt_halt("ERROR opening socket");
+	if( socket_server < 0) mmt_halt("ERROR opening socket");
 
 	/* Initialize socket structure */
 	bzero((char *) &serv_addr, sizeof( serv_addr ));
@@ -356,13 +358,13 @@ int main( int argc, char** argv ) {
 	serv_addr.sin_port        = htons( port_number );
 
 	/* Now bind the host address using bind() call.*/
-	if( bind(socket_fd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0 ) mmt_halt("Error on binding");
+	if( bind(socket_server, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0 ) mmt_halt("Error on binding");
 
 	/* Now start listening for the clients, here
 	 * process will go in sleep mode and will wait
 	 * for the incoming connection
 	 */
-	listen( socket_fd, 5 );//int listen(int socket, int backlog);  limit the number of outstanding connections in the socket's listen queue
+	listen( socket_server, 5 );//int listen(int socket, int backlog);  limit the number of outstanding connections in the socket's listen queue
 
 	socklen = sizeof( cli_addr );
 
@@ -379,9 +381,9 @@ int main( int argc, char** argv ) {
 	//this loop will be broken by Ctrl+c
 	while( 1 ) {
 			//accept: wait for a connection request
-			childfd = accept( socket_fd, (struct sockaddr *) &cli_addr, &socklen );
+			client_socket = accept( socket_server, (struct sockaddr *) &cli_addr, &socklen );
 
-			if (childfd < 0) mmt_halt("Error on accept");
+			if (client_socket < 0) mmt_halt("Error on accept");
 
 			if( core_mask )
 				core_mask_ptr = &core_mask[ clients_count * threads_count % cores_count ];
@@ -390,18 +392,23 @@ int main( int argc, char** argv ) {
 
 			/* Create child process */
 			pid = fork();
-			if (pid < 0) error("ERROR on fork");
 
-			if (pid == 0) {
+			if( pid < 0 ){
+				mmt_error("Cannot fork a new process");
+				close( client_socket );
+				continue;
+			}
+			else if (pid == 0) {
 				/*===========================*/
 				/* This is the child process */
 
-				close( socket_fd );
+				// child doesn't need the listener
+				close( socket_server );
 
 				if( verbose ){
 					//convert client's IP to readable text
 					inet_ntop(AF_INET, &cli_addr.sin_addr.s_addr, str_buffer, str_buffer_size );
-					mmt_info("%3zuth connection is coming from %s:%d ... processed by proc. %d",
+					mmt_info( "%3zuth connection is coming from %s:%d ... processed by proc. %d",
 							clients_count, str_buffer, cli_addr.sin_port, getpid() );
 				}
 
@@ -418,6 +425,7 @@ int main( int argc, char** argv ) {
 					_sec_handler.process_fn = &mmt_smp_sec_process;
 					size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 				}else{
+					mmt_warn("Cannot handle thread_count = %d", _sec_handler.threads_count );
 					exit( EXIT_FAILURE );
 				}
 
@@ -444,35 +452,39 @@ int main( int argc, char** argv ) {
 
 				//mark the starting moment
 				if( verbose )
-					gettimeofday(&start_time, NULL);
+					gettimeofday( &start_time, NULL );
 
 				//do processing
-				size = receiving_reports( childfd );
+				size = receiving_reports( client_socket );
+
+				close( client_socket );
+
+				//finish
+				alerts_count = termination();
 
 				if( verbose ){
 					gettimeofday( &end_time, NULL );
 					mmt_info( "%3zuth connection sent %zu reports, in %.2fs, generated %"PRIu64" alerts",
 							clients_count,
 							size, time_diff( start_time, end_time ),
-							mmt_sec_get_total_alerts()
+							alerts_count
 					);
 				}
 
-				//finish
-				termination();
+				verdict_printer_free();
+
 				exit( EXIT_SUCCESS );
 
 				/*End of child process       */
 				/*===========================*/
 			}
 			else {
-				waitpid( pid );
 				/* pid > 0. This is the parent process.
 				 * The child process handles the connection,
 				 * so we don't need our copy of the connected socket descriptor.
 				 * Close it.  Then continue with the loop and accept another connection.
 				 */
-				close( childfd );
+				close( client_socket );
 			}
 	}
 

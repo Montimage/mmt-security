@@ -17,8 +17,6 @@ void verdict_printer_init( const char *file_string, const char *redis_string );
 
 void verdict_printer_send( const char* msg );
 
-void verdict_printer_reset( );
-
 void verdict_printer_free( );
 
 #endif /* SRC_LIB_VERDICT_PRINTER_H_ */

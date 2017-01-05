@@ -48,7 +48,7 @@ static pcap_t *pcap;
 typedef struct _sec_handler_struct{
 	void *handler;
 
-	void (*process_fn)( const void *, const message_t *);
+	void (*process_fn)( const void *, message_t *);
 
 	int threads_count;
 }_sec_handler_t;
@@ -214,8 +214,6 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	total_received_reports ++;
 
-	//need to free #msg
-	free_message_t( msg );
 	return 1;
 }
 
@@ -233,13 +231,14 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 
 static inline void termination(){
 	struct pcap_stat pcs; /* packet capture filter stats */
+	size_t alerts_count;
 
 	pcap_breakloop( pcap );
 
 	if( _sec_handler.threads_count > 1 )
-		mmt_smp_sec_unregister( _sec_handler.handler, NO );
+		alerts_count = mmt_smp_sec_unregister( _sec_handler.handler, NO );
 	else
-		mmt_sec_unregister( _sec_handler.handler );
+		alerts_count = mmt_sec_unregister( _sec_handler.handler );
 
 	if (pcap_stats(pcap, &pcs) < 0) {
 //		(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));//Statistics aren't available from savefiles
@@ -251,7 +250,7 @@ static inline void termination(){
 	}
 
 	fprintf(stderr, "%12zu reports received\n", total_received_reports );
-	fprintf(stderr, "%12"PRIu64" alerts generated\n", mmt_sec_get_total_alerts() );
+	fprintf(stderr, "%12"PRIu64" alerts generated\n", alerts_count );
 
 	verdict_printer_free();
 

@@ -63,12 +63,12 @@ mmt_sec_handler_t *mmt_sec_register(
 /**
  * Unregister, free resources
  */
-void mmt_sec_unregister( mmt_sec_handler_t *handler );
+size_t mmt_sec_unregister( mmt_sec_handler_t *handler );
 
 /**
  * Give message to validate
  */
-void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message );
+void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *message );
 
 
 /**

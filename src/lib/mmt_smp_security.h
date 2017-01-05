@@ -42,14 +42,14 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 /**
  * Unregister, free resources
  */
-void mmt_smp_sec_unregister( mmt_smp_sec_handler_t *handler, bool stop_immediatly );
+size_t mmt_smp_sec_unregister( mmt_smp_sec_handler_t *handler, bool stop_immediatly );
 
 /**
  * Give message to validate
  */
-void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, const message_t *message );
+void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *message );
 
-void mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediatly  );
+uint64_t mmt_smp_sec_count_alerts( const mmt_smp_sec_handler_t *handler );
 
 /**
  * Get rules attached to a given #handler

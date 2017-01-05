@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "verdict_printer.h"
+#include "mmt_lib.h"
 
 #define DEFAULT_REDIS_PORT    6379
 
@@ -28,7 +29,6 @@ enum output_mode{
 };
 
 static enum output_mode output_mode = OUTPUT_NONE;
-
 
 /**
  * - Redis: redis://192.168.0.10:6379
@@ -94,10 +94,4 @@ void verdict_printer_send( const char* msg ){
 void verdict_printer_free( ){
 	if( output_mode & OUTPUT_FILE )
 		close_file();
-}
-
-
-void verdict_printer_reset( ){
-	if( output_mode & OUTPUT_FILE )
-		reset_file();
 }

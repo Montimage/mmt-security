@@ -25,14 +25,12 @@
 #include "../dpi/mmt_dpi.h"
 
 //string size of an alert in JSON format
-#define MAX_MSG_SIZE 100000
+#define MAX_MSG_SIZE 10000
 
 //number of fsm instances of one rule
 #ifndef MAX_INSTANCE_COUNT
 	#define MAX_INSTANCE_COUNT 1000000
 #endif
-
-static uint64_t total_alerts = 0;
 
 const char *mmt_sec_get_version_info(){
 	//define in version.h
@@ -54,6 +52,9 @@ typedef struct _mmt_sec_handler_struct{
 
 	size_t proto_atts_count;
 	const proto_attribute_t **proto_atts_array;
+
+	//number of generated alerts
+	size_t alerts_count;
 }_mmt_sec_handler_t;
 
 
@@ -125,6 +126,7 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 	handler->rules_array = rules_array;
 	handler->callback = callback;
 	handler->user_data_for_callback = user_data;
+	handler->alerts_count = 0;
 	//one fsm for one rule
 	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
 	for( i=0; i<rules_count; i++ ){
@@ -140,11 +142,13 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 /**
  * Public API
  */
-void mmt_sec_unregister( mmt_sec_handler_t *handler ){
-	size_t i;
-	__check_null( handler, );
+size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
+	size_t i, alerts_count = 0;
+	__check_null( handler, 0);
 
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
+
+	alerts_count = _handler->alerts_count;
 
 	//free data elements of _handler
 	for( i=0; i<_handler->rules_count; i++ ){
@@ -154,12 +158,15 @@ void mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	mmt_mem_free( _handler->proto_atts_array );
 	mmt_mem_free( _handler->engines );
 	mmt_mem_free( _handler );
+
+	return alerts_count;
 }
 
 /**
  * Public API (used by mmt_sec_smp)
  */
-void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
+void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
+	__check_null( handler, );
 	_mmt_sec_handler_t *_handler;
 	size_t i;
 	int verdict;
@@ -177,8 +184,7 @@ void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 			//get execution trace
 			execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
 
-			//lock-free
-			__sync_add_and_fetch(&total_alerts, 1);
+			_handler->alerts_count ++;
 
 			//call user-callback function
 			_handler->callback(
@@ -190,15 +196,7 @@ void _mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 					_handler->user_data_for_callback );
 		}
 	}
-
 	free_message_t( msg );
-}
-
-void mmt_sec_process( const mmt_sec_handler_t *handler, const message_t *message ){
-	__check_null( handler, );
-	message_t *msg = clone_message_t( message );
-
-	_mmt_sec_process( handler, msg );
 }
 
 static inline void _remove_special_character( char * tmp ){
@@ -218,7 +216,7 @@ static inline void _remove_special_character( char * tmp ){
 
 #define MAX_STR_SIZE 50000
 
-char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
+inline char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
 	char buffer[ MAX_STR_SIZE + 1 ];
 	char *str_ptr;
 	size_t size, i, j, total_len, index;
@@ -447,6 +445,7 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 	int len;
 	char message[ MAX_MSG_SIZE + 1 ];
 	struct timeval now;
+	uint64_t alert_index = 0;
 	gettimeofday(&now, NULL);
 
 	char *string = convert_execution_trace_to_json_string( trace, rule );
@@ -457,7 +456,7 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 
 	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld.%06ld,%"PRIu64",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
 			(uint64_t) now.tv_sec, (uint64_t)now.tv_usec,
-			total_alerts, //index of alarm, not used, appear just for being compatible with format of other report types of mmt-probe
+			alert_index, //index of alarm, not used, appear just for being compatible with format of other report types of mmt-probe
 			rule->id,
 			verdict_type_string[verdict],
 			rule->type_string,
@@ -468,11 +467,6 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 
 	mmt_mem_free( string );
 }
-
-uint64_t mmt_sec_get_total_alerts(){
-	return total_alerts;
-}
-
 
 void mmt_sec_print_rules_info(){
 	const rule_info_t **rules_arr;

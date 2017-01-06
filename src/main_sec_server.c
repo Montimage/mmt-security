@@ -170,11 +170,12 @@ static inline size_t receiving_reports( int sock ) {
 	uint16_t el_data_length;
 	int el_data_type;
 	size_t counter;
+	size_t elements_count;
 
-	while( !is_stop_processing ){
+	while( likely( !is_stop_processing )){
 		n = recv( sock, &length_of_report, 4, MSG_WAITALL );//Read 4 bytes first to know the length of the report
 		//end of socket flow
-		if ( n == 0 )	break;
+		if ( unlikely( n == 0 ))	break;
 
 		if( unlikely( length_of_report > REPORT_SIZE )){
 			mmt_warn("Overflow: length_of_report = %d", length_of_report );
@@ -193,15 +194,11 @@ static inline size_t receiving_reports( int sock ) {
 		index = 0;
 
 		//parser data
-		msg = mmt_mem_alloc( sizeof( message_t ));
-
 		//number of elements
-		msg->elements_count = (uint8_t) buffer[ index ];
+		elements_count = (uint8_t) buffer[ index ];
 		index += 1;
 
-		//allocate memory to store the elements
-		msg->elements = mmt_mem_alloc( sizeof( message_element_t) * msg->elements_count );
-		bzero( msg->elements, sizeof( message_element_t) * msg->elements_count );
+		msg = create_message_t( elements_count );
 
 		msg->timestamp = mmt_sec_encode_timeval( ( struct timeval * ) &( buffer[index] ) );
 		index += sizeof (struct timeval);//16
@@ -234,9 +231,10 @@ static inline size_t receiving_reports( int sock ) {
 			}
 			else if( el_data_type != -1 )
 				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
-			else
-				el_ptr->data = NULL;
-
+			else{
+				el_ptr->data      = NULL;
+				el_ptr->data_type = VOID;
+			}
 
 			index += el_data_length;
 
@@ -258,14 +256,12 @@ static inline size_t receiving_reports( int sock ) {
 static inline size_t termination(){
 	size_t alerts_count = 0;
 
-	mmt_mem_free( proto_atts );
-
 	if( _sec_handler.threads_count > 1 )
 		alerts_count = mmt_smp_sec_unregister( _sec_handler.handler, NO );
 	else
 		alerts_count = mmt_sec_unregister( _sec_handler.handler );
 
-
+	mmt_mem_free( proto_atts );
 	mmt_mem_free( rules_arr );
 	mmt_mem_print_info();
 
@@ -332,6 +328,8 @@ int main( int argc, char** argv ) {
 	size_t size, rules_count, cores_count = 0, clients_count = 0, alerts_count = 0;
 	uint8_t *core_mask = NULL, *core_mask_ptr;
 
+	mmt_sec_callback _print_output;
+
 	parse_options(argc, argv, rules_id_filter, &port_number, &threads_count, &cores_count, &core_mask, &verbose );
 
 	mmt_assert( threads_count == 1 || threads_count <= cores_count, "Core mask is not enough for %zu threads",  threads_count );
@@ -368,7 +366,8 @@ int main( int argc, char** argv ) {
 
 	socklen = sizeof( cli_addr );
 
-	mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on port %d\n",
+	if( verbose )
+		mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on port %d\n",
 			mmt_sec_get_version_info(), rules_count, threads_count, port_number );
 
 	clients_count = 0;
@@ -415,13 +414,19 @@ int main( int argc, char** argv ) {
 				//register signal handler for this child process
 				register_signals();
 
+				//donot need output
+				if( output_file_string[0] == '\0' &&  output_redis_string[0] == '\0' )
+					_print_output = NULL;
+				else
+					_print_output = mmt_sec_print_verdict;
+
 				//init mmt-sec to verify the rules
 				if( _sec_handler.threads_count == 1 ){
-					_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, mmt_sec_print_verdict, NULL );
+					_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, _print_output, NULL );
 					_sec_handler.process_fn = &mmt_sec_process;
 					size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 				}else if( _sec_handler.threads_count > 1 ){
-					_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, threads_count - 1, core_mask_ptr, verbose && clients_count == 1, mmt_sec_print_verdict, NULL );
+					_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, threads_count - 1, core_mask_ptr, verbose && clients_count == 1, _print_output, NULL );
 					_sec_handler.process_fn = &mmt_smp_sec_process;
 					size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 				}else{
@@ -464,7 +469,7 @@ int main( int argc, char** argv ) {
 
 				if( verbose ){
 					gettimeofday( &end_time, NULL );
-					mmt_info( "%3zuth connection sent %zu reports, in %.2fs, generated %"PRIu64" alerts",
+					mmt_info( "%3zuth connection sent %9zu reports, in %5.2fs, generated %9"PRIu64" alerts",
 							clients_count,
 							size, time_diff( start_time, end_time ),
 							alerts_count

@@ -305,6 +305,7 @@ static inline int check_sql_injection(const void *p_payload, double payload_len)
            boolean_expression="((tcp.flags == 16)&amp;&amp;(tcp.ack_nb == tcp.seq_nb.17))"/>
 -->
 
+<!-- 
 <property value="THEN" delay_units="s" delay_min="-1" delay_max="0-" property_id="7" type_property="ATTACK" 
     description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb.">
     <event value="COMPUTE" event_id="17"
@@ -314,7 +315,7 @@ static inline int check_sql_injection(const void *p_payload, double payload_len)
            description="Trigger: the last TCP ACK packets have different seg_nb and ack_nb"
            boolean_expression="((tcp.flags == 16)&amp;&amp;((tcp.ack_nb == tcp.ack_nb)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;(ip.src != ip.dst))))"/>
 </property>
-
+ -->
 
 <!-- 
 <property value="BEFORE" delay_units="s" delay_min="0+" delay_max="1" property_id="7" type_property="ATTACK" 
@@ -583,9 +584,11 @@ it is nice to have an automated method of redirect expiration.
              boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset.1 - ip.frag_offset) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
 </property>
 
+<!-- Eat CPU -->
 <!-- Property 1: Probable IP protocol scan (4 different attempts in a row on different protocols).
 -->
 
+<!--
 <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="26" type_property="ATTACK" 
     description="Probable IP protocol scan (4 different attempts in a row on different protocols)."
     >
@@ -606,10 +609,13 @@ it is nice to have an automated method of redirect expiration.
              boolean_expression="((ip.proto_id != ip.proto_id.3)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
     </operator>
 </property>
+-->
 
 <!-- Property 2: Probable UDP protocol scan (4 different attempts in a row on different ports).
 -->
 
+<!-- Eat CPU -->
+<!-- 
 <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="27" type_property="ATTACK" 
     description="Probable UDP protocol scan (4 different attempts in a row on different ports)."
     >
@@ -630,7 +636,7 @@ it is nice to have an automated method of redirect expiration.
              boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.3)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
     </operator>
 </property>
- 
+--> 
     <!-- Property 10: XMAS s00can : TCP with all flags FIN, URG, PSH active.-->
     <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="28" type_property="ATTACK"
          description="XMAS scan : TCP with all flags FIN, URG, PSH active.">

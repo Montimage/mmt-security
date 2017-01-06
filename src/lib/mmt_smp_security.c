@@ -65,10 +65,9 @@ size_t mmt_smp_sec_get_unique_protocol_attributes( const mmt_smp_sec_handler_t *
 	return _handler->proto_atts_count;
 }
 
-void _mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediately  ){
+static inline void _mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediately  ){
 	size_t i;
 	int ret;
-	__check_null( handler, );
 
 	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *)handler;
 
@@ -226,7 +225,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 		rules_count_per_thread = rules_count / threads_count;
 
 		if( verbose){
-			printf("Thread %2zu processes %zu rules: ", i + 1, rules_count_per_thread );
+			printf("Thread %zu processes %zu rules: ", i + 1, rules_count_per_thread );
 			for( j=0; j<rules_count_per_thread; j++ )
 				printf("%d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? '\n':',' );
 		}
@@ -260,7 +259,10 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 	int ret;
 	lock_free_spsc_ring_t **ring;
 
-	//__check_null( handler, );
+#ifdef DEBUG_MODE
+	mmt_assert( handler != NULL, "handler cannot be null");
+	mmt_assert( msg != NULL, "msg cannot be null");
+#endif
 
 	_handler = (_mmt_smp_sec_handler_t *)handler;
 
@@ -278,6 +280,9 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 			if( likely( ret == RING_SUCCESS ))
 				break;
 			else
+				//TODO: to refine,
+				// e.g., omit the current ring and continue for next rules
+				// then, go back to the current one after processing the last rule
 				ring_wait_for_poping( *ring );
 		}while( 1 );
 	}

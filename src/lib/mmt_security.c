@@ -166,7 +166,10 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
  * Public API (used by mmt_sec_smp)
  */
 void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
-	__check_null( handler, );
+#ifdef DEBUG_MODE
+	mmt_assert( handler != NULL, "msg cannot be null");
+	mmt_assert( msg != NULL, "msg cannot be null");
+#endif
 	_mmt_sec_handler_t *_handler;
 	size_t i;
 	int verdict;
@@ -181,19 +184,21 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 
 		//find a validated/invalid trace
 		if( verdict != VERDICT_UNKNOWN ){
-			//get execution trace
-			execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
-
 			_handler->alerts_count ++;
 
-			//call user-callback function
-			_handler->callback(
+			if( _handler->callback != NULL ){
+				//get execution trace
+				execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
+
+				//call user-callback function
+				_handler->callback(
 					_handler->rules_array[i],
 					verdict,
 					msg->timestamp,
 					msg->counter,
 					execution_trace,
 					_handler->user_data_for_callback );
+			}
 		}
 	}
 	free_message_t( msg );

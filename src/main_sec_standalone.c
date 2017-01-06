@@ -174,13 +174,11 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 	bool has_data = NO;
 	void *data = NULL;
 	int type;
-	message_t *msg = mmt_mem_alloc( sizeof ( message_t ) );
+	message_t *msg = create_message_t( proto_atts_count );
 	msg->timestamp = mmt_sec_encode_timeval( &pkt->p_hdr->ts );
 	msg->counter   = pkt->packet_id;
 
 	//get a list of proto/attributes being used by mmt-security
-	msg->elements_count = proto_atts_count;
-	msg->elements       = mmt_mem_dup( proto_atts, proto_atts_count * sizeof( message_element_t) );
 	for( i=0; i<proto_atts_count; i++ ){
 		data = _get_data( pkt, proto_atts[i].proto_id, proto_atts[i].att_id, proto_atts[i].data_type, &type );
 		if( data != NULL )
@@ -188,6 +186,8 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 
 		msg->elements[i].data      = data;
 		msg->elements[i].data_type = type;
+		msg->elements[i].att_id    = proto_atts[i].att_id;
+		msg->elements[i].proto_id  = proto_atts[i].proto_id;
 	}
 
 	//need to free #msg when the packet contains no-interested information

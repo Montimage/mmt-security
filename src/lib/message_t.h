@@ -39,6 +39,7 @@ typedef struct message_struct{
  */
 message_t *clone_message_t( const message_t *msg );
 
+message_t *create_message_t( size_t elements_count );
 
 message_t *retain_message_t( message_t *msg );
 

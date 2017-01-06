@@ -82,8 +82,8 @@ void fsm_reset( fsm_t *fsm ){
 
 	_fsm = (_fsm_t *)fsm;
 	//reset the current state to the initial one
-	_fsm->current_state  = _fsm->init_state;
-	_fsm->previous_state = NULL;
+	_fsm->current_state    = _fsm->init_state;
+	_fsm->previous_state   = NULL;
 	_fsm->current_event_id = 0;
 
 	for( i=0; i< _fsm->events_trace->elements_count; i++ ){
@@ -126,9 +126,11 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	size_t i;
 	enum fsm_handle_event_value ret;
 
+#ifdef DEBUG_MODE
 	if( unlikely( _fsm->current_event_id == 0 )){
 		mmt_halt( "Not possible");
 	}
+#endif
 
 	//mmt_debug( "fsm_id = %d (%p), ref = %zu, event_id: %d", _fsm->id, _fsm, mmt_mem_reference_count( event_data), tran->event_type );
 
@@ -222,17 +224,23 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
  * Public API
  */
 enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data, fsm_t **new_fsm ) {
-	const fsm_transition_t *tran = NULL;
-	_fsm_t *_fsm = NULL, *_new_fsm = NULL;
+	const fsm_transition_t *tran;
+	_fsm_t *_fsm, *_new_fsm;
 	//uint64_t timer, counter;
 
 	//set the
 	*new_fsm = NULL;
-	//__check_null( fsm, FSM_ERR_ARG );
+
+#ifdef DEBUG_MODE
+	__check_null( fsm, FSM_ERR_ARG );
+#endif
 
 	_fsm = (_fsm_t *)fsm;
+
+#ifdef DEBUG_MODE
 	if ( unlikely( !_fsm->current_state ))
 		mmt_halt( "Not found current state of fsm %d", _fsm->id );
+#endif
 
 	//	mmt_debug( "Verify transition: %d of fsm %p", transition_index, fsm );
 
@@ -331,8 +339,9 @@ void fsm_free( fsm_t *fsm ){
  */
 const mmt_array_t* fsm_get_execution_trace( const fsm_t *fsm ){
 	_fsm_t *_fsm;
+#ifdef DEBUG_MODE
 	__check_null( fsm, NULL );
-
+#endif
 	_fsm = (_fsm_t *)fsm;
 	return( _fsm->messages_trace );
 }
@@ -343,9 +352,9 @@ const mmt_array_t* fsm_get_execution_trace( const fsm_t *fsm ){
  */
 const void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
 	_fsm_t *_fsm;
-	//void *data;
+#ifdef DEBUG_MODE
 	__check_null( fsm, NULL );
-
+#endif
 	_fsm = (_fsm_t *)fsm;
 	return _fsm->events_trace->data[ event_id ];
 }
@@ -353,10 +362,11 @@ const void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
 /**
  * Public API
  */
-uint16_t fsm_get_id( const fsm_t *fsm ){
+inline uint16_t fsm_get_id( const fsm_t *fsm ){
 	_fsm_t *_fsm;
+#ifdef DEBUG_MODE
 	__check_null( fsm, -1 );
-
+#endif
 	_fsm = (_fsm_t *)fsm;
 	return _fsm->id;
 }
@@ -364,9 +374,11 @@ uint16_t fsm_get_id( const fsm_t *fsm ){
 /**
  * Public API
  */
-void fsm_set_id( fsm_t *fsm, uint16_t id ){
+inline void fsm_set_id( fsm_t *fsm, uint16_t id ){
 	_fsm_t *_fsm;
+#ifdef DEBUG_MODE
 	__check_null( fsm,  );
+#endif
 	_fsm = (_fsm_t *)fsm;
 	_fsm->id = id;
 }

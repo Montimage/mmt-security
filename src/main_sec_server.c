@@ -382,7 +382,7 @@ int main( int argc, char** argv ) {
 			//accept: wait for a connection request
 			client_socket = accept( socket_server, (struct sockaddr *) &cli_addr, &socklen );
 
-			if (client_socket < 0) mmt_halt("Error on accept");
+			if( client_socket < 0 ) mmt_halt("Error on accept");
 
 			if( core_mask )
 				core_mask_ptr = &core_mask[ clients_count * threads_count % cores_count ];

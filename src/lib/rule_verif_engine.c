@@ -54,9 +54,11 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 	const fsm_state_t *state = fsm_get_current_state( fsm );
 
 	//from a state: 2 outgoing transitions have 2 different events
-//	mmt_assert( _engine->max_events_count >= state->transitions_count,
-//			"Error: Number of outgoing transition must not be greater than number of events (%zu <= %zu)",
-//			state->transitions_count, _engine->max_events_count );
+#ifdef DEBUG_MODE
+	mmt_assert( _engine->max_events_count >= state->transitions_count,
+			"Error: Number of outgoing transition must not be greater than number of events (%zu <= %zu)",
+			state->transitions_count, _engine->max_events_count );
+#endif
 
 	//for each outgoing transition, we add it to the list of expecting events
 	for( i=0; i<state->transitions_count; i++ ){
@@ -192,7 +194,9 @@ static inline void _store_valid_execution_trace( _rule_engine_t *_engine, fsm_t 
  * Public API
  */
 const mmt_array_t* rule_engine_get_valide_trace( const rule_engine_t *engine ){
-	//__check_null( engine, NULL );
+#ifdef DEBUG_MODE
+	mmt_assert( engine != NULL, "engine cannot be null" );
+#endif
 	_rule_engine_t *_engine = ( _rule_engine_t *)engine;
 	return _engine->valid_execution_trace;
 }
@@ -387,21 +391,22 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
  * Public API
  */
 enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message ){
-	//__check_null( engine,  VERDICT_UNKNOWN );
-	//__check_null( message, VERDICT_UNKNOWN );
+#ifdef DEBUG_MODE
+	mmt_assert( engine != NULL, "engine cannot be null" );
+	mmt_assert( message != NULL, "message cannot be null" );
+#endif
 
 	_rule_engine_t *_engine = ( _rule_engine_t *) engine;
 	void *data    = _engine->rule_info->convert_message( message );
 	uint64_t hash = _engine->rule_info->hash_message( data );
-	uint8_t event_id = 0;
+	uint8_t event_id;
 	link_node_t *node;
 	_fsm_tran_index_t *fsm_ind;
-	enum verdict_type ret = VERDICT_UNKNOWN;;
-	//insert #message pointer to head of #data;
+	enum verdict_type ret;
 
 	//there are no transitions that can receive the message
 	if( hash == 0 ){
-		mmt_mem_free( data );
+		mmt_mem_force_free( data );
 		return VERDICT_UNKNOWN;
 	}
 
@@ -410,14 +415,11 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	 * as when verifying one event, a new fsm instance can be created and inserted
 	 * to the head of one entry
 	 */
-	//for( event_id=0; event_id<_engine->max_events_count; event_id++ )
-	//	_engine->tmp_fsm_by_expecting_event_id[ event_id ] = _engine->fsm_by_expecting_event_id[ event_id ];
 	memcpy( _engine->tmp_fsm_by_expecting_event_id, _engine->fsm_by_expecting_event_id, _engine->max_events_count * sizeof( void *) );
 
 	//mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
 	//get from hash table the list of events to be verified
-	//event_id start from 1, but hash starts from 0
 	for( event_id=0; event_id<_engine->max_events_count; event_id++ ){
 		//this event does not fire
 		if(  BIT_CHECK( hash, event_id ) == 0 ) continue;

@@ -29,7 +29,7 @@
 
 //number of fsm instances of one rule
 #ifndef MAX_INSTANCE_COUNT
-	#define MAX_INSTANCE_COUNT 1000000
+	#define MAX_INSTANCE_COUNT 100000
 #endif
 
 const char *mmt_sec_get_version_info(){
@@ -219,7 +219,7 @@ static inline void _remove_special_character( char * tmp ){
 
 }
 
-#define MAX_STR_SIZE 50000
+#define MAX_STR_SIZE 10000
 
 inline char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
 	char buffer[ MAX_STR_SIZE + 1 ];
@@ -319,13 +319,10 @@ inline char* convert_execution_trace_to_json_string( const mmt_array_t *trace, c
  */
 int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type ){
 	double number = 0;
-	char buffer[100], *new_string = NULL;
 	const uint16_t buffer_size = 100;
 	uint16_t size;
 	//does not exist data for this proto_id and att_id
 	__check_null( data, 1 );
-
-	buffer[0] = '\0';
 
 	switch( type ){
 	case MMT_UNDEFINED_TYPE: /**< no type constant value */
@@ -368,25 +365,28 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		return 0;
 
 	case MMT_DATA_MAC_ADDR: /**< ethernet mac address constant value */
-		new_string = (char *) data;
-		size = snprintf(buffer , buffer_size, "%02x:%02x:%02x:%02x:%02x:%02x",
-				new_string[0], new_string[1], new_string[2], new_string[3], new_string[4], new_string[5] );
+//		new_string = (char *) data;
+//		size = snprintf(buffer , buffer_size, "%02x:%02x:%02x:%02x:%02x:%02x",
+//				new_string[0], new_string[1], new_string[2], new_string[3], new_string[4], new_string[5] );
 		*new_type = STRING;
-		*new_data = mmt_mem_dup( buffer, size );
+//		*new_data = mmt_mem_dup( buffer, size );
+		*new_data = mmt_mem_dup( data, 6 );
 		return 0;
 
 	case MMT_DATA_IP_ADDR: /**< ip address constant value */
-		inet_ntop(AF_INET, data, buffer, buffer_size );
+		//inet_ntop(AF_INET, data, buffer, buffer_size );
 		//mmt_debug( "IPv4: %s", string );
 		*new_type = STRING;
-		*new_data = mmt_mem_dup( buffer, strlen( buffer));
+		//*new_data = mmt_mem_dup( buffer, strlen( buffer));
+		*new_data = mmt_mem_dup( data, 4 );
 		return 0;
 
 	case MMT_DATA_IP6_ADDR: /**< ip6 address constant value */
-		inet_ntop(AF_INET6, data, buffer, buffer_size );
+//		inet_ntop(AF_INET6, data, buffer, buffer_size );
 		//mmt_debug( "IPv6: %s", string );
 		*new_type = STRING;
-		*new_data = mmt_mem_dup( buffer, strlen( buffer));
+//		*new_data = mmt_mem_dup( buffer, strlen( buffer));
+		*new_data = mmt_mem_dup( data, 6 );
 		return 0;
 
 	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */

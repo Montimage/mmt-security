@@ -14,7 +14,7 @@
 #include "system_info.h"
 #include "lock_free_spsc_ring.h"
 
-#define RING_SIZE 100000
+#define RING_SIZE 10000
 
 //implemented in mmt_security.c
 typedef struct _mmt_smp_sec_handler_struct{
@@ -112,8 +112,10 @@ size_t mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately
 	_mmt_smp_sec_stop( handler, stop_immediately );
 
 	//free data elements of _handler
-	for( i=0; i<_handler->threads_count; i++ )
+	for( i=0; i<_handler->threads_count; i++ ){
 		alerts_count += mmt_sec_unregister( _handler->mmt_sec_handlers[i] );
+		mmt_debug("Thread %zu generated %zu alerts", i, alerts_count );
+	}
 
 	for( i=0; i<_handler->threads_count; i++ )
 		ring_free( _handler->messages_buffers[ i ] );
@@ -261,7 +263,6 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 
 #ifdef DEBUG_MODE
 	mmt_assert( handler != NULL, "handler cannot be null");
-	mmt_assert( msg != NULL, "msg cannot be null");
 #endif
 
 	_handler = (_mmt_smp_sec_handler_t *)handler;

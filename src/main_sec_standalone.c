@@ -41,6 +41,7 @@ static message_element_t *proto_atts = NULL;
 //Statistic
 static size_t total_received_reports = 0;
 
+static mmt_sec_callback _print_output = NULL;
 
 static const rule_info_t **rules_arr = NULL;
 static pcap_t *pcap;
@@ -137,7 +138,14 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 		usage(argv[0]);
 	}
 
-	verdict_printer_init( file_string, redis_string );
+	//do not need output
+	if( file_string[0] == '\0' &&  redis_string[0] == '\0' )
+		_print_output = NULL;
+	else{
+		_print_output = mmt_sec_print_verdict;
+
+		verdict_printer_init( file_string, redis_string );
+	}
 	return 0;
 }
 
@@ -252,7 +260,8 @@ static inline void termination(){
 	fprintf(stderr, "%12zu reports received\n", total_received_reports );
 	fprintf(stderr, "%12"PRIu64" alerts generated\n", alerts_count );
 
-	verdict_printer_free();
+	if( _print_output != NULL )
+		verdict_printer_free();
 
 	mmt_mem_free( proto_atts );
 
@@ -324,11 +333,11 @@ int main(int argc, char** argv) {
 
 	//init mmt-sec to verify the rules
 	if( _sec_handler.threads_count == 1 ){
-		_sec_handler.handler    = mmt_sec_register( rules_arr, size, mmt_sec_print_verdict, NULL );
+		_sec_handler.handler    = mmt_sec_register( rules_arr, size, _print_output, NULL );
 		_sec_handler.process_fn = &mmt_sec_process;
 		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}else if( _sec_handler.threads_count > 1 ){
-		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count - 1, core_mask, verbose, mmt_sec_print_verdict, NULL );
+		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count - 1, core_mask, verbose, _print_output, NULL );
 		_sec_handler.process_fn = &mmt_smp_sec_process;
 		size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}else{

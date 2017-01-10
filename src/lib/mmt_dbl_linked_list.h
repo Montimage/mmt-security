@@ -120,23 +120,6 @@ link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
 
 	return head;
 }
-/**
- * Free a list.
- * Data of each node is freed if #free_data == YES
- */
-static inline
-void free_link_list( link_node_t *head, bool free_data ){
-	link_node_t *ptr;
-	while( head != NULL ){
-		if( free_data )
-			mmt_mem_free( head->data );
-		ptr = head->next;
-		head->next = head->prev = NULL;
-		mmt_mem_free( head );
-
-		head = ptr;
-	}
-}
 
 /**
  * Free a list and its data.
@@ -146,15 +129,37 @@ void free_link_list( link_node_t *head, bool free_data ){
 static inline
 void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) ){
 	link_node_t *ptr;
-	while( head != NULL ){
-		if( free_fn )
+	if( free_fn )
+		while( head != NULL ){
 			free_fn( head->data );
-		ptr = head->next;
-		head->next = head->prev = NULL;
-		mmt_mem_free( head );
 
-		head = ptr;
+			ptr = head->next;
+			head->next = head->prev = NULL;
+			mmt_mem_force_free( head );
+
+			head = ptr;
+		}
+	else{
+		while( head != NULL ){
+			ptr = head->next;
+			head->next = head->prev = NULL;
+			mmt_mem_force_free( head );
+
+			head = ptr;
+		}
 	}
+}
+
+/**
+ * Free a list.
+ * Data of each node is freed if #free_data == YES
+ */
+static inline
+void free_link_list( link_node_t *head, bool free_data ){
+	if( free_data )
+		free_link_list_and_data( head, (void *)mmt_mem_free );
+	else
+		free_link_list_and_data( head, NULL );
 }
 
 static inline

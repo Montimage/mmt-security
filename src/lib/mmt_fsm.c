@@ -14,10 +14,11 @@
  * Detailed definition of FSM
  */
 typedef struct fsm_struct{
-	uint16_t id;
-
 	uint64_t time_min, time_max;
 	uint64_t counter_min, counter_max;
+
+	//id of the FSM
+	uint16_t id;
 
 	/** ID of event to be verified */
 	uint16_t current_event_id;
@@ -172,22 +173,15 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	//    against the current message_data and event_data
 	if( new_state->is_temporary ){
 		//for each outgoing transition of the target
-		for( i=0; i<new_state->transitions_count; i++ ){
-			//fire the timeout transition only if other transitions cannot be fired
-			if( new_state->transitions[i].event_type == FSM_EVENT_TYPE_TIMEOUT )
-				continue;
-
+		//fire the timeout transition (at index 0) only if other transitions cannot be fired
+		for( i=new_state->transitions_count - 1; i>= 0; i-- ){
 			ret = _fire_a_tran( (fsm_t *) _fsm, (uint16_t)i, message_data, event_data );
 
 			if( ret != FSM_NO_STATE_CHANGE )
 				return ret;
 		}
 
-		//fire timeout transition only if we cannot find any other outgoing transitions
-		if( new_state->transitions[0].event_type == FSM_EVENT_TYPE_TIMEOUT )
-			return _fire_a_tran( (fsm_t *) _fsm, 0, message_data, event_data );
-
-		mmt_debug( "LOOOP" );
+//		mmt_debug( "LOOOP" );
 		return FSM_NO_STATE_CHANGE;
 	}
 
@@ -212,6 +206,7 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 		val = new_state->delay.time_max + message_data->timestamp;
 		if( val < _fsm->time_max ) _fsm->time_max = val;
 	}
+
 	/* Call the new _state's entry action if it has any
 	 * (even if state returns to itself) */
 
@@ -253,7 +248,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 	//check if timeout or not (even we are checking a real event)
 	//check only for the state other than init_state
-	if( _fsm->current_state != _fsm->init_state && message_data->timestamp > _fsm->time_max &&  !_fsm->current_state->is_temporary  ){
+	if( !_fsm->current_state->is_temporary && _fsm->current_state != _fsm->init_state && message_data->timestamp > _fsm->time_max  ){
 		tran = &_fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
 		if( likely( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ))
 			//fire timeout transition
@@ -286,6 +281,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 		*new_fsm = (fsm_t *)_new_fsm;
 		return _update_fsm( _new_fsm, tran->target_state, tran, message_data, event_data );
 	}
+
 	//add event to execution trace
 	return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
 }
@@ -327,7 +323,7 @@ void fsm_free( fsm_t *fsm ){
 
 	mmt_array_free( _fsm->events_trace,   (void *)mmt_mem_free );
 	mmt_array_free( _fsm->messages_trace, (void *)free_message_t );
-	mmt_mem_free( fsm );
+	mmt_mem_force_free( fsm );
 }
 
 

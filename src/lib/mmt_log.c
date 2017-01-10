@@ -46,7 +46,7 @@ void mmt_print_execution_trace (void) {
 }
 
 
-static char *log_level_name[] ={ "INFO", "DEBUG", "WARN", "ERROR", "HALT" };
+static const char *log_level_name[] ={ "INFO", "DEBUG", "WARN", "ERROR", "HALT" };
 
 void mmt_log( log_level_t level, const char *format, ... ){
 	va_list arg;

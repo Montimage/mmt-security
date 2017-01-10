@@ -79,7 +79,6 @@ size_t mmt_mem_free( void *x ){
 
    mmt_memory_t *mem = mmt_mem_revert( x );
    if( mem->ref_count <= 1 ){
-		//freed_memory_size += mem->size;
 		free( mem );
 		return 0;
    }else{

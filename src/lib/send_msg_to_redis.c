@@ -58,15 +58,16 @@ inline void send_message_to_redis (const char * message) {
 
 		reply = thredis_command( thredis, "PUBLISH %s [%s]", REDIS_CHANNEL_NAME, message );
 
-		if(reply == NULL){
+		if( unlikely( reply == NULL )){
 			mmt_error("Redis command error: can't allocate reply context\n");
 		}else{
-			if(thredis->redis->err != 0){
+			if( unlikely( thredis->redis->err != 0 )){
 				mmt_error("Redis command error nb %d: %s\n",thredis->redis->err, thredis->redis->errstr);
 			}
-			if(reply->type == REDIS_REPLY_ERROR){
+			if( unlikely( reply->type == REDIS_REPLY_ERROR )){
 				mmt_error("Redis reply error nb %d: %s\n", reply->type, reply->str);
 			}
+
 			freeReplyObject(reply);
 		}
 	}

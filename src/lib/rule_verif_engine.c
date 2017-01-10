@@ -17,13 +17,12 @@ typedef struct _rule_engine_struct{
 	//instance_id - fsm_sub_instance
 	link_node_t **fsm_by_instance_id;
 
+	mmt_array_t *valid_execution_trace;
 
 	size_t max_events_count, max_instances_count;
 	size_t total_instances_count;
 	//number of instances
 	size_t instances_count;
-
-	mmt_array_t *valid_execution_trace;
 }_rule_engine_t;
 
 /**
@@ -31,9 +30,9 @@ typedef struct _rule_engine_struct{
  * the #fsm will fire the #index-th transition of its current state
  */
 typedef struct _fsm_tran_index_struct{
+	uint64_t counter;     //index of the last verified message
 	size_t index;         //index of the transition of the current state of #fsm to be verified
 	fsm_t *fsm;           //fsm to be verified
-	uint64_t counter;     //index of the last verified message
 }_fsm_tran_index_t ;
 
 static inline _fsm_tran_index_t* _create_fsm_tran_index_t( size_t index, fsm_t *fsm, uint64_t counter){
@@ -67,7 +66,7 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 		tran     = &( state->transitions[ i ] );
 		event_id = tran->event_type;
 
-		if( !is_add_timeout && event_id == FSM_EVENT_TYPE_TIMEOUT )
+		if( event_id == FSM_EVENT_TYPE_TIMEOUT && !is_add_timeout )
 			continue;
 
 //d = count_nodes_from_link_list( _engine->fsm_by_expecting_event_id[ event_id ]);
@@ -184,7 +183,8 @@ void rule_engine_free( rule_engine_t *engine ){
 }
 
 static inline void _store_valid_execution_trace( _rule_engine_t *_engine, fsm_t *fsm ){
-	if( _engine->valid_execution_trace != NULL )
+	//free old trace if need
+	if( likely( _engine->valid_execution_trace != NULL ))
 		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );
 
 	_engine->valid_execution_trace = mmt_array_clone( fsm_get_execution_trace( fsm ), (void*) retain_message_t );

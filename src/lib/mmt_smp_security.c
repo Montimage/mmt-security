@@ -148,25 +148,24 @@ static inline void *_process_one_thread( void *arg ){
 
 		size = ring_pop_brust( ring, &arr );
 
-		if( size == 0 )
+		if( unlikely( size == 0 ))
 			ring_wait_for_pushing( ring );
 		else{
 
 			//do not process the last msg in the for
 			size -= 1;
-			for( i=0; i< size; i++ ){
+			for( i=0; likely( i< size ); i++ )
 				mmt_sec_process( mmt_sec, arr[i] );
-			}
 
 			//only the last msg can be NULL
 			if( unlikely( arr[ size ] == NULL ) ){
-				mmt_mem_free( arr );
+				mmt_mem_force_free( arr );
 				break;
 			}else{
 				mmt_sec_process( mmt_sec, arr[size] );
 			}
 
-			mmt_mem_free( arr );
+			mmt_mem_force_free( arr );
 		}
 	}
 
@@ -278,7 +277,7 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 		do{
 			ret = ring_push( *ring, msg );
 
-			if( likely( ret == RING_SUCCESS ))
+			if( ret == RING_SUCCESS )
 				break;
 			else
 				//TODO: to refine,

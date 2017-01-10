@@ -35,14 +35,18 @@ mmt_array_t* mmt_array_init( size_t elements_count ){
 static inline __attribute__((always_inline))
 mmt_array_t* mmt_array_clone( const mmt_array_t *array, void* (*clone_data_fn)(void *) ){
 	size_t i;
-	mmt_array_t *ret = mmt_array_init( array->elements_count );
+//	mmt_array_t *ret = mmt_array_init( array->elements_count );
+	mmt_array_t *ret = mmt_mem_alloc( sizeof( mmt_array_t) + array->elements_count * sizeof( void* ) );
+	ret->elements_count = array->elements_count;
+	ret->data           = (void *) (ret + 1);
 
-	if( clone_data_fn != NULL )
+	if( clone_data_fn != NULL ){
 		for( i=0; i<array->elements_count; i++ )
 			ret->data[i] = clone_data_fn( array->data[ i ] );
-	else
+	}else{
 		for( i=0; i<array->elements_count; i++ )
-				ret->data[i] = array->data[ i ];
+			ret->data[i] = array->data[ i ];
+	}
 	return ret;
 }
 
@@ -64,7 +68,7 @@ void mmt_array_free( mmt_array_t *array, void (*free_data_fn)(void *) ){
 		for( i=0; i<array->elements_count; i++ )
 			free_data_fn( array->data[ i ] );
 
-	mmt_mem_free( array );
+	mmt_mem_force_free( array );
 }
 
 #endif /* SRC_LIB_MMT_ARRAY_T_H_ */

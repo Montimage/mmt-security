@@ -12,6 +12,8 @@
 
 #include <stdint.h>
 #include "base.h"
+#include "mmt_lib.h"
+
 //////////////////////////////////Linked-List ///////////////////////////////////////
 typedef struct link_node_struct{
 	/** two linkers link to the previous and the next nodes*/
@@ -21,6 +23,19 @@ typedef struct link_node_struct{
 }link_node_t;
 
 /**
+ * Create a new dbl-link-node
+ * @param data
+ * @return
+ */
+static inline
+link_node_t *create_node_of_link_list( void *data ){
+	link_node_t *new_node = mmt_mem_alloc( sizeof( link_node_t ));
+	new_node->data = data;
+	new_node->prev = new_node->next = NULL;
+	return new_node;
+}
+
+/**
  * Create a new node of a linked-list
  * - Input:
  * 	+ *data: a pointer points to data of the node being created
@@ -28,7 +43,24 @@ typedef struct link_node_struct{
  * - Return:
  * 	+ a pointer points to the new node
  */
-link_node_t *create_node_of_link_list( void *data );
+static inline
+link_node_t *append_node_to_link_list( link_node_t *head, void *data ){
+	link_node_t *new_node, *ptr;
+
+	new_node = create_node_of_link_list( data );
+
+	if( unlikely( head == NULL )) return new_node;
+
+	//append to tail
+	ptr = head;
+	//find tail
+	while( ptr->next != NULL ) ptr = ptr->next;
+	//add new node to tail
+	ptr->next = new_node;
+	new_node->prev = ptr;
+
+	return head;
+}
 
 /**
  * Create then append a new node to the end of a linked-list
@@ -40,29 +72,93 @@ link_node_t *create_node_of_link_list( void *data );
  * 	+ new head of the linked-list.
  * 		If entry is NULL then the function will return the new node being created
  */
-link_node_t *append_node_to_link_list( link_node_t *entry, void *data );
-link_node_t *insert_node_to_link_list( link_node_t *entry, void *data );
+static inline
+link_node_t *insert_node_to_link_list( link_node_t *head, void *data ){
+	link_node_t *new_node;
+
+	new_node = create_node_of_link_list( data );
+
+	if( unlikely( head == NULL )) return new_node;
+
+	//insert to head
+	new_node->next = head;
+	head->prev     = new_node;
+
+	return new_node;
+}
 
 /**
  * Remove a node having #data from the list.
  * If there is no node has #data, the function does not change the list.
  */
-link_node_t *remove_node_from_link_list( link_node_t *entry, const void *data );
+static inline
+link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
+	link_node_t *ptr = head;
+	while( ptr != NULL && ptr->data != data )
+		ptr = ptr->next;
 
+	//not found any node having this #data
+	if( ptr == NULL )
+		return head;
+
+	if( ptr == head ){
+		head = head->next;
+		if( head != NULL )
+			head->prev = NULL;
+		//free this node
+		mmt_mem_free( ptr );
+		return head;
+	}
+	//ptr is not null && ptr->pre is not null as ptr != head
+	ptr->prev->next = ptr->next;
+
+	if( ptr->next != NULL )
+		ptr->next->prev = ptr->prev;
+
+	//free this node
+	mmt_mem_free( ptr );
+
+	return head;
+}
 /**
  * Free a list.
  * Data of each node is freed if #free_data == YES
  */
-void free_link_list( link_node_t *head, bool free_data );
+static inline
+void free_link_list( link_node_t *head, bool free_data ){
+	link_node_t *ptr;
+	while( head != NULL ){
+		if( free_data )
+			mmt_mem_free( head->data );
+		ptr = head->next;
+		head->next = head->prev = NULL;
+		mmt_mem_free( head );
+
+		head = ptr;
+	}
+}
 
 /**
  * Free a list and its data.
  * Data of each node is freed by function #free_fn.
  * If #free_fn is NULL, the data will not be freed.
  */
-void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) );
+static inline
+void free_link_list_and_data( link_node_t *head, void (*free_fn)( void *) ){
+	link_node_t *ptr;
+	while( head != NULL ){
+		if( free_fn )
+			free_fn( head->data );
+		ptr = head->next;
+		head->next = head->prev = NULL;
+		mmt_mem_free( head );
 
-static inline size_t count_nodes_from_link_list( const link_node_t *entry ){
+		head = ptr;
+	}
+}
+
+static inline
+size_t count_nodes_from_link_list( const link_node_t *entry ){
 	size_t size = 0;
 	while( entry != NULL ){
 		size ++;

@@ -261,7 +261,6 @@ static inline size_t termination(){
 
 	mmt_mem_free( proto_atts );
 	mmt_mem_free( rules_arr );
-	mmt_mem_print_info();
 
 	return alerts_count;
 }

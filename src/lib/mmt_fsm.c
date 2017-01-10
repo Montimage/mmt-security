@@ -228,9 +228,6 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	_fsm_t *_fsm, *_new_fsm;
 	//uint64_t timer, counter;
 
-	//set the
-	*new_fsm = NULL;
-
 #ifdef DEBUG_MODE
 	__check_null( fsm, FSM_ERR_ARG );
 #endif

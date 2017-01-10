@@ -81,9 +81,6 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 		switch (opt) {
 		case 't':
 			optcount++;
-			if (optcount > 1) {
-				usage(argv[0]);
-			}
 			strncpy((char *) filename, optarg, MAX_FILENAME_SIZE);
 			*type = TRACE_FILE;
 			break;
@@ -95,24 +92,15 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			break;
 		case 'i':
 			optcount++;
-			if (optcount > 1) {
-				usage(argv[0]);
-			}
 			strncpy((char *) filename, optarg, MAX_FILENAME_SIZE);
 			*type = LIVE_INTERFACE;
 			break;
 		case 'f':
 			optcount++;
-			if (optcount <= 1) {
-				usage(argv[0]);
-			}
 			strncpy((char *) file_string, optarg, MAX_FILENAME_SIZE);
 			break;
 		case 'r':
 			optcount++;
-			if (optcount <= 1) {
-				usage(argv[0]);
-			}
 			strncpy((char *) redis_string, optarg, MAX_FILENAME_SIZE);
 			break;
 		case 'l':
@@ -266,7 +254,6 @@ static inline void termination(){
 	mmt_mem_free( proto_atts );
 
 	mmt_mem_free( rules_arr );
-	mmt_mem_print_info();
 }
 
 void signal_handler_seg(int signal_type) {

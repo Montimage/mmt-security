@@ -273,8 +273,8 @@ static inline void _reset_engine_for_instance( _rule_engine_t *_engine, fsm_t *f
 					if( ptr != NULL )
 						ptr->prev = node->prev;
 				}
-				mmt_mem_free( fsm_ind );//node->data
-				mmt_mem_free( node );
+				mmt_mem_force_free( fsm_ind );//node->data
+				mmt_mem_force_free( node );
 			}
 			node = ptr;
 		}
@@ -384,6 +384,7 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
 	default:
 		break;
 	}
+
 	return VERDICT_UNKNOWN;
 }
 
@@ -428,14 +429,11 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 		//verify instances that are waiting for event_id
 		node = _engine->tmp_fsm_by_expecting_event_id[ event_id ];
 
-		//these fsm waiting for event #event_id have been checked (also their timeout)
-		_engine->tmp_fsm_by_expecting_event_id[ event_id ] = NULL;
-
 		//for each instance
 		while( node != NULL ){
 
 			fsm_ind = (_fsm_tran_index_t *)node->data;
-			node = node->next;
+			node    = node->next;
 
 			//put this after node = node->next
 			// because #node can be freed( or inserted a new node) in the function #_fire_transition

@@ -18,7 +18,8 @@ typedef struct mmt_array_struct{
 /**
  * Create an array of #elements_count elements. Each element is a void*
  */
-static inline mmt_array_t* mmt_array_init( size_t elements_count ){
+static inline __attribute__((always_inline))
+mmt_array_t* mmt_array_init( size_t elements_count ){
 	size_t i;
 	mmt_array_t *ret = mmt_mem_alloc( sizeof( mmt_array_t) + elements_count * sizeof( void* ) );
 
@@ -31,7 +32,8 @@ static inline mmt_array_t* mmt_array_init( size_t elements_count ){
 	return ret;
 }
 
-static inline mmt_array_t* mmt_array_clone( const mmt_array_t *array, void* (*clone_data_fn)(void *) ){
+static inline __attribute__((always_inline))
+mmt_array_t* mmt_array_clone( const mmt_array_t *array, void* (*clone_data_fn)(void *) ){
 	size_t i;
 	mmt_array_t *ret = mmt_array_init( array->elements_count );
 
@@ -44,7 +46,8 @@ static inline mmt_array_t* mmt_array_clone( const mmt_array_t *array, void* (*cl
 	return ret;
 }
 
-static inline mmt_array_t* mmt_array_alter_elements( mmt_array_t *array, void* (*alter_data_fn)(void *) ){
+static inline __attribute__((always_inline))
+mmt_array_t* mmt_array_alter_elements( mmt_array_t *array, void* (*alter_data_fn)(void *) ){
 	size_t i;
 
 	if( alter_data_fn != NULL )
@@ -54,7 +57,8 @@ static inline mmt_array_t* mmt_array_alter_elements( mmt_array_t *array, void* (
 	return array;
 }
 
-static inline void mmt_array_free( mmt_array_t *array, void (*free_data_fn)(void *) ){
+static inline __attribute__((always_inline))
+void mmt_array_free( mmt_array_t *array, void (*free_data_fn)(void *) ){
 	size_t i;
 	if( free_data_fn != NULL )
 		for( i=0; i<array->elements_count; i++ )

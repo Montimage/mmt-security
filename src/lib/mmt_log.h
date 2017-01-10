@@ -31,7 +31,6 @@ void mmt_log( log_level_t level, const char *format, ... )
 #define mmt_error( ... ) mmt_log( ERROR, __VA_ARGS__ )
 
 
-
 #ifdef DEBUG_MODE
 	#define mmt_debug(...)   do{ printf("%s:%d ", __FILE__, __LINE__); mmt_log( DEBUG, __VA_ARGS__ ); fflush( stdout ); } while(0)
 	#define mmt_halt( ... )  do{ printf("%s:%d ", __FILE__, __LINE__); mmt_log( HALT, __VA_ARGS__ ); }while( 0 )

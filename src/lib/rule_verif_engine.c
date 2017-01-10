@@ -23,6 +23,7 @@ typedef struct _rule_engine_struct{
 	size_t total_instances_count;
 	//number of instances
 	size_t instances_count;
+
 }_rule_engine_t;
 
 /**
@@ -51,6 +52,7 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 	uint16_t event_id;
 	const fsm_transition_t *tran;
 	const fsm_state_t *state = fsm_get_current_state( fsm );
+	_fsm_tran_index_t *fsm_ind;
 
 	//from a state: 2 outgoing transitions have 2 different events
 #ifdef DEBUG_MODE
@@ -79,10 +81,10 @@ static inline void _set_expecting_events_id( _rule_engine_t *_engine, fsm_t *fsm
 
 		//if event having #event_id occurs,
 		// then #fsm will fire the i-th transition from its current state
-		_engine->fsm_by_expecting_event_id[ event_id ] =
-				insert_node_to_link_list( _engine->fsm_by_expecting_event_id[ event_id],
-													_create_fsm_tran_index_t( i, fsm, counter ) );
+		fsm_ind = _create_fsm_tran_index_t( i, fsm, counter );
 
+		_engine->fsm_by_expecting_event_id[ event_id ] =
+				insert_node_to_link_list( _engine->fsm_by_expecting_event_id[ event_id], fsm_ind );
 	}
 }
 
@@ -149,7 +151,7 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 	//add fsm_bootstrap to the first element of
 	_engine->fsm_by_instance_id[ 0 ] = insert_node_to_link_list(_engine->fsm_by_instance_id[ 0 ], _engine->fsm_bootstrap );
 
-	_engine->valid_execution_trace = NULL;
+	_engine->valid_execution_trace = mmt_array_init( _engine->max_events_count );
 
 	_engine->total_instances_count = 0;
 	return (rule_engine_t *) _engine;
@@ -183,11 +185,18 @@ void rule_engine_free( rule_engine_t *engine ){
 }
 
 static inline void _store_valid_execution_trace( _rule_engine_t *_engine, fsm_t *fsm ){
-	//free old trace if need
-	if( likely( _engine->valid_execution_trace != NULL ))
-		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );
+	size_t i;
+	const mmt_array_t *array = fsm_get_execution_trace( fsm );
 
-	_engine->valid_execution_trace = mmt_array_clone( fsm_get_execution_trace( fsm ), (void*) retain_message_t );
+#ifdef DEBUG_MODE
+	mmt_assert( array->elements_count == _engine->max_events_count, "Impossible" );
+#endif
+
+	for( i=0; i<_engine->max_events_count; i++ ){
+		//free old message
+		free_message_t( _engine->valid_execution_trace->data[i] );
+		_engine->valid_execution_trace->data[i] = retain_message_t( array->data[i] );
+	}
 }
 
 /**
@@ -197,6 +206,7 @@ const mmt_array_t* rule_engine_get_valide_trace( const rule_engine_t *engine ){
 #ifdef DEBUG_MODE
 	mmt_assert( engine != NULL, "engine cannot be null" );
 #endif
+
 	_rule_engine_t *_engine = ( _rule_engine_t *)engine;
 	return _engine->valid_execution_trace;
 }
@@ -240,6 +250,7 @@ static inline void _reset_engine_for_fsm( _rule_engine_t *_engine, fsm_t *fsm ){
 //	_engine->total_instances_count -= count_nodes_from_link_list( _engine->fsm_by_instance_id[ fsm_id ] );
 	//mmt_assert( _engine->total_instances_count >= 0, "Cannot be negative. %s:%d", __FILE__, __LINE__ );
 	free_link_list_and_data( _engine->fsm_by_instance_id[ fsm_id ], (void *)fsm_free );
+
 	//put it to be available for the other
 	_engine->fsm_by_instance_id[ fsm_id ] = NULL;
 }
@@ -258,7 +269,7 @@ static inline void _reset_engine_for_instance( _rule_engine_t *_engine, fsm_t *f
 	for( i=0; i<_engine->max_events_count; i++ ){
 		node = _engine->fsm_by_expecting_event_id[ i ];
 		while( node != NULL ){
-			ptr = node->next;
+			ptr     = node->next;
 			fsm_ind = (_fsm_tran_index_t *) node->data;
 
 			//found a node containing #fsm
@@ -299,7 +310,7 @@ static inline uint16_t _find_an_available_id( _rule_engine_t *_engine ){
 }
 
 static inline
-enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_id, message_t *message_data, void *event_data, _rule_engine_t *_engine ){
+enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_id, message_t *message_data, void *event_data, _rule_engine_t *_engine, link_node_t *node ){
 	fsm_t *fsm = fsm_ind->fsm;
 	//fire a specific transition of the current state of #node->fsm
 	//the transition has index = #node->tran_index
@@ -342,11 +353,12 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
 
 			//remove from old list
 			//=> the #fsm_ind->fsm does not wait for the #event_id any more
-			_engine->fsm_by_expecting_event_id[ event_id ] =
-					remove_node_from_link_list( _engine->fsm_by_expecting_event_id[ event_id ], (void *)fsm_ind );
+			_engine->fsm_by_expecting_event_id[ event_id ] = remove_link_node_from_link_list( node );
 
 			//free the node
-			mmt_mem_free( fsm_ind );
+			mmt_mem_force_free( node );
+			//free node->data
+			mmt_mem_force_free( fsm_ind );
 		}
 	}
 
@@ -401,7 +413,7 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	void *data    = _engine->rule_info->convert_message( message );
 	uint64_t hash = _engine->rule_info->hash_message( data );
 	uint8_t event_id;
-	link_node_t *node;
+	link_node_t *node, *node_ptr;
 	_fsm_tran_index_t *fsm_ind;
 	enum verdict_type ret;
 
@@ -432,17 +444,18 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 		//for each instance
 		while( node != NULL ){
 
-			fsm_ind = (_fsm_tran_index_t *)node->data;
-			node    = node->next;
+			fsm_ind  = (_fsm_tran_index_t *)node->data;
+			node_ptr = node;
+			node     = node->next;
 
 			//put this after node = node->next
 			// because #node can be freed( or inserted a new node) in the function #_fire_transition
-			ret = _fire_transition( fsm_ind, event_id, message, data, _engine );
+			ret = _fire_transition( fsm_ind, event_id, message, data, _engine, node_ptr );
 
 			//get only one verdict per packet
 			if( ret != VERDICT_UNKNOWN ){
 				//must free #data before returning
-				mmt_mem_free( data );
+				mmt_mem_force_free( data );
 				return ret;
 			}
 		}
@@ -455,8 +468,9 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 
 	while( node != NULL ){
 
-		fsm_ind = (_fsm_tran_index_t *)node->data;
-		node    = node->next;
+		fsm_ind  = (_fsm_tran_index_t *)node->data;
+		node_ptr = node;
+		node     = node->next;
 
 		//check whether the #fsm_ind was verified above
 		if( fsm_ind->counter == message->counter )
@@ -464,17 +478,17 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 
 		//put this after node = node->next
 		// because #node can be freed( or inserted a new node) in the function #_fire_transition
-		ret = _fire_transition( fsm_ind, FSM_EVENT_TYPE_TIMEOUT, message, data, _engine );
+		ret = _fire_transition( fsm_ind, FSM_EVENT_TYPE_TIMEOUT, message, data, _engine, node_ptr );
 
 		//get only one verdict per packet
 		if( ret != VERDICT_UNKNOWN ){
 			//must free #data before returning
-			mmt_mem_free( data );
+			mmt_mem_force_free( data );
 			return ret;
 		}
 	}
 
-	mmt_mem_free( data );
+	mmt_mem_force_free( data );
 	//data was not handled by any instance
 	return VERDICT_UNKNOWN;
 }

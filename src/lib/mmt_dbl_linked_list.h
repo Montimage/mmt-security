@@ -87,6 +87,15 @@ link_node_t *insert_node_to_link_list( link_node_t *head, void *data ){
 	return new_node;
 }
 
+static inline
+link_node_t *remove_link_node_from_link_list( const link_node_t *node ){
+	if( node->prev == NULL )
+		return node->next;
+	node->prev->next = node->next;
+	node->next->prev = node->prev;
+	return node->prev;
+}
+
 /**
  * Remove a node having #data from the list.
  * If there is no node has #data, the function does not change the list.
@@ -101,6 +110,7 @@ link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
 	if( ptr == NULL )
 		return head;
 
+/*
 	if( ptr == head ){
 		head = head->next;
 		if( head != NULL )
@@ -114,9 +124,11 @@ link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
 
 	if( ptr->next != NULL )
 		ptr->next->prev = ptr->prev;
+*/
+	head = remove_link_node_from_link_list( ptr );
 
 	//free this node
-	mmt_mem_free( ptr );
+	mmt_mem_force_free( ptr );
 
 	return head;
 }

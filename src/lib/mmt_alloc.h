@@ -21,14 +21,12 @@
 
 
 typedef struct mmt_memory_struct{
-	size_t ref_count;
+	size_t  ref_count;
 	size_t  size;
 	void *  data;
 }mmt_memory_t;
 
 #define mmt_mem_revert( x ) (mmt_memory_t *) ( (uint8_t*)x - sizeof( mmt_memory_t ) )
-
-const static size_t size_of_mmt_memory_t = sizeof( mmt_memory_t );
 
 /**
  * A wrapper of malloc
@@ -49,7 +47,7 @@ void *mmt_mem_alloc(size_t size){
 	mmt_assert( size > 0, "Size must not be negative" );
 #endif
 
-	size = size_of_mmt_memory_t + size + 1;
+	size = sizeof( mmt_memory_t ) + size + 1;
 	mmt_memory_t *mem = malloc( size );
 
 	//quit if not enough
@@ -99,8 +97,7 @@ void mmt_mem_force_free( void *x ){
 	mmt_assert( x != NULL, "x (%p) must not be NULL", x );
 #endif
 
-	mmt_memory_t *mem = mmt_mem_revert( x );
-   free( mem );
+   free( mmt_mem_revert( x ) );
 }
 
 /**
@@ -129,6 +126,7 @@ size_t mmt_mem_size( const void *x ){
 static inline
 void* mmt_mem_dup( const void *ptr, size_t size ){
 	__check_null( ptr, NULL );  // nothing to do
+	if( unlikely( size == 0)) return NULL;
 
 	void *ret = mmt_mem_alloc( size );
 	memcpy( ret, ptr, size );

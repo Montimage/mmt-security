@@ -62,8 +62,11 @@ static message_element_t *proto_atts    = NULL;
 //id of socket
 static int socket_server                = 0;
 
+static pid_t parent_pid = 0;
+
 static char output_file_string[MAX_FILENAME_SIZE + 1]  = {0};
 static char output_redis_string[MAX_FILENAME_SIZE + 1] = {0};
+
 
 static inline double time_diff(struct timeval t1, struct timeval t2) {
 	return (double)(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)/1000000.0;
@@ -223,11 +226,11 @@ static inline size_t receiving_reports( int sock ) {
 			el_data_type = _get_data_type( el_ptr->proto_id, el_ptr->att_id );
 
 			//special processing for these data types
-			if( el_data_type == MMT_HEADER_LINE || el_data_type == MMT_DATA_POINTER){
+			if( likely( el_data_type == MMT_HEADER_LINE || el_data_type == MMT_DATA_POINTER )){
 				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
 				el_ptr->data_type = STRING;
 			}
-			else if( el_data_type != -1 )
+			else if( likely( el_data_type != -1 ))
 				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
 			else{
 				el_ptr->data      = NULL;
@@ -278,23 +281,33 @@ void signal_handler_seg(int signal_type) {
 void signal_handler(int signal_type) {
 	static volatile int times_counter = 0;
 	size_t alerts_count;
+	pid_t pid = getpid();
+	int status;
 
 	close( socket_server );
 
 	if( times_counter >= 1 ) exit( signal_type );
 	times_counter ++;
 
-	mmt_error( "Interrupted proc %d by signal %d", getpid(), signal_type );
+	if( pid == parent_pid )
+		mmt_error( "Interrupted proc %d by signal %d", pid, signal_type );
 
 	if( signal_type == SIGINT ){
-		mmt_error("Releasing resource ... (press Ctrl+c again to exit immediately)");
+		if( pid == parent_pid )
+			mmt_error("Releasing resource ... (press Ctrl+c again to exit immediately)");
+
 		signal(SIGINT, signal_handler);
 	}
 	sleep( 1 );//waiting for everything finish
 	alerts_count = termination();
 
-	if( verbose )
-		mmt_info("Process %d generated %zu alerts", getpid(), alerts_count );
+	//print only for child process
+	if( verbose && parent_pid != pid )
+		mmt_info("Process %d generated %zu alerts", pid, alerts_count );
+
+	//parent waits for all children
+	if( parent_pid == pid ) wait( &status );
+
 	exit( signal_type );
 }
 
@@ -333,6 +346,7 @@ int main( int argc, char** argv ) {
 
 	mmt_sec_callback _print_output;
 
+	parent_pid = getpid();
 
 	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count, &cores_count, &core_mask, &verbose );
 
@@ -390,13 +404,17 @@ int main( int argc, char** argv ) {
 	 * process will go in sleep mode and will wait
 	 * for the incoming connection
 	 */
-	listen( socket_server, 5 );//int listen(int socket, int backlog);  limit the number of outstanding connections in the socket's listen queue
+	listen( socket_server, 5 );//limit the number of outstanding connections in the socket's listen queue
 
 
-	if( verbose )
-		mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on port %d\n",
-			mmt_sec_get_version_info(), rules_count, threads_count, port_number );
-
+	if( verbose ){
+		if( is_unix_socket == NO )
+			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on port %d\n",
+					mmt_sec_get_version_info(), rules_count, threads_count, port_number );
+		else
+			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on \"%s\"\n",
+					mmt_sec_get_version_info(), rules_count, threads_count, un_domain_name );
+	}
 	clients_count = 0;
 	core_mask_ptr = NULL;
 

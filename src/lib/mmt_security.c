@@ -320,7 +320,11 @@ inline char* convert_execution_trace_to_json_string( const mmt_array_t *trace, c
 int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type ){
 	double number = 0;
 	const uint16_t buffer_size = 100;
+	char buffer[101];
+
 	uint16_t size;
+	char *new_string;
+
 	//does not exist data for this proto_id and att_id
 	__check_null( data, 1 );
 
@@ -365,28 +369,28 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		return 0;
 
 	case MMT_DATA_MAC_ADDR: /**< ethernet mac address constant value */
-//		new_string = (char *) data;
-//		size = snprintf(buffer , buffer_size, "%02x:%02x:%02x:%02x:%02x:%02x",
-//				new_string[0], new_string[1], new_string[2], new_string[3], new_string[4], new_string[5] );
+		new_string = (char *) data;
+		size = snprintf(buffer , buffer_size, "%02x:%02x:%02x:%02x:%02x:%02x",
+				new_string[0], new_string[1], new_string[2], new_string[3], new_string[4], new_string[5] );
 		*new_type = STRING;
-//		*new_data = mmt_mem_dup( buffer, size );
-		*new_data = mmt_mem_dup( data, 6 );
+		*new_data = mmt_mem_dup( buffer, size );
+//		*new_data = mmt_mem_dup( data, 6 );
 		return 0;
 
 	case MMT_DATA_IP_ADDR: /**< ip address constant value */
-		//inet_ntop(AF_INET, data, buffer, buffer_size );
+		inet_ntop(AF_INET, data, buffer, buffer_size );
 		//mmt_debug( "IPv4: %s", string );
 		*new_type = STRING;
-		//*new_data = mmt_mem_dup( buffer, strlen( buffer));
-		*new_data = mmt_mem_dup( data, 4 );
+		*new_data = mmt_mem_dup( buffer, strlen( buffer));
+//		*new_data = mmt_mem_dup( data, 4 );
 		return 0;
 
 	case MMT_DATA_IP6_ADDR: /**< ip6 address constant value */
-//		inet_ntop(AF_INET6, data, buffer, buffer_size );
+		inet_ntop(AF_INET6, data, buffer, buffer_size );
 		//mmt_debug( "IPv6: %s", string );
 		*new_type = STRING;
-//		*new_data = mmt_mem_dup( buffer, strlen( buffer));
-		*new_data = mmt_mem_dup( data, 6 );
+		*new_data = mmt_mem_dup( buffer, strlen( buffer));
+//		*new_data = mmt_mem_dup( data, 6 );
 		return 0;
 
 	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
@@ -514,7 +518,7 @@ void mmt_sec_print_rules_info(){
 	size = strlen( string );
 	if( size > 0 ) string[ size - 1 ] = '\0';
 
-	printf("\n\nProtocols and their attributes using in these rules:\n\t %s\n\n", string );
+	printf("\n\nProtocols and their attributes used in these rules:\n\t %s\n\n", string );
 
 	mmt_mem_free( rules_arr );
 }

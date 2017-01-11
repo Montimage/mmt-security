@@ -88,7 +88,7 @@ link_node_t *insert_node_to_link_list( link_node_t *head, void *data ){
 }
 
 static inline
-link_node_t *remove_link_node_from_link_list( const link_node_t *node ){
+link_node_t *remove_link_node_from_its_link_list( const link_node_t *node ){
 	if( node->prev == NULL )
 		return node->next;
 	node->prev->next = node->next;
@@ -125,7 +125,7 @@ link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
 	if( ptr->next != NULL )
 		ptr->next->prev = ptr->prev;
 */
-	head = remove_link_node_from_link_list( ptr );
+	head = remove_link_node_from_its_link_list( ptr );
 
 	//free this node
 	mmt_mem_force_free( ptr );

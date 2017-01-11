@@ -55,6 +55,10 @@ typedef struct _mmt_sec_handler_struct{
 
 	//number of generated alerts
 	size_t alerts_count;
+
+#ifdef DEBUG_MODE
+	size_t messages_count;
+#endif
 }_mmt_sec_handler_t;
 
 
@@ -135,6 +139,10 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 
 	_get_unique_proto_attts( handler );
 
+#ifdef DEBUG_MODE
+	handler->messages_count = 0;
+#endif
+
 	return (mmt_sec_handler_t *)handler;
 }
 
@@ -150,6 +158,10 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 
 	alerts_count = _handler->alerts_count;
 
+#ifdef DEBUG_MODE
+	mmt_debug("received %zu messages and generated %zu alerts",
+			_handler->messages_count, _handler->alerts_count );
+#endif
 	//free data elements of _handler
 	for( i=0; i<_handler->rules_count; i++ ){
 		rule_engine_free( _handler->engines[i] );
@@ -176,6 +188,10 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	const mmt_array_t *execution_trace;
 
 	_handler = (_mmt_sec_handler_t *)handler;
+
+#ifdef DEBUG_MODE
+	_handler->messages_count ++;
+#endif
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){

@@ -239,8 +239,8 @@ static inline void _reset_engine_for_fsm( _rule_engine_t *_engine, fsm_t *fsm ){
 					if( ptr != NULL )
 						ptr->prev = node->prev;
 				}
-				mmt_mem_free( fsm_ind );//node->data
-				mmt_mem_free( node );
+				mmt_mem_force_free( fsm_ind );//node->data
+				mmt_mem_force_free( node );
 			}
 			node = ptr;
 		}
@@ -300,7 +300,7 @@ static inline void _reset_engine_for_instance( _rule_engine_t *_engine, fsm_t *f
 
 static inline uint16_t _find_an_available_id( _rule_engine_t *_engine ){
 	size_t i;
-	for( i=0; i<_engine->max_instances_count; i++ )
+	for( i=1; i<_engine->max_instances_count; i++ )
 		if( _engine->fsm_by_instance_id[ i ] == NULL ){
 			return i;
 		}
@@ -310,13 +310,14 @@ static inline uint16_t _find_an_available_id( _rule_engine_t *_engine ){
 }
 
 static inline
-enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_id, message_t *message_data, void *event_data, _rule_engine_t *_engine, link_node_t *node ){
+enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message_t *message_data, void *event_data, _rule_engine_t *_engine ){
+	_fsm_tran_index_t *fsm_ind = node->data;
 	fsm_t *fsm = fsm_ind->fsm;
 	//fire a specific transition of the current state of #node->fsm
 	//the transition has index = #node->tran_index
 	enum fsm_handle_event_value val;
 	fsm_t *new_fsm = NULL;
-	uint16_t new_fsm_id = 0;
+	uint16_t new_fsm_id;
 	enum verdict_type verdict;
 
 	//mmt_debug( "  transition to verify: %zu", fsm_ind->index );
@@ -353,7 +354,7 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
 
 			//remove from old list
 			//=> the #fsm_ind->fsm does not wait for the #event_id any more
-			_engine->fsm_by_expecting_event_id[ event_id ] = remove_link_node_from_link_list( node );
+			_engine->fsm_by_expecting_event_id[ event_id ] = remove_link_node_from_its_link_list( node );
 
 			//free the node
 			mmt_mem_force_free( node );
@@ -366,7 +367,7 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
 	case FSM_STATE_CHANGED:
 		//mmt_debug( "FSM_STATE_CHANGED" );
 		//add to new list(s) that waiting for a new event
-		_set_expecting_events_id( _engine, fsm, new_fsm_id != 0,  message_data->counter );
+		_set_expecting_events_id( _engine, fsm, new_fsm != NULL,  message_data->counter );
 		break;
 
 	//a final state that is either valid state or invalid one
@@ -389,9 +390,11 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
 		_reset_engine_for_instance( _engine, fsm );
 		break;
 
+#ifdef DEBUG_MODE
 	case FSM_ERR_ARG:
 		mmt_halt( "FSM_ERR_ARG" );
 		break;
+#endif
 
 	default:
 		break;
@@ -405,7 +408,7 @@ enum verdict_type _fire_transition( _fsm_tran_index_t *fsm_ind, uint16_t event_i
  */
 enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message ){
 #ifdef DEBUG_MODE
-	mmt_assert( engine != NULL, "engine cannot be null" );
+	mmt_assert( engine != NULL,  "engine cannot be null" );
 	mmt_assert( message != NULL, "message cannot be null" );
 #endif
 
@@ -434,11 +437,12 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
 	//get from hash table the list of events to be verified
 	for( event_id=0; event_id<_engine->max_events_count; event_id++ ){
+
 		//this event does not fire
 		if(  BIT_CHECK( hash, event_id ) == 0 ) continue;
 		//mmt_debug( "Event_id : %d", event_id );
 
-		//verify instances that are waiting for event_id
+		//verify fsm instances that are waiting for event_id
 		node = _engine->tmp_fsm_by_expecting_event_id[ event_id ];
 
 		//for each instance
@@ -450,7 +454,7 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 
 			//put this after node = node->next
 			// because #node can be freed( or inserted a new node) in the function #_fire_transition
-			ret = _fire_transition( fsm_ind, event_id, message, data, _engine, node_ptr );
+			ret = _process_a_node( node_ptr, event_id, message, data, _engine );
 
 			//get only one verdict per packet
 			if( ret != VERDICT_UNKNOWN ){
@@ -478,7 +482,7 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 
 		//put this after node = node->next
 		// because #node can be freed( or inserted a new node) in the function #_fire_transition
-		ret = _fire_transition( fsm_ind, FSM_EVENT_TYPE_TIMEOUT, message, data, _engine, node_ptr );
+		ret = _process_a_node( node_ptr, FSM_EVENT_TYPE_TIMEOUT, message, data, _engine );
 
 		//get only one verdict per packet
 		if( ret != VERDICT_UNKNOWN ){

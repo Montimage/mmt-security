@@ -45,7 +45,7 @@ typedef struct fsm_struct{
    /**
     * Trace of running FSM
     */
-   mmt_array_t *events_trace; //map: <event_id : event_data>
+   mmt_array_t *events_trace;
 
    mmt_array_t *messages_trace;
 }_fsm_t;

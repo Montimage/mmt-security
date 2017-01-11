@@ -171,7 +171,7 @@ void ring_free( lock_free_spsc_ring_t *q );
  *
  */
 static inline void ring_wait_for_pushing( lock_free_spsc_ring_t *q ){
-	nanosleep( (const struct timespec[]){{0, 1000L}}, NULL );
+	nanosleep( (const struct timespec[]){{0, 50000L}}, NULL );
 }
 
 

@@ -32,6 +32,7 @@ typedef struct _mmt_smp_sec_handler_struct{
 	//one buffer per thread
 	lock_free_spsc_ring_t **messages_buffers;
 
+	uint8_t *hash_array;
 }_mmt_smp_sec_handler_t;
 
 struct _thread_arg{
@@ -114,7 +115,7 @@ size_t mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately
 	//free data elements of _handler
 	for( i=0; i<_handler->threads_count; i++ ){
 		alerts_count += mmt_sec_unregister( _handler->mmt_sec_handlers[i] );
-		mmt_debug("Thread %zu generated %zu alerts", i, alerts_count );
+//		mmt_debug("Thread %zu generated %zu alerts", i, alerts_count );
 	}
 
 	for( i=0; i<_handler->threads_count; i++ )
@@ -126,6 +127,9 @@ size_t mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately
 	mmt_mem_free( _handler->threads_id );
 
 	mmt_mem_free( _handler->proto_atts_array );
+
+	mmt_mem_free( _handler->hash_array );
+
 	mmt_mem_free( _handler );
 	return alerts_count;
 }
@@ -249,6 +253,8 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 		mmt_assert( ret == 0, "Cannot create thread %zu", (i+1) );
 	}
 
+	handler->hash_array = mmt_mem_alloc( handler->threads_count );
+
 	return (mmt_smp_sec_handler_t *)handler;
 }
 
@@ -258,7 +264,8 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg ){
 	_mmt_smp_sec_handler_t *_handler;
 	int ret;
-	lock_free_spsc_ring_t **ring;
+	lock_free_spsc_ring_t *ring;
+	size_t total, i;
 
 #ifdef DEBUG_MODE
 	mmt_assert( handler != NULL, "handler cannot be null");
@@ -272,19 +279,24 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 	if( likely( _handler->threads_count > 1 ))
 		msg = retain_many_message_t( msg,  _handler->threads_count - 1 );
 
-	for( ring = _handler->messages_buffers; ring < &(_handler->messages_buffers[ _handler->threads_count ]); ring++ ){
-		//insert msg to a buffer
-		do{
-			ret = ring_push( *ring, msg );
+	//all threads have not been yet put the message
+	memset( _handler->hash_array, 0, _handler->threads_count );
 
-			if( ret == RING_SUCCESS )
-				break;
-			else
-				//TODO: to refine,
-				// e.g., omit the current ring and continue for next rules
-				// then, go back to the current one after processing the last rule
-				ring_wait_for_poping( *ring );
-		}while( 1 );
+	total = 0;
+	while( total < _handler->threads_count ){
+		for( i=0; i<_handler->threads_count; i++ ){
+			//if ring i-th has been put the message
+			if( unlikely( _handler->hash_array[ i ] == 1 ))
+				continue;
+
+			//insert msg to a buffer
+			// if we cannot insert (e.g., ring is full), we omit the current ring and continue for next rules
+			// then, go back to the current one after processing the last rule
+			if( ring_push( _handler->messages_buffers[ i ], msg ) == RING_SUCCESS ){
+				total ++;
+				_handler->hash_array[ i ] = 1;
+			}
+		}
 	}
 }
 

@@ -362,6 +362,15 @@ int main( int argc, char** argv ) {
 	//init mmt-sec to verify the rules
 	_sec_handler.threads_count = threads_count;
 
+	if( verbose ){
+		if( is_unix_socket == NO )
+			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on port %d\n",
+					mmt_sec_get_version_info(), rules_count, threads_count, port_number );
+		else
+			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on \"%s\"\n",
+					mmt_sec_get_version_info(), rules_count, threads_count, un_domain_name );
+	}
+
 	/* create internet socket */
 	if( is_unix_socket == NO ){
 		socket_server = socket( AF_INET, SOCK_STREAM, 0 );
@@ -407,14 +416,7 @@ int main( int argc, char** argv ) {
 	listen( socket_server, 5 );//limit the number of outstanding connections in the socket's listen queue
 
 
-	if( verbose ){
-		if( is_unix_socket == NO )
-			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on port %d\n",
-					mmt_sec_get_version_info(), rules_count, threads_count, port_number );
-		else
-			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on \"%s\"\n",
-					mmt_sec_get_version_info(), rules_count, threads_count, un_domain_name );
-	}
+
 	clients_count = 0;
 	core_mask_ptr = NULL;
 

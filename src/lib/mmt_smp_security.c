@@ -14,7 +14,7 @@
 #include "system_info.h"
 #include "lock_free_spsc_ring.h"
 
-#define RING_SIZE 10000
+#define RING_SIZE 20000
 
 //implemented in mmt_security.c
 typedef struct _mmt_smp_sec_handler_struct{

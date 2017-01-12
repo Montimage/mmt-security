@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <stdatomic.h>
 #include <time.h>
+#include <semaphore.h>
 #include "mmt_lib.h"
 
 #define RING_EMPTY  -1
@@ -34,6 +35,7 @@ typedef struct lock_free_spsc_ring_struct
 
     //pthread_mutex_t mutex_wait_pushing, mutex_wait_poping;
     //pthread_cond_t cond_wait_pushing, cond_wait_poping;
+    sem_t sem_wait_pushing, sem_wait_poping;
 
 }lock_free_spsc_ring_t;
 
@@ -80,6 +82,8 @@ static inline int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
 	q->_data[ h ] = val;
 
 	atomic_store_explicit( &q->_head, (h +1) % q->_size, memory_order_release );
+
+	sem_post( &q->sem_wait_pushing );
 
 	return RING_SUCCESS;
 }
@@ -171,7 +175,12 @@ void ring_free( lock_free_spsc_ring_t *q );
  *
  */
 static inline void ring_wait_for_pushing( lock_free_spsc_ring_t *q ){
-	nanosleep( (const struct timespec[]){{0, 50000L}}, NULL );
+//	nanosleep( (const struct timespec[]){{0, 50000L}}, NULL );
+	if( unlikely( sem_trywait( &q->sem_wait_pushing) == 0 ))
+		return; //already lock
+	else{
+		sem_wait( &q->sem_wait_pushing );
+	}
 }
 
 

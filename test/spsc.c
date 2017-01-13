@@ -24,7 +24,7 @@ void *_consumer_fn( void *arg ){
 	_user_data_t *u_data = (_user_data_t * ) arg;
 
 	lock_free_spsc_ring_t *ring = u_data->ring;
-	void *ptr;
+	void **arr = NULL;
 	int ret;
 
 	size_t total_cpu = get_number_of_online_processors();
@@ -37,22 +37,19 @@ void *_consumer_fn( void *arg ){
 	}
 
 	do{
-		do{
-			ret = ring_pop( ring, &ptr );
-			if( likely( ret == RING_SUCCESS ))
+		ret = ring_pop_burst( ring, &arr );
+		if( unlikely( ret == 0 ))
+			ring_wait_for_pushing( ring );
+		else{
+			for( i=0; i<ret; i++ )
+				total += (size_t) arr[i];
+			if( unlikely( arr[ret - 1] == NULL )){
+				mmt_mem_force_free( arr );
 				break;
+			}
 			else
-				ring_wait_for_pushing( ring );
-		}while( 1 );
-
-		if( likely (ptr != NULL ))
-			total += ( size_t )ptr;
-		else
-			break;
-
-		//small calculation
-		//for( i=0; i<1000; i++ ) total += i;
-
+				mmt_mem_force_free( arr );
+		}
 	}while( 1 );
 	mmt_info("Thread %2zu (pid = %d): total from 1 to %'zu = %'zu", u_data->index, gettid(), u_data->total, total );
 	mmt_mem_free( u_data );
@@ -105,7 +102,7 @@ int main( int argc, char **args ){
 
 	gettimeofday( &start_time, NULL );
 	//producer
-	for( j=0; j<loops_count; j++ ){
+	for( j=1; j<loops_count; j++ ){
 		for( i=0; i< consumers_count; i++ ){
 			do{
 				ret = ring_push( rings[ i ], (void *) (j + 1) );

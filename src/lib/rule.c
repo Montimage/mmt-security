@@ -408,9 +408,6 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 	mmt_assert( (rule.value != RULE_VALUE_COMPUTE || (rule.context != NULL && rule.trigger != NULL )),
 			"Error 13g: Require context and trigger for rule %d", rule.id );
 
-	//TODO: avoid duplicate event_id
-	//TODO: avoid variable references to non-exist event
-
 	ret = mmt_mem_dup( &rule, sizeof( rule_t));
 	return ret;
 }
@@ -484,8 +481,6 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, 
 
 	// Cleanup function for the XML library.
 	xmlCleanupParser();
-
-	//TODO: avoid duplicate rule_id
 
 	//copy result to a new array
 	*properties_arr = mmt_mem_dup( &array, rules_count * sizeof( rule_t *) );

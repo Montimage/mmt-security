@@ -227,7 +227,7 @@ static inline size_t receiving_reports( int sock ) {
 
 			//special processing for these data types
 			if( likely( el_data_type == MMT_HEADER_LINE || el_data_type == MMT_DATA_POINTER )){
-				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
+				el_ptr->data      = mmt_mem_force_dup( &buffer[index], el_data_length );
 				el_ptr->data_type = STRING;
 			}
 			else if( likely( el_data_type != -1 ))
@@ -358,6 +358,8 @@ int main( int argc, char** argv ) {
 
 	//get all available rules
 	rules_count = mmt_sec_get_rules_info( &rules_arr );
+
+	mmt_assert( rules_count > 0, "No rule to verify.");
 
 	//init mmt-sec to verify the rules
 	_sec_handler.threads_count = threads_count;

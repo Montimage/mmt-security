@@ -95,7 +95,7 @@ void fsm_reset( fsm_t *fsm ){
 
 static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
 
-	_fsm_t *new_fsm = mmt_mem_dup( _fsm, sizeof( _fsm_t) );
+	_fsm_t *new_fsm = mmt_mem_force_dup( _fsm, sizeof( _fsm_t) );
 
 	new_fsm->events_trace    = mmt_array_clone( _fsm->events_trace,   mmt_mem_retain );
 	new_fsm->messages_trace  = mmt_array_clone( _fsm->messages_trace, (void *)retain_message_t );

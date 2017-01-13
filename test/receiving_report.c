@@ -51,8 +51,8 @@ typedef struct report_element {
 } report_element_t;
 
 typedef struct report {
-	int flag; //TODO (to know if we can delete node or not)
-	int counter; //TODO (it can be report_ID and acts like the sequence)
+	int flag;
+	int counter;
 	size_t elements_count;
 	struct timeval timestamp;
 	report_element_t *report_elements;

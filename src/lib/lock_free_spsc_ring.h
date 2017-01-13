@@ -83,7 +83,7 @@ static inline int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
 
 	atomic_store_explicit( &q->_head, (h +1) % q->_size, memory_order_release );
 
-	sem_post( &q->sem_wait_pushing );
+//	sem_post( &q->sem_wait_pushing );
 
 	return RING_SUCCESS;
 }
@@ -137,7 +137,7 @@ static inline int  ring_pop ( lock_free_spsc_ring_t *q, void **val ){
  * 	Therefore one need to free this array by calling mmt_mem_free( val_arr ) after
  * 	using the array.
  */
-static inline size_t ring_pop_brust( lock_free_spsc_ring_t *q, void ***val_arr ){
+static inline size_t ring_pop_burst( lock_free_spsc_ring_t *q, void ***val_arr ){
 	int size, j;
 	uint32_t t = q->_tail;
 
@@ -175,17 +175,17 @@ void ring_free( lock_free_spsc_ring_t *q );
  *
  */
 static inline void ring_wait_for_pushing( lock_free_spsc_ring_t *q ){
-//	nanosleep( (const struct timespec[]){{0, 50000L}}, NULL );
-	if( unlikely( sem_trywait( &q->sem_wait_pushing) == 0 ))
-		return; //already lock
-	else{
-		sem_wait( &q->sem_wait_pushing );
-	}
+	nanosleep( (const struct timespec[]){{0, 5000L}}, NULL );
+//	if( unlikely( sem_trywait( &q->sem_wait_pushing) == 0 ))
+//		return; //already lock
+//	else{
+//		sem_wait( &q->sem_wait_pushing );
+//	}
 }
 
 
 static inline void ring_wait_for_poping( lock_free_spsc_ring_t *q ){
-	nanosleep( (const struct timespec[]){{0, 1000L}}, NULL );
+	nanosleep( (const struct timespec[]){{0, 100L}}, NULL );
 }
 
 #endif /* SRC_QUEUE_LOCK_FREE_SPSC_RING_H_ */

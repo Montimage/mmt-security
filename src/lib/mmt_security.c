@@ -350,32 +350,32 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 	case MMT_DATA_CHAR: /**< 1 character constant value */
 		number = *(char *) data;
 		*new_type = NUMERIC;
-		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
 		return 0;
 
 	case MMT_U8_DATA: /**< unsigned 1-byte constant value */
 		number = *(uint8_t *) data;
 		*new_type = NUMERIC;
-		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
 		return 0;
 
 	case MMT_DATA_PORT: /**< tcp/udp port constant value */
 	case MMT_U16_DATA: /**< unsigned 2-bytes constant value */
 		number = *(uint16_t *) data;
 		*new_type = NUMERIC;
-		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
 		return 0;
 
 	case MMT_U32_DATA: /**< unsigned 4-bytes constant value */
 		number = *(uint32_t *) data;
 		*new_type = NUMERIC;
-		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
 		return 0;
 
 	case MMT_U64_DATA: /**< unsigned 8-bytes constant value */
 		number = *(uint64_t *) data;
 		*new_type = NUMERIC;
-		*new_data = mmt_mem_dup( &number, sizeof( number ));
+		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
 		return 0;
 
 	case MMT_DATA_FLOAT: /**< float constant value */
@@ -389,7 +389,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		size = snprintf(buffer , buffer_size, "%02x:%02x:%02x:%02x:%02x:%02x",
 				new_string[0], new_string[1], new_string[2], new_string[3], new_string[4], new_string[5] );
 		*new_type = STRING;
-		*new_data = mmt_mem_dup( buffer, size );
+		*new_data = mmt_mem_force_dup( buffer, size );
 //		*new_data = mmt_mem_dup( data, 6 );
 		return 0;
 
@@ -397,7 +397,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		inet_ntop(AF_INET, data, buffer, buffer_size );
 		//mmt_debug( "IPv4: %s", string );
 		*new_type = STRING;
-		*new_data = mmt_mem_dup( buffer, strlen( buffer));
+		*new_data = mmt_mem_force_dup( buffer, strlen( buffer));
 //		*new_data = mmt_mem_dup( data, 4 );
 		return 0;
 
@@ -405,7 +405,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		inet_ntop(AF_INET6, data, buffer, buffer_size );
 		//mmt_debug( "IPv6: %s", string );
 		*new_type = STRING;
-		*new_data = mmt_mem_dup( buffer, strlen( buffer));
+		*new_data = mmt_mem_force_dup( buffer, strlen( buffer));
 //		*new_data = mmt_mem_dup( data, 6 );
 		return 0;
 

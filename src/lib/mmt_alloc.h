@@ -114,6 +114,15 @@ size_t mmt_mem_size( const void *x ){
    return mem->size;
 }
 
+static inline
+void* mmt_mem_force_dup( const void *ptr, size_t size ){
+	void *ret = mmt_mem_alloc( size );
+	memcpy( ret, ptr, size );
+//	rte_memcpy( ret, ptr, size );
+	return ret;
+}
+
+
 /**
  * Duplicate a memory
  * - Input:
@@ -128,10 +137,7 @@ void* mmt_mem_dup( const void *ptr, size_t size ){
 	__check_null( ptr, NULL );  // nothing to do
 	if( unlikely( size == 0)) return NULL;
 
-	void *ret = mmt_mem_alloc( size );
-	memcpy( ret, ptr, size );
-//	rte_memcpy( ret, ptr, size );
-	return ret;
+	return mmt_mem_force_dup( ptr, size );
 }
 
 /**

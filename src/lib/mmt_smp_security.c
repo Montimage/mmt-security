@@ -14,7 +14,7 @@
 #include "system_info.h"
 #include "lock_free_spsc_ring.h"
 
-#define RING_SIZE 20000
+#define RING_SIZE 50000
 
 //implemented in mmt_security.c
 typedef struct _mmt_smp_sec_handler_struct{
@@ -150,7 +150,7 @@ static inline void *_process_one_thread( void *arg ){
 
 	while( 1 ){
 
-		size = ring_pop_brust( ring, &arr );
+		size = ring_pop_burst( ring, &arr );
 
 		if( unlikely( size == 0 ))
 			ring_wait_for_pushing( ring );
@@ -158,7 +158,7 @@ static inline void *_process_one_thread( void *arg ){
 
 			//do not process the last msg in the for
 			size -= 1;
-			for( i=0; likely( i< size ); i++ )
+			for( i=0; i< size; i++ )
 				mmt_sec_process( mmt_sec, arr[i] );
 
 			//only the last msg can be NULL
@@ -236,7 +236,6 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 		}
 
 		handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, callback, user_data );
-
 		rule_ptr    += rules_count_per_thread;
 		rules_count -= rules_count_per_thread; //number of remaining rules
 		threads_count --;//number of remaining threads

@@ -76,6 +76,7 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 				mmt_warn( "Rule %d in file %s uses an existing id", *key, path);
 			}
 		}
+
 		free( entry );
 		mmt_mem_free( tmp_array );
 	}
@@ -90,7 +91,9 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 }
 
 size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_path_name ){
-	void* lib = dlopen ( plugin_path_name, RTLD_NOW );
+
+	void *lib = dlopen( plugin_path_name, RTLD_NOW );
+
 	rule_info_t const* tmp_array;
 	rule_info_t const** ret_array;
 	size_t size, i;
@@ -105,6 +108,7 @@ size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_
 		ret_array[i] = & (tmp_array[i]);
 
 	*plugins_arr = ret_array;
+
 	return size;
 }
 

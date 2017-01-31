@@ -14,8 +14,28 @@
 #include "mmt_lib.h"
 #include "plugin_header.h"
 #include "mmt_security.h"
+#include "mmt_mem_pool.h"
+#include "mmt_fsm.h"
 
-typedef void rule_engine_t;
+typedef struct rule_engine_struct{
+	const rule_info_t *rule_info;
+	//this fsm is used for execution the first events
+	fsm_t *fsm_bootstrap;
+	//event_id - fsm_instance
+	link_node_t **fsm_by_expecting_event_id;
+	link_node_t **tmp_fsm_by_expecting_event_id;
+	//instance_id - fsm_sub_instance
+	link_node_t **fsm_by_instance_id;
+
+	mmt_array_t *valid_execution_trace;
+
+	size_t max_events_count, max_instances_count;
+	size_t total_instances_count;
+	//number of instances
+	size_t instances_count;
+
+	mmt_mem_pool_t *mem_pool;
+}rule_engine_t;
 
 //max number of events in a rule
 //max number of instances of a rule at any moment

@@ -93,8 +93,8 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint16_t ref_index 
 	var->proto = proto;
 	var->att   = attr;
 	var->ref_index = ref_index;
-	var->proto_id = get_protocol_id_by_name( var->proto );
-	var->att_id   = get_attribute_id_by_protocol_id_and_attribute_name( var->proto_id, var->att );
+	var->proto_id  = get_protocol_id_by_name( var->proto );
+	var->att_id    = get_attribute_id_by_protocol_id_and_attribute_name( var->proto_id, var->att );
 	var->data_type = _get_attribute_data_type( var->proto_id, var->att_id );
 
 	mmt_assert( var->data_type != UNKNOWN, "Error 2: Data type for %s.%s has not implemented yet.", proto, attr);
@@ -686,9 +686,6 @@ inline bool _is_string_param( const operation_t *opt ){
 		expr = (expression_t *) ptr->data;
 		if( expr->type == VARIABLE && expr->variable->data_type != STRING )
 			return NO;
-
-		if( expr->type == CONSTANT && expr->constant->data_type != STRING )
-			return NO;
 		ptr = ptr->next;
 	}
 	return YES;
@@ -710,7 +707,7 @@ size_t expr_stringify_operation( char **string, operation_t *opt ){
 	if( _is_comparison_operator( opt->operator ) && _is_string_param ( opt ) ){
 		//delimiter
 		delim = ",";
-		index += sprintf( &str[ index ], "0 %s strcmp(", opt->name );
+		index += sprintf( &str[ index ], "0 %s mmt_mem_cmp(", opt->name );
 	}else if( opt->operator == FUNCTION ){
 		delim = ",";
 		index += sprintf( &str[ index ], "%s(", opt->name );

@@ -276,7 +276,7 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 	//-1 since msg was cloned from message -> it has ref_count = 1
 	//=> we need to increase ref_count only ( _handler->threads_count - 1)
 	if( likely( _handler->threads_count > 1 ))
-		msg = retain_many_message_t( msg,  _handler->threads_count - 1 );
+		msg = mmt_mem_retains( msg,  _handler->threads_count - 1 );
 
 	//all threads have not been yet put the message
 	memset( _handler->hash_array, 0, _handler->threads_count );

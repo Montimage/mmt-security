@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "base.h"
@@ -21,12 +22,14 @@
 
 
 typedef struct mmt_memory_struct{
-	size_t  ref_count;
-	size_t  size;
-	void *  data;
+	uint32_t  ref_count;
+	uint32_t  size;
+	void*     data;
 }mmt_memory_t;
 
-#define mmt_mem_revert( x ) (mmt_memory_t *) ( (uint8_t*)x - sizeof( mmt_memory_t ) )
+#define SIZE_OF_MMT_MEMORY_T 16
+
+#define mmt_mem_revert( x ) (mmt_memory_t *) ( (uint8_t*)x - SIZE_OF_MMT_MEMORY_T )
 
 /**
  * A wrapper of malloc
@@ -47,8 +50,7 @@ void *mmt_mem_alloc(size_t size){
 	mmt_assert( size > 0, "Size must not be negative" );
 #endif
 
-	size = sizeof( mmt_memory_t ) + size + 1;
-	mmt_memory_t *mem = malloc( size );
+	mmt_memory_t *mem = malloc( SIZE_OF_MMT_MEMORY_T + size + 1 );
 
 	//quit if not enough
 	mmt_assert( mem != NULL, "Not enough memory to allocate %zu bytes", size);
@@ -56,7 +58,7 @@ void *mmt_mem_alloc(size_t size){
 	//allocated_memory_size += size;
 
 	//safe string
-	((char *)mem)[ size-1 ] = '\0';
+	((char *)mem)[ SIZE_OF_MMT_MEMORY_T + size ] = '\0';
 
 	//mem->data points to the memory segment after sizeof( mmt_memory_t )
 	mem->data      = mem + 1;
@@ -118,7 +120,6 @@ static inline
 void* mmt_mem_force_dup( const void *ptr, size_t size ){
 	void *ret = mmt_mem_alloc( size );
 	memcpy( ret, ptr, size );
-//	rte_memcpy( ret, ptr, size );
 	return ret;
 }
 
@@ -155,6 +156,23 @@ void *mmt_mem_retain( void *x ){
    return mem->data;
 }
 
+/**
+ * Atomic version of #mmt_mem_retain
+ * @param x
+ */
+static inline
+void *mmt_mem_atomic_retain( void *x ){
+	__check_null( x, NULL );  // nothing to do
+   mmt_memory_t *mem = mmt_mem_revert( x );
+   __sync_add_and_fetch( &mem->ref_count, 1 );
+   return mem->data;
+}
+
+/**
+ * Increase references of variable #retains_count times
+ * @param x
+ * @param retains_count
+ */
 static inline
 void *mmt_mem_retains( void *x, size_t retains_count ){
 	__check_null( x, NULL );  // nothing to do
@@ -164,6 +182,20 @@ void *mmt_mem_retains( void *x, size_t retains_count ){
 }
 
 /**
+ * Atomic version of #mmt_mem_retains
+ * @param x
+ * @param retains_count
+ */
+static inline
+void *mmt_mem_atomic_retains( void *x, size_t retains_count ){
+	__check_null( x, NULL );  // nothing to do
+   mmt_memory_t *mem = mmt_mem_revert( x );
+   __sync_add_and_fetch( &mem->ref_count, retains_count );
+   return mem->data;
+}
+
+
+/**
  * Return number of pointers pointing to this memory
  */
 static inline
@@ -171,6 +203,21 @@ size_t mmt_mem_reference_count( void *x ){
 	if( x == NULL ) return 0; // nothing to do
 	mmt_memory_t *mem = mmt_mem_revert( x );
 	return mem->ref_count;
+}
+
+static inline int mmt_mem_cmp( const void *x, const void *y){
+	int ret;
+	__check_null( x, -1 );
+	__check_null( y,  1 );
+
+	mmt_memory_t *mx = mmt_mem_revert( x );
+	mmt_memory_t *my = mmt_mem_revert( y );
+	ret = mx->size - my->size;
+
+	if( ret != 0 )
+		return ret;
+	else
+		return memcmp( mx->data, my->data, mx->size );
 }
 
 #define mmt_free_and_assign_to_null( x ) while( x != NULL ){ mmt_mem_free( x ); x = NULL; break; }

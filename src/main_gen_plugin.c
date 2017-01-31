@@ -77,8 +77,10 @@ int main( int argc, char** argv ){
 		if( ret == 0 ){
 			mmt_info( "Encoded %zu rules from \"%s\" to \"%s\"", rule_count, xml_file, output_file );
 
+#ifndef DEBUG_MODE
 			//delete .c file
 			remove( c_file );
+#endif
 		}else
 			mmt_error( "Cannot encode rule \"%s\". Check options.", xml_file );
 	}

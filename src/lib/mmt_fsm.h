@@ -272,7 +272,7 @@ enum fsm_handle_event_value{
  * 	be verified firstly, before the transition having index == #transition_index. Thus if one of them
  * 	can fire, the machine will fire that transition, not the one having index == #transition_index
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data, fsm_t **new_fsm );
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, const void *event_data, fsm_t **new_fsm );
 
 /**
  *  Get the current state
@@ -358,4 +358,8 @@ static inline void fsm_free_event( fsm_event_t *event, bool free_data ){
 	mmt_mem_free( event );
 }
 
+
+void fsm_set_user_data( fsm_t *fsm, void *data);
+
+void * fsm_get_user_data( const fsm_t *fsm );
 #endif /* SRC_LIB_FSM_H_ */

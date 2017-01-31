@@ -9,6 +9,7 @@
 
 #include "mmt_fsm.h"
 #include "message_t.h"
+#include "rule_verif_engine.h"
 
 /**
  * Detailed definition of FSM
@@ -48,6 +49,9 @@ typedef struct fsm_struct{
    mmt_array_t *events_trace;
 
    mmt_array_t *messages_trace;
+
+   //this is for internal usage. It points to _rule_engine_t
+   void *user_data;
 }_fsm_t;
 
 
@@ -88,8 +92,8 @@ void fsm_reset( fsm_t *fsm ){
 	_fsm->current_event_id = 0;
 
 	for( i=0; i< _fsm->events_trace->elements_count; i++ ){
-		mmt_free_and_assign_to_null( _fsm->events_trace->data[ i ]   );
-		mmt_free_and_assign_to_null( _fsm->messages_trace->data[ i ] );
+		mmt_mem_free(   _fsm->events_trace->data[ i ]   );
+		free_message_t( _fsm->messages_trace->data[ i ] );
 	}
 }
 
@@ -98,7 +102,7 @@ static inline _fsm_t* _fsm_clone( const _fsm_t *_fsm ){
 	_fsm_t *new_fsm = mmt_mem_force_dup( _fsm, sizeof( _fsm_t) );
 
 	new_fsm->events_trace    = mmt_array_clone( _fsm->events_trace,   mmt_mem_retain );
-	new_fsm->messages_trace  = mmt_array_clone( _fsm->messages_trace, (void *)retain_message_t );
+	new_fsm->messages_trace  = mmt_array_clone( _fsm->messages_trace, mmt_mem_atomic_retain );
 
 	return new_fsm;
 }
@@ -108,11 +112,11 @@ fsm_t *fsm_clone( const fsm_t *fsm ) {
 	return (fsm_t *) _fsm_clone( (_fsm_t *) fsm);
 }
 
-static inline enum fsm_handle_event_value _fire_a_tran( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data ) {
+static inline enum fsm_handle_event_value _fire_a_tran( fsm_t *fsm, uint16_t transition_index, message_t *message_data, const void *event_data ) {
 	fsm_t *new_fsm = NULL;
 	enum fsm_handle_event_value ret;
 
-	ret = fsm_handle_event( fsm,  transition_index, message_data, event_data, &new_fsm );
+	ret = fsm_handle_event( fsm, transition_index, message_data, event_data, &new_fsm );
 
 	//Occasionally a new fsm may be created, we do not need it
 	if( unlikely( new_fsm != NULL ) ) fsm_free( new_fsm );
@@ -121,7 +125,7 @@ static inline enum fsm_handle_event_value _fire_a_tran( fsm_t *fsm, uint16_t tra
 }
 
 
-static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_state_t *new_state, const fsm_transition_t *tran, message_t *message_data, void *event_data ){
+static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_state_t *new_state, const fsm_transition_t *tran, message_t *message_data, const void *event_data ){
 	void *ptr = NULL;
 	uint64_t val;
 	size_t i;
@@ -137,14 +141,14 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 
 	//check if we will override an element of execution trace
 	if( unlikely( _fsm->events_trace->data[ _fsm->current_event_id   ] != NULL ) ){
-		mmt_mem_free( _fsm->events_trace->data[ _fsm->current_event_id   ] );
+		mmt_mem_force_free( _fsm->events_trace->data[ _fsm->current_event_id   ] );
 	//if( unlikely( _fsm->messages_trace->data[ _fsm->current_event_id   ] != NULL ) )
 		free_message_t( _fsm->messages_trace->data[ _fsm->current_event_id   ] );
 	}
 
 	//store execution log
-	_fsm->events_trace->data[ _fsm->current_event_id   ] = mmt_mem_retain( event_data );
-	_fsm->messages_trace->data[ _fsm->current_event_id ] = retain_message_t( message_data );
+	_fsm->events_trace->data[ _fsm->current_event_id   ] = mmt_mem_force_dup( event_data, ((rule_engine_t*) _fsm->user_data)->rule_info->message_size );
+	_fsm->messages_trace->data[ _fsm->current_event_id ] = mmt_mem_atomic_retain( message_data );
 
 //	/* Run exit action
 //	 * (even if it returns to itself) */
@@ -188,20 +192,20 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	//update deadline
 	//outgoing from init state
 	if( tran->action == FSM_ACTION_RESET_TIMER || _fsm->previous_state == _fsm->init_state ){
-		_fsm->counter_min = new_state->delay.counter_min + message_data->counter;
+//		_fsm->counter_min = new_state->delay.counter_min + message_data->counter;
 		_fsm->time_min    = new_state->delay.time_min    + message_data->timestamp;
 
-		_fsm->counter_max = new_state->delay.counter_max + message_data->counter;
+//		_fsm->counter_max = new_state->delay.counter_max + message_data->counter;
 		_fsm->time_max    = new_state->delay.time_max    + message_data->timestamp;
 	}else{
-		val = new_state->delay.counter_min + message_data->counter;
-		if( val > _fsm->counter_min ) _fsm->counter_min = val;
+//		val = new_state->delay.counter_min + message_data->counter;
+//		if( val > _fsm->counter_min ) _fsm->counter_min = val;
 
 		val = new_state->delay.time_min + message_data->timestamp;
 		if( val > _fsm->time_min ) _fsm->time_min = val;
 
-		val = new_state->delay.counter_max + message_data->counter;
-		if( val < _fsm->counter_max ) _fsm->counter_max = val;
+//		val = new_state->delay.counter_max + message_data->counter;
+//		if( val < _fsm->counter_max ) _fsm->counter_max = val;
 
 		val = new_state->delay.time_max + message_data->timestamp;
 		if( val < _fsm->time_max ) _fsm->time_max = val;
@@ -218,7 +222,7 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 /**
  * Public API
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, void *event_data, fsm_t **new_fsm ) {
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, const void *event_data, fsm_t **new_fsm ) {
 	const fsm_transition_t *tran;
 	_fsm_t *_fsm, *_new_fsm;
 	//uint64_t timer, counter;
@@ -355,7 +359,7 @@ const void *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
 /**
  * Public API
  */
-inline uint16_t fsm_get_id( const fsm_t *fsm ){
+uint16_t fsm_get_id( const fsm_t *fsm ){
 	_fsm_t *_fsm;
 #ifdef DEBUG_MODE
 	__check_null( fsm, -1 );
@@ -367,11 +371,38 @@ inline uint16_t fsm_get_id( const fsm_t *fsm ){
 /**
  * Public API
  */
-inline void fsm_set_id( fsm_t *fsm, uint16_t id ){
+void fsm_set_id( fsm_t *fsm, uint16_t id ){
 	_fsm_t *_fsm;
 #ifdef DEBUG_MODE
 	__check_null( fsm,  );
 #endif
 	_fsm = (_fsm_t *)fsm;
 	_fsm->id = id;
+}
+
+
+
+
+/**
+ * Public API
+ */
+void * fsm_get_user_data( const fsm_t *fsm ){
+	_fsm_t *_fsm;
+#ifdef DEBUG_MODE
+	__check_null( fsm, NULL );
+#endif
+	_fsm = (_fsm_t *)fsm;
+	return _fsm->user_data;
+}
+
+/**
+ * Public API
+ */
+void fsm_set_user_data( fsm_t *fsm, void *data){
+	_fsm_t *_fsm;
+#ifdef DEBUG_MODE
+	__check_null( fsm,  );
+#endif
+	_fsm = (_fsm_t *)fsm;
+	_fsm->user_data = data;
 }

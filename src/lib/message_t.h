@@ -13,14 +13,15 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/time.h>
-
+#include "mmt_lib.h"
+#include "expression.h"
 /**
  *
  */
 typedef struct message_element_struct{
 	uint32_t proto_id;
 	uint32_t att_id;
-	int data_type; //NUMERIC, STRING
+	int data_type; //NUMERIC, STRING, VOID
 	void *data;
 }message_element_t;
 
@@ -33,17 +34,10 @@ typedef struct message_struct{
 }message_t;
 
 
-/**
- * Clone a message_t.
- * This function creates new message_t by cloning everything inside #msg.
- */
-message_t *clone_message_t( const message_t *msg );
 
 message_t *create_message_t( size_t elements_count );
 
-message_t *retain_message_t( message_t *msg );
-
-message_t *retain_many_message_t( message_t *msg, size_t count );
+void force_free_message_t( message_t *msg );
 
 /**
  * Free a message_t
@@ -54,6 +48,23 @@ message_t *retain_many_message_t( message_t *msg, size_t count );
  * One can increase number of references of a variable by using either
  * #mmt_mem_retain or #mmt_mem_retains
  */
-size_t free_message_t( message_t *msg );
+static inline size_t free_message_t( message_t *msg ){
+	size_t ret;
+	__check_null( msg, 0 );  // nothing to do
+
+	mmt_memory_t *mem = mmt_mem_revert( msg );
+
+	ret = __sync_fetch_and_sub( &mem->ref_count, 1 );
+
+	//free message only when there is one reference to its father
+	if( ret == 1 ){
+		force_free_message_t( msg );
+		return 0;
+	}
+	else if( ret < 1 ){
+		return 0;
+	}else
+		return ret;
+}
 
 #endif /* SRC_LIB_MESSAGE_T_H_ */

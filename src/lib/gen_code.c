@@ -591,7 +591,8 @@ void _iterate_variables_to_init_structure( void *key, void *data, void *user_dat
 	if( index == 0 ){
 		_gen_comment( fd, "Create an instance of _msg_t_%d", rule_id);
 		fprintf( fd, "static inline _msg_t_%d* _allocate_msg_t_%d(){", rule_id, rule_id );
-		fprintf( fd, "\n\t _msg_t_%d *m = mmt_mem_alloc( sizeof( _msg_t_%d ));", rule_id, rule_id );
+		fprintf( fd, "\n\t static _msg_t_%d _msg;", rule_id );
+		fprintf( fd, "\n\t _msg_t_%d *m = &_msg;", rule_id );
 	}
 	fprintf( fd, "\n\t m->%s_%s = NULL;", var->proto, var->att);
 
@@ -614,7 +615,7 @@ void _iterate_variables_to_convert_to_structure( void *key, void *data, void *us
 	if( index == 0 ){
 		old_proto_id = -1; //init
 		_gen_comment( fd, "Public API" );
-		fprintf( fd, "static void *convert_message_to_event_%d( const message_t *msg){", rule_id );
+		fprintf( fd, "static const void *convert_message_to_event_%d( const message_t *msg){", rule_id );
 		fprintf( fd, "\n\t if( unlikely( msg == NULL )) return NULL;" );
 		fprintf( fd, "\n\t _msg_t_%d *new_msg = _allocate_msg_t_%d();", rule_id, rule_id );
 		fprintf( fd, "\n\t size_t i;" );
@@ -663,7 +664,7 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 	size_t i;
 	char *string;
 	fprintf(fd, "\n\n //======================================GENERAL======================================");
-	_gen_comment( fd, "Information of %zu rules", count );
+	_gen_comment( fd, "Information of %zu rules\n  * PUBLIC API", count );
 	fprintf( fd, "size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){");
 	fprintf( fd, "\n\t  static const rule_info_t rules[] = (rule_info_t[]){");
 	for( i=0; i<count; i++ ){
@@ -683,8 +684,8 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 				_string( rules[i]->if_not_satisfied, 'N', "UL", 'L', '"', rules[i]->if_not_satisfied, '"') );
 		fprintf( fd, "\n\t\t\t .create_instance  = &create_new_fsm_%d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .hash_message     = &hash_message_%d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t .convert_message  = &convert_message_to_event_%d", rules[i]->id );
-
+		fprintf( fd, "\n\t\t\t .convert_message  = &convert_message_to_event_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .message_size     = sizeof( _msg_t_%d )", rules[i]->id );
 		if( i < count -1 )
 			fprintf( fd, "\n\t\t },");
 		else
@@ -693,9 +694,10 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 	fprintf( fd, "\n\t };\n\t *rules_arr = rules;");
 	fprintf( fd, "\n\t return %zu;\n }", count);
 
-	_gen_comment(fd, "Moment the rules being encoded");
+	_gen_comment(fd, "Moment the rules being encoded\n  * PUBLIC API");
 	string = get_current_date_time_string("%Y-%m-%d %H:%M:%S");
-	fprintf( fd, "\n const char * __get_generated_date(){ return \"%s, mmt-security version %s\";};", string, MMT_SEC_VERSION );
+	fprintf( fd, "const char * __get_generated_date(){ return \"%s, mmt-security version %s\";};",
+				string, MMT_SEC_VERSION );
 	mmt_mem_free( string );
 }
 
@@ -938,7 +940,6 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, con
 
 	//information of rules
 	_gen_rule_information( fd, rules, count );
-
 
 	fclose(fd);
 

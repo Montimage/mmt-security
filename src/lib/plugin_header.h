@@ -59,12 +59,23 @@ typedef struct rule_info_struct{
 	/** Create a FSM instance */
 	void* (* create_instance )();
 
-	/** Create an internal struct using by guard of FSM above, e.g., _msg_t_1 */
-	void* (* convert_message )( const message_t * message);
+	/**
+	 * Create an internal struct using by guard of FSM above, e.g., _msg_t_1
+	 *
+	 * This function is not thread-safe
+	 */
+
+	const void* (* convert_message )( const message_t * message);
+
+	/**
+	 * Size of message returned by #convert_message
+	 */
+	const size_t message_size;
 
 	/**
 	 * - Return:
 	 * 	+ a hash number.
+	 * This function is not thread-safe
 	 */
 	uint64_t (* hash_message )( const void *data );
 }rule_info_t;

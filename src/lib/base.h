@@ -20,6 +20,10 @@
 #define NO false
 #define YES true
 
+//thread local storage
+#define __t_scope __thread
+
+//macroe
 #define __check_null( x, y ) if( unlikely( x == NULL )) return y; else
 
 //branch prediction
@@ -29,6 +33,7 @@
 #ifndef unlikely
 	#define unlikely(x) __builtin_expect(!!(x),0)
 #endif
+
 
 /* a=target variable, i=bit number to act upon 0-n  (n == sizeof(a))*/
 //set bit i-th to 1

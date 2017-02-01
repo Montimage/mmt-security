@@ -82,11 +82,6 @@ size_t mmt_sec_get_rules(  const mmt_sec_handler_t *handler,  const rule_info_t 
 size_t mmt_sec_get_unique_protocol_attributes( const mmt_sec_handler_t *handler, const proto_attribute_t ***proto_atts_array );
 
 /**
- * Convert a given execution trace to a JSON string
- */
-char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule );
-
-/**
  * Encode a #timeval to an uint64_t value
  */
 static inline uint64_t mmt_sec_encode_timeval( const struct timeval *t ){

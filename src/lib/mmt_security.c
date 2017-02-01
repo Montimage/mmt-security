@@ -237,18 +237,17 @@ static inline void _remove_special_character( char * tmp ){
 
 #define MAX_STR_SIZE 10000
 
-inline char* convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
-	char buffer[ MAX_STR_SIZE + 1 ];
+static const char* _convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
+	static __t_scope char buffer[ MAX_STR_SIZE + 1 ];
 	char *str_ptr;
 	size_t size, i, j, total_len, index;
 	const message_t *msg;
 	const message_element_t *me;
-	char *tmp;
-	constant_t expr_const;
 	bool is_first;
 	struct timeval time;
 	const mmt_array_t *proto_atts_event; //proto_att of an event
 	const proto_attribute_t *pro_ptr;
+	double double_val;
 
 	__check_null( trace, NULL );
 
@@ -283,40 +282,56 @@ inline char* convert_execution_trace_to_json_string( const mmt_array_t *trace, c
 
 			//get array of proto_att used in the event having #index
 			proto_atts_event = &rule->proto_atts_events[ index ];
+
 			//check if #me is used in this event of the rule #rule
 			for( j=0; j<proto_atts_event->elements_count; j++ ){
 				pro_ptr = (proto_attribute_t *)proto_atts_event->data[ j ];
 				if( pro_ptr->att_id == me->att_id && pro_ptr->proto_id == me->proto_id )
 					break;
 			}
+
 			//not found any variable/proto_att in this event using "me"
 			if( j>= proto_atts_event->elements_count )
 				continue;
 
-			//convert me->data to string
-			expr_const.data = me->data;
-			//data_types of mmt-dpi
-			//expr_const.data_type = get_attribute_data_type( me->proto_id, me->att_id );
-			//data_type of mmt-security contains only either a NUMERIC or a STRING
-			//expr_const.data_type = convert_data_type( expr_const.data_type );
-			expr_const.data_type = me->data_type;
+			total_len -= size;
+			if( unlikely( total_len <= 0 )) break;
 
-			if( expr_stringify_constant( &tmp, &expr_const ) ){
+			str_ptr += size;
 
-				total_len -= size;
-				if( unlikely( total_len <= 0 )) break;
+			//pro_ptr->data_type;
+			switch( me->data_type ){
+			case NUMERIC:
+				double_val = *(double *)me->data;
 
-				_remove_special_character( tmp );
-
-				str_ptr += size;
-				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":%s}",
+				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":%.2f}",
 						(is_first? "":","),
 						pro_ptr->proto,
 						pro_ptr->att,
-						tmp);
-				mmt_mem_free( tmp );
-				is_first = NO;
+						double_val );
+
+				//remove zero at the end, e.g., 10.00 ==> 10
+				while( size > 1 && *str_ptr == '0' ){
+					size    --;
+					str_ptr --;
+					if( *str_ptr == '.'){
+						size    --;
+						str_ptr --;
+						break;
+					}
+				}
+
+				break;
+			default:
+				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":\"%s\"}",
+						(is_first? "":","),
+						pro_ptr->proto,
+						pro_ptr->att,
+						(char *)me->data );
+				break;
 			}
+
+			is_first = NO;
 		}
 
 		total_len -= size;
@@ -327,7 +342,85 @@ inline char* convert_execution_trace_to_json_string( const mmt_array_t *trace, c
 				(index == trace->elements_count - 1)? "}": ""  );
 
 	}
-	return (char *) mmt_mem_dup( buffer, strlen( buffer) );
+
+	return buffer;
+}
+
+
+void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
+		enum verdict_type verdict,
+		uint64_t timestamp,  //moment the rule is validated
+		uint32_t counter,
+		const mmt_array_t *const trace,
+		void *user_data )
+{
+	int len;
+	char message[ MAX_MSG_SIZE + 1 ];
+	static __t_scope uint64_t alert_index = 0;
+	const char *description = "";
+	const char *string = _convert_execution_trace_to_json_string( trace, rule );
+
+	//print description of a rule each 1O alerts
+	if( unlikely( alert_index % 10 == 0 ))
+		description = rule->description;
+
+	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld,%"PRIu64",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
+			time( NULL ),
+			++ alert_index, //index of alarm, not used, appear just for being compatible with format of other report types of mmt-probe
+			rule->id,
+			verdict_type_string[verdict],
+			rule->type_string,
+			description,
+			string );
+
+	message[ len ] = '\0';
+	verdict_printer_send( message );
+}
+
+void mmt_sec_print_rules_info(){
+	const rule_info_t **rules_arr;
+	size_t i, j, k, n  = 0, size;
+	const mmt_array_t *proto_atts;
+	const proto_attribute_t *proto;
+
+	char string[ 100000 ], *ch_ptr, tmp_string[ 1000 ];
+	string[ 0 ] = '\0';
+	ch_ptr = &string[ 0 ];
+
+	n = load_mmt_sec_rules( &rules_arr );
+
+	printf("Found %zu rule%s", n, n<=1? ".": "s." );
+
+	for( i=0; i<n; i++ ){
+		printf("\n%zu - Rule id: %d", (i+1), rules_arr[i]->id );
+		printf("\n\t- type            : %s",  rules_arr[i]->type_string );
+		printf("\n\t- description     : %s",  rules_arr[i]->description );
+		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
+		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
+		//for each event
+		for(j=0; j<rules_arr[i]->events_count; j++ ){
+			printf("\n\t- event %2zu        ", j+1 );
+			//visite each proto/att of one event
+			proto_atts = &(rules_arr[i]->proto_atts_events[ j+1 ]);
+			for( k=0; k<proto_atts->elements_count; k++ ){
+				proto = proto_atts->data[k];
+				printf("%c %s.%s", k==0?':':',', proto->proto, proto->att );
+
+				//add to unique set
+				sprintf( tmp_string, "%s.%s", proto->proto, proto->att );
+				if( strstr( string, tmp_string ) == NULL )
+					ch_ptr += sprintf( ch_ptr, "\"%s.%s\",", proto->proto, proto->att );
+			}
+		}
+	}
+
+	//remove the last comma
+	size = strlen( string );
+	if( size > 0 ) string[ size - 1 ] = '\0';
+
+	printf("\n\nProtocols and their attributes used in these rules:\n\t %s\n\n", string );
+
+	mmt_mem_free( rules_arr );
 }
 
 /**
@@ -445,84 +538,4 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 #endif
 
 	return 1;
-}
-
-
-void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
-		enum verdict_type verdict,
-		uint64_t timestamp,  //moment the rule is validated
-		uint32_t counter,
-		const mmt_array_t *const trace,
-		void *user_data )
-{
-	int len;
-	char message[ MAX_MSG_SIZE + 1 ];
-	struct timeval now;
-	uint64_t alert_index = 0;
-	gettimeofday(&now, NULL);
-
-	char *string = convert_execution_trace_to_json_string( trace, rule );
-
-//	len = snprintf( message, MAX_MSG_SIZE, "{\"timestamp\":%ld.%ld,\"pid\":%"PRIu32",\"verdict\":\"%s\",\"type\":\"%s\",\"cause\":\"%s\",\"history\":%s},",
-//			now.tv_sec, now.tv_usec,
-//			rule->id, verdict_type_string[verdict],  rule->type_string,  rule->description, string );
-
-	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld.%06ld,%"PRIu64",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
-			(uint64_t) now.tv_sec, (uint64_t)now.tv_usec,
-			alert_index, //index of alarm, not used, appear just for being compatible with format of other report types of mmt-probe
-			rule->id,
-			verdict_type_string[verdict],
-			rule->type_string,
-			rule->description, string );
-
-	message[ len ] = '\0';
-	verdict_printer_send( message );
-
-	mmt_mem_free( string );
-}
-
-void mmt_sec_print_rules_info(){
-	const rule_info_t **rules_arr;
-	size_t i, j, k, n  = 0, size;
-	const mmt_array_t *proto_atts;
-	const proto_attribute_t *proto;
-
-	char string[ 100000 ], *ch_ptr, tmp_string[ 1000 ];
-	string[ 0 ] = '\0';
-	ch_ptr = &string[ 0 ];
-
-	n = load_mmt_sec_rules( &rules_arr );
-
-	printf("Found %zu rule%s", n, n<=1? ".": "s." );
-
-	for( i=0; i<n; i++ ){
-		printf("\n%zu - Rule id: %d", (i+1), rules_arr[i]->id );
-		printf("\n\t- type            : %s",  rules_arr[i]->type_string );
-		printf("\n\t- description     : %s",  rules_arr[i]->description );
-		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
-		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
-		//for each event
-		for(j=0; j<rules_arr[i]->events_count; j++ ){
-			printf("\n\t- event %2zu        ", j+1 );
-			//visite each proto/att of one event
-			proto_atts = &(rules_arr[i]->proto_atts_events[ j+1 ]);
-			for( k=0; k<proto_atts->elements_count; k++ ){
-				proto = proto_atts->data[k];
-				printf("%c %s.%s", k==0?':':',', proto->proto, proto->att );
-
-				//add to unique set
-				sprintf( tmp_string, "%s.%s", proto->proto, proto->att );
-				if( strstr( string, tmp_string ) == NULL )
-					ch_ptr += sprintf( ch_ptr, "\"%s.%s\",", proto->proto, proto->att );
-			}
-		}
-	}
-
-	//remove the last comma
-	size = strlen( string );
-	if( size > 0 ) string[ size - 1 ] = '\0';
-
-	printf("\n\nProtocols and their attributes used in these rules:\n\t %s\n\n", string );
-
-	mmt_mem_free( rules_arr );
 }

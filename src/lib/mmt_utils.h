@@ -16,6 +16,19 @@
 #include "mmt_log.h"
 
 #define str_end_with( str, y) (strcmp(str + strlen(str) - strlen( y ), y) == 0)
+
+static inline uint64_t rdtsc() {
+    uint32_t lo, hi;
+    __asm__ __volatile__ (
+      "xorl %%eax, %%eax\n"
+      "cpuid\n"
+      "rdtsc\n"
+      : "=a" (lo), "=d" (hi)
+      :
+      : "%ebx", "%ecx");
+    return (uint64_t)hi << 32 | lo;
+}
+
 /**
  * find a byte in an array
  * - Return

@@ -54,7 +54,7 @@ static inline void _close_current_file_and_create_semaphore(){
 
 
 static inline void send_message_to_single_file( const char * message ) {
-	int ret = fprintf( file, "%s\n", "message" );
+	int ret = fprintf( file, "%s\n", message );
 	if( unlikely( ret < 0 ) )
 		mmt_error("Error when writing data to file %p: %s", file, strerror( errno ) );
 }

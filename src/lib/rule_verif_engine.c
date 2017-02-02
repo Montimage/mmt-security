@@ -18,8 +18,7 @@ typedef struct _fsm_tran_index_struct{
 
 static inline _fsm_tran_index_t* _create_fsm_tran_index_t( rule_engine_t *_engine, size_t index, fsm_t *fsm, uint64_t counter){
 
-	//_fsm_tran_index_t *ret = mmt_mem_alloc( sizeof( _fsm_tran_index_t));
-	_fsm_tran_index_t *ret = mmt_mem_pool_allocate_element( _engine->mem_pool, mmt_mem_alloc );
+	_fsm_tran_index_t *ret = mmt_mem_alloc( sizeof( _fsm_tran_index_t));
 	ret->index   = index;
 	ret->fsm     = fsm;
 	ret->counter = counter;
@@ -104,11 +103,10 @@ static inline enum verdict_type _get_verdict( int rule_type, enum fsm_handle_eve
 /**
  * Public API
  */
-rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instances_count  ){
+rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instances_count ){
 	size_t i;
 	mmt_assert( rule_info != NULL, "rule_info is NULL");
 	rule_engine_t *_engine = mmt_mem_alloc( sizeof( rule_engine_t ));
-	_engine->mem_pool       = mmt_mem_pool_create( sizeof( _fsm_tran_index_t ), 1000  );
 
 	_engine->fsm_bootstrap             = rule_info->create_instance();
 	fsm_set_id( _engine->fsm_bootstrap, 0 );
@@ -165,8 +163,6 @@ void rule_engine_free( rule_engine_t *_engine ){
 
 	if( _engine->valid_execution_trace != NULL )
 		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );
-
-	mmt_mem_pool_free( _engine->mem_pool, (void *)mmt_mem_free );
 
 	mmt_mem_free( _engine );
 }
@@ -228,8 +224,7 @@ static inline void _reset_engine_for_fsm( rule_engine_t *_engine, fsm_t *fsm ){
 					if( ptr != NULL )
 						ptr->prev = node->prev;
 				}
-				//mmt_mem_force_free( fsm_ind );//node->data
-				mmt_mem_pool_free_element( _engine->mem_pool, fsm_ind, mmt_mem_force_free );
+				mmt_mem_force_free( fsm_ind );//node->data
 
 				mmt_mem_force_free( node );
 			}
@@ -275,8 +270,7 @@ static inline void _reset_engine_for_instance( rule_engine_t *_engine, fsm_t *fs
 					if( ptr != NULL )
 						ptr->prev = node->prev;
 				}
-				//mmt_mem_force_free( fsm_ind );//node->data
-				mmt_mem_pool_free_element( _engine->mem_pool, fsm_ind, mmt_mem_force_free );
+				mmt_mem_force_free( fsm_ind );//node->data
 
 				mmt_mem_force_free( node );
 			}
@@ -353,8 +347,7 @@ enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message
 			//free the node
 			mmt_mem_force_free( node );
 			//free node->data
-			//mmt_mem_force_free( fsm_ind );
-			mmt_mem_pool_free_element( _engine->mem_pool, fsm_ind, mmt_mem_force_free );
+			mmt_mem_force_free( fsm_ind );
 		}
 	}
 

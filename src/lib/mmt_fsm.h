@@ -185,7 +185,7 @@ typedef struct fsm_state_struct{
  * 	+ final_state
  * 	+ incl_state
  */
-fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state, size_t events_count );
+fsm_t *fsm_init( const fsm_state_t *init_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state, size_t events_count, size_t message_size );
 
 /**
  * Reset the machine as being created.

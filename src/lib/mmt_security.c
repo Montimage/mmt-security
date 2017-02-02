@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/syscall.h>
 #include <pthread.h>
+#include <math.h>
 
 #include "mmt_security.h"
 #include "base.h"
@@ -20,6 +21,7 @@
 #include "rule.h"
 #include "version.h"
 #include "plugin_header.h"
+#include "mmt_mem_pools.h"
 
 #include "../dpi/types_defs.h"
 #include "../dpi/mmt_dpi.h"
@@ -248,6 +250,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 	const mmt_array_t *proto_atts_event; //proto_att of an event
 	const proto_attribute_t *pro_ptr;
 	double double_val;
+	uint8_t *u8_ptr;
 
 	__check_null( trace, NULL );
 
@@ -274,14 +277,15 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 						msg->counter );
 
 		is_first = YES;
+
+		//get array of proto_att used in the event having #index
+		proto_atts_event = &rule->proto_atts_events[ index ];
+
 		//go into detail of a message
 		for( i=0; i<msg->elements_count; i++ ){
 			me = &msg->elements[i];
 
 			if( me->data == NULL ) continue;
-
-			//get array of proto_att used in the event having #index
-			proto_atts_event = &rule->proto_atts_events[ index ];
 
 			//check if #me is used in this event of the rule #rule
 			for( j=0; j<proto_atts_event->elements_count; j++ ){
@@ -305,30 +309,72 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				double_val = *(double *)me->data;
 
 				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":%.2f}",
-						(is_first? "":","),
-						pro_ptr->proto,
-						pro_ptr->att,
-						double_val );
+							(is_first? "":","),
+							pro_ptr->proto,
+							pro_ptr->att,
+							double_val );
 
 				//remove zero at the end, e.g., 10.00 ==> 10
-				while( size > 1 && *str_ptr == '0' ){
-					size    --;
+				while( *str_ptr == '0' ){
 					str_ptr --;
 					if( *str_ptr == '.'){
-						size    --;
 						str_ptr --;
 						break;
 					}
 				}
 
 				break;
+
 			default:
-				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":\"%s\"}",
+				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":",
 						(is_first? "":","),
 						pro_ptr->proto,
-						pro_ptr->att,
-						(char *)me->data );
-				break;
+						pro_ptr->att);
+
+				str_ptr   += size;
+				total_len -= size;
+
+				u8_ptr = NULL;
+
+				switch( pro_ptr->proto_id ){
+				//IP SRC = 12, DEST = 13
+				case 178:
+					switch ( pro_ptr->att_id ){
+					case 12:
+					case 13:
+						u8_ptr = (uint8_t *) me->data;
+						size   = sprintf(str_ptr, "\"%d.%d.%d.%d\"}",
+								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
+					}
+
+					break;
+
+					//IPV6 SRC=7 DST=8
+				case 182:
+					switch( pro_ptr->att_id ){
+					case 7:
+					case 8:
+						u8_ptr = (uint8_t *) me->data;
+						size   = sprintf(str_ptr, "\"%02x:%02x:%02x:%02x:%02x:%02x\"}",
+								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
+					}
+					break;
+
+						//Ethernet
+				case 99:
+					switch( pro_ptr->att_id ){
+					case 7:
+					case 8:
+						u8_ptr = (uint8_t *) me->data;
+						size   = sprintf(str_ptr, "\"%02x:%02x:%02x:%02x:%02x:%02x\"}",
+								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
+					}
+					break;
+
+				}
+
+				if( u8_ptr == NULL )
+					size = sprintf( str_ptr, "\"%s\"}", (char *) me->data );
 			}
 
 			is_first = NO;
@@ -340,14 +386,14 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		str_ptr += size;
 		snprintf( str_ptr, total_len, "]}%s", //end attributes, end event_
 				(index == trace->elements_count - 1)? "}": ""  );
-
 	}
 
 	return buffer;
 }
 
 
-void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
+void mmt_sec_print_verdict(
+		const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
 		uint32_t counter,
@@ -356,17 +402,19 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 {
 	int len;
 	char message[ MAX_MSG_SIZE + 1 ];
-	static __t_scope uint64_t alert_index = 0;
 	const char *description = "";
 	const char *string = _convert_execution_trace_to_json_string( trace, rule );
+	static uint32_t alert_index = 0;
+
+	__sync_add_and_fetch( &alert_index, 1 );
 
 	//print description of a rule each 1O alerts
-	if( unlikely( alert_index % 10 == 0 ))
+	if( unlikely( alert_index % 10 == 1 ))
 		description = rule->description;
 
-	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld,%"PRIu64",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
+	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld,%"PRIu32",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
 			time( NULL ),
-			++ alert_index, //index of alarm, not used, appear just for being compatible with format of other report types of mmt-probe
+			alert_index, //index of alarm
 			rule->id,
 			verdict_type_string[verdict],
 			rule->type_string,
@@ -375,6 +423,7 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 
 	message[ len ] = '\0';
 	verdict_printer_send( message );
+
 }
 
 void mmt_sec_print_rules_info(){

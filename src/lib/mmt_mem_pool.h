@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+
+////////One pool
 typedef struct mmt_mem_pool_struct{
 	uint32_t element_size;		   //size of one element
 	uint32_t elements_count;     //number of elements being available
@@ -19,6 +21,8 @@ typedef struct mmt_mem_pool_struct{
 mmt_mem_pool_t * mmt_mem_pool_create( size_t element_size, size_t max_elements_count );
 
 void mmt_mem_pool_free( mmt_mem_pool_t *, void (*free_fn)(void *) );
+
+void mmt_mem_pool_reset( mmt_mem_pool_t * );
 
 void * mmt_mem_pool_allocate_element( mmt_mem_pool_t *,  void *(*malloc_fn)(size_t) );
 

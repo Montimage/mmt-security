@@ -19,7 +19,7 @@ PROPERTY=$(cat <<-END
     description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
     <event value="COMPUTE" event_id="1" 
         description="HTTP packet using a port different from 80 and 8080"
-           boolean_expression="((#strcmp( http.method, '') )&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+           boolean_expression="(( http.method != '') &amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP packet"
            boolean_expression="(ip.src != ip.dst)"/>

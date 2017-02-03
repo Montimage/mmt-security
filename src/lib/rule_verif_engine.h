@@ -14,7 +14,6 @@
 #include "mmt_lib.h"
 #include "plugin_header.h"
 #include "mmt_security.h"
-#include "mmt_mem_pools.h"
 #include "mmt_fsm.h"
 
 typedef struct rule_engine_struct{

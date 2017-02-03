@@ -21,7 +21,6 @@
 #include "rule.h"
 #include "version.h"
 #include "plugin_header.h"
-#include "mmt_mem_pools.h"
 
 #include "../dpi/types_defs.h"
 #include "../dpi/mmt_dpi.h"
@@ -241,7 +240,7 @@ static inline void _remove_special_character( char * tmp ){
 
 static const char* _convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
 	static __t_scope char buffer[ MAX_STR_SIZE + 1 ];
-	char *str_ptr;
+	char *str_ptr, *c_ptr;
 	size_t size, i, j, total_len, index;
 	const message_t *msg;
 	const message_element_t *me;
@@ -269,8 +268,8 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 		mmt_sec_decode_timeval( msg->timestamp, &time );
 
-		size = snprintf( str_ptr, total_len, "%s\"event_%zu\":{\"timestamp\":%"PRIu64".%06lu,\"counter\":%"PRIu64",\"attributes\":[",
-						total_len == MAX_STR_SIZE ? "{": " ,",
+		size = snprintf( str_ptr, total_len, "%c\"event_%zu\":{\"timestamp\":%"PRIu64".%06lu,\"counter\":%"PRIu64",\"attributes\":[",
+						total_len == MAX_STR_SIZE ? '{': ',',
 						index,
 						time.tv_sec, //timestamp: second
 						time.tv_usec, //timestamp: microsecond
@@ -308,17 +307,21 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			case NUMERIC:
 				double_val = *(double *)me->data;
 
-				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":%.2f}",
+				//do not forget }
+				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":%.2f",
 							(is_first? "":","),
 							pro_ptr->proto,
 							pro_ptr->att,
 							double_val );
 
+				c_ptr = str_ptr + size;
 				//remove zero at the end, e.g., 10.00 ==> 10
-				while( *str_ptr == '0' ){
-					str_ptr --;
-					if( *str_ptr == '.'){
-						str_ptr --;
+				while( *c_ptr == '0' || *c_ptr == '\0' ){
+					c_ptr --;
+					size --;
+
+					if( *c_ptr == '.'){
+						size --;
 						break;
 					}
 				}
@@ -326,6 +329,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				break;
 
 			default:
+				//do not forget }
 				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":",
 						(is_first? "":","),
 						pro_ptr->proto,
@@ -343,41 +347,51 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					case 12:
 					case 13:
 						u8_ptr = (uint8_t *) me->data;
-						size   = sprintf(str_ptr, "\"%d.%d.%d.%d\"}",
+						size   = sprintf(str_ptr, "\"%d.%d.%d.%d\"",
 								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
 					}
 
 					break;
 
-					//IPV6 SRC=7 DST=8
+				//IPV6 SRC=7 DST=8
 				case 182:
 					switch( pro_ptr->att_id ){
 					case 7:
 					case 8:
 						u8_ptr = (uint8_t *) me->data;
-						size   = sprintf(str_ptr, "\"%02x:%02x:%02x:%02x:%02x:%02x\"}",
+						size   = sprintf(str_ptr, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
 								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
 					}
 					break;
 
-						//Ethernet
+				//Ethernet
 				case 99:
 					switch( pro_ptr->att_id ){
 					case 7:
 					case 8:
 						u8_ptr = (uint8_t *) me->data;
-						size   = sprintf(str_ptr, "\"%02x:%02x:%02x:%02x:%02x:%02x\"}",
+						size   = sprintf(str_ptr, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
 								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
 					}
 					break;
 
+				}// end of switch( pro_ptr->proto_id ){
+
+				//if the attribute is not neither IP nor MAC
+				if( u8_ptr == NULL ){
+					_remove_special_character(  (char *) me->data );
+					size = sprintf( str_ptr, "\"%s\"", (char *) me->data );
 				}
 
-				if( u8_ptr == NULL ){
-					size = sprintf( str_ptr, "\"%s\"}", (char *) me->data );
-					_remove_special_character( str_ptr );
-				}
-			}
+				//close } here
+				str_ptr += size;
+				*str_ptr = '}';
+				*(str_ptr + 1 ) = '\0';
+
+				size = 1;
+				//
+
+			}//end of switch( me->data_type )
 
 			is_first = NO;
 		}
@@ -394,6 +408,16 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 }
 
 
+/**
+ * PUBLIC API
+ * Print verdicts to verdict printer
+ * @param rule
+ * @param verdict
+ * @param timestamp
+ * @param counter
+ * @param trace
+ * @param user_data
+ */
 void mmt_sec_print_verdict(
 		const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
@@ -407,12 +431,27 @@ void mmt_sec_print_verdict(
 	const char *description = "";
 	const char *string = _convert_execution_trace_to_json_string( trace, rule );
 	static uint32_t alert_index = 0;
+	//TODO this limit mmt-sec on max 50 K rules
+	static uint8_t  prop_index[50000] = {0}, *p;
 
 	__sync_add_and_fetch( &alert_index, 1 );
 
-	//print description of a rule each 1O alerts
-	if( unlikely( alert_index % 10 == 1 ))
+
+	//each rule is processed by only one thread
+	//=> this is thread-safe
+	p = prop_index + rule->id - 1;
+	(*p) ++;
+
+	switch (*p){
+	case 1:
 		description = rule->description;
+		break;
+		//print description of a rule each 1O alerts
+	case 10:
+		//reset counter
+		(*p) = 0;
+		break;
+	}
 
 	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld,%"PRIu32",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
 			time( NULL ),
@@ -425,9 +464,12 @@ void mmt_sec_print_verdict(
 
 	message[ len ] = '\0';
 	verdict_printer_send( message );
-
 }
 
+/**
+ * PUBLIC API
+ * Print information of available rules
+ */
 void mmt_sec_print_rules_info(){
 	const rule_info_t **rules_arr;
 	size_t i, j, k, n  = 0, size;
@@ -476,6 +518,7 @@ void mmt_sec_print_rules_info(){
 
 /**
  * Public API
+ * Convert data in format of MMT-Probe to data in format of MMT-Sec
  */
 int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type ){
 	double number = 0;

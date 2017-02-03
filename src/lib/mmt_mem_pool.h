@@ -20,7 +20,7 @@ typedef struct mmt_mem_pool_struct{
 
 mmt_mem_pool_t * mmt_mem_pool_create( size_t element_size, size_t max_elements_count );
 
-void mmt_mem_pool_free( mmt_mem_pool_t *, void (*free_fn)(void *) );
+void mmt_mem_pool_delete( mmt_mem_pool_t *, void (*free_fn)(void *) );
 
 void mmt_mem_pool_reset( mmt_mem_pool_t * );
 

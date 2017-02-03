@@ -40,7 +40,7 @@ void mmt_mem_pool_reset( mmt_mem_pool_t *pool){
 	pool->elements_count = 0;
 }
 
-void mmt_mem_pool_free( mmt_mem_pool_t *pool, void (*free_fn)(void *) ){
+void mmt_mem_pool_delete( mmt_mem_pool_t *pool, void (*free_fn)(void *) ){
 	_mmt_mem_pool_t *_pool;
 	//free also its data
 	if( free_fn != NULL ){

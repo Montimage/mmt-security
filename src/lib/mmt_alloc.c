@@ -6,11 +6,20 @@
  */
 #include <stdint.h>
 #include "mmt_alloc.h"
-#include "mmt_mem_pool.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 ////memory
 ///////////////////////////////////////////////////////////////////////////////
+
+static inline void _mem_reset( mmt_memory_t *mem, size_t size ){
+	//mem->data points to the memory segment after sizeof( mmt_memory_t )
+	mem->data      = mem + 1;
+	//safe string
+	((char *)mem->data)[ size ] = '\0';
+	//store size to head of the memory segment
+	mem->size      = size;
+	mem->ref_count = 1;
+}
 static inline void *_mem_alloc(size_t size){
 	mmt_memory_t *mem = malloc( SIZE_OF_MMT_MEMORY_T + size + 1 );
 
@@ -19,14 +28,7 @@ static inline void *_mem_alloc(size_t size){
 	//remember size of memory being allocated
 	//allocated_memory_size += size;
 
-	//safe string
-	((char *)mem)[ SIZE_OF_MMT_MEMORY_T + size ] = '\0';
-
-	//mem->data points to the memory segment after sizeof( mmt_memory_t )
-	mem->data      = mem + 1;
-	//store size to head of the memory segment
-	mem->size      = size;
-	mem->ref_count = 1;
+	_mem_reset( mem, size );
 
 	return mem->data;
 }
@@ -37,6 +39,65 @@ static inline void _mem_force_free( void *x ){
 ///end memory
 ///////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////
+////circular buffer
+///////////////////////////////////////////////////////////////////////////////
+typedef struct _mmt_mem_pool_struct{
+	uint16_t head, tail;
+	uint32_t size;
+	void **data;
+}ring_t;
+
+ring_t * _create_ring( uint32_t max_elements_count ){
+	ring_t *ret = malloc( sizeof( ring_t ) );
+	if( ret == NULL )
+		return NULL;
+
+	ret->size = max_elements_count;
+	ret->head = 0;
+	ret->tail = 0;
+	ret->data = malloc(  sizeof( void *) * ret->size );
+
+	if( ret->data == NULL ){
+		free( ret );
+		fprintf(stderr, "Not enough memory to allocate ring_t" );
+		abort();
+	}
+	return ret;
+}
+
+void _free_ring( ring_t *ring ){
+	free( ring->data );
+	free( ring );
+}
+
+bool _push_ring( ring_t *ring, void *data ){
+	if( (ring->head + 1) % ring->size == ring->tail )
+		return false;
+
+	ring->data[ ring->head ]  = data;
+	ring->head = (ring->head + 1) % ring->size;
+	return true;
+}
+
+void *_pop_ring( ring_t *ring ){
+	void *val;
+	if( ring->head == ring->tail )
+		return NULL;
+	val = ring->data[ ring->tail ];
+	ring->tail = (ring->tail + 1) % ring->size;
+	return val;
+}
+
+void _iterate_ring( ring_t *ring, void (*fn)(void *) ){
+	while( ring->head != ring->tail ){
+		fn( ring->data[ ring->tail ] );
+
+		ring->tail = (ring->tail + 1) % ring->size;
+	}
+}
+///end circular buffer
+///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
 ////binary-map for keys are uint32_t
@@ -118,24 +179,39 @@ typedef struct mem_pools_struct{
 
 static __thread mem_pools_t mem_pools = {
 		.bytes_count = 0,
-		.max_bytes   = 10000,
+		.max_bytes   = 1000 * 1000 * 1000, //1GB
 		.pools_map   = NULL
 };
 
 //malloc using mem_pools
 static inline void *_pools_alloc( uint32_t elem_size ){
-	mmt_mem_pool_t *pool = __get_map_uint32_t( mem_pools.pools_map, elem_size );
-	if( unlikely( pool == NULL || pool->elements_count == 0 )){
+	void *ret;
+	ring_t *ring;
+
+	//mem_pools is empty
+	if( unlikely( mem_pools.bytes_count < elem_size ))
+		return _mem_alloc( elem_size );
+
+	ring = __get_map_uint32_t( mem_pools.pools_map, elem_size );
+
+
+	if( unlikely( ring == NULL || (ret = _pop_ring( ring )) == NULL )){
 		return _mem_alloc( elem_size );
 	}
 
 	//reduce number of available elements
 	mem_pools.bytes_count -= elem_size;
-	return mmt_mem_pool_allocate_element( pool, mmt_mem_alloc );
+
+	mmt_memory_t *mem = mmt_mem_revert( ret );
+
+	_mem_reset( mem, elem_size );
+
+	return ret;
 }
 
 //free using mem_pools
 static inline void _pools_free( void *elem ){
+	bool ret;
 	mmt_memory_t *mem = mmt_mem_revert( elem );
 
 	//total pools is full => free memory
@@ -145,35 +221,41 @@ static inline void _pools_free( void *elem ){
 	}
 
 	//find a slot in set of pools to store this element
-	mmt_mem_pool_t *pool = __get_map_uint32_t( mem_pools.pools_map, mem->size );
+	ring_t *ring = __get_map_uint32_t( mem_pools.pools_map, mem->size );
 
-	//its pool does not exist or it is full
-	//happen only one time when the pool for elem_size does not exist
-	if( unlikely( pool == NULL )){
-		pool = mmt_mem_pool_create( mem->size, 100 );
-		//insert the pool into mem_pools
-		__set_map_uint32_t( &mem_pools.pools_map, mem->size, pool );
+	//its ring does not exist or it is full
+	//happen only one time when the ring for elem_size does not exist
+	if( unlikely( ring == NULL )){
+		ring = _create_ring( 100 );
+		//insert the ring into mem_pools
+		__set_map_uint32_t( &mem_pools.pools_map, mem->size, ring );
 	}
 
 	//increase the total available bytes of the mem_pools
 	mem_pools.bytes_count += mem->size;
 
-	//store the element to the pool
-	mmt_mem_pool_free_element( pool, elem, (void *)_mem_force_free );
+	//store the element to the ring
+	ret = _push_ring( ring, elem );
+
+	//its ring is full => free the memory
+	if( ! ret )	free( mem );
 }
 
 static inline void _free_one_pool( uint32_t key, void *data, void *args){
-	mmt_mem_pool_delete( (mmt_mem_pool_t *)data, _mem_force_free );
+	ring_t *ring = data;
+	_iterate_ring( ring, _mem_force_free );
+	_free_ring( ring );
 }
 
 //free the mem_pools when app stopped
 static inline void _free_mem_pools(){
-	//free each pool of mem_pools
+	//free each ring of mem_pools
 	__iterate_map_uint32_t( mem_pools.pools_map, _free_one_pool, NULL );
 	//free tree_map
 	__free_map_uint32_t(  mem_pools.pools_map );
 }
 
+//call when exiting application
 static __attribute__((destructor)) void _destructor () {
 	_free_mem_pools();
 }
@@ -181,20 +263,31 @@ static __attribute__((destructor)) void _destructor () {
 ///////////////////////////////////////////////////////////////////////////////
 
 
+/**
+ * PUBLIC API
+ *
+ * Allocate memory
+ * @param size
+ */
 void *mmt_mem_alloc(size_t size){
 #ifdef DEBUG_MODE
 	mmt_assert( size > 0, "Size must be positive" );
 #endif
 
-	return _mem_alloc( size );
-//	return _pools_alloc( size );
+//	return _mem_alloc( size );
+	return _pools_alloc( size );
 }
 
+/**
+ * PUBLIC API
+ * Free memory that was allocated by mmt_mem_alloc
+ * @param x
+ */
 void mmt_mem_force_free( void *x ){
 #ifdef DEBUG_MODE
 	mmt_assert( x != NULL, "x (%p) must not be NULL", x );
 #endif
 
-	_mem_force_free( x );
-//	return _pools_free( x );
+//	_mem_force_free( x );
+	return _pools_free( x );
 }

@@ -9,7 +9,7 @@
 
 typedef struct _mmt_mem_pool_struct{
 	mmt_mem_pool_t pool;
-	size_t head_index, tail_index;
+	uint32_t head_index, tail_index;
 	void **data;
 }_mmt_mem_pool_t;
 

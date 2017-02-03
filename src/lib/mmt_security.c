@@ -373,8 +373,10 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 				}
 
-				if( u8_ptr == NULL )
+				if( u8_ptr == NULL ){
 					size = sprintf( str_ptr, "\"%s\"}", (char *) me->data );
+					_remove_special_character( str_ptr );
+				}
 			}
 
 			is_first = NO;

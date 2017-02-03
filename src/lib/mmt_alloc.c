@@ -8,11 +8,11 @@
 #include "mmt_alloc.h"
 #include "mmt_mem_pools.h"
 
-static __thread mmt_mem_pools_map_t *mem_pools = NULL;
+//static __thread mmt_mem_pools_map_t *mem_pools = NULL;
 
 void *mmt_mem_alloc(size_t size){
 #ifdef DEBUG_MODE
-	mmt_assert( size > 0, "Size must not be negative" );
+	mmt_assert( size > 0, "Size must be positive" );
 #endif
 
 	mmt_memory_t *mem = malloc( SIZE_OF_MMT_MEMORY_T + size + 1 );
@@ -33,7 +33,6 @@ void *mmt_mem_alloc(size_t size){
 
 	return mem->data;
 }
-
 
 void mmt_mem_force_free( void *x ){
 #ifdef DEBUG_MODE

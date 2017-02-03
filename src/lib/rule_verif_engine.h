@@ -14,7 +14,6 @@
 #include "mmt_lib.h"
 #include "plugin_header.h"
 #include "mmt_security.h"
-#include "mmt_mem_pool.h"
 #include "mmt_fsm.h"
 
 typedef struct rule_engine_struct{
@@ -33,8 +32,6 @@ typedef struct rule_engine_struct{
 	size_t total_instances_count;
 	//number of instances
 	size_t instances_count;
-
-	mmt_mem_pool_t *mem_pool;
 }rule_engine_t;
 
 //max number of events in a rule

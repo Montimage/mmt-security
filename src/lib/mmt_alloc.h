@@ -20,7 +20,6 @@
 #include "mmt_alloc.h"
 #include "mmt_log.h"
 
-
 typedef struct mmt_memory_struct{
 	uint32_t  ref_count;
 	uint32_t  size;
@@ -43,31 +42,16 @@ typedef struct mmt_memory_struct{
  * - Error:
  * 	+ Exit system if memory is not enough
  */
-static inline
-void *mmt_mem_alloc(size_t size){
+void *mmt_mem_alloc(size_t size);
 
-#ifdef DEBUG_MODE
-	mmt_assert( size > 0, "Size must not be negative" );
-#endif
 
-	mmt_memory_t *mem = malloc( SIZE_OF_MMT_MEMORY_T + size + 1 );
+/**
+ * Free memory allocated by mmt_malloc
+ * Do not use this function to free memory created by malloc
+ * @param x
+ */
+void mmt_mem_force_free( void *x );
 
-	//quit if not enough
-	mmt_assert( mem != NULL, "Not enough memory to allocate %zu bytes", size);
-	//remember size of memory being allocated
-	//allocated_memory_size += size;
-
-	//safe string
-	((char *)mem)[ SIZE_OF_MMT_MEMORY_T + size ] = '\0';
-
-	//mem->data points to the memory segment after sizeof( mmt_memory_t )
-	mem->data      = mem + 1;
-	//store size to head of the memory segment
-	mem->size      = size;
-	mem->ref_count = 1;
-
-	return mem->data;
-}
 
 /**
  * Free memory allocated by mmt_malloc
@@ -79,7 +63,7 @@ size_t mmt_mem_free( void *x ){
 
    mmt_memory_t *mem = mmt_mem_revert( x );
    if( mem->ref_count <= 1 ){
-		free( mem );
+   	mmt_mem_force_free( x );
 		return 0;
    }else{
    	mem->ref_count --;
@@ -88,19 +72,6 @@ size_t mmt_mem_free( void *x ){
 }
 
 
-/**
- * Free memory allocated by mmt_malloc
- * Do not use this function to free memory created by malloc
- * @param x
- */
-static inline
-void mmt_mem_force_free( void *x ){
-#ifdef DEBUG_MODE
-	mmt_assert( x != NULL, "x (%p) must not be NULL", x );
-#endif
-
-   free( mmt_mem_revert( x ) );
-}
 
 /**
  * Get size of the memory segment pointed by ptr.

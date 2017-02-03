@@ -24,6 +24,8 @@ void mmt_print_execution_trace (void) {
   for (i = 0; i < size; i++){
      fprintf(stderr, "\t %zu. %s\n", (i+1), strings[i]);
 
+     //DEBUG_MODE given by Makefile
+#ifdef DEBUG_MODE
      /* find first occurence of '(' or ' ' in message[i] and assume
       * everything before that is the file name. (Don't go beyond 0 though
       * (string terminator)*/
@@ -40,6 +42,8 @@ void mmt_print_execution_trace (void) {
 
      fprintf(stderr, "\t    ");
      if( system(syscom) ) {}
+#endif
+
   }
 
   free (strings);
@@ -61,10 +65,8 @@ void mmt_log( log_level_t level, const char *format, ... ){
 	va_end(arg);
 	if( level == HALT ){
 
-//DEBUG_MODE given by Makefile
-#ifdef DEBUG_MODE
+
 		mmt_print_execution_trace();
-#endif
 
 		exit( 1 );
 	}

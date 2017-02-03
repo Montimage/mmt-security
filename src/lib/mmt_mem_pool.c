@@ -7,8 +7,6 @@
 
 #include "mmt_mem_pool.h"
 
-
-
 typedef struct _mmt_mem_pool_struct{
 	mmt_mem_pool_t pool;
 	size_t head_index, tail_index;
@@ -35,7 +33,14 @@ mmt_mem_pool_t * mmt_mem_pool_create( size_t element_size, size_t max_elements_c
 	return (mmt_mem_pool_t *) ret;
 }
 
-void mmt_mem_pool_free( mmt_mem_pool_t *pool, void (*free_fn)(void *) ){
+void mmt_mem_pool_reset( mmt_mem_pool_t *pool){
+	_mmt_mem_pool_t *_pool = (_mmt_mem_pool_t *) pool;
+	_pool->head_index    = 0;
+	_pool->tail_index    = 0;
+	pool->elements_count = 0;
+}
+
+void mmt_mem_pool_delete( mmt_mem_pool_t *pool, void (*free_fn)(void *) ){
 	_mmt_mem_pool_t *_pool;
 	//free also its data
 	if( free_fn != NULL ){

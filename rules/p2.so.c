@@ -1,6 +1,6 @@
 
- /** 927
-  * This file is generated automatically on 2017-01-31 14:13:20
+ /** 926
+  * This file is generated automatically on 2017-02-03 10:51:51
   */
  #include <string.h>
  #include <stdio.h>
@@ -9,7 +9,7 @@
  #include "mmt_fsm.h"
  #include "mmt_lib.h"
  
- /** 934
+ /** 933
   * Embedded functions
   */
  
@@ -19,12 +19,12 @@
 
  #define PROTO_ATTS_COUNT_1 4
 
- /** 867
+ /** 866
   * Proto_atts for rule 1
   */
  
  static proto_attribute_t proto_atts_1[ PROTO_ATTS_COUNT_1 ] = {{.proto = "http", .proto_id = 153, .att = "method", .att_id = 1, .data_type = 1}, {.proto = "ip", .proto_id = 178, .att = "dst", .att_id = 13, .data_type = 1}, {.proto = "ip", .proto_id = 178, .att = "src", .att_id = 12, .data_type = 1}, {.proto = "tcp", .proto_id = 354, .att = "dest_port", .att_id = 2, .data_type = 0}};
- /** 879
+ /** 878
   * Detail of proto_atts for each event
   */
  
@@ -39,7 +39,7 @@
 	 } 
  };//end proto_atts_events_
 
- /** 556
+ /** 555
   * Structure to represent event data
   */
  typedef struct _msg_struct_1{
@@ -50,7 +50,7 @@
 	 const char *ip_src;
 	 const double *tcp_dest_port;
  }_msg_t_1;
- /** 592
+ /** 591
   * Create an instance of _msg_t_1
   */
  static inline _msg_t_1* _allocate_msg_t_1(){
@@ -64,7 +64,7 @@
 	 m->counter   = 0;//index of packet
 	 return m; 
  }
- /** 617
+ /** 616
   * Public API
   */
  static const void *convert_message_to_event_1( const message_t *msg){
@@ -74,13 +74,13 @@
 	 new_msg->timestamp = msg->timestamp;
 	 new_msg->counter = msg->counter;
 	 for( i=0; i<msg->elements_count; i++){
-		 switch( msg->elements[i].proto_id ){/** 627 For each protocol*/
+		 switch( msg->elements[i].proto_id ){/** 626 For each protocol*/
 		 case 153:// protocol http
 			 switch( msg->elements[i].att_id ){
 			 case 1:// attribute method
 				 new_msg->http_method = (char *) msg->elements[i].data;
 				 break;
-			 }//end switch of att_id 634
+			 }//end switch of att_id 633
 			 break;
 		 case 178:// protocol ip
 			 switch( msg->elements[i].att_id ){
@@ -90,19 +90,19 @@
 			 case 12:// attribute src
 				 new_msg->ip_src = (char *) msg->elements[i].data;
 				 break;
-			 }//end switch of att_id 634
+			 }//end switch of att_id 633
 			 break;
 		 case 354:// protocol tcp
 			 switch( msg->elements[i].att_id ){
 			 case 2:// attribute dest_port
 				 new_msg->tcp_dest_port = (double *) msg->elements[i].data;
 				 break;
-			 }//end switch of att_id 651
+			 }//end switch of att_id 650
 		 }//end switch
 	 }//end for
-	 return (void *)new_msg; //654
+	 return (void *)new_msg; //653
  }//end function
- /** 523
+ /** 522
   * Public API
   */
  static uint64_t hash_message_1( const void *data ){
@@ -128,7 +128,7 @@
 	 if( unlikely( ev_data->tcp_dest_port == NULL )) return 0;
 	 double tcp_dest_port = *( ev_data->tcp_dest_port );
 
-	 return ((strcmp(http_method , "")) && ((tcp_dest_port != 80) && (tcp_dest_port != 8080)));
+	 return (0 != strcmp(http_method , "") && ((tcp_dest_port != 80) && (tcp_dest_port != 8080)));
  }
  
  /** 94
@@ -237,11 +237,11 @@
   * Create a new FSM for this rule
   */
  static void *create_new_fsm_1(){
-		 return fsm_init( &s_1_0, &s_1_1, &s_1_2, &s_1_3, EVENTS_COUNT_1 );//init, error, final, inconclusive, events_count
+		 return fsm_init( &s_1_0, &s_1_1, &s_1_2, &s_1_3, EVENTS_COUNT_1, sizeof( _msg_t_1 ) );//init, error, final, inconclusive, events_count
  }//end function
 
  //======================================GENERAL======================================
- /** 667
+ /** 666
   * Information of 1 rules
   * PUBLIC API
   */
@@ -267,8 +267,8 @@
 	 *rules_arr = rules;
 	 return 1;
  }
- /** 697
+ /** 696
   * Moment the rules being encoded
   * PUBLIC API
   */
- const char * __get_generated_date(){ return "2017-01-31 14:13:20, mmt-security version 1.0.0 (af1e5ee)";};
+ const char * __get_generated_date(){ return "2017-02-03 10:51:51, mmt-security version 1.0.0 (9368b03)";};

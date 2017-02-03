@@ -678,6 +678,19 @@ inline bool _is_comparison_operator( int op ){
 	return op == NEQ || op == EQ || op == GT || op == GTE || op == LT || op == LTE;
 }
 
+inline bool _is_string_variable( const operation_t *opt ){
+	link_node_t *ptr;
+	expression_t *expr;
+	ptr = opt->params_list;
+	while( ptr != NULL ){
+		expr = (expression_t *) ptr->data;
+		if( expr->type != VARIABLE || expr->variable->data_type != STRING )
+			return NO;
+		ptr = ptr->next;
+	}
+	return YES;
+}
+
 inline bool _is_string_param( const operation_t *opt ){
 	link_node_t *ptr;
 	expression_t *expr;
@@ -686,11 +699,12 @@ inline bool _is_string_param( const operation_t *opt ){
 		expr = (expression_t *) ptr->data;
 		if( expr->type == VARIABLE && expr->variable->data_type != STRING )
 			return NO;
+		if( expr->type == CONSTANT && expr->variable->data_type != STRING )
+			return NO;
 		ptr = ptr->next;
 	}
 	return YES;
 }
-
 /**
  * Public API
  */
@@ -707,7 +721,8 @@ size_t expr_stringify_operation( char **string, operation_t *opt ){
 	if( _is_comparison_operator( opt->operator ) && _is_string_param ( opt ) ){
 		//delimiter
 		delim = ",";
-		index += sprintf( &str[ index ], "0 %s mmt_mem_cmp(", opt->name );
+		index += sprintf( &str[ index ], "0 %s %s(", opt->name,
+				_is_string_variable( opt) ? "mmt_mem_cmp" : "strcmp" );
 	}else if( opt->operator == FUNCTION ){
 		delim = ",";
 		index += sprintf( &str[ index ], "%s(", opt->name );

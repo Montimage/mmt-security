@@ -6,17 +6,18 @@
  */
 
 #include "mmt_lib.h"
-
+#include "plugin_header.h"
 #include "mmt_fsm.h"
 #include "message_t.h"
 #include "rule_verif_engine.h"
+#include "mmt_mem_pool.h"
 
 /**
  * Detailed definition of FSM
  */
 typedef struct fsm_struct{
 	uint64_t time_min, time_max;
-	uint64_t counter_min, counter_max;
+//	uint64_t counter_min, counter_max;
 
 	//id of the FSM
 	uint16_t id;
@@ -42,6 +43,7 @@ typedef struct fsm_struct{
 
    const fsm_state_t *success_state;
 
+   size_t message_size;
 
    /**
     * Trace of running FSM
@@ -58,7 +60,7 @@ typedef struct fsm_struct{
 /**
  * Public API
  */
-fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state, size_t events_count ) {
+fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state, size_t events_count, size_t message_size ) {
 	_fsm_t *fsm = mmt_mem_alloc( sizeof( _fsm_t ));
 
 	fsm->init_state      = initial_state;
@@ -70,9 +72,10 @@ fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state
 	fsm->id              = 0;
 	fsm->events_trace    = mmt_array_init( events_count + 1 ); //event_id starts from 1, zero is timeout
 	fsm->messages_trace  = mmt_array_init( events_count + 1 ); //event_id starts from 1, zero is timeout
-	fsm->time_max    = fsm->time_min    = 0;
-	fsm->counter_max = fsm->counter_min = 0;
-	fsm->current_event_id = 0;
+	fsm->time_max        = fsm->time_min    = 0;
+//	fsm->counter_max     = fsm->counter_min = 0;
+	fsm->current_event_id= 0;
+	fsm->message_size      = message_size;
 
 	return (fsm_t *) fsm;
 }
@@ -147,7 +150,7 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	}
 
 	//store execution log
-	_fsm->events_trace->data[ _fsm->current_event_id   ] = mmt_mem_force_dup( event_data, ((rule_engine_t*) _fsm->user_data)->rule_info->message_size );
+	_fsm->events_trace->data[ _fsm->current_event_id   ] = mmt_mem_force_dup( event_data, _fsm->message_size );
 	_fsm->messages_trace->data[ _fsm->current_event_id ] = mmt_mem_atomic_retain( message_data );
 
 //	/* Run exit action

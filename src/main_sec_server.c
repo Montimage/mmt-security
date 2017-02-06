@@ -28,9 +28,9 @@
 
 #include "dpi/types_defs.h"
 #include "dpi/mmt_dpi.h"
+#include "lib/config.h"
 #include "lib/mmt_lib.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/mmt_sec_config.h"
 #include "lib/system_info.h"
 
 //maximum length of a report sent from mmt-probe

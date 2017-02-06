@@ -28,11 +28,6 @@
 //string size of an alert in JSON format
 #define MAX_MSG_SIZE 10000
 
-//number of fsm instances of one rule
-#ifndef MAX_INSTANCE_COUNT
-	#define MAX_INSTANCE_COUNT 100000
-#endif
-
 const char *mmt_sec_get_version_info(){
 	//define in version.h
 	return MMT_SEC_VERSION;
@@ -123,7 +118,7 @@ static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
 mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rules_count,
 		mmt_sec_callback callback, void *user_data){
 	size_t i;
-
+	uint32_t max_instance_count = get_config()->security.max_instances;
 	__check_null( rules_array, NULL );
 
 	_mmt_sec_handler_t *handler = mmt_mem_alloc( sizeof( _mmt_sec_handler_t ));
@@ -135,7 +130,7 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 	//one fsm for one rule
 	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
 	for( i=0; i<rules_count; i++ ){
-		handler->engines[i] = rule_engine_init( rules_array[i], MAX_INSTANCE_COUNT );
+		handler->engines[i] = rule_engine_init( rules_array[i], max_instance_count );
 	}
 
 	_get_unique_proto_attts( handler );
@@ -514,6 +509,7 @@ void mmt_sec_print_rules_info(){
 	printf("\n\nProtocols and their attributes used in these rules:\n\t %s\n\n", string );
 
 	mmt_mem_free( rules_arr );
+	unload_mmt_sec_rules();
 }
 
 /**

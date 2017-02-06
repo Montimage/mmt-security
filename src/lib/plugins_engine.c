@@ -90,6 +90,10 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	return index;
 }
 
+#define MAX_LIBS_COUNT 100000
+static void *dl_libs[MAX_LIBS_COUNT];
+static uint32_t dl_libs_index = 0;
+
 size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_path_name ){
 
 	void *lib = dlopen( plugin_path_name, RTLD_NOW );
@@ -109,9 +113,21 @@ size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_
 
 	*plugins_arr = ret_array;
 
+	if( dl_libs_index < MAX_LIBS_COUNT )
+		dl_libs[ dl_libs_index ++ ] = lib;
+
 	return size;
 }
 
-void close_plugins() {
+void unload_mmt_sec_rules() {
+	size_t i;
+	for( i=0; i<dl_libs_index; i++ )
+		dlclose( dl_libs[ i ] );
+	dl_libs_index = 0;
+}
 
+
+//call when exiting application
+static __attribute__((destructor)) void _destructor () {
+	unload_mmt_sec_rules();
 }

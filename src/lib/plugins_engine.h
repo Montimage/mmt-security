@@ -37,7 +37,7 @@ size_t load_mmt_sec_rule( rule_info_t const ***plugins_arr, const char *plugin_p
  * to the loaded plugins have been retrieved. Normally this function is used when closing the
  * library.
  */
-void close_mmt_sec_rules();
+void unload_mmt_sec_rules();
 
 
 #endif /* SRC_LIB_PLUGIN_ENGINE_H_ */

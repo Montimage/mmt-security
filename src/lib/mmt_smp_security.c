@@ -14,8 +14,6 @@
 #include "system_info.h"
 #include "lock_free_spsc_ring.h"
 
-#define RING_SIZE 50000
-
 //implemented in mmt_security.c
 typedef struct _mmt_smp_sec_handler_struct{
 	size_t threads_count;
@@ -192,6 +190,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	int ret;
 	struct _thread_arg *thread_arg;
 	long cpus_count = get_number_of_online_processors() - 1;
+	uint32_t ring_size = get_config()->security.smp.ring_size;
 
 	__check_null( rules_array, NULL );
 
@@ -218,7 +217,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 
 	//one buffer per thread
 	for( i=0; i<handler->threads_count; i++)
-		handler->messages_buffers[ i ] = ring_init( RING_SIZE );
+		handler->messages_buffers[ i ] = ring_init( ring_size );
 
 	handler->mmt_sec_handlers = mmt_mem_alloc( sizeof( mmt_sec_handler_t *) * handler->threads_count );
 	rule_ptr = rules_array;
@@ -279,7 +278,9 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 		msg = mmt_mem_retains( msg,  _handler->threads_count - 1 );
 
 	//all threads have not been yet put the message
-	memset( _handler->hash_array, 0, _handler->threads_count );
+//	memset( _handler->hash_array, 0, _handler->threads_count );
+	for( i=0; i<_handler->threads_count; i++ )
+		_handler->hash_array[ i ] = 0;
 
 	total = 0;
 	while( total < _handler->threads_count ){

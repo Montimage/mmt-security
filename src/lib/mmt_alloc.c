@@ -173,13 +173,11 @@ static inline void __iterate_map_uint32_t( node_uint32_t * node, void (*callback
 ///////////////////////////////////////////////////////////////////////////////
 typedef struct mem_pools_struct{
 	size_t bytes_count; //total number of available bytes of all pools
-	size_t   max_bytes;
 	node_uint32_t *pools_map;
 }mem_pools_t ;
 
 static __thread mem_pools_t mem_pools = {
 		.bytes_count = 0,
-		.max_bytes   = 1000 * 1000 * 1000, //1GB
 		.pools_map   = NULL
 };
 
@@ -194,10 +192,8 @@ static inline void *_pools_alloc( uint32_t elem_size ){
 
 	ring = __get_map_uint32_t( mem_pools.pools_map, elem_size );
 
-
-	if( unlikely( ring == NULL || (ret = _pop_ring( ring )) == NULL )){
+	if( unlikely( ring == NULL || (ret = _pop_ring( ring )) == NULL ))
 		return _mem_alloc( elem_size );
-	}
 
 	//reduce number of available elements
 	mem_pools.bytes_count -= elem_size;
@@ -215,7 +211,7 @@ static inline void _pools_free( void *elem ){
 	mmt_memory_t *mem = mmt_mem_revert( elem );
 
 	//total pools is full => free memory
-	if( unlikely( mem_pools.bytes_count >= mem_pools.max_bytes )){
+	if( unlikely( mem_pools.bytes_count >= get_config()->mem_pool.max_bytes )){
 		free( mem );
 		return;
 	}
@@ -226,7 +222,7 @@ static inline void _pools_free( void *elem ){
 	//its ring does not exist or it is full
 	//happen only one time when the ring for elem_size does not exist
 	if( unlikely( ring == NULL )){
-		ring = _create_ring( 100 );
+		ring = _create_ring( get_config()->mem_pool.max_elements_per_pool );
 		//insert the ring into mem_pools
 		__set_map_uint32_t( &mem_pools.pools_map, mem->size, ring );
 	}
@@ -238,7 +234,10 @@ static inline void _pools_free( void *elem ){
 	ret = _push_ring( ring, elem );
 
 	//its ring is full => free the memory
-	if( ! ret )	free( mem );
+	if( unlikely( ! ret )){
+		mmt_debug("Full pool %"PRIu32, mem->size );
+		free( mem );
+	}
 }
 
 static inline void _free_one_pool( uint32_t key, void *data, void *args){

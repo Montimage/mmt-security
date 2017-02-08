@@ -125,7 +125,14 @@ static inline size_t str_split(const char* string, char a_delim, char ***array){
 	return count;
 }
 
-
+static inline
+size_t index_of( uint32_t val, const uint32_t *array, size_t array_size){
+	size_t i;
+	for( i=0; i<array_size; i++ )
+		if( array[i] == val )
+			return i+1;
+	return 0;
+}
 
 /**
  * mask is a string indicating logical cores to be used,
@@ -142,11 +149,12 @@ static inline size_t str_split(const char* string, char a_delim, char ***array){
  * - Return:
  * 	+ size of the output array
  */
-static inline size_t expand_number_range( const char *mask, uint8_t **result ){
+static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 	const char *cur, *prv;
 	size_t size = 0, i, j;
-	uint8_t num;
-	uint8_t array[ 1000 ];
+	uint32_t num;
+	//TODO this can handle maximally only 100K rules in rules-mask (lcores in core-mask)
+	uint32_t array[ 100000 ];
 
 	*result = NULL;
 	if( mask == NULL ) return 0;
@@ -155,12 +163,12 @@ static inline size_t expand_number_range( const char *mask, uint8_t **result ){
 	while( *cur != '\0' ){
 		//first number
 		if( !isdigit( *cur ) ){
-			mmt_halt( "Core mask: Expected a digit at %s", cur );
+			mmt_halt( "Mask: Expected a digit at %s", cur );
 			return 0;
 		}
 
 		num = atoi( cur );
-		if( find_byte( num, array, size ) == 0 )
+		if( index_of( num, array, size ) == 0 )
 			array[ size++ ] = num;
 
 		while( isdigit( *cur ) ) cur ++;
@@ -170,7 +178,7 @@ static inline size_t expand_number_range( const char *mask, uint8_t **result ){
 
 		//separator
 		if( *cur != ',' &&  *cur != '-' ){
-			mmt_halt( "Core mask: Expected a separator, either ' or , at %s", cur );
+			mmt_halt( "Mask: Expected a separator, either ' or , at %s", cur );
 			return 0;
 		}
 
@@ -183,12 +191,12 @@ static inline size_t expand_number_range( const char *mask, uint8_t **result ){
 			i=array[ size-1 ] + 1;
 
 			if( i > num ){
-				mmt_halt( "Core mask: Range is incorrect %zu-%d", i-1, num );
+				mmt_halt( "Mask: Range is incorrect %zu-%d", i-1, num );
 				return 0;
 			}
 
 			for(  ; i<=num; i++ )
-				if( find_byte( i, array, size ) == 0 )
+				if( index_of( i, array, size ) == 0 )
 					array[ size ++ ] = i;
 
 			//after the second number must be ',' or '\n'
@@ -197,18 +205,19 @@ static inline size_t expand_number_range( const char *mask, uint8_t **result ){
 		}
 
 		if( *cur != ',' ){
-			mmt_halt( "Core mask: Expected a separator , at %s", cur );
+			mmt_halt( "Mask: Expected a separator , at %s", cur );
 			return 0;
 		}
 		cur++;
 
 		if( *cur == '\0' ){
-			mmt_halt( "Core mask: Unexpected a separator , at the end" );
+			mmt_halt( "Mask: Unexpected a separator , at the end" );
 			return 0;
 		}
 	}
 
-	*result = mmt_mem_dup( array, size );
+	*result = mmt_mem_dup( array, size * sizeof( uint32_t) );
 	return size;
 }
+
 #endif /* SRC_LIB_MMT_UTILS_H_ */

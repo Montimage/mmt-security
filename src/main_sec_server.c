@@ -33,6 +33,7 @@
 #include "lib/mmt_smp_security.h"
 #include "lib/system_info.h"
 
+#define MAX_RULE_MASK_SIZE 100000
 //maximum length of a report sent from mmt-probe
 #define REPORT_SIZE 10000
 //maximum length of file name storing alerts
@@ -78,6 +79,7 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-p <number/string> : If p is a number, it indicates port number of internet domain socket otherwise it indicates name of unix domain socket. Default: 5000\n");
 	fprintf(stderr, "\t-n <number> : Number of threads per process. Default = 1\n");
 	fprintf(stderr, "\t-c <string> : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
+	fprintf(stderr, "\t-m <string> : Attributes special rules to special threads e.g., \"(1:10-13)(2:50)(4:1007-1010)\"\n");
 	fprintf(stderr, "\t-f <string> : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string> : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v          : Verbose.\n");
@@ -87,10 +89,10 @@ void usage(const char * prg_name) {
 }
 
 size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, char *unix_domain, size_t *threads_count,
-		size_t *cores_count, uint8_t **core_mask, bool *verbose ) {
+		size_t *cores_count, uint32_t **core_mask, char *rule_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
 
-	while ((opt = getopt(argc, argv, "p:n:f:r:c:vlh")) != EOF) {
+	while ((opt = getopt(argc, argv, "p:n:f:r:c:m:vlh")) != EOF) {
 		switch (opt) {
 		case 'p':
 			optcount++;
@@ -119,6 +121,10 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 				*threads_count = x;
 			else
 				usage(argv[0]);
+			break;
+		case 'm':
+			optcount++;
+			strncpy( rule_mask, optarg, MAX_RULE_MASK_SIZE );
 			break;
 		case 'c':
 			optcount++;
@@ -342,13 +348,15 @@ int main( int argc, char** argv ) {
 	socklen_t socklen;
 	struct timeval start_time, end_time;
 	size_t size, rules_count, cores_count = 0, clients_count = 0, alerts_count = 0;
-	uint8_t *core_mask = NULL, *core_mask_ptr;
+	uint32_t *core_mask = NULL, *core_mask_ptr;
 
 	mmt_sec_callback _print_output;
 
+	char rule_mask[ 100000 ];
+
 	parent_pid = getpid();
 
-	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count, &cores_count, &core_mask, &verbose );
+	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count, &cores_count, &core_mask, rule_mask, &verbose );
 
 	is_unix_socket = (port_number == 0);
 
@@ -366,11 +374,9 @@ int main( int argc, char** argv ) {
 
 	if( verbose ){
 		if( is_unix_socket == NO )
-			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on port %d\n",
-					mmt_sec_get_version_info(), rules_count, threads_count, port_number );
+			mmt_info(" MMT-Security is listening on port %d\n", port_number );
 		else
-			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on \"%s\"\n",
-					mmt_sec_get_version_info(), rules_count, threads_count, un_domain_name );
+			mmt_info(" MMT-Security is listening on \"%s\"\n", un_domain_name );
 	}
 
 	/* create internet socket */
@@ -489,7 +495,7 @@ int main( int argc, char** argv ) {
 				_sec_handler.process_fn = &mmt_sec_process;
 				size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 			}else if( _sec_handler.threads_count > 1 ){
-				_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, threads_count - 1, core_mask_ptr, verbose && clients_count == 1, _print_output, NULL );
+				_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, threads_count - 1, core_mask_ptr, rule_mask, verbose && clients_count == 1, _print_output, NULL );
 				_sec_handler.process_fn = &mmt_smp_sec_process;
 				size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 			}

@@ -210,6 +210,13 @@ static inline void _pools_free( void *elem ){
 	bool ret;
 	mmt_memory_t *mem = mmt_mem_revert( elem );
 
+#ifdef DEBUG_MODE
+	if( mem->size == 0 ){
+		fprintf(stderr, "Memory size must not be zero. This can be caused by calling mmt_mem_free to free a memory block that was not created by mmt_mem_alloc");
+		abort();
+	}
+#endif
+
 	//total pools is full => free memory
 	if( unlikely( mem_pools.bytes_count >= get_config()->mem_pool.max_bytes )){
 		free( mem );
@@ -235,7 +242,7 @@ static inline void _pools_free( void *elem ){
 
 	//its ring is full => free the memory
 	if( unlikely( ! ret )){
-		mmt_debug("Full pool %"PRIu32, mem->size );
+//		mmt_debug("Pool %p is full for block %"PRIu32, ring, mem->size );
 		free( mem );
 	}
 }
@@ -252,6 +259,7 @@ static inline void _free_mem_pools(){
 	__iterate_map_uint32_t( mem_pools.pools_map, _free_one_pool, NULL );
 	//free tree_map
 	__free_map_uint32_t(  mem_pools.pools_map );
+	mem_pools.pools_map = NULL;
 }
 
 //call when exiting application

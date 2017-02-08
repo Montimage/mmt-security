@@ -40,6 +40,11 @@ typedef struct config_struct {
 		uint32_t max_instances;
 
 		/**
+		 * A mask to distribute rules on each thread
+		 */
+		char *rules_mask;
+
+		/**
 		 * for multi-thread
 		 */
 		struct{

@@ -124,14 +124,19 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 	_mmt_sec_handler_t *handler = mmt_mem_alloc( sizeof( _mmt_sec_handler_t ));
 	handler->rules_count = rules_count;
 	handler->rules_array = rules_array;
-	handler->callback = callback;
+	handler->callback    = callback;
 	handler->user_data_for_callback = user_data;
 	handler->alerts_count = 0;
 	//one fsm for one rule
 	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
-	for( i=0; i<rules_count; i++ ){
+	for( i=0; i<rules_count; i++ )
 		handler->engines[i] = rule_engine_init( rules_array[i], max_instance_count );
-	}
+
+#ifdef DEBUG_MODE
+//	printf(" Thread pid=%2d processes %4zu rules: ", gettid(), rules_count );
+//	for( i=0; i<rules_count; i++ )
+//		printf("%"PRIu32"%c", rules_array[i]->id, i == rules_count -1 ? '\n':',' );
+#endif
 
 	_get_unique_proto_attts( handler );
 
@@ -158,10 +163,10 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	mmt_debug("received %zu messages and generated %zu alerts",
 			_handler->messages_count, _handler->alerts_count );
 #endif
+
 	//free data elements of _handler
-	for( i=0; i<_handler->rules_count; i++ ){
+	for( i=0; i<_handler->rules_count; i++ )
 		rule_engine_free( _handler->engines[i] );
-	}
 
 	mmt_mem_free( _handler->proto_atts_array );
 	mmt_mem_free( _handler->engines );
@@ -426,8 +431,8 @@ void mmt_sec_print_verdict(
 	const char *description = "";
 	const char *string = _convert_execution_trace_to_json_string( trace, rule );
 	static uint32_t alert_index = 0;
-	//TODO this limit mmt-sec on max 50 K rules
-	static uint8_t  prop_index[50000] = {0}, *p;
+	//TODO this limit mmt-sec on max 100 K rules
+	static uint8_t  prop_index[100000] = {0}, *p;
 
 	__sync_add_and_fetch( &alert_index, 1 );
 

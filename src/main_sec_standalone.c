@@ -30,7 +30,7 @@
 #include "lib/mmt_smp_security.h"
 #include "lib/verdict_printer.h"
 
-
+#define MAX_RULE_MASK_SIZE 100000
 #define MAX_FILENAME_SIZE 500
 #define TRACE_FILE 1
 #define LIVE_INTERFACE 2
@@ -63,6 +63,7 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");
 	fprintf(stderr, "\t-i <interface> : Gives the interface name for live traffic analysis.\n");
 	fprintf(stderr, "\t-c <string>    : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
+	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads e.g., \"(1:10-13)(2:50)(4:1007-1010)\"\n");
 	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v             : Verbose.\n");
@@ -71,13 +72,13 @@ void usage(const char * prg_name) {
 	exit(1);
 }
 
-size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id, size_t *threads_count, uint8_t **core_mask, bool *verbose ) {
+size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id, size_t *threads_count, uint32_t **core_mask, char *rule_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
 	char file_string[MAX_FILENAME_SIZE]  = {0};
 	char redis_string[MAX_FILENAME_SIZE] = {0};
 	*verbose = NO;
 	filename[0] = '\0';
-	while ((opt = getopt(argc, argv, "t:i:f:r:c:lhv")) != EOF) {
+	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:lhv")) != EOF) {
 		switch (opt) {
 		case 't':
 			optcount++;
@@ -98,6 +99,10 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 		case 'f':
 			optcount++;
 			strncpy((char *) file_string, optarg, MAX_FILENAME_SIZE);
+			break;
+		case 'm':
+			optcount++;
+			strncpy( rule_mask, optarg, MAX_RULE_MASK_SIZE );
 			break;
 		case 'r':
 			optcount++;
@@ -299,17 +304,17 @@ int main(int argc, char** argv) {
 	char errbuf[1024];
 	char filename[MAX_FILENAME_SIZE + 1];
 	size_t core_size;
-	uint8_t *core_mask = NULL;
+	uint32_t *core_mask = NULL;
 	int type;
 	size_t threads_count = 1;
 	bool verbose;
 	struct pkthdr header;
-
+	char rule_mask[ MAX_RULE_MASK_SIZE ];
 	size_t i, j, size;
 	uint16_t *rules_id_filter;
 	const proto_attribute_t **p_atts;
 
-	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count, &core_mask, &verbose );
+	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count, &core_mask, rule_mask, &verbose );
 
 	register_signals();
 
@@ -324,7 +329,7 @@ int main(int argc, char** argv) {
 		_sec_handler.process_fn = &mmt_sec_process;
 		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}else if( _sec_handler.threads_count > 1 ){
-		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count - 1, core_mask, verbose, _print_output, NULL );
+		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count - 1, core_mask, rule_mask, verbose, _print_output, NULL );
 		_sec_handler.process_fn = &mmt_smp_sec_process;
 		size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}else{

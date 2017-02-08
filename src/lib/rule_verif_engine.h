@@ -28,7 +28,7 @@ typedef struct rule_engine_struct{
 
 	mmt_array_t *valid_execution_trace;
 
-	size_t max_events_count, max_instances_count;
+	size_t max_events_size, max_instances_size;
 	size_t total_instances_count;
 	//number of instances
 	size_t instances_count;

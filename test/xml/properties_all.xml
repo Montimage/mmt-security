@@ -155,7 +155,6 @@ static inline bool check_UA( const char *user_agent){
 }
 
 static inline int check_sql_injection(const void *p_payload, double payload_len){
-   int handle = 0;
    size_t len = payload_len;
    char *str  = malloc( len + 1 );
    memcpy( str, p_payload, len );
@@ -167,20 +166,59 @@ static inline int check_sql_injection(const void *p_payload, double payload_len)
 
    char *s1, *s2, *s3, *s4, *s5, *s6;
    s1 = strstr(str, "DROP"   ); //find the first occurrence of string "DROP" in string
+   if( s1 != NULL ){
+      free( str );
+      return 1;
+   }
+      
    s2 = strstr(str, "UNION"  ); //find the first occurrence of string "UNION" in string
+   if( s2 != NULL ){
+      free( str );
+      return 1;
+   }
+   
    s3 = strstr(str, "SELECT" ); //find the first occurrence of string "SELECT" in string
-   s4 = strstr(str, "CHAR"   ); //find the first occurrence of string "CHAR" in string  
+   if( s3 != NULL ){
+      free( str );
+      return 1;
+   }
+   s4 = strstr(str, "CHAR"   ); //find the first occurrence of string "CHAR" in string
+   if( s4 != NULL ){
+      free( str );
+      return 1;
+   }  
    s5 = strstr(str, "DELETE" ); //find the first occurrence of string "CHAR" in string
+   if( s5 != NULL ){
+      free( str );
+      return 1;
+   }
    s6 = strstr(str, "INSERT" ); //find the first occurrence of string "CHAR" in string
-     
-   if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL))  {
-      //printf ("SQL injection detected\n");
-      handle = 1;   
+   if( s6 != NULL ){
+      free( str );
+      return 1;
    }
    
    free( str );
-   return handle;
- 
+   return 0;
+}
+
+
+
+int check_http_response(const char* p){
+  if(p == NULL){
+    return 1;
+  }
+  return 0;
+}
+
+int check_ip_add(const char *src, const char *dst, const char *src1, const char *dst1){
+  if((src == NULL) || (dst == NULL) || (src1 == NULL) || (dst1 == NULL)){
+    return 1;
+  }
+  if (((src = src1) && (dst = dst1)) || ((src = dst1) && (dst = src1))){
+     return 1;
+  }
+  return 0;
 }
 
 ]]></embedded_functions>
@@ -588,7 +626,6 @@ it is nice to have an automated method of redirect expiration.
 <!-- Property 1: Probable IP protocol scan (4 different attempts in a row on different protocols).
 -->
 
-<!--
 <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="26" type_property="ATTACK" 
     description="Probable IP protocol scan (4 different attempts in a row on different protocols)."
     >
@@ -609,13 +646,12 @@ it is nice to have an automated method of redirect expiration.
              boolean_expression="((ip.proto_id != ip.proto_id.3)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
     </operator>
 </property>
--->
+
 
 <!-- Property 2: Probable UDP protocol scan (4 different attempts in a row on different ports).
 -->
 
 <!-- Eat CPU -->
-<!-- 
 <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="27" type_property="ATTACK" 
     description="Probable UDP protocol scan (4 different attempts in a row on different ports)."
     >
@@ -636,7 +672,7 @@ it is nice to have an automated method of redirect expiration.
              boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.3)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
     </operator>
 </property>
---> 
+
     <!-- Property 10: XMAS s00can : TCP with all flags FIN, URG, PSH active.-->
     <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="28" type_property="ATTACK"
          description="XMAS scan : TCP with all flags FIN, URG, PSH active.">
@@ -648,4 +684,33 @@ it is nice to have an automated method of redirect expiration.
          boolean_expression="((tcp.fin == 1)&amp;&amp;(tcp.psh == 1))"/>
     </property>
 
+
+<!-- Property 29, 30: HTTP version 0.9 detection-->
+
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="29" type_property="EVASION" 
+    description="HTTP response with no header (type 1)"
+    >
+   <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="250">
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a HTTP GET packet"
+           boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))"/>
+   <event value="COMPUTE" event_id="2" 
+         description="Context: TCP ACK after HTTP GET"
+           boolean_expression="((#check_ip_add(ip.src, ip.dst, ip.src.1, ip.dst.1) == 1)&amp;&amp;((http.packet_count == http.packet_count.1)&amp;&amp;(tcp.packet_count != 0)))"/>
+   </operator>
+   <event value="COMPUTE" event_id="3" 
+           description="Trigger: HTTP response contains no header"
+         boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.2+1))&amp;&amp;(#check_http_response(http.response)==1)))))"/>
+</property>
+
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="30" type_property="EVASION" 
+    description="HTTP response with no header right after the GET (type 2)"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a HTTP GET packet"
+           boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))"/>
+   <event value="COMPUTE" event_id="2" 
+           description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+         boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))"/>
+</property>
 </beginning>

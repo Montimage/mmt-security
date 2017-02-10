@@ -67,7 +67,9 @@ static pid_t parent_pid = 0;
 
 static char output_file_string[MAX_FILENAME_SIZE + 1]  = {0};
 static char output_redis_string[MAX_FILENAME_SIZE + 1] = {0};
-
+static size_t reports_count = 0;
+static size_t clients_count = 0;
+static struct timeval start_time, end_time;
 
 static inline double time_diff(struct timeval t1, struct timeval t2) {
 	return (double)(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)/1000000.0;
@@ -167,7 +169,6 @@ static inline int _get_data_type( uint32_t proto_id, uint32_t att_id ){
  *  then passes it to #mmt_security
  */
 static inline size_t receiving_reports( int sock ) {
-	size_t reports_count = 0;
 	size_t index = 0, n;
 	uint8_t buffer[ REPORT_SIZE ], *buf_ptr; //utf-8
 
@@ -179,7 +180,9 @@ static inline size_t receiving_reports( int sock ) {
 	size_t counter;
 	size_t elements_count;
 
+	reports_count = 0;
 	while( 1 ){
+		reports_count ++;
 		//Read 4 bytes first to know the length of the report
 		n = recv( sock, &length_of_report, 4, MSG_WAITALL );
 
@@ -253,8 +256,6 @@ static inline size_t receiving_reports( int sock ) {
 
 		//call mmt_security
 		_sec_handler.process_fn( _sec_handler.handler, msg );
-
-		reports_count ++;
 	}
 
 	return reports_count;
@@ -308,9 +309,14 @@ void signal_handler(int signal_type) {
 	alerts_count = termination();
 
 	//print only for child process
-	if( verbose && parent_pid != pid )
-		mmt_info("Process %d generated %zu alerts", pid, alerts_count );
+	if( verbose && parent_pid != pid ){
+		gettimeofday( &end_time, NULL );
+		mmt_info( "%3zuth connection sent %9zu reports, in %7.2fs, generated %9zu alerts",
+				clients_count, reports_count, time_diff( start_time, end_time ), alerts_count
+		);
 
+		//mmt_info("Process %d generated %zu alerts", pid, alerts_count );
+	}
 	//parent waits for all children
 	if( parent_pid == pid ) wait( &status );
 
@@ -346,8 +352,7 @@ int main( int argc, char** argv ) {
 	bool is_unix_socket = NO;
 
 	socklen_t socklen;
-	struct timeval start_time, end_time;
-	size_t size, rules_count, cores_count = 0, clients_count = 0, alerts_count = 0;
+	size_t size, rules_count, cores_count = 0, alerts_count = 0;
 	uint32_t *core_mask = NULL, *core_mask_ptr;
 
 	mmt_sec_callback _print_output;

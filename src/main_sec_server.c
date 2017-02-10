@@ -182,7 +182,7 @@ static inline size_t receiving_reports( int sock ) {
 
 	reports_count = 0;
 	while( 1 ){
-		reports_count ++;
+
 		//Read 4 bytes first to know the length of the report
 		n = recv( sock, &length_of_report, 4, MSG_WAITALL );
 
@@ -254,6 +254,7 @@ static inline size_t receiving_reports( int sock ) {
 			}
 		}
 
+		reports_count ++;
 		//call mmt_security
 		_sec_handler.process_fn( _sec_handler.handler, msg );
 	}

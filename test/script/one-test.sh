@@ -169,7 +169,7 @@ function run_lb () {
   if [[ -z "$LB_OUTPUT" ]]; then
     LB_OUTPUT=",,,,,,,,"
   fi
-  echo "$LB_OUTPUT,$HTTP,$NO_HTTP" > $FILE.txt.tmp
+  echo "$LB_OUTPUT,$NO_HTTP,$HTTP" > $FILE.txt.tmp
 
 }
 
@@ -191,7 +191,7 @@ function run_traffic_gen () {
   #$FLOW = #flows,#flows,?,fps, #flow packet, #non-flows
   FLOW=`grep "\[tcpreplay-2\]{" $FILE.txt | sed "s/\[tcpreplay-2\]{//" | sed "s/}//"`
 
-  REST="$SIZE,$RATE,$FLOW"
+  REST="$RATE,$SIZE,$FLOW"
   if [[ -z "$REST" ]]; then
     REST=",,,,,,,,,,,"
   fi
@@ -257,7 +257,7 @@ rm $LOG_PATH/*.tmp &> /dev/null
 
 #print header of csv file
 if [[ $# == 7 ]]; then
-  echo "test_id,bandwidth,pkt_size,attack_rate,probe_cores,rules_count,|tcpreplay->,Bps,Mbps,pps,pkt_count,byte_count,duration,flows_count,?,?,fps,pkt_flow_count,non_flow_count,|load_balancer->,pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,?,http_pkt,non_http_pkt,|probe1->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|probe->2,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|security1->,#alerts,#reports,|security->2,#alerts,#reports" > $OUTPUT 
+  echo "test_id,bandwidth,pkt_size,attack_rate,probe_cores,rules_count,|tcpreplay->,Bps,Mbps,pps,pkt_count,byte_count,duration,flows_count,?,?,fps,flow_pkts,non_flow,|load_balancer->,pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,?,non_http_pkt,http_pkt,|probe1->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|probe->2,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|security1->,#alerts,#reports,|security->2,#alerts,#reports" > $OUTPUT 
 fi
 
 

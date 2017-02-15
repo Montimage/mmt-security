@@ -70,6 +70,7 @@ static char output_redis_string[MAX_FILENAME_SIZE + 1] = {0};
 static size_t reports_count = 0;
 static size_t clients_count = 0;
 static struct timeval start_time, end_time;
+static size_t rules_count = 0;
 
 static inline double time_diff(struct timeval t1, struct timeval t2) {
 	return (double)(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)/1000000.0;
@@ -157,7 +158,7 @@ static inline int _get_data_type( uint32_t proto_id, uint32_t att_id ){
 		}
 
 #ifdef DEBUG_MODE
-	mmt_warn( "Unknown data type of attribute %"PRIu32" of protocol %"PRIu32, att_id, proto_id );
+//	mmt_warn( "Unknown data type of attribute %"PRIu32" of protocol %"PRIu32, att_id, proto_id );
 #endif
 
 	return -1;
@@ -169,7 +170,7 @@ static inline int _get_data_type( uint32_t proto_id, uint32_t att_id ){
  *  then passes it to #mmt_security
  */
 static inline size_t receiving_reports( int sock ) {
-	size_t index = 0, n;
+	size_t index, n;
 	uint8_t buffer[ REPORT_SIZE ], *buf_ptr; //utf-8
 
 	uint32_t length_of_report = 0;
@@ -235,21 +236,32 @@ static inline size_t receiving_reports( int sock ) {
 			el_data_type = _get_data_type( el_ptr->proto_id, el_ptr->att_id );
 
 			//special processing for these data types
-			if( likely( el_data_type == MMT_HEADER_LINE || el_data_type == MMT_DATA_POINTER )){
+			switch( el_data_type ){
+			case MMT_HEADER_LINE :
 				el_ptr->data      = mmt_mem_force_dup( &buffer[index], el_data_length );
 				el_ptr->data_type = STRING;
-			}
-			else if( likely( el_data_type != -1 ))
-				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
-			else{
+				break;
+			case MMT_DATA_POINTER :
+				el_ptr->data      = mmt_mem_force_dup( &buffer[index], el_data_length );
+				el_ptr->data_type = VOID;
+				break;
+			case -1:
 				el_ptr->data      = NULL;
 				el_ptr->data_type = VOID;
+				break;
+			default:
+				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
 			}
 
 			index += el_data_length;
 
+			//http.method
+//			if( el_ptr->proto_id == 153 && el_ptr->att_id == 1 ){
+//				printf("http %zu: len:%"PRIu32", data:[%s] \n", reports_count, el_data_length, (char *)el_ptr->data );
+//			}
+
 			if( unlikely( index >= length_of_report )){
-				mmt_halt( "Data format received from mmt-probe is not correct." );
+				mmt_halt( "Data format received from mmt-probe is not correct. Expected %zu but has only %"PRIu32" bytes", index, length_of_report );
 				break;
 			}
 		}
@@ -264,11 +276,15 @@ static inline size_t receiving_reports( int sock ) {
 
 static inline size_t termination(){
 	size_t alerts_count = 0;
+	if( _sec_handler.handler == NULL )
+		return 0;
 
 	if( _sec_handler.threads_count > 1 )
 		alerts_count = mmt_smp_sec_unregister( _sec_handler.handler, NO );
 	else
 		alerts_count = mmt_sec_unregister( _sec_handler.handler );
+
+	_sec_handler.handler = NULL;
 
 	mmt_mem_free( proto_atts );
 	mmt_mem_free( rules_arr );
@@ -318,6 +334,10 @@ void signal_handler(int signal_type) {
 
 		//mmt_info("Process %d generated %zu alerts", pid, alerts_count );
 	}
+
+	if( alerts_count != 0 )
+		mmt_sec_print_verdict( NULL, 0, 0, rules_count, NULL, NULL );
+
 	//parent waits for all children
 	if( parent_pid == pid ) wait( &status );
 
@@ -353,7 +373,7 @@ int main( int argc, char** argv ) {
 	bool is_unix_socket = NO;
 
 	socklen_t socklen;
-	size_t size, rules_count, cores_count = 0, alerts_count = 0;
+	size_t size, cores_count = 0, alerts_count = 0;
 	uint32_t *core_mask = NULL, *core_mask_ptr;
 
 	mmt_sec_callback _print_output;
@@ -537,6 +557,8 @@ int main( int argc, char** argv ) {
 						clients_count, size, time_diff( start_time, end_time ), alerts_count
 				);
 			}
+			//TODO: HN removes this (this is for testing only)
+			mmt_sec_print_verdict( NULL, 0, 0, rules_count, NULL, NULL );
 
 			mmt_mem_free( core_mask );
 

@@ -153,9 +153,20 @@ static inline void* _get_data( const ipacket_t *pkt, uint32_t proto_id, uint32_t
 	const uint16_t buffer_size = 100;
 	uint16_t size;
 	void *new_data = NULL;
+	uint32_t *data_len;
 	uint8_t *data = (uint8_t *) get_attribute_extracted_data( pkt, proto_id, att_id );
 	//does not exist data for this proto_id and att_id
 	if( data == NULL ) return NULL;
+
+	//tcp.p_payload
+	if( proto_id == 354 && att_id == 4098 ){
+		data_len = (uint32_t *)get_attribute_extracted_data( pkt, 354, 23 );
+		if( data_len == NULL )
+			return NULL;
+
+		*new_type = VOID;
+		return mmt_mem_dup( data, *data_len );
+	}
 
 	if( mmt_sec_convert_data( data, data_type, &new_data, new_type ) == 0 )
 		return new_data;
@@ -359,6 +370,11 @@ int main(int argc, char** argv) {
 	for( i=0; i<size; i++ ){
 		//mmt_debug( "Registered attribute to extract: %s.%s", proto_atts[i]->proto, proto_atts[i]->att );
 		register_extraction_attribute( mmt_dpi_handler, p_atts[i]->proto_id, p_atts[i]->att_id );
+
+		//tcp.p_payload
+		if( p_atts[i]->proto_id == 354 && p_atts[i]->att_id == 4098)
+			//tcp.payload_len
+			register_extraction_attribute( mmt_dpi_handler, 354, 23 );
 
 		proto_atts[i].proto_id  = p_atts[i]->proto_id;
 		proto_atts[i].att_id    = p_atts[i]->att_id;

@@ -11,21 +11,22 @@ FIRST=OK
 
 rm logs/*
 
-#bandwidth
-for BW in 5000 7000 9500
+#number of cores for probe
+for CORE in 16 8
 do
-  #packet size
-  for PKT in 600 800 1000
+  #number of rules for security
+  for RULE in 100 200 400
   do
-    #attack rate
-    for A_RATE in normal 10 20 40
+    #bandwidth
+    for BW in 5000 7000 9500
     do
-      #number of cores for probe
-      for CORE in 16 8
+      #packet size
+      for PKT in 600 800 1000
       do
-        #number of rules for security
-        for RULE in 100 200 400
+        #attack rate
+        for A_RATE in normal 10 20 40
         do
+     
           INDEX=$((INDEX + 1))
           echo "$INDEX ================= $(date)" | tee -a logs/log.txt
           ./one-test.sh $INDEX $BW $PKT $A_RATE $CORE $RULE $FIRST >> logs/log.txt 2>&1

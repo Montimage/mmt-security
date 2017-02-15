@@ -45,7 +45,7 @@ message_t *create_message_t( size_t elements_count ){
 void force_free_message_t( message_t *msg ){
 	size_t i;
 	for( i=0; i<msg->elements_count; i++ )
-		if( likely( msg->elements[i].data != NULL && msg->elements[i].data_type != VOID ))
+		if( likely( msg->elements[i].data != NULL ))
 			mmt_mem_force_free( msg->elements[i].data );
 
 	//mmt_mem_pool_free_element( mem_pool, msg, mmt_mem_force_free );

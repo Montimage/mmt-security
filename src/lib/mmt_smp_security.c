@@ -103,7 +103,7 @@ static inline void _mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_
  * Public API
  */
 size_t mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately ){
-	size_t i, alerts_count = 0;
+	size_t i, alerts_count = 0, size;
 
 	__check_null( handler, 0);
 
@@ -113,9 +113,10 @@ size_t mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately
 
 	//free data elements of _handler
 	for( i=0; i<_handler->threads_count; i++ ){
-		alerts_count += mmt_sec_unregister( _handler->mmt_sec_handlers[i] );
+		size = mmt_sec_unregister( _handler->mmt_sec_handlers[i] );
 		if( _handler->verbose )
-			mmt_info("Thread %2zu generated %8zu alerts", i+1, alerts_count );
+			mmt_info("Thread %2zu generated %8zu alerts", i+1, size );
+		alerts_count += size;
 	}
 
 	for( i=0; i<_handler->threads_count; i++ )

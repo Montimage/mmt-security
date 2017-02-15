@@ -203,35 +203,51 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 		if( verdict != VERDICT_UNKNOWN ){
 			_handler->alerts_count ++;
 
-			if( _handler->callback != NULL ){
-				//get execution trace
-				execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
+			//TODO: HN removes this (this is for testing only)
+							mmt_sec_print_verdict(
+								_handler->rules_array[i],
+								verdict,
+								0,
+								0,
+								NULL,
+								NULL );
 
-				//call user-callback function
-				_handler->callback(
-					_handler->rules_array[i],
-					verdict,
-					msg->timestamp,
-					msg->counter,
-					execution_trace,
-					_handler->user_data_for_callback );
-			}
+//			if( _handler->callback != NULL ){
+//				//get execution trace
+//				execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
+//
+//				//call user-callback function
+//				_handler->callback(
+//					_handler->rules_array[i],
+//					verdict,
+//					msg->timestamp,
+//					msg->counter,
+//					execution_trace,
+//					_handler->user_data_for_callback );
+//			}
 		}
 	}
 	free_message_t( msg );
 }
 
-static inline void _remove_special_character( char * tmp ){
-	while( *tmp != '\0' ){
+static inline void _remove_special_character( char * tmp, size_t len ){
+	while( len != 0 ){
 		switch( *tmp ){
-		case '"':
-		case '\t':
-		case '\n':
-			*tmp = '_';
+		case '\b': //  Backspace (ascii code 08)
+		case '\f': //  Form feed (ascii code 0C)
+		case '\n': //  New line
+		case '\r': //  Carriage return
+		case '\t': //  Tab
+		case '\"': //  Double quote
+		case '\\': //  Backslash character
+		case '\0':
+		//case '\u': //  unicode
+			*tmp = '.';
 			break;
 		}
 
 		tmp ++;
+		len --;
 	}
 
 }
@@ -321,7 +337,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					size --;
 
 					if( *c_ptr == '.'){
-						size --;
+						//size --;
 						break;
 					}
 				}
@@ -379,8 +395,8 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 				//if the attribute is not neither IP nor MAC
 				if( u8_ptr == NULL ){
-					_remove_special_character(  (char *) me->data );
 					size = sprintf( str_ptr, "\"%s\"", (char *) me->data );
+					_remove_special_character(  str_ptr + 1, size - 2 );
 				}
 
 				//close } here
@@ -407,6 +423,30 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 	return buffer;
 }
 
+//TODO: hn removes this
+//this is for testing only
+void mmt_sec_print_verdict(
+		const rule_info_t *rule,		//id of rule
+		enum verdict_type verdict,
+		uint64_t timestamp,  //moment the rule is validated
+		uint32_t counter,
+		const mmt_array_t *const trace,
+		void *user_data )
+{
+	//TODO this limit mmt-sec on max 100 K rules
+	static uint32_t  prop_index[100000] = {0}, *p;
+	size_t i;
+	if (unlikely (rule == NULL)){
+		for( i=1; i<=counter; i++)
+			printf("property %3zu generates %6"PRIu32" alerts\n", i, prop_index[ i ]);
+		return;
+	}
+
+	//each rule is processed by only one thread
+	//=> this is thread-safe
+	p = prop_index + rule->id;
+	(*p) ++;
+}
 
 /**
  * PUBLIC API
@@ -418,7 +458,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
  * @param trace
  * @param user_data
  */
-void mmt_sec_print_verdict(
+void _mmt_sec_print_verdict(
 		const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
@@ -586,6 +626,9 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		return 0;
 
 	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
+		*new_type = VOID;
+		*new_data = (void *)data;
+		return 0;
 	case MMT_DATA_PATH: /**< protocol path constant value */
 	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
 	case MMT_DATA_BUFFER: /**< binary buffer content */
@@ -599,9 +642,7 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 	case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
 	case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
 	case MMT_STATS: /**< pointer to MMT Protocol statistics */
-		*new_type = VOID;
-		*new_data = (void *)data;
-		return 0;
+		break;
 
 	case MMT_BINARY_DATA: /**< binary constant value */
 	case MMT_BINARY_VAR_DATA: /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */

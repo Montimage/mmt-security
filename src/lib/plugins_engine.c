@@ -11,7 +11,8 @@
 #include "plugins_engine.h"
 #include "mmt_lib.h"
 
-#define MAX_PLUGIN_COUNT 1000
+//TODO: this limit 100K rules
+#define MAX_PLUGIN_COUNT 100000
 
 static int load_filter( const struct dirent *entry ){
 	char *ext = strrchr( entry->d_name, '.' );
@@ -90,6 +91,7 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	return index;
 }
 
+//TODO: this limit 100K files .so
 #define MAX_LIBS_COUNT 100000
 static void *dl_libs[MAX_LIBS_COUNT];
 static uint32_t dl_libs_index = 0;

@@ -31,29 +31,16 @@ function stat () {
 # $1 : proc_name
 # $2 : interval (in second)
 # $3 : output
-function stat_then_kill_proc () {
+function stat_proc () {
   #empty file 
-  echo > $3
-  THRESHOLD=$2
-  THRESHOLD_1=$(( THRESHOLD - 15 ))
-  THRESHOLD_2=$(( THRESHOLD - 8 ))
-  
+  echo > $3 
   for (( i=0; i < $2; ++i ))
   do
     stat $i $1 $3
     sleep 1
-
-    case "$i-" in
-      #first Ctrl+C
-      "$THRESHOLD_1-") pkill -INT $1 &> /dev/null ;;
-      #second Ctrl+C if need
-      "$THRESHOLD_2-") pkill -INT $1 &> /dev/null ;;
-    esac
   done
 
-  #force kill the program if it has not been existed
-  pkill -TERM $1 &> /dev/null 
-  stat $i $1 $3
+   stat $i $1 $3
 }
 
 # $1 : directory
@@ -63,25 +50,31 @@ function stat_then_kill_proc () {
 # $5 : output
 cd $1
 
+PROGRAM=$2
+
 #kill $1 if it is running
-pkill -TERM $2 &> /dev/null 
+pkill -TERM $PROGRAM &> /dev/null 
 
 #empty output file
 date > "$5.txt"
 
 #background process to do statistic
-stat_then_kill_proc "$2" "$4" "$5.stat" &
+stat_proc "$PROGRAM" "$4" "$5.stat" &
 
-print_ts "$5.txt" "(start $2 $3)"
+print_ts "$5.txt" "(start $PROGRAM $3)"
 
 #run the program
-./$2 $3 >> "$5.txt" 2>&1
+./$PROGRAM $3 >> "$5.txt" 2>&1 
 
-print_ts "$5.txt" "(end $2)"
+sleep 1
 
-#wait for the timer
-wait $!
+print_ts "$5.txt" "(end $PROGRAM)"
 
-echo "finish $2"
+echo "finish $PROGRAM"
 
 date >> "$5.txt"
+
+#stop statistic
+kill -TERM $!
+
+exit 0

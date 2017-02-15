@@ -178,10 +178,10 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	// We reach a state in which has delay = 0
 	// => we need to continue verifying the next outgoing transitions
 	//    against the current message_data and event_data
-	if( new_state->is_temporary ){
+	if( _fsm->current_state->is_temporary ){
 		//for each outgoing transition of the target
 		//fire the timeout transition (at index 0) only if other transitions cannot be fired
-		for( i=new_state->transitions_count - 1; i>= 0; i-- ){
+		for( i=_fsm->current_state->transitions_count - 1; i>= 0; i-- ){
 			ret = _fire_a_tran( (fsm_t *) _fsm, (uint16_t)i, message_data, event_data );
 
 			if( ret != FSM_NO_STATE_CHANGE )
@@ -239,6 +239,8 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 #ifdef DEBUG_MODE
 	if ( unlikely( !_fsm->current_state ))
 		mmt_halt( "Not found current state of fsm %d", _fsm->id );
+	if( transition_index >= _fsm->current_state->transitions_count )
+		mmt_halt("Transition_index is greater than transitions_count (%d >= %zu)", transition_index,  _fsm->current_state->transitions_count );
 #endif
 
 	//	mmt_debug( "Verify transition: %d of fsm %p", transition_index, fsm );

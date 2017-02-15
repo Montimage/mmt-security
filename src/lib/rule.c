@@ -412,16 +412,19 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 	return ret;
 }
 
-#define MAX_STRING_SIZE 10000
+#define MAX_STRING_SIZE 100000
+//TODO: this limit 100K rules
+#define MAX_RULE_COUNT 100000
 /**
  * Public API
  */
 size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, char **embedded_functions){
 	xmlDoc *xml_doc = NULL;
 	xmlNode *root_node = NULL, *xml_node;
-	rule_t *array[1000], *rule_ptr ;
+
+	rule_t *array[MAX_RULE_COUNT], *rule_ptr ;
 	char string[ MAX_STRING_SIZE ], *string_ptr;
-	size_t rules_count = 0, size, i;
+	size_t rules_count = 0, size, string_size, i;
 	xmlChar *xml_content;
 
 	*properties_arr = NULL;
@@ -446,6 +449,7 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, 
 	mmt_assert( root_node->type == XML_ELEMENT_NODE && str_equal(root_node->name, "beginning") ,
 			"Error 13b: Name of the root node must be 'beginning', not '%s'", root_node->name );
 
+	string_size = 0;
 	//first property
 	xml_node = root_node->children;
 	while( xml_node != NULL ){
@@ -460,12 +464,25 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, 
 					for( i=0; i<rules_count; i++ )
 						mmt_assert( array[i]->id != rule_ptr->id, "Error 13h: Duplicate rule id %d", rule_ptr->id );
 					array[ rules_count ] = rule_ptr;
-					rules_count ++;
+					if( rules_count == MAX_RULE_COUNT )
+						mmt_warn( "Too much rules" );
+					else
+						rules_count ++;
 				}
 			}else if( str_equal( xml_node->name, "embedded_functions") ){
 				//mmt_assert( xml_node->type == XML_CDATA_SECTION_NODE, "Error 13b: Need to surround content of node \"%s\" by CDATA", xml_node->name );
 				xml_content = xmlNodeGetContent( xml_node );
-				string_ptr += sprintf( string_ptr, "%s", xml_content );
+
+				size = snprintf( string_ptr, MAX_STRING_SIZE - string_size, "%s", (char *)xml_content );
+
+				if( string_size + size >= MAX_STRING_SIZE )
+					mmt_warn( "Embedded function is too long" );
+				else{
+					string_size += size;
+					string_ptr += size;
+					*string_ptr = '\0';
+				}
+
 				xmlFree( xml_content );
 			}
 		}
@@ -476,7 +493,6 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, 
 	/*free the document */
 	xmlFreeDoc( xml_doc );
 
-
 	//Need to recuperate what attributes will need to be printed out (<proto_id, field_id, data_type_id>)
 
 	// Cleanup function for the XML library.
@@ -485,7 +501,8 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, 
 	//copy result to a new array
 	*properties_arr = mmt_mem_dup( &array, rules_count * sizeof( rule_t *) );
 
-	*embedded_functions = mmt_mem_dup( string, strlen( string ) );
+
+	*embedded_functions = mmt_mem_dup( string, string_size );
 
 	return rules_count;
 }

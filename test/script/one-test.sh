@@ -1,7 +1,10 @@
 #!/bin/bash
 
-#run the test during 5 minutes
-INTERVAL=80
+#for tcpreplay: number of loops we will replay pcap file
+LOOP=300
+
+#do statistic in at most 3 minutes
+INTERVAL=180
 
 
 if [[ $# != 6 && $# != 7 ]]; then
@@ -19,7 +22,7 @@ PROBE_CORE=$5
 RULES_COUNT=$6
 
 
-DESCRIPTION="bandwidth $BANDWIDTH, pkt-size $PKT_SIZE, attack rate $ATTACK_RATE, #core $PROBE_CORE, #rules $RULES_COUNT"
+DESCRIPTION="bandwidth $BANDWIDTH, pkt-size $PKT_SIZE, attack rate $ATTACK_RATE, #core $PROBE_CORE, #rules $RULES_COUNT*2"
 
 #check input parameters
 case $PKT_SIZE in
@@ -38,6 +41,28 @@ case $PROBE_CORE in
   16) ;;
   *) echo "probe_core must be 8 or 16" && exit 1 ;;
 esac
+
+
+#calculate loops count
+
+case "$ATTACK_RATE-$PKT_SIZE" in
+  "normal-600")  LOOP=12000 ;;
+  "10-600")      LOOP=300 ;;
+  "20-600")      LOOP=600 ;;
+  "40-600")      LOOP=1200 ;;
+
+  "normal-800")  LOOP=11000 ;;
+  "10-800")      LOOP=200 ;;
+  "20-800")      LOOP=500 ;;
+  "40-800")      LOOP=1200 ;;
+
+  "normal-1000") LOOP=11800 ;;
+  "10-1000")     LOOP=200 ;;
+  "20-1000")     LOOP=400 ;;
+  "40-1000")     LOOP=1000 ;;
+esac
+
+LOOP=$((LOOP*$BANDWIDTH/5000))
 
 #path on remote server in which we run the tests
 APP_PATH="/opt/mmt/test"
@@ -59,7 +84,17 @@ XRANGE="$START:$END"
 date >  $LOG_PATH/$TEST_ID.txt
 echo "test $TEST_ID, $DESCRIPTION" | tee -a $LOG_PATH/$TEST_ID.txt
 
-CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT"
+CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT*2"
+
+
+# $1 : IP
+# $2 : program
+function kill_proc () {
+  IP=$1
+  PROG=$2
+
+  ssh $1 "cd $APP_PATH && pkill -INT $PROG && sleep 7 && pkill -INT $PROG && sleep 3 && pkill -TERM $PROG"
+}
 
 # note:
 # parameter of run-proc.sh
@@ -75,14 +110,15 @@ CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT"
 # $2 : program
 # $3 : param
 # $4 : id
+# $5 : name
 function run () {
-  ssh $1 "mkdir -p $APP_PATH &> /dev/null"
+  ssh $1 "mkdir -p $APP_PATH/ &> /dev/null"
   #copy run-file
-  scp run-proc.sh $1:/$APP_PATH > /dev/null
+  scp run-proc.sh $1:/$APP_PATH/run$5.sh > /dev/null
   #copy program to server
   scp apps/$2 $1:$APP_PATH/$2   > /dev/null
   #run
-  ssh $1 "chmod +x $APP_PATH/run-proc.sh && $APP_PATH/run-proc.sh $APP_PATH $2 \"$3\" $INTERVAL $TEST_ID.$2$4"
+  ssh $1 "chmod +x $APP_PATH/run$5.sh &> /dev/null && $APP_PATH/run$5.sh $APP_PATH $2 \"$3\" $INTERVAL $TEST_ID.$2$4"
   #get log
   scp $1:$APP_PATH/$TEST_ID.$2$4* $LOG_PATH/ > /dev/null
   #draw graph
@@ -94,17 +130,18 @@ function run () {
 # $2 : id
 function run_probe () {
   SERVER="root@$1"
-  PROBE_CONF="probe.conf"
+  PROBE_CONF="probe$2.conf"
   APP_PARAM="-c $PROBE_CORE_MASK -- -c $APP_PATH/$PROBE_CONF"
   PROGRAM="probe"
 
   #update thread_number in probe.conf
-  sed -e "s/^thread-nb.*/thread-nb=$PROBE_CORE/" $PROBE_CONF > probe_tmp.conf
+  sed -e "s/^thread-nb.*/thread-nb=$PROBE_CORE/" $PROBE_CONF > probe$2_tmp.conf
 
-  scp probe_tmp.conf $SERVER:$APP_PATH/$PROBE_CONF > /dev/null
+  scp probe$2_tmp.conf $SERVER:$APP_PATH/$PROBE_CONF > /dev/null
 
+  rm probe$2_tmp.conf
 
-  run $SERVER $PROGRAM "$APP_PARAM" $2
+  run $SERVER $PROGRAM "$APP_PARAM" $2 p
 
   FILE=$LOG_PATH/$TEST_ID.$PROGRAM$2
 
@@ -128,12 +165,14 @@ function run_probe () {
 function run_security () {
   SERVER="root@$1"
   START_INDEX=$(($RULES_COUNT+1))
-  APP_PARAM="-p /opt/mmt/probe/bin/mysocket -c 38-85 -m (0:${START_INDEX}-1000) -n 4 -v"
+  APP_PARAM="-p /opt/mmt/probe/bin/mysocket -c 37-84 -m (0:${START_INDEX}-1000) -n 4 -v"
   PROGRAM="sec"
 
-  scp -r rules $SERVER:$APP_PATH/ > /dev/null
+  #create rules folder if need, remove its old content
+  ssh $1 "mkdir -p $APP_PATH/rules &> /dev/null ; rm $APP_PATH/rules/* &> /dev/null"
+  scp -r rules/$2.*.so $SERVER:$APP_PATH/rules/ &> /dev/null
 
-  run $SERVER $PROGRAM "$APP_PARAM" $2
+  run $SERVER $PROGRAM "$APP_PARAM" $2 s
 
   FILE=$LOG_PATH/$TEST_ID.$PROGRAM$2
 
@@ -176,7 +215,7 @@ function run_lb () {
 # $1 : IP server
 function run_traffic_gen () {
   SERVER="root@$1"
-  APP_PARAM="-i eth2 --unique-ip --netmap --preload-pcap --nm-delay=15 --loop=9999999999 --mbps=$BANDWIDTH /home/lab8/pcap/SODIUM_test/${ATTACK_RATE}_${PKT_SIZE}.pcap"
+  APP_PARAM="-i eth2 --unique-ip --netmap --preload-pcap --nm-delay=15 --loop=$LOOP --mbps=$BANDWIDTH /home/lab8/pcap/SODIUM_test/${ATTACK_RATE}_${PKT_SIZE}.pcap"
   PROGRAM="tcpreplay"
 
   FILE=$LOG_PATH/$TEST_ID.$PROGRAM
@@ -214,29 +253,34 @@ sleep 1
 
 
 #mmt-probe need to terminate before mmt-sec
-INTERVAL=$((INTERVAL-10))
 
 echo "Run mmt-probe"
 run_probe 192.168.0.7  1 &
 run_probe 192.168.0.35 2 &
 
-sleep 5
+sleep 1
 
 #mmt-lb will be killed before mmt-probe 10s
-INTERVAL=$((INTERVAL-10))
-
 echo "Run mmt-lb"
 run_lb 192.168.0.36 &
 
 
-#only need to sleep 1 second as traffic will generate after 10s by --nm-delay=10
+#only need to sleep 1 second as traffic will generate after 15s by --nm-delay=15
 sleep 1
-
-#traffic-gen will be killed before mmt-lb 10s
-INTERVAL=$((INTERVAL-10))
 
 echo "Run tcpreplay"
 run_traffic_gen 192.168.0.37
+
+
+
+kill_proc 192.168.0.36 lb
+sleep 1
+kill_proc 192.168.0.7  probe &
+kill_proc 192.168.0.35 probe
+
+sleep 1
+kill_proc 192.168.0.7  sec &
+kill_proc 192.168.0.35 sec 
 
 
 #wait for all ssh
@@ -245,6 +289,7 @@ for job in `jobs -p`
 do
    wait $job || let "FAIL+=1"
 done
+
 
 TRAF_OUTPUT=$(  cat $LOG_PATH/$TEST_ID.tcpreplay.txt.tmp)
 LB_OUTPUT=$(    cat $LOG_PATH/$TEST_ID.lb.txt.tmp)
@@ -257,11 +302,11 @@ rm $LOG_PATH/*.tmp &> /dev/null
 
 #print header of csv file
 if [[ $# == 7 ]]; then
-  echo "test_id,bandwidth,pkt_size,attack_rate,probe_cores,rules_count,|tcpreplay->,Bps,Mbps,pps,pkt_count,byte_count,duration,flows_count,?,?,fps,flow_pkts,non_flow,|load_balancer->,pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,?,non_http_pkt,http_pkt,|probe1->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|probe->2,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|security1->,#alerts,#reports,|security->2,#alerts,#reports" > $OUTPUT 
+  echo "test_id,bandwidth,pkt_size,attack_rate,probe_cores,rules_count,|tcpreplay->,loops,Bps,Mbps,pps,pkt_count,byte_count,duration,flows_count,?,?,fps,flow_pkts,non_flow,|load_balancer->,pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,?,non_http_pkt,http_pkt,|probe1->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|probe->2,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|security1->,#alerts,#reports,|security->2,#alerts,#reports" > $OUTPUT 
 fi
 
 
-echo "$CONFIG,|,$TRAF_OUTPUT,|,$LB_OUTPUT,|,$PROBE1_OUTPUT,|,$PROBE2_OUTPUT,|,$SEC1_OUTPUT,|,$SEC2_OUTPUT" >> $OUTPUT
+echo "$CONFIG,|,$LOOP,$TRAF_OUTPUT,|,$LB_OUTPUT,|,$PROBE1_OUTPUT,|,$PROBE2_OUTPUT,|,$SEC1_OUTPUT,|,$SEC2_OUTPUT" >> $OUTPUT
 
 #done
 echo ""

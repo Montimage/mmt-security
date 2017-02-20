@@ -180,7 +180,7 @@ static inline void *_process_one_thread( void *arg ){
 }
 
 static const size_t _get_special_rules_for_thread( uint32_t thread_id, const char *rule_mask, uint32_t **rule_range ){
-	uint32_t id;
+	uint32_t id = 0;
 	size_t size = 0, range_count = 0;
 	const char *c = rule_mask, *ptr;
 	char *string;

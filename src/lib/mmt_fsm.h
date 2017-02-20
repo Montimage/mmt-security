@@ -274,6 +274,16 @@ enum fsm_handle_event_value{
  */
 enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, const void *event_data, fsm_t **new_fsm );
 
+
+bool fsm_is_verifying_single_packet( const fsm_t *fsm );
+/**
+ * This is specific function for the rules that verify only one a single packet
+ * @param fsm
+ * @param message_data
+ * @param event_data
+ * @return FSM_ERR_ARG if this fsm verifies on multiple packets
+ */
+enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *message_data, const void *event_data );
 /**
  *  Get the current state
  *

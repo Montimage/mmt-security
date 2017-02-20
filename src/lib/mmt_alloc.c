@@ -281,8 +281,8 @@ void *mmt_mem_alloc(size_t size){
 	mmt_assert( size > 0, "Size must be positive" );
 #endif
 
-//	return _mem_alloc( size );
-	return _pools_alloc( size );
+	return _mem_alloc( size );
+//	return _pools_alloc( size );
 }
 
 /**
@@ -295,6 +295,6 @@ void mmt_mem_force_free( void *x ){
 	mmt_assert( x != NULL, "x (%p) must not be NULL", x );
 #endif
 
-//	_mem_force_free( x );
-	return _pools_free( x );
+	_mem_force_free( x );
+//	return _pools_free( x );
 }

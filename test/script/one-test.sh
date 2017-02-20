@@ -5,10 +5,11 @@ LOOP=300
 
 #do statistic in at most 3 minutes
 INTERVAL=180
-
+TYPE="simple"
 
 if [[ $# != 6 && $# != 7 ]]; then
-  echo "usage: $0 test_id bandwidth pkt_size attack_rate probe_core rules_count"
+  echo "usage: $0 test_id bandwidth pkt_size attack_rate probe_core rules_count [loop]"
+  echo "       the last parameter is optional, representing loops count. Ifx=0 we run the test in ~2minutes and print header to output file"
   exit 0
 fi
 
@@ -22,7 +23,6 @@ PROBE_CORE=$5
 RULES_COUNT=$6
 
 
-DESCRIPTION="bandwidth $BANDWIDTH, pkt-size $PKT_SIZE, attack rate $ATTACK_RATE, #core $PROBE_CORE, #rules $RULES_COUNT*2"
 
 #check input parameters
 case $PKT_SIZE in
@@ -64,6 +64,11 @@ esac
 
 LOOP=$((LOOP*$BANDWIDTH/5000))
 
+
+if [[ $7 -ne 0 ]]; then
+  LOOP=$7
+fi
+
 #path on remote server in which we run the tests
 APP_PATH="/opt/mmt/test"
 
@@ -71,11 +76,18 @@ LOG_PATH="logs"
 
 OUTPUT=$LOG_PATH/output.csv
 
+#rate of #noHTTP_rules/#HTTP_rules
+#rate = x => there is 1 rule HTTP and x rules noHTTP
+HTTP_noHTTP_RULE_RATE=30
+
+DESCRIPTION="bandwidth $BANDWIDTH, pkt-size $PKT_SIZE, attack rate $ATTACK_RATE, #core $PROBE_CORE, #rules $RULES_COUNT*$((HTTP_noHTTP_RULE_RATE+1))"
+
 #gnuplot
 A_RATE=$ATTACK_RATE
 if [[ "$A_RATE" == "normal" ]]; then
   A_RATE="0"
 fi
+
 GRAPH_TITLE="$(date +%Y-%m-%d\ %H:%M:%S)\nbandwidth $BANDWIDTH Mbps, pkt-size $PKT_SIZE Byte, attack rate $A_RATE%,\n #core $PROBE_CORE, #rules $RULES_COUNT"
 START=$(date +%s)
 END=$((START+INTERVAL+5))
@@ -84,7 +96,7 @@ XRANGE="$START:$END"
 date >  $LOG_PATH/$TEST_ID.txt
 echo "test $TEST_ID, $DESCRIPTION" | tee -a $LOG_PATH/$TEST_ID.txt
 
-CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT*2"
+CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT*$((HTTP_noHTTP_RULE_RATE+1))"
 
 
 # $1 : IP
@@ -92,8 +104,10 @@ CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT*2"
 function kill_proc () {
   IP=$1
   PROG=$2
+  
+  echo "kill $PROG"
 
-  ssh $1 "cd $APP_PATH && pkill -INT $PROG && sleep 7 && pkill -INT $PROG && sleep 3 && pkill -TERM $PROG"
+  ssh $1 "cd $APP_PATH && pkill -INT $PROG && sleep 5 && pkill -INT $PROG && sleep 3 && pkill -TERM $PROG"
 }
 
 # note:
@@ -130,7 +144,7 @@ function run () {
 # $2 : id
 function run_probe () {
   SERVER="root@$1"
-  PROBE_CONF="probe$2.conf"
+  PROBE_CONF="probe$2_$TYPE.conf"
   APP_PARAM="-c $PROBE_CORE_MASK -- -c $APP_PATH/$PROBE_CONF"
   PROGRAM="probe"
 
@@ -165,7 +179,11 @@ function run_probe () {
 function run_security () {
   SERVER="root@$1"
   START_INDEX=$(($RULES_COUNT+1))
-  APP_PARAM="-p /opt/mmt/probe/bin/mysocket -c 37-84 -m (0:${START_INDEX}-1000) -n 4 -v"
+  #increase rules for nonHTTP
+  if [[ $2 -eq 1 ]]; then
+    START_INDEX=$((RULES_COUNT*HTTP_noHTTP_RULE_RATE+1))
+  fi
+  APP_PARAM="-p /opt/mmt/probe/bin/mysocket -c 37-84 -m (0:${START_INDEX}-15000) -n 3 -v"
   PROGRAM="sec"
 
   #create rules folder if need, remove its old content
@@ -215,7 +233,7 @@ function run_lb () {
 # $1 : IP server
 function run_traffic_gen () {
   SERVER="root@$1"
-  APP_PARAM="-i eth2 --unique-ip --netmap --preload-pcap --nm-delay=15 --loop=$LOOP --mbps=$BANDWIDTH /home/lab8/pcap/SODIUM_test/${ATTACK_RATE}_${PKT_SIZE}.pcap"
+  APP_PARAM="-i eth2 --unique-ip --netmap --preload-pcap --nm-delay=20 --loop=$LOOP --mbps=$BANDWIDTH /home/lab8/pcap/SODIUM_test/${ATTACK_RATE}_${PKT_SIZE}.pcap"
   PROGRAM="tcpreplay"
 
   FILE=$LOG_PATH/$TEST_ID.$PROGRAM
@@ -231,7 +249,7 @@ function run_traffic_gen () {
   FLOW=`grep "\[tcpreplay-2\]{" $FILE.txt | sed "s/\[tcpreplay-2\]{//" | sed "s/}//"`
 
   REST="$RATE,$SIZE,$FLOW"
-  if [[ -z "$REST" ]]; then
+  if [[ -z "$RATE" ]]; then
     REST=",,,,,,,,,,,"
   fi
 
@@ -245,18 +263,18 @@ echo ""
 
 
 echo "Run mmt-security"
-run_security 192.168.0.7  1 &
-run_security 192.168.0.35 2 &
+run_security 192.168.0.7  2 &
+run_security 192.168.0.35 1 &
 
 #wait for mmt-sec starts
-sleep 1
+sleep 3
 
 
 #mmt-probe need to terminate before mmt-sec
 
 echo "Run mmt-probe"
-run_probe 192.168.0.7  1 &
-run_probe 192.168.0.35 2 &
+run_probe 192.168.0.7  2 &
+run_probe 192.168.0.35 1 &
 
 sleep 1
 
@@ -274,11 +292,10 @@ run_traffic_gen 192.168.0.37
 
 
 kill_proc 192.168.0.36 lb
-sleep 1
+
 kill_proc 192.168.0.7  probe &
 kill_proc 192.168.0.35 probe
 
-sleep 1
 kill_proc 192.168.0.7  sec &
 kill_proc 192.168.0.35 sec 
 
@@ -301,8 +318,8 @@ SEC2_OUTPUT=$(  cat $LOG_PATH/$TEST_ID.sec2.txt.tmp)
 rm $LOG_PATH/*.tmp &> /dev/null
 
 #print header of csv file
-if [[ $# == 7 ]]; then
-  echo "test_id,bandwidth,pkt_size,attack_rate,probe_cores,rules_count,|tcpreplay->,loops,Bps,Mbps,pps,pkt_count,byte_count,duration,flows_count,?,?,fps,flow_pkts,non_flow,|load_balancer->,pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,?,non_http_pkt,http_pkt,|probe1->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|probe->2,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|security1->,#alerts,#reports,|security->2,#alerts,#reports" > $OUTPUT 
+if [[ $7 -eq 0 ]]; then
+  echo "test_id,bandwidth,pkt_size,attack_rate,probe_cores,rules_count,|tcpreplay->,loops,Bps,Mbps,pps,pkt_count,byte_count,duration,flows_count,?,?,fps,flow_pkts,non_flow,|load_balancer->,pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,?,non_http_pkt,http_pkt,|probe1(nonHTTP)->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|probe2(HTTP)->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|security1(nonHTTP)->,#alerts,#reports,|security2(HTTP)->,#alerts,#reports" >> $OUTPUT 
 fi
 
 

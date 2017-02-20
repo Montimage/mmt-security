@@ -32,6 +32,10 @@ typedef struct rule_engine_struct{
 	size_t total_instances_count;
 	//number of instances
 	size_t instances_count;
+
+	//depending on type of rule (verifying on a single packet or on multi-packets)
+	//the processing will be different
+	enum verdict_type (*processing_packets)( struct rule_engine_struct *, message_t *);
 }rule_engine_t;
 
 //max number of events in a rule

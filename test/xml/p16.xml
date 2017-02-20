@@ -1,0 +1,48 @@
+<beginning>
+<embedded_functions><![CDATA[
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+
+static inline int check_sql_injection(const void *p_payload, double payload_len){
+   int key_word_len = 6;
+   char *key_words[6] = {"DROP", "UNION", "SELECT", "CHAR", "DELETE", "INSERT"};
+   size_t len = payload_len, i;
+   char *str  = malloc( len + 1 );
+   memcpy( str, p_payload, len );
+   str[ len ] = '\0';
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+   for( i=0; i<key_word_len; i++)
+      if( strstr(str, key_words[i]  ) != NULL ){
+         free( str );
+         return 1;
+      }
+   
+   free( str );
+   return 0;
+}
+
+]]>
+</embedded_functions>
+
+
+<!-- C4_Analyse_04g : SQL Injection detection.-->
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="16" type_property="ATTACK" 
+    description="SQL Injection detected"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a TCP segment"
+           boolean_expression="((tcp.payload_len &gt; 0)&amp;&amp;(#check_sql_injection(tcp.p_payload, tcp.payload_len) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: SQL Injection in the payload"
+           boolean_expression="(ip.src != ip.dst )"/>
+</property>
+
+
+</beginning>

@@ -626,9 +626,6 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 		return 0;
 
 	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
-		*new_type = VOID;
-		*new_data = (void *)data;
-		return 0;
 	case MMT_DATA_PATH: /**< protocol path constant value */
 	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
 	case MMT_DATA_BUFFER: /**< binary buffer content */

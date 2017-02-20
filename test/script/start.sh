@@ -7,9 +7,10 @@ ssh root@192.168.0.35 "export TZ=Europe/Paris && date --set \"$(date)\""
 ssh root@192.168.0.36 "export TZ=Europe/Paris && date --set \"$(date)\""
 
 INDEX=0
-FIRST=OK
+#print out header
+FIRST=2
 
-rm logs/*
+#rm logs/*
 
 #number of cores for probe
 for CORE in 16 8
@@ -28,14 +29,16 @@ do
         do
      
           INDEX=$((INDEX + 1))
-          echo "$INDEX ================= $(date)" | tee -a logs/log.txt
-          ./one-test.sh $INDEX $BW $PKT $A_RATE $CORE $RULE $FIRST >> logs/log.txt 2>&1
 
-          #print header of output-file only for the first time
-          unset FIRST
-          
-          echo "sleep 5s ..."
-          sleep 5
+            echo "$INDEX ================= $(date)" | tee -a logs/log.txt
+            ./one-test.sh $INDEX $BW $PKT $A_RATE $CORE $RULE $FIRST >> logs/log.txt 2>&1
+
+            #print header of output-file only for the first time
+            unset FIRST
+            
+            echo "sleep 2s ..."
+            sleep 2
+
         done
       done
     done

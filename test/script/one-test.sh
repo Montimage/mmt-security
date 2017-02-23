@@ -5,7 +5,7 @@ LOOP=300
 
 #do statistic in at most 3 minutes
 INTERVAL=180
-TYPE="simple"
+TYPE="complex"
 
 if [[ $# != 6 && $# != 7 ]]; then
   echo "usage: $0 test_id bandwidth pkt_size attack_rate probe_core rules_count [loop]"
@@ -78,7 +78,7 @@ OUTPUT=$LOG_PATH/output.csv
 
 #rate of #noHTTP_rules/#HTTP_rules
 #rate = x => there is 1 rule HTTP and x rules noHTTP
-HTTP_noHTTP_RULE_RATE=30
+HTTP_noHTTP_RULE_RATE=2
 
 DESCRIPTION="bandwidth $BANDWIDTH, pkt-size $PKT_SIZE, attack rate $ATTACK_RATE, #core $PROBE_CORE, #rules $RULES_COUNT*$((HTTP_noHTTP_RULE_RATE+1))"
 
@@ -104,10 +104,14 @@ CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT*$((H
 function kill_proc () {
   IP=$1
   PROG=$2
+  TIME=10
+  if [[ "$PROG" == "lb" ]]; then
+	TIME=15
+  fi
   
   echo "kill $PROG"
 
-  ssh $1 "cd $APP_PATH && pkill -INT $PROG && sleep 5 && pkill -INT $PROG && sleep 3 && pkill -TERM $PROG"
+  ssh $1 "cd $APP_PATH && pkill -INT $PROG && sleep $TIME && pkill -INT $PROG && sleep 3 && pkill -TERM $PROG"
 }
 
 # note:
@@ -188,7 +192,7 @@ function run_security () {
 
   #create rules folder if need, remove its old content
   ssh $1 "mkdir -p $APP_PATH/rules &> /dev/null ; rm $APP_PATH/rules/* &> /dev/null"
-  scp -r rules/$2.*.so $SERVER:$APP_PATH/rules/ &> /dev/null
+  scp -r rules/$2.*$TYPE.*.so $SERVER:$APP_PATH/rules/ &> /dev/null
 
   run $SERVER $PROGRAM "$APP_PARAM" $2 s
 
@@ -219,8 +223,8 @@ function run_lb () {
   #filter output: pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,? 
   LB_OUTPUT=`grep "\[mmt-report-1\]{2," $FILE.txt | sed "s/\[mmt-report-1\]{2,//" | sed "s/}//"` 
   #HTTP pkt, non-HTTP pkt
-  HTTP=`grep "\[mmt-report-3\]{" $FILE.txt | sed "s/\[mmt-report-3\]{//" | cut -d',' -f3 | xargs | sed -e 's/\ /+/g' | bc` 
-  NO_HTTP=`grep "\[mmt-report-3\]{" $FILE.txt | sed "s/\[mmt-report-3\]{//" | cut -d',' -f4 | xargs | sed -e 's/\ /+/g' | bc` 
+  HTTP=`grep "\[mmt-report-0\]{" $FILE.txt | sed "s/\[mmt-report-0\]{//" | cut -d',' -f2 ` 
+  NO_HTTP=`grep "\[mmt-report-0\]{" $FILE.txt | sed "s/\[mmt-report-0\]{//" | cut -d',' -f3` 
 
   #if no report => insert empty
   if [[ -z "$LB_OUTPUT" ]]; then
@@ -263,8 +267,8 @@ echo ""
 
 
 echo "Run mmt-security"
-run_security 192.168.0.7  2 &
-run_security 192.168.0.35 1 &
+run_security 192.168.0.7  1 &
+run_security 192.168.0.35 2 &
 
 #wait for mmt-sec starts
 sleep 3
@@ -273,8 +277,8 @@ sleep 3
 #mmt-probe need to terminate before mmt-sec
 
 echo "Run mmt-probe"
-run_probe 192.168.0.7  2 &
-run_probe 192.168.0.35 1 &
+run_probe 192.168.0.7  1 &
+run_probe 192.168.0.35 2 &
 
 sleep 1
 
@@ -289,7 +293,7 @@ sleep 1
 echo "Run tcpreplay"
 run_traffic_gen 192.168.0.37
 
-
+sleep 1
 
 kill_proc 192.168.0.36 lb
 

@@ -64,7 +64,11 @@ stat_proc "$PROGRAM" "$4" "$5.stat" &
 print_ts "$5.txt" "(start $PROGRAM $3)"
 
 #run the program
-./$PROGRAM $3 >> "$5.txt" 2>&1 
+#if [[ "$PROGRAM" -eq "lb" ]]; then
+#  taskset 0x20000000000 ./$PROGRAM $3 >> "$5.txt" 2>&1
+#else
+./$PROGRAM $3 >> "$5.txt" 2>&1
+#fi
 
 sleep 1
 

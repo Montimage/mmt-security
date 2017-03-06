@@ -237,12 +237,13 @@ static inline size_t receiving_reports( int sock ) {
 
 			//special processing for these data types
 			switch( el_data_type ){
+			case MMT_GENERIC_HEADER_LINE :
 			case MMT_HEADER_LINE :
-				el_ptr->data      = mmt_mem_force_dup( &buffer[index], el_data_length );
+				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
 				el_ptr->data_type = STRING;
 				break;
 			case MMT_DATA_POINTER :
-				el_ptr->data      = mmt_mem_force_dup( &buffer[index], el_data_length );
+				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
 				el_ptr->data_type = VOID;
 				break;
 			case -1:
@@ -517,7 +518,7 @@ int main( int argc, char** argv ) {
 
 			//init mmt-sec to verify the rules
 			if( _sec_handler.threads_count == 1 ){
-				_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, _print_output, NULL );
+				_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, verbose, _print_output, NULL );
 				_sec_handler.process_fn = &mmt_sec_process;
 				size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 			}else if( _sec_handler.threads_count > 1 ){
@@ -557,8 +558,6 @@ int main( int argc, char** argv ) {
 						clients_count, size, time_diff( start_time, end_time ), alerts_count
 				);
 			}
-			//TODO: HN removes this (this is for testing only)
-			mmt_sec_print_verdict( NULL, 0, 0, rules_count, NULL, NULL );
 
 			mmt_mem_free( core_mask );
 

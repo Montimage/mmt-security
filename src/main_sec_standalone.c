@@ -336,7 +336,7 @@ int main(int argc, char** argv) {
 
 	//init mmt-sec to verify the rules
 	if( _sec_handler.threads_count == 1 ){
-		_sec_handler.handler    = mmt_sec_register( rules_arr, size, _print_output, NULL );
+		_sec_handler.handler    = mmt_sec_register( rules_arr, size, verbose, _print_output, NULL );
 		_sec_handler.process_fn = &mmt_sec_process;
 		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}else if( _sec_handler.threads_count > 1 ){

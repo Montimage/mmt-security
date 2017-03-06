@@ -20,6 +20,7 @@ static inline void _mem_reset( mmt_memory_t *mem, size_t size ){
 	mem->size      = size;
 	mem->ref_count = 1;
 }
+
 static inline void *_mem_alloc(size_t size){
 	mmt_memory_t *mem = malloc( SIZE_OF_MMT_MEMORY_T + size + 1 );
 
@@ -43,8 +44,9 @@ static inline void _mem_force_free( void *x ){
 ////circular buffer
 ///////////////////////////////////////////////////////////////////////////////
 typedef struct _mmt_mem_pool_struct{
-	uint16_t head, tail;
-	uint32_t size;
+	uint32_t head __attribute__ ((aligned(16)));
+	uint32_t tail __attribute__ ((aligned(16)));
+	uint32_t size __attribute__ ((aligned(16)));
 	void **data;
 }ring_t;
 
@@ -103,7 +105,7 @@ void _iterate_ring( ring_t *ring, void (*fn)(void *) ){
 ////binary-map for keys are uint32_t
 ///////////////////////////////////////////////////////////////////////////////
 typedef struct node_uint32_struct{
-	uint32_t key;
+	uint32_t key __attribute__ ((aligned(16)));
 	void *   data;
    struct node_uint32_struct *left, *right;
 }node_uint32_t;
@@ -172,7 +174,8 @@ static inline void __iterate_map_uint32_t( node_uint32_t * node, void (*callback
 ///Memory pools
 ///////////////////////////////////////////////////////////////////////////////
 typedef struct mem_pools_struct{
-	size_t bytes_count; //total number of available bytes of all pools
+	 //total number of available bytes of all pools
+	size_t bytes_count __attribute__ ((aligned(16)));
 	node_uint32_t *pools_map;
 }mem_pools_t ;
 
@@ -281,8 +284,8 @@ void *mmt_mem_alloc(size_t size){
 	mmt_assert( size > 0, "Size must be positive" );
 #endif
 
-	return _mem_alloc( size );
-//	return _pools_alloc( size );
+//	return _mem_alloc( size );
+	return _pools_alloc( size );
 }
 
 /**
@@ -295,6 +298,6 @@ void mmt_mem_force_free( void *x ){
 	mmt_assert( x != NULL, "x (%p) must not be NULL", x );
 #endif
 
-	_mem_force_free( x );
-//	return _pools_free( x );
+//	_mem_force_free( x );
+	return _pools_free( x );
 }

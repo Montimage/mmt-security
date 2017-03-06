@@ -299,7 +299,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	handler->messages_buffers= mmt_mem_alloc( sizeof( void *) * handler->threads_count );
 
 	//this is only for get mmt_sec_get_unique_protocol_attributes
-	mmt_sec_handler = mmt_sec_register( rules_array, rules_count, NULL, NULL );
+	mmt_sec_handler = mmt_sec_register( rules_array, rules_count, false, NULL, NULL );
 	handler->proto_atts_count = mmt_sec_get_unique_protocol_attributes( mmt_sec_handler, &p_atts );
 	handler->proto_atts_array = mmt_mem_dup( p_atts, sizeof( void *) * handler->proto_atts_count );
 	mmt_sec_unregister( mmt_sec_handler ); //free this handler after getting unique set of proto_atts
@@ -349,7 +349,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 				mmt_info("Thread %2d processes %4d rules: %s", i + 1, rules_count_per_thread, buffer );
 			}
 
-			handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, callback, user_data );
+			handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, verbose, callback, user_data );
 
 			rule_ptr      += rules_count_per_thread;
 			rules_count   -= rules_count_per_thread; //number of remaining rules
@@ -379,7 +379,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 			mmt_info("Thread %2d processes %4d rules: %s", i + 1, rules_count_per_thread, buffer );
 		}
 
-		handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, callback, user_data );
+		handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, verbose, callback, user_data );
 		rule_ptr    += rules_count_per_thread;
 		rules_count -= rules_count_per_thread; //number of remaining rules
 		threads_count --;//number of remaining threads

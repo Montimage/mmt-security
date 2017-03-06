@@ -50,8 +50,9 @@ typedef struct _mmt_sec_handler_struct{
 	const proto_attribute_t **proto_atts_array;
 
 	//number of generated alerts
-	size_t alerts_count;
+	size_t *alerts_count;
 
+	bool verbose;
 #ifdef DEBUG_MODE
 	size_t messages_count;
 #endif
@@ -115,7 +116,7 @@ static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
 /**
  * Public API
  */
-mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rules_count,
+mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rules_count, bool verbose,
 		mmt_sec_callback callback, void *user_data){
 	size_t i;
 	uint32_t max_instance_count = get_config()->security.max_instances;
@@ -126,17 +127,16 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 	handler->rules_array = rules_array;
 	handler->callback    = callback;
 	handler->user_data_for_callback = user_data;
-	handler->alerts_count = 0;
+	handler->alerts_count = mmt_mem_alloc( sizeof (size_t ) * rules_count );
+	handler->verbose     = verbose;
 	//one fsm for one rule
 	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
-	for( i=0; i<rules_count; i++ )
+	for( i=0; i<rules_count; i++ ){
 		handler->engines[i] = rule_engine_init( rules_array[i], max_instance_count );
+		handler->alerts_count[i] = 0;
+	}
 
-#ifdef DEBUG_MODE
-//	printf(" Thread pid=%2d processes %4zu rules: ", gettid(), rules_count );
-//	for( i=0; i<rules_count; i++ )
-//		printf("%"PRIu32"%c", rules_array[i]->id, i == rules_count -1 ? '\n':',' );
-#endif
+	//printf(" Thread pid=%2d processes %4zu rules: ", gettid(), rules_count );
 
 	_get_unique_proto_attts( handler );
 
@@ -157,12 +157,11 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
 
-	alerts_count = _handler->alerts_count;
-
-#ifdef DEBUG_MODE
-	mmt_debug("received %zu messages and generated %zu alerts",
-			_handler->messages_count, _handler->alerts_count );
-#endif
+	for( i=0; i<_handler->rules_count; i++ ){
+		if( _handler->verbose )
+			printf(" - rule %"PRIu32" generated %"PRIu64" verdicts\n", _handler->rules_array[i]->id, _handler->alerts_count[ i ] );
+		alerts_count += _handler->alerts_count[ i ];
+	}
 
 	//free data elements of _handler
 	for( i=0; i<_handler->rules_count; i++ )
@@ -201,30 +200,21 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 
 		//find a validated/invalid trace
 		if( verdict != VERDICT_UNKNOWN ){
-			_handler->alerts_count ++;
+			_handler->alerts_count[i] ++;
 
-			//TODO: HN removes this (this is for testing only)
-							mmt_sec_print_verdict(
-								_handler->rules_array[i],
-								verdict,
-								0,
-								0,
-								NULL,
-								NULL );
+			if( _handler->callback != NULL ){
+				//get execution trace
+				execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
 
-//			if( _handler->callback != NULL ){
-//				//get execution trace
-//				execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
-//
-//				//call user-callback function
-//				_handler->callback(
-//					_handler->rules_array[i],
-//					verdict,
-//					msg->timestamp,
-//					msg->counter,
-//					execution_trace,
-//					_handler->user_data_for_callback );
-//			}
+				//call user-callback function
+				_handler->callback(
+					_handler->rules_array[i],
+					verdict,
+					msg->timestamp,
+					msg->counter,
+					execution_trace,
+					_handler->user_data_for_callback );
+			}
 		}
 	}
 	free_message_t( msg );
@@ -423,31 +413,6 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 	return buffer;
 }
 
-//TODO: hn removes this
-//this is for testing only
-void mmt_sec_print_verdict(
-		const rule_info_t *rule,		//id of rule
-		enum verdict_type verdict,
-		uint64_t timestamp,  //moment the rule is validated
-		uint32_t counter,
-		const mmt_array_t *const trace,
-		void *user_data )
-{
-	//TODO this limit mmt-sec on max 100 K rules
-	static uint32_t  prop_index[100000] = {0}, *p;
-	size_t i;
-	if (unlikely (rule == NULL)){
-		for( i=1; i<=counter; i++)
-			printf("property %3zu generates %6"PRIu32" alerts\n", i, prop_index[ i ]);
-		return;
-	}
-
-	//each rule is processed by only one thread
-	//=> this is thread-safe
-	p = prop_index + rule->id;
-	(*p) ++;
-}
-
 /**
  * PUBLIC API
  * Print verdicts to verdict printer
@@ -458,7 +423,7 @@ void mmt_sec_print_verdict(
  * @param trace
  * @param user_data
  */
-void _mmt_sec_print_verdict(
+void mmt_sec_print_verdict(
 		const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated

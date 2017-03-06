@@ -3,6 +3,41 @@
 <!-- MMT_Security Copyright (C) 2014  Montimage-->
 <beginning>
 	<!-- Simple multi-session property -->
+	
+	
+<embedded_functions><![CDATA[
+int *check_nfs_upload(void *file_name, void *file_opcode, void *p_payload, void *payload_len){
+  int *handle;
+  handle = malloc(sizeof(int));
+  *handle = 0;
+  if((file_name == NULL) || (file_opcode == NULL) || (p_payload == NULL) || (payload_len == NULL)){
+    return handle;
+  }
+  
+  //take the file name
+  uint16_t leng = *((uint16_t*)file_opcode);
+  char * fn_str = malloc(leng+1);
+  strncpy(fn_str, file_name, leng);
+  fn_str[leng] = '\0';
+  //printf("File name: %s. Leng: %d\n", fn_str, leng);
+  
+  //take the payload
+  uint16_t len = *((uint16_t *)payload_len);
+  //printf("Payload length: %"PRIu16"\n", len);
+  char *tcp_payload = malloc(len+1);
+  memcpy(tcp_payload, p_payload, len);
+  tcp_payload[len] = '\0';
+  //printf("TCP payload: %s\n", tcp_payload);
+  
+  if (strstr(tcp_payload, fn_str) != NULL){
+	  //printf ("Detected\n");
+	  *handle = 1;
+		}
+  free(fn_str);
+  free(tcp_payload);
+  return handle;
+}
+]]></embedded_functions>
 
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="300" property_id="1" type_property="ATTACK" 
     description="NFS synchronization and then upload">

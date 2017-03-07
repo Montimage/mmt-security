@@ -70,6 +70,8 @@ print_ts "$5.txt" "(start $PROGRAM $3)"
 ./$PROGRAM $3 >> "$5.txt" 2>&1
 #fi
 
+sync
+
 sleep 1
 
 print_ts "$5.txt" "(end $PROGRAM)"

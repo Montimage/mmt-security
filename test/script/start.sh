@@ -26,10 +26,20 @@ function run_test() {
 
 }
 
+
+function test_one_loop() {
+  FIRST=1
+  BW=4000
+  run_test
+}
+
 #rm logs/*
 
+for test_loop in 1 2 3
+do
+
 #base
-for BW in 8600 8800 9000 9200 9400 9600
+for BW in 9100 9700 
 do
   CORE=16
   RULE=200
@@ -39,8 +49,10 @@ do
   run_test
 done
 
+test_one_loop
+
 #pkt
-for BW in 6100 6300 6500 6700
+for BW in $(seq 8300 200 91000);
 do
   CORE=16
   RULE=200
@@ -50,8 +62,11 @@ do
   run_test
 done
 
+
+test_one_loop
+
 #pkt
-for BW in 8100 8300 8500 8700 8900 9100
+for BW in $(seq 5900 200 6900);
 do
   CORE=16
   RULE=200
@@ -61,8 +76,11 @@ do
   run_test
 done
 
+
+test_one_loop
+
 #a_rate
-for BW in 8000 8100 8300 8500 8700
+for BW in $(seq 9100 200 9700);
 do
   CORE=16
   RULE=200
@@ -71,8 +89,12 @@ do
   
   run_test
 done
+
+
+test_one_loop
+
 #a_rate
-for BW in 6500 6700 6900 7100
+for BW in $(seq 7100 200 7500);
 do
   CORE=16
   RULE=200
@@ -83,8 +105,11 @@ do
 done
 
 
+test_one_loop
+
+
 #core
-for BW in 5600 5800 6000 6200
+for BW in $(seq 6100 200 6900);
 do
   CORE=8 #
   RULE=200
@@ -94,8 +119,12 @@ do
   run_test
 done
 
+
+
+test_one_loop
+
 #rule
-for BW in 4600 4800 5000 5200
+for BW in $(seq 6100 200 6900)
 do
   CORE=16
   RULE=400
@@ -103,4 +132,11 @@ do
   A_RATE=10
   
   run_test
+done
+
+
+test_one_loop
+
+echo "$INDEX,test_loop,$test_loop" >> logs/output.txt 
+
 done

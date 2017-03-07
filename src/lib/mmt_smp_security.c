@@ -368,16 +368,17 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 
 		rules_count_per_thread = rules_count / threads_count;
 
-		if( verbose){
-			size = 0;
-			for( j=0; j<rules_count_per_thread; j++ ){
-				if( size >= buffer_len - 10 ) break;
-				size += sprintf(buffer + size, "%d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
-			}
-			buffer[size] = '\0';
-
-			mmt_info("Thread %2d processes %4d rules: %s", i + 1, rules_count_per_thread, buffer );
-		}
+		//TODO: this is for test only (uncomment after testing)
+//		if( verbose){
+//			size = 0;
+//			for( j=0; j<rules_count_per_thread; j++ ){
+//				if( size >= buffer_len - 10 ) break;
+//				size += sprintf(buffer + size, "%d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
+//			}
+//			buffer[size] = '\0';
+//
+//			mmt_info("Thread %2d processes %4d rules: %s", i + 1, rules_count_per_thread, buffer );
+//		}
 
 		handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, verbose, callback, user_data );
 		rule_ptr    += rules_count_per_thread;

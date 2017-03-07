@@ -1,11 +1,16 @@
 #!/bin/bash
 
-#for tcpreplay: number of loops we will replay pcap file
-LOOP=300
-
 #do statistic in at most 3 minutes
 INTERVAL=180
+
+#test type: simple or complex rules
 TYPE="complex"
+TYPE="simple"
+
+#rate of #noHTTP_rules/#HTTP_rules
+#rate = x => there is 1 rule HTTP and x rules noHTTP
+HTTP_noHTTP_RULE_RATE=1
+
 
 if [[ $# != 6 && $# != 7 ]]; then
   echo "usage: $0 test_id bandwidth pkt_size attack_rate probe_core rules_count [loop]"
@@ -74,11 +79,10 @@ APP_PATH="/opt/mmt/test"
 
 LOG_PATH="logs"
 
+#output of any tests
 OUTPUT=$LOG_PATH/output.csv
-
-#rate of #noHTTP_rules/#HTTP_rules
-#rate = x => there is 1 rule HTTP and x rules noHTTP
-HTTP_noHTTP_RULE_RATE=2
+#output of this test
+SINGE_OUTPUT=$LOG_PATH/$TEST_ID.txt
 
 DESCRIPTION="bandwidth $BANDWIDTH, pkt-size $PKT_SIZE, attack rate $ATTACK_RATE, #core $PROBE_CORE, #rules $RULES_COUNT*$((HTTP_noHTTP_RULE_RATE+1))"
 
@@ -88,13 +92,13 @@ if [[ "$A_RATE" == "normal" ]]; then
   A_RATE="0"
 fi
 
-GRAPH_TITLE="$(date +%Y-%m-%d\ %H:%M:%S)\nbandwidth $BANDWIDTH Mbps, pkt-size $PKT_SIZE Byte, attack rate $A_RATE%,\n #core $PROBE_CORE, #rules $RULES_COUNT"
+GRAPH_TITLE="$(date +%Y-%m-%d\ %H:%M:%S)\nbw $BANDWIDTH Mbps, pkt-size $PKT_SIZE Byte, attack rate $A_RATE%,\n #core $PROBE_CORE, #rules $RULES_COUNT"
 START=$(date +%s)
 END=$((START+INTERVAL+5))
 XRANGE="$START:$END"
 
 date >  $LOG_PATH/$TEST_ID.txt
-echo "test $TEST_ID, $DESCRIPTION" | tee -a $LOG_PATH/$TEST_ID.txt
+echo "test $TEST_ID, $DESCRIPTION" | tee -a $SINGE_OUTPUT
 
 CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT*$((HTTP_noHTTP_RULE_RATE+1))"
 
@@ -104,9 +108,10 @@ CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT*$((H
 function kill_proc () {
   IP=$1
   PROG=$2
-  TIME=10
-  if [[ "$PROG" == "lb" ]]; then
 	TIME=15
+
+  if [[ "$PROG" == "sec" ]]; then
+    TIME=7
   fi
   
   echo "kill $PROG"
@@ -187,7 +192,7 @@ function run_security () {
   if [[ $2 -eq 1 ]]; then
     START_INDEX=$((RULES_COUNT*HTTP_noHTTP_RULE_RATE+1))
   fi
-  APP_PARAM="-p /opt/mmt/probe/bin/mysocket -c 37-84 -m (0:${START_INDEX}-15000) -n 3 -v"
+  APP_PARAM="-p /opt/mmt/probe/bin/mysocket -c 37-84 -m (0:${START_INDEX}-100000) -n 3 -v"
   PROGRAM="sec"
 
   #create rules folder if need, remove its old content
@@ -221,7 +226,7 @@ function run_lb () {
   FILE=$LOG_PATH/$TEST_ID.$PROGRAM
 
   #filter output: pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,? 
-  LB_OUTPUT=`grep "\[mmt-report-1\]{2," $FILE.txt | sed "s/\[mmt-report-1\]{2,//" | sed "s/}//"` 
+  LB_OUTPUT=`grep "\[mmt-report-1\]{3," $FILE.txt | sed "s/\[mmt-report-1\]{3,//" | sed "s/}//"` 
   #HTTP pkt, non-HTTP pkt
   HTTP=`grep "\[mmt-report-0\]{" $FILE.txt | sed "s/\[mmt-report-0\]{//" | cut -d',' -f2 ` 
   NO_HTTP=`grep "\[mmt-report-0\]{" $FILE.txt | sed "s/\[mmt-report-0\]{//" | cut -d',' -f3` 
@@ -293,12 +298,16 @@ sleep 1
 echo "Run tcpreplay"
 run_traffic_gen 192.168.0.37
 
-sleep 1
+sleep 5
 
 kill_proc 192.168.0.36 lb
 
+sleep 10
+
 kill_proc 192.168.0.7  probe &
 kill_proc 192.168.0.35 probe
+
+sleep 15
 
 kill_proc 192.168.0.7  sec &
 kill_proc 192.168.0.35 sec 
@@ -322,12 +331,19 @@ SEC2_OUTPUT=$(  cat $LOG_PATH/$TEST_ID.sec2.txt.tmp)
 rm $LOG_PATH/*.tmp &> /dev/null
 
 #print header of csv file
-if [[ $7 -eq 0 ]]; then
-  echo "test_id,bandwidth,pkt_size,attack_rate,probe_cores,rules_count,|tcpreplay->,loops,Bps,Mbps,pps,pkt_count,byte_count,duration,flows_count,?,?,fps,flow_pkts,non_flow,|load_balancer->,pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,?,non_http_pkt,http_pkt,|probe1(nonHTTP)->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|probe2(HTTP)->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|security1(nonHTTP)->,#alerts,#reports,|security2(HTTP)->,#alerts,#reports" >> $OUTPUT 
+txt="test_id,bandwidth,pkt_size,attack_rate,probe_cores,rules_count,|tcpreplay->,loops,Bps,Mbps,pps,pkt_count,byte_count,duration,flows_count,?,?,fps,flow_pkts,non_flow,|load_balancer->,pkt recv, pkt pros, #drop, %drop, #err,%err,?,?,?,non_http_pkt,http_pkt,|probe1(nonHTTP)->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|probe2(HTTP)->,id,#pkt_proc,#drop,%drop,#error,#pkt_recv,#reports,|security1(nonHTTP)->,#alerts,#reports,|security2(HTTP)->,#alerts,#reports"
+
+echo $txt >> $SINGE_OUTPUT
+
+if [[ "$7" == "0" ]]; then
+  echo $txt >> $OUTPUT 
 fi
 
 
-echo "$CONFIG,|,$LOOP,$TRAF_OUTPUT,|,$LB_OUTPUT,|,$PROBE1_OUTPUT,|,$PROBE2_OUTPUT,|,$SEC1_OUTPUT,|,$SEC2_OUTPUT" >> $OUTPUT
+txt="$CONFIG,|,$LOOP,$TRAF_OUTPUT,|,$LB_OUTPUT,|,$PROBE1_OUTPUT,|,$PROBE2_OUTPUT,|,$SEC1_OUTPUT,|,$SEC2_OUTPUT"
+
+echo $txt >> $SINGE_OUTPUT
+echo $txt >> $OUTPUT
 
 #done
 echo ""

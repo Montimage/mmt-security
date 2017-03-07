@@ -158,7 +158,11 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
 
 	for( i=0; i<_handler->rules_count; i++ ){
-		if( _handler->verbose )
+		if( _handler->alerts_count[ i ] == 0 )
+			continue;
+
+		//TODO: this is for test only (uncomment after testing)
+		//if( _handler->verbose )
 			printf(" - rule %"PRIu32" generated %"PRIu64" verdicts\n", _handler->rules_array[i]->id, _handler->alerts_count[ i ] );
 		alerts_count += _handler->alerts_count[ i ];
 	}

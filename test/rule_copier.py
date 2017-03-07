@@ -1,27 +1,63 @@
 import sys
+import re
+import time
 
-loop = int(sys.argv[1])
-infile = sys.argv[2]
-outfile= sys.argv[3]
+if len(sys.argv) != 5:
+	print( "Usage: " + sys.argv[0] + " p_id_from p_id_to input_file output_file" )
+	sys.exit()
 
-print loop
+p_id_from = int(sys.argv[1])
+p_id_to   = int(sys.argv[2])
+infile    = sys.argv[3]
+outfile   = sys.argv[4]
 
+foutput = open(outfile, 'w', encoding='utf8')
+foutput.write("<!--This file is repeated from "+ infile +" -->\n")
 
-foutput = open(outfile, 'wb')
-foutput.write('<beginning>\n')
-nb_r = 1
-for i in xrange(loop):
-	finput = open(infile, 'rb')
+rules_count = p_id_from
+loop = 0
+jump_header = False
+inside_hader = True
+distinct_rule_count = 0
+while rules_count <= p_id_to :
+	foutput.write("\n<!-- ================LOOP " + str( loop ) + " ==================-->\n\n");
+	loop += 1;
+	
+	finput = open(infile, 'r', encoding='utf8')
+	
+	inside_hader = True
+	distinct_rule_count = 0
+	
 	for line in finput:
-		elements = line.split(' ')
-		for element in elements:
-			if element == 'property_id=\"\"':
-				#print "A property found"
-				element = 'property_id=\"'+str(nb_r)+'\"'
-				foutput.write(element + ' ')
-				nb_r += 1
-			else: 
-				foutput.write(element + ' ')
+		
+		if inside_hader == True and line.find("<property ") != -1:
+			inside_hader = False
+			
+		if jump_header == True and inside_hader == True:
+			continue
+		
+		if line.find( "</beginning>" ) != -1:
+			break;
+		
+		new_line = re.sub('property_id=".*"', 'property_id = "' + str( rules_count ) + '"', line );
+		if new_line != line:
+			rules_count += 1
+			distinct_rule_count += 1
+			
+		foutput.write( new_line )
+		
+		#we got enough rules
+		if rules_count == p_id_to and line == "</property>":
+			break
 	finput.close()
-foutput.write('</beginning>\n')
+	
+	jump_header = True
+	
+foutput.write('\n</beginning>\n')
+
+des = time.strftime("%Y/%m/%d %H:%M:%S") + " Generated " + str( p_id_to - p_id_from + 1 ) + " from " + str(distinct_rule_count) + " distinct rules in " + str(loop) + " loops"
+
+foutput.write( "\n<!-- " + des + " -->");
+print( des )
+
 foutput.close()

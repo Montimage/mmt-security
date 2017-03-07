@@ -352,7 +352,8 @@ enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *mes
 	//the second event is not satisfied => use timeout
 	if( tran->guard && tran->guard( event_data, fsm)  == NO )
 		state = _fsm->init_state->transitions[0].target_state->transitions[0].target_state;
-	state = tran->target_state;
+   else
+      state = tran->target_state;
 
 	_fsm->events_trace->data[   1 ] = NULL; //reset this to NULL
 	_fsm->events_trace->data[   2 ] = NULL;

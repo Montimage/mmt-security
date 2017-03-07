@@ -3,49 +3,40 @@
 <!-- MMT_Security Copyright (C) 2014  Montimage-->
 <beginning>
 	<!-- Simple multi-session property -->
-	
-	
+		
 <embedded_functions><![CDATA[
-int *check_nfs_upload(void *file_name, void *file_opcode, void *p_payload, void *payload_len){
-  int *handle;
-  handle = malloc(sizeof(int));
-  *handle = 0;
-  if((file_name == NULL) || (file_opcode == NULL) || (p_payload == NULL) || (payload_len == NULL)){
-    return handle;
-  }
-  
-  //take the file name
-  uint16_t leng = *((uint16_t*)file_opcode);
-  char * fn_str = malloc(leng+1);
-  strncpy(fn_str, file_name, leng);
-  fn_str[leng] = '\0';
-  //printf("File name: %s. Leng: %d\n", fn_str, leng);
-  
-  //take the payload
-  uint16_t len = *((uint16_t *)payload_len);
-  //printf("Payload length: %"PRIu16"\n", len);
-  char *tcp_payload = malloc(len+1);
-  memcpy(tcp_payload, p_payload, len);
-  tcp_payload[len] = '\0';
-  //printf("TCP payload: %s\n", tcp_payload);
-  
-  if (strstr(tcp_payload, fn_str) != NULL){
-	  //printf ("Detected\n");
-	  *handle = 1;
-		}
-  free(fn_str);
-  free(tcp_payload);
-  return handle;
+	
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+
+static inline int em_check_nfs_upload(const char *file_name, const char *p_payload){
+	//return 1;
+	printf("executing em_check_nfs_upload\n");
+	if((file_name == NULL) || (p_payload == NULL)){
+	return 2;
+	}
+  return (strstr(p_payload, file_name) != NULL);
 }
 ]]></embedded_functions>
 
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="300" property_id="1" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="120" property_id="1" type_property="ATTACK" 
     description="NFS synchronization and then upload">
     <event value="COMPUTE" event_id="1" 
            description="NFS synchronization"
-           boolean_expression="(nfs.file_opcode != 0)"/>
+           boolean_expression="(nfs.file_name != '')"/>
     <event value="COMPUTE" event_id="2" 
            description="Upload the same file"
-           boolean_expression="((ip.dst == ip.src.1)&amp;&amp;(#check_nfs_upload(nfs.file_name.1, nfs.file_opcode.1, tcp.p_payload, tcp.payload_len) == 1))"/>
+           boolean_expression="((ip.dst == ip.src.1)&amp;&amp;(#em_check_nfs_upload(nfs.file_name.1, tcp.p_payload) == 1))"/>
 </property>
 </beginning>

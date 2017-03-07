@@ -5,28 +5,46 @@
 	<!-- Simple multi-session, multi-probe property  ip.src != ip.dst-->
 	
 <embedded_functions><![CDATA[
-int *check_nfs_redis(void *p_payload, void *payload_len){
-  int *handle;
-  handle = malloc(sizeof(int));
-  *handle = 0;
-  if((p_payload == NULL) || (payload_len == NULL)){
-    return handle;
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+#include "hiredis/hiredis.h"
+#include <sys/time.h>
+
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+
+static inline int check_nfs_redis(const char *p_payload, double payload_len){
+printf("must have alerts\n");
+  return 1;
+  
+  if(p_payload == NULL){
+    return 2;
   }
+  
+  //printf("Payload: %s\n", p_payload);
+  
+  size_t len = payload_len;
+  char *str  = malloc( len + 1 );
+  memcpy( str, p_payload, len );
+  str[ len ] = '\0'; 
+  
   
   redisContext *c, *command;
   redisReply *reply;
   
-  //const char *hostname = "127.0.0.1";
-  const char *hostname = "192.168.0.37";
+  const char *hostname = "127.0.0.1";
+  //const char *hostname = "192.168.0.37";
   int port = 6379;
-  
-  //take the payload
-  uint16_t len = *((uint16_t *)payload_len);
-  //printf("Payload length: %"PRIu16"\n", len);
-  char *tcp_payload = malloc(len+1);
-  memcpy(tcp_payload, p_payload, len);
-  tcp_payload[len] = '\0';
-  //printf("TCP payload: %s\n", tcp_payload);
   
   struct timeval timeout = { 1, 500000 }; // 1.5 seconds
   c = redisConnectWithTimeout(hostname, port, timeout);
@@ -78,20 +96,22 @@ int *check_nfs_redis(void *p_payload, void *payload_len){
 				token = strtok(NULL, ",");
 				i++;
 				}
-			if (strstr(tcp_payload, f_name) != NULL){
-			//printf ("Detected\n");
-			*handle = 1;
-			return handle;
+			//printf("Payload: %s\n", str);
+			if (strstr(str, f_name) != NULL){
+			printf ("Detected\n");
+			redisFree(c);
+			free(str);
+			return 1;
 			}            
         }
+    redisFree(c);
     }
-  redisFree(c);
-  free(tcp_payload);
-  return handle;
+  free(str);
+  return 0;
 }
 ]]></embedded_functions>
 
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="2" type_property="ATTACK" 
     description="Upload a file comming from NFS server (detection based on two probes)">
     <event value="COMPUTE" event_id="1" 
            description="Context: HTTP packet"

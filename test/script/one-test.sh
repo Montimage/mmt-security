@@ -67,7 +67,7 @@ case "$ATTACK_RATE-$PKT_SIZE" in
   "40-1000")     LOOP=1000 ;;
 esac
 
-LOOP=$((LOOP*$BANDWIDTH/5000))
+LOOP=$((LOOP*$BANDWIDTH/24000))
 
 
 if [[ $7 -ne 0 ]]; then
@@ -108,10 +108,10 @@ CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT*$((H
 function kill_proc () {
   IP=$1
   PROG=$2
-	TIME=15
+	TIME=10
 
   if [[ "$PROG" == "sec" ]]; then
-    TIME=7
+    TIME=5
   fi
   
   echo "kill $PROG"
@@ -276,7 +276,7 @@ run_security 192.168.0.7  1 &
 run_security 192.168.0.35 2 &
 
 #wait for mmt-sec starts
-sleep 3
+sleep 1
 
 
 #mmt-probe need to terminate before mmt-sec
@@ -298,16 +298,16 @@ sleep 1
 echo "Run tcpreplay"
 run_traffic_gen 192.168.0.37
 
-sleep 5
+sleep 3
 
 kill_proc 192.168.0.36 lb
 
-sleep 10
+sleep 2
 
 kill_proc 192.168.0.7  probe &
 kill_proc 192.168.0.35 probe
 
-sleep 15
+sleep 5
 
 kill_proc 192.168.0.7  sec &
 kill_proc 192.168.0.35 sec 

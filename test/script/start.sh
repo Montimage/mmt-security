@@ -29,8 +29,9 @@ function run_test() {
 
 function test_one_loop() {
   FIRST=1
-  BW=4000
-  run_test
+  BW=3000
+  #run_test
+  unset FIRST
 }
 
 #rm logs/*
@@ -39,7 +40,7 @@ for test_loop in 1 2 3
 do
 
 #base
-for BW in 9100 9700 
+for BW in $(seq 5100 200 5900)
 do
   CORE=16
   RULE=200
@@ -52,7 +53,7 @@ done
 test_one_loop
 
 #pkt
-for BW in $(seq 8300 200 91000);
+for BW in $(seq 6300 200 6900);
 do
   CORE=16
   RULE=200
@@ -66,7 +67,7 @@ done
 test_one_loop
 
 #pkt
-for BW in $(seq 5900 200 6900);
+for BW in $(seq 3700 200 4100);
 do
   CORE=16
   RULE=200
@@ -80,7 +81,7 @@ done
 test_one_loop
 
 #a_rate
-for BW in $(seq 9100 200 9700);
+for BW in $(seq 5900 200 6500);
 do
   CORE=16
   RULE=200
@@ -94,7 +95,7 @@ done
 test_one_loop
 
 #a_rate
-for BW in $(seq 7100 200 7500);
+for BW in $(seq 6900 200 6500);
 do
   CORE=16
   RULE=200
@@ -109,7 +110,7 @@ test_one_loop
 
 
 #core
-for BW in $(seq 6100 200 6900);
+for BW in $(seq 4300 200 4900);
 do
   CORE=8 #
   RULE=200
@@ -124,7 +125,7 @@ done
 test_one_loop
 
 #rule
-for BW in $(seq 6100 200 6900)
+for BW in $(seq 4100 200 4700)
 do
   CORE=16
   RULE=400
@@ -137,6 +138,6 @@ done
 
 test_one_loop
 
-echo "$INDEX,test_loop,$test_loop" >> logs/output.txt 
+echo "$INDEX,test_loop,$test_loop" >> logs/output.csv
 
 done

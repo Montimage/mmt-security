@@ -401,10 +401,11 @@ int main( int argc, char** argv ) {
 	_sec_handler.threads_count = threads_count;
 
 	if( verbose ){
-		if( is_unix_socket == NO )
-			mmt_info(" MMT-Security is listening on port %d\n", port_number );
-		else
-			mmt_info(" MMT-Security is listening on \"%s\"\n", un_domain_name );
+		//TODO: uncomment this after testing
+//		if( is_unix_socket == NO )
+//			mmt_info(" MMT-Security is listening on port %d\n", port_number );
+//		else
+//			mmt_info(" MMT-Security is listening on \"%s\"\n", un_domain_name );
 	}
 
 	/* create internet socket */
@@ -497,8 +498,9 @@ int main( int argc, char** argv ) {
 					mmt_info( "%3zuth connection is coming from %s:%d ... processed by proc. %d",
 							clients_count, str_buffer, in_cli_addr.sin_port, getpid() );
 				}else{
-					mmt_info( "%3zuth connection is coming from local ... processed by proc. %d",
-							clients_count, getpid() );
+					//TODO: uncomment this after testing
+//					mmt_info( "%3zuth connection is coming from local ... processed by proc. %d",
+//							clients_count, getpid() );
 				}
 			}
 

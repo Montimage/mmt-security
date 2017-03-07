@@ -24,7 +24,7 @@
 */
 
 static inline int em_check_nfs_redis(const char *p_payload, double payload_len){
-	printf("entering the EM\n");
+	//printf("entering the EM\n");
 	//return 0;
 	
     if(p_payload == NULL){
@@ -84,21 +84,21 @@ static inline int em_check_nfs_redis(const char *p_payload, double payload_len){
 						//printf("Timestamp: %s\n", _token);
 						if (now.tv_sec - atoi(_token) > 300) {
 							redisCommand(c,"LREM multisession.report 1 %s", probe_report);
-							printf("Delete the outdated report %s\n", probe_report);
+							//printf("Delete the outdated report %s\n", probe_report);
 							continue;
 							}
 						}
 					}
 				if (i==2){
 					strcpy(f_name, token);
-					printf("%s\n", f_name);
+					//printf("%s\n", f_name);
 					}
 				token = strtok(NULL, ",");
 				i++;
 				}
-			printf("Payload: %s\n", str);
+			//printf("Payload: %s\n", str);
 			if (strstr(str, f_name) != NULL){
-			printf ("Detected\n");
+			//printf ("Detected\n");
 			redisFree(c);
 			free(str);
 			return 1;

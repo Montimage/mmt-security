@@ -237,6 +237,7 @@ static inline size_t receiving_reports( int sock ) {
 
 			//special processing for these data types
 			switch( el_data_type ){
+			case MMT_STRING_DATA_POINTER:
 			case MMT_GENERIC_HEADER_LINE :
 			case MMT_HEADER_LINE :
 				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );

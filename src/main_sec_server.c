@@ -77,6 +77,7 @@ static inline double time_diff(struct timeval t1, struct timeval t2) {
 }
 
 void usage(const char * prg_name) {
+	fprintf(stderr, "MMT-Security version %s\n",  mmt_sec_get_version_info() );
 	fprintf(stderr, "%s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-p <number/string> : If p is a number, it indicates port number of internet domain socket otherwise it indicates name of unix domain socket. Default: 5000\n");

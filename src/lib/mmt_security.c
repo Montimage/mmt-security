@@ -127,11 +127,13 @@ static inline uint64_t _calculate_hash_number_of_a_rule( size_t rule_index, cons
 	const proto_attribute_t *me;
 	uint64_t  hash = 0;
 	//for each proto_att of this rules
-	k = 0;
+
 	for( j=0; j<rule->proto_atts_count; j++ ){
 		me = &rule->proto_atts[ j ];
-		for( ; k < handler->proto_atts_count; k++ )
-			if( handler->proto_atts_array[k] == me ){
+		for( k=0; k < handler->proto_atts_count; k++ )
+			if( handler->proto_atts_array[k]->proto_id == me->proto_id  &&
+					handler->proto_atts_array[k]->att_id == me->att_id  ){
+
 				//this rule need proto_att in k-th of handler->proto_atts_array
 				BIT_SET( hash, k );
 			}
@@ -162,7 +164,7 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 	//one fsm for one rule
 	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
 	for( i=0; i<rules_count; i++ ){
-		handler->engines[i] = rule_engine_init( rules_array[i], max_instance_count );
+		handler->engines[i]      = rule_engine_init( rules_array[i], max_instance_count );
 		handler->alerts_count[i] = 0;
 	}
 
@@ -217,10 +219,10 @@ static inline uint64_t _calculate_hash_number_of_input_message( const message_t 
 	uint64_t hash = 0;
 	size_t k, i;
 	const message_element_t *el;
-	k = 0;
+
 	for( i=0; i<msg->elements_count; i++ ){
 		el = & msg->elements[ i ];
-		for( ; k < _handler->proto_atts_count; k++ )
+		for( k=0; k < _handler->proto_atts_count; k++ )
 			if( el->proto_id == _handler->proto_atts_array[ k ]->proto_id
 					&& el->att_id == _handler->proto_atts_array[ k ]->att_id
 					&& el->data != NULL )

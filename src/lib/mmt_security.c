@@ -252,7 +252,7 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
 		//msg does not contain enough proto.att for i-th rule
-		if( (hash & _handler->rules_array[i]) == 0 )
+		if( (hash & _handler->rules_hash[i]) == 0 )
 			continue;
 
 		//mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );

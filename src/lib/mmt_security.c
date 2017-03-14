@@ -52,6 +52,10 @@ typedef struct _mmt_sec_handler_struct{
 	//number of generated alerts
 	size_t *alerts_count;
 
+	//TODO: this limits 64 events per mmt_security, i.e., set of rules processed
+	//by this handler have maximally 64 events
+	uint64_t *rules_hash; //a 64-bit hash number of each rule
+
 	bool verbose;
 #ifdef DEBUG_MODE
 	size_t messages_count;
@@ -79,7 +83,7 @@ size_t mmt_sec_get_unique_protocol_attributes( const mmt_sec_handler_t *handler,
 static inline void _iterate_proto_atts( void *key, void *data, void *user_data, size_t index, size_t total ){
 	void **array = user_data;
 	array[ index ] = data;
-	//free the key being created on line 97
+	//free the key being created on line 99
 	mmt_mem_free( key );
 }
 
@@ -88,7 +92,7 @@ static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
 	size_t i, j;
 
 	mmt_map_t *map = mmt_map_init( (void *) strcmp );
-	char *string;
+	uint64_t *proto_att_key;
 	const proto_attribute_t *me;
 
 	//for each rule
@@ -96,21 +100,47 @@ static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
 		rule = _handler->rules_array[i];
 		for( j=0; j<rule->proto_atts_count; j++ ){
 			me = &rule->proto_atts[j];
-			string = mmt_mem_alloc( strlen( me->att) + strlen( me->proto ) + 1 );
-			sprintf( string, "%s.%s", me->proto, me->att );
-			if( mmt_map_set_data( map, string, (void *)me, NO ) != NULL ){
+			proto_att_key  = mmt_mem_alloc( sizeof( uint64_t) );
+			*proto_att_key = simple_hash_64( me->proto_id, me->att_id );
+			if( mmt_map_set_data( map, proto_att_key, (void *)me, NO ) != NULL ){
 				//already exist
-				mmt_mem_free( string );
+				mmt_mem_free( proto_att_key );
 				continue;
 			}
 		}
 	}
 
 	_handler->proto_atts_count = mmt_map_count( map );
+	if( _handler->proto_atts_count > 64 )
+		mmt_halt( "A single mmt_security cannot handler more than 64 different proto.att. You might need to use mmt_smp_sec to divide work load." );
+
 	_handler->proto_atts_array = mmt_mem_alloc( _handler->proto_atts_count * sizeof( void* ));
 	mmt_map_iterate( map, _iterate_proto_atts, _handler->proto_atts_array );
 
 	mmt_map_free( map, NO );
+}
+
+
+static inline uint64_t _calculate_hash_number_of_a_rule( size_t rule_index, const _mmt_sec_handler_t * handler ){
+	const rule_info_t *rule = handler->rules_array[ rule_index ];
+	size_t j, k;
+	const proto_attribute_t *me;
+	uint64_t  hash = 0;
+	//for each proto_att of this rules
+	k = 0;
+	for( j=0; j<rule->proto_atts_count; j++ ){
+		me = &rule->proto_atts[ j ];
+		for( ; k < handler->proto_atts_count; k++ )
+			if( handler->proto_atts_array[k] == me ){
+				//this rule need proto_att in k-th of handler->proto_atts_array
+				BIT_SET( hash, k );
+			}
+	}
+
+	if( unlikely( hash == 0 ) )
+		mmt_warn( "Rule %"PRIu32" does not concerns to any protocol (%s)", rule->id, rule->description );
+
+	return hash;
 }
 
 /**
@@ -139,6 +169,11 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 	//printf(" Thread pid=%2d processes %4zu rules: ", gettid(), rules_count );
 
 	_get_unique_proto_attts( handler );
+
+	handler->rules_hash = mmt_mem_alloc( sizeof( uint64_t ) * rules_count );
+	for( i=0; i<rules_count; i++ ){
+		handler->rules_hash[ i ] = _calculate_hash_number_of_a_rule( i, handler );
+	}
 
 #ifdef DEBUG_MODE
 	handler->messages_count = 0;
@@ -178,6 +213,22 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	return alerts_count;
 }
 
+static inline uint64_t _calculate_hash_number_of_input_message( const message_t *msg, const _mmt_sec_handler_t *_handler ){
+	uint64_t hash = 0;
+	size_t k, i;
+	const message_element_t *el;
+	k = 0;
+	for( i=0; i<msg->elements_count; i++ ){
+		el = & msg->elements[ i ];
+		for( ; k < _handler->proto_atts_count; k++ )
+			if( el->proto_id == _handler->proto_atts_array[ k ]->proto_id
+					&& el->att_id == _handler->proto_atts_array[ k ]->att_id
+					&& el->data != NULL )
+				BIT_SET( hash, k );
+	}
+
+	return hash;
+}
 /**
  * Public API (used by mmt_sec_smp)
  */
@@ -186,12 +237,13 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	mmt_assert( handler != NULL, "msg cannot be null");
 	mmt_assert( msg != NULL, "msg cannot be null");
 #endif
-	_mmt_sec_handler_t *_handler;
+
 	size_t i;
 	int verdict;
 	const mmt_array_t *execution_trace;
 
-	_handler = (_mmt_sec_handler_t *)handler;
+	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
+	uint64_t hash = _calculate_hash_number_of_input_message( msg, _handler );
 
 #ifdef DEBUG_MODE
 	_handler->messages_count ++;
@@ -199,10 +251,14 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
+		//msg does not contain enough proto.att for i-th rule
+		if( (hash & _handler->rules_array[i]) == 0 )
+			continue;
+
 		//mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
 		verdict = rule_engine_process( _handler->engines[i], msg );
 
-		//find a validated/invalid trace
+		//found a validated/invalid trace
 		if( verdict != VERDICT_UNKNOWN ){
 			_handler->alerts_count[i] ++;
 

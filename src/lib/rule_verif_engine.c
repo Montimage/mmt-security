@@ -402,6 +402,7 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 
 	//mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
+
 	//get from hash table the list of events to be verified
 	for( event_id=0; event_id<engine->max_events_size; event_id++ ){
 

@@ -79,6 +79,23 @@ static inline void simple_dehash_32( uint32_t val, uint16_t *a, uint16_t *b){
 }
 
 
+/**
+ * Encode 2 uint32_t to 1 uint64_t
+ */
+static inline uint64_t simple_hash_64( uint32_t a, uint32_t b ){
+	uint64_t val = a;
+	val = val << 32;
+	val = val | b;
+	return val;
+}
+
+/**
+ * Decode 1 uint64_t to 2 uint32_t
+ */
+static inline void simple_dehash_64( uint64_t val, uint32_t *a, uint32_t *b){
+	*a = val >> 32;
+	*b = (val << 32) >> 32;
+}
 
 /**
  * Split a string to an array

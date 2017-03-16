@@ -15,7 +15,7 @@ static config_t config = {
 				.max_elements_per_pool = 1000
 		},
 		.security = {
-			.max_instances = 1000,
+			.max_instances = 100000,
 			.rules_mask    = NULL,
 			.smp = {
 				.ring_size = 1000

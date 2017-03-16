@@ -337,10 +337,10 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
     <!--if_satisfied="py_createstix(5_two_successive_TCP_SYN_requests_could_be_a_spoofed_address, ip.src.12)"-->
     <event value="COMPUTE" event_id="1" 
            description="SYN request"
-           boolean_expression="((tcp.flags == 2)&amp;&amp;(ip.src != ip.dst))"/>
+           boolean_expression="((tcp.flags == 12)&amp;&amp;(ip.src != ip.dst))"/>
     <event value="COMPUTE" event_id="2" 
            description="SYN request"
-           boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst != ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+           boolean_expression="((tcp.flags == 12)&amp;&amp;((ip.dst != ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
 </property>
 
 

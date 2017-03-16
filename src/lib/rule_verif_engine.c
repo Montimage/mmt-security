@@ -469,14 +469,14 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 	mmt_assert( rule_info != NULL, "rule_info is NULL");
 	rule_engine_t *_engine = mmt_mem_alloc( sizeof( rule_engine_t ));
 
-	_engine->fsm_bootstrap             = rule_info->create_instance();
+	_engine->fsm_bootstrap      = rule_info->create_instance();
 	fsm_set_id( _engine->fsm_bootstrap, 0 );
 
-	_engine->rule_info                 = rule_info;
-	_engine->max_events_size          = rule_info->events_count + 1; //event_id start from 1
+	_engine->rule_info          = rule_info;
+	_engine->max_events_size    = rule_info->events_count + 1; //event_id start from 1
 	mmt_assert( _engine->max_events_size <= 64, "Cannot hold more than 64 events in a property" );
-	_engine->max_instances_size       = max_instances_count;
-	_engine->instances_count           = 1; //fsm_bootstrap
+	_engine->max_instances_size = max_instances_count;
+	_engine->instances_count    = 1; //fsm_bootstrap
 	//linked-list of fsm instances indexed by their expected event_id
 	_engine->tmp_fsm_by_expecting_event_id = mmt_mem_alloc( _engine->max_events_size * sizeof( void *) );
 	_engine->fsm_by_expecting_event_id     = mmt_mem_alloc( _engine->max_events_size * sizeof( void *) );

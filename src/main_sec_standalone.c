@@ -26,9 +26,7 @@
 #include "dpi/mmt_dpi.h"
 
 #include "lib/mmt_lib.h"
-#include "lib/plugin_header.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/verdict_printer.h"
 
 #define MAX_RULE_MASK_SIZE 100000
 #define MAX_FILENAME_SIZE 500
@@ -58,12 +56,12 @@ static _sec_handler_t _sec_handler;
 
 void usage(const char * prg_name) {
 	fprintf(stderr, "MMT-Security version %s using DPI version %s\n", mmt_sec_get_version_info(), mmt_version() );
-	fprintf(stderr, "%s [<option>]\n", prg_name);
+	fprintf(stderr, "\nUsage: %s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");
 	fprintf(stderr, "\t-i <interface> : Gives the interface name for live traffic analysis.\n");
 	fprintf(stderr, "\t-c <string>    : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
-	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads e.g., \"(1:10-13)(2:50)(4:1007-1010)\"\n");
+	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads using format (lcore:range) e.g., \"(1:1-8,10-13)(2:50)(4:1007-1010)\". Set lcore=0 to exclude rules from verification.\n");
 	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v             : Verbose.\n");
@@ -193,6 +191,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 	//get a list of proto/attributes being used by mmt-security
 	for( i=0; i<proto_atts_count; i++ ){
 		data = _get_data( pkt, proto_atts[i].proto_id, proto_atts[i].att_id, proto_atts[i].data_type, &type );
+
 		if( data != NULL )
 			has_data = YES;
 
@@ -216,6 +215,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  * message to mmt-security.
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
+
 	message_t *msg = _get_packet_info( ipacket );
 
 	//if there is no interested information
@@ -226,7 +226,7 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	total_received_reports ++;
 
-	return 1;
+	return 0;
 }
 
 void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, const u_char *data ){

@@ -172,10 +172,10 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 
 	_get_unique_proto_attts( handler );
 
-	handler->rules_hash = mmt_mem_alloc( sizeof( uint64_t ) * rules_count );
-	for( i=0; i<rules_count; i++ ){
-		handler->rules_hash[ i ] = _calculate_hash_number_of_a_rule( i, handler );
-	}
+//	handler->rules_hash = mmt_mem_alloc( sizeof( uint64_t ) * rules_count );
+//	for( i=0; i<rules_count; i++ ){
+//		handler->rules_hash[ i ] = _calculate_hash_number_of_a_rule( i, handler );
+//	}
 
 #ifdef DEBUG_MODE
 	handler->messages_count = 0;
@@ -198,8 +198,7 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 		if( _handler->alerts_count[ i ] == 0 )
 			continue;
 
-		//TODO: this is for test only (uncomment after testing)
-		//if( _handler->verbose )
+		if( _handler->verbose )
 			printf(" - rule %"PRIu32" generated %"PRIu64" verdicts\n", _handler->rules_array[i]->id, _handler->alerts_count[ i ] );
 		alerts_count += _handler->alerts_count[ i ];
 	}
@@ -245,7 +244,7 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	const mmt_array_t *execution_trace;
 
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
-	uint64_t hash = _calculate_hash_number_of_input_message( msg, _handler );
+//	uint64_t hash = _calculate_hash_number_of_input_message( msg, _handler );
 
 #ifdef DEBUG_MODE
 	_handler->messages_count ++;
@@ -254,8 +253,8 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
 		//msg does not contain enough proto.att for i-th rule
-		if( (hash & _handler->rules_hash[i]) == 0 )
-			continue;
+//		if( (hash & _handler->rules_hash[i]) == 0 )
+//			continue;
 
 		//mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
 		verdict = rule_engine_process( _handler->engines[i], msg );
@@ -409,6 +408,17 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				u8_ptr = NULL;
 
 				switch( pro_ptr->proto_id ){
+				//ARP
+				case 30:
+					switch ( pro_ptr->att_id ){
+					case 7:   //AR_SIP
+					case 9:   //AR_TIP
+						u8_ptr = (uint8_t *) me->data;
+						size   = sprintf(str_ptr, "\"%d.%d.%d.%d\"",
+								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
+					}
+
+					break;
 				//IP SRC = 12, DEST = 13
 				case 178:
 					switch ( pro_ptr->att_id ){

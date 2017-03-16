@@ -37,9 +37,9 @@ static inline void _set_expecting_events_id( rule_engine_t *_engine, fsm_t *fsm,
 
 	//from a state: 2 outgoing transitions have 2 different events
 #ifdef DEBUG_MODE
-	mmt_assert( _engine->max_events_count >= state->transitions_count,
+	mmt_assert( _engine->max_events_size >= state->transitions_count,
 			"Error: Number of outgoing transition must not be greater than number of events (%zu <= %zu)",
-			state->transitions_count, _engine->max_events_count );
+			state->transitions_count, _engine->max_events_size );
 #endif
 
 	//for each outgoing transition, we add it to the list of expecting events
@@ -100,82 +100,17 @@ static inline enum verdict_type _get_verdict( int rule_type, enum fsm_handle_eve
 }
 
 
-/**
- * Public API
- */
-rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instances_count ){
-	size_t i;
-	mmt_assert( rule_info != NULL, "rule_info is NULL");
-	rule_engine_t *_engine = mmt_mem_alloc( sizeof( rule_engine_t ));
 
-	_engine->fsm_bootstrap             = rule_info->create_instance();
-	fsm_set_id( _engine->fsm_bootstrap, 0 );
-
-	_engine->rule_info                 = rule_info;
-	_engine->max_events_count          = rule_info->events_count + 1; //event_id start from 1
-	mmt_assert( _engine->max_events_count <= 64, "Cannot hold more than 64 events in a property" );
-	_engine->max_instances_count       = max_instances_count;
-	_engine->instances_count           = 1; //fsm_bootstrap
-	//linked-list of fsm instances indexed by their expected event_id
-	_engine->tmp_fsm_by_expecting_event_id = mmt_mem_alloc( _engine->max_events_count * sizeof( void *) );
-	_engine->fsm_by_expecting_event_id     = mmt_mem_alloc( _engine->max_events_count * sizeof( void *) );
-	for( i=0; i<_engine->max_events_count; i++ )
-		_engine->fsm_by_expecting_event_id[ i ] = NULL;
-
-	//add fsm_bootstrap to the list
-	_set_expecting_events_id( _engine, _engine->fsm_bootstrap, NO, 0 );
-
-	//linked-list of fsm instances
-	_engine->fsm_by_instance_id = mmt_mem_alloc( _engine->max_instances_count * sizeof( void *) );
-	for( i=0; i<_engine->max_instances_count; i++ )
-		_engine->fsm_by_instance_id[ i ] = NULL;
-
-	//add fsm_bootstrap to the first element of
-	_engine->fsm_by_instance_id[ 0 ] = insert_node_to_link_list(_engine->fsm_by_instance_id[ 0 ], _engine->fsm_bootstrap );
-
-	_engine->valid_execution_trace = mmt_array_init( _engine->max_events_count );
-
-	_engine->total_instances_count = 0;
-
-	fsm_set_user_data( _engine->fsm_bootstrap, _engine );
-	return _engine;
-}
-
-
-/**
- * Public API
- */
-void rule_engine_free( rule_engine_t *_engine ){
-	size_t i;
-
-	__check_null( _engine, );
-
-	for( i=0; i<_engine->max_events_count; i++ )
-		free_link_list(_engine->fsm_by_expecting_event_id[ i ], YES );
-
-	mmt_mem_free( _engine->fsm_by_expecting_event_id );
-	mmt_mem_free( _engine->tmp_fsm_by_expecting_event_id );
-
-	for( i=0; i<_engine->max_instances_count; i++ )
-		free_link_list_and_data( _engine->fsm_by_instance_id[ i ], (void *)fsm_free );
-
-	mmt_mem_free( _engine->fsm_by_instance_id );
-
-	if( _engine->valid_execution_trace != NULL )
-		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );
-
-	mmt_mem_free( _engine );
-}
 
 static inline void _store_valid_execution_trace( rule_engine_t *_engine, fsm_t *fsm ){
 	size_t i;
 	const mmt_array_t *array = fsm_get_execution_trace( fsm );
 
 #ifdef DEBUG_MODE
-	mmt_assert( array->elements_count == _engine->max_events_count, "Impossible" );
+	mmt_assert( array->elements_count == _engine->max_events_size, "Impossible" );
 #endif
 
-	for( i=0; i<_engine->max_events_count; i++ ){
+	for( i=0; i<_engine->max_events_size; i++ ){
 		//free old message
 		free_message_t( _engine->valid_execution_trace->data[i] );
 
@@ -206,7 +141,7 @@ static inline void _reset_engine_for_fsm( rule_engine_t *_engine, fsm_t *fsm ){
 	_fsm_tran_index_t *fsm_ind;
 	uint16_t fsm_id = fsm_get_id( fsm );
 	//remove all fsm having #fsm_id from the list #fsm_by_expecting_event_id
-	for( i=0; i<_engine->max_events_count; i++ ){
+	for( i=0; i<_engine->max_events_size; i++ ){
 		node = _engine->fsm_by_expecting_event_id[ i ];
 		while( node != NULL ){
 			ptr = node->next;
@@ -252,7 +187,7 @@ static inline void _reset_engine_for_instance( rule_engine_t *_engine, fsm_t *fs
 	//(1) - remove fsm from the list #fsm_by_expecting_event_id
 
 	//for each entry (that is a list) of expecting event i
-	for( i=0; i<_engine->max_events_count; i++ ){
+	for( i=0; i<_engine->max_events_size; i++ ){
 		node = _engine->fsm_by_expecting_event_id[ i ];
 		while( node != NULL ){
 			ptr     = node->next;
@@ -287,7 +222,7 @@ static inline void _reset_engine_for_instance( rule_engine_t *_engine, fsm_t *fs
 
 static inline uint16_t _find_an_available_id( rule_engine_t *_engine ){
 	size_t i;
-	for( i=1; i<_engine->max_instances_count; i++ )
+	for( i=1; i<_engine->max_instances_size; i++ )
 		if( _engine->fsm_by_instance_id[ i ] == NULL ){
 			return i;
 		}
@@ -342,7 +277,7 @@ enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message
 
 			//remove from old list
 			//=> the #fsm_ind->fsm does not wait for the #event_id any more
-			_engine->fsm_by_expecting_event_id[ event_id ] = remove_link_node_from_its_link_list( node );
+			_engine->fsm_by_expecting_event_id[ event_id ] = remove_link_node_from_its_link_list( node, _engine->fsm_by_expecting_event_id[ event_id ] );
 
 			//free the node
 			mmt_mem_force_free( node );
@@ -399,7 +334,50 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	mmt_assert( engine != NULL,  "engine cannot be null" );
 	mmt_assert( message != NULL, "message cannot be null" );
 #endif
+	return engine->processing_packets( engine, message );
+}
 
+
+enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *message ){
+	enum verdict_type verdict;
+	const void *data = engine->rule_info->convert_message( message );
+	enum fsm_handle_event_value val = fsm_handle_single_packet( engine->fsm_bootstrap, message, data );
+	const mmt_array_t *array;
+	size_t i;
+
+	switch( val ){
+	case FSM_NO_STATE_CHANGE:
+		return VERDICT_UNKNOWN;
+
+	//a final state that is either valid state or invalid one
+	//depending on rule type (ATTACK, SECURITY, EVASION, ... ) a different verdict will be given
+	case FSM_INCONCLUSIVE_STATE_REACHED:
+	case FSM_FINAL_STATE_REACHED:
+	case FSM_ERROR_STATE_REACHED:
+		verdict = _get_verdict( engine->rule_info->type_id, val );
+
+		if( verdict != VERDICT_UNKNOWN ){
+			_store_valid_execution_trace( engine, engine->fsm_bootstrap );
+			return verdict;
+		}else{
+			free_message_ts( message, 2 );
+		}
+		break;
+
+	case FSM_ERR_ARG:
+		mmt_halt( "FSM_ERR_ARG" );
+		break;
+
+	default:
+		break;
+	}
+
+
+	return VERDICT_UNKNOWN;
+}
+
+
+enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *message ){
 	const void *data        = engine->rule_info->convert_message( message );
 	const uint64_t hash     = engine->rule_info->hash_message( data );
 	uint8_t event_id;
@@ -419,13 +397,14 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 	 * memcpy is slower than for-each
 	 */
 	//memcpy( _engine->tmp_fsm_by_expecting_event_id, _engine->fsm_by_expecting_event_id, _engine->max_events_count * sizeof( void *) );
-	for( event_id=0; event_id<engine->max_events_count; event_id++ )
+	for( event_id=0; event_id<engine->max_events_size; event_id++ )
 		engine->tmp_fsm_by_expecting_event_id[ event_id ] =  engine->fsm_by_expecting_event_id[event_id ];
 
 	//mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
+
 	//get from hash table the list of events to be verified
-	for( event_id=0; event_id<engine->max_events_count; event_id++ ){
+	for( event_id=0; event_id<engine->max_events_size; event_id++ ){
 
 		//this event does not fire
 		if(  BIT_CHECK( hash, event_id ) == 0 ) continue;
@@ -481,3 +460,78 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 }
 
 
+
+/**
+ * Public API
+ */
+rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instances_count ){
+	size_t i;
+	mmt_assert( rule_info != NULL, "rule_info is NULL");
+	rule_engine_t *_engine = mmt_mem_alloc( sizeof( rule_engine_t ));
+
+	_engine->fsm_bootstrap      = rule_info->create_instance();
+	fsm_set_id( _engine->fsm_bootstrap, 0 );
+
+	_engine->rule_info          = rule_info;
+	_engine->max_events_size    = rule_info->events_count + 1; //event_id start from 1
+	mmt_assert( _engine->max_events_size <= 64, "Cannot hold more than 64 events in a property" );
+	_engine->max_instances_size = max_instances_count;
+	_engine->instances_count    = 1; //fsm_bootstrap
+	//linked-list of fsm instances indexed by their expected event_id
+	_engine->tmp_fsm_by_expecting_event_id = mmt_mem_alloc( _engine->max_events_size * sizeof( void *) );
+	_engine->fsm_by_expecting_event_id     = mmt_mem_alloc( _engine->max_events_size * sizeof( void *) );
+	for( i=0; i<_engine->max_events_size; i++ )
+		_engine->fsm_by_expecting_event_id[ i ] = NULL;
+
+	//add fsm_bootstrap to the list
+	_set_expecting_events_id( _engine, _engine->fsm_bootstrap, NO, 0 );
+
+	//linked-list of fsm instances
+	_engine->fsm_by_instance_id = mmt_mem_alloc( _engine->max_instances_size * sizeof( void *) );
+	for( i=0; i<_engine->max_instances_size; i++ )
+		_engine->fsm_by_instance_id[ i ] = NULL;
+
+	//add fsm_bootstrap to the first element of
+	_engine->fsm_by_instance_id[ 0 ] = insert_node_to_link_list(_engine->fsm_by_instance_id[ 0 ], _engine->fsm_bootstrap );
+
+	_engine->valid_execution_trace = mmt_array_init( _engine->max_events_size );
+
+	_engine->total_instances_count = 0;
+
+	fsm_set_user_data( _engine->fsm_bootstrap, _engine );
+
+
+	if( fsm_is_verifying_single_packet( _engine->fsm_bootstrap) ){
+		_engine->processing_packets = _process_single_packet;
+	}else{
+		_engine->processing_packets = _process_multi_packets;
+	}
+
+	return _engine;
+}
+
+
+/**
+ * Public API
+ */
+void rule_engine_free( rule_engine_t *_engine ){
+	size_t i;
+
+	__check_null( _engine, );
+
+	for( i=0; i<_engine->max_events_size; i++ )
+		free_link_list(_engine->fsm_by_expecting_event_id[ i ], YES );
+
+	mmt_mem_free( _engine->fsm_by_expecting_event_id );
+	mmt_mem_free( _engine->tmp_fsm_by_expecting_event_id );
+
+	for( i=0; i<_engine->max_instances_size; i++ )
+		free_link_list_and_data( _engine->fsm_by_instance_id[ i ], (void *)fsm_free );
+
+	mmt_mem_free( _engine->fsm_by_instance_id );
+
+	if( _engine->valid_execution_trace != NULL )
+		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );
+
+	mmt_mem_free( _engine );
+}

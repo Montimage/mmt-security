@@ -1,0 +1,287 @@
+<beginning>
+
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+
+static inline int check_ip_options(const char *op2, const char *op1){
+  int handle = 0;
+  
+  int i2 = *((int*)op2);
+  int i1 = *((int*)op1);
+  int bit2 = (i2 >> 1) & 1;
+  int bit1 = (i1 >> 1) & 1;
+//  if(bit2 == 1 || bit1 == 1){
+      if(i2 != i1) handle = 1;
+//  }
+  return handle;
+}
+
+
+static inline int check_port(int i){
+  
+  //printf("Port:%d\n", i);
+  //according to: 
+  //https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+  //and
+  //https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
+
+  if(i<1023) return 0;
+  if(i>49151 && i< 65536) return 0;
+  if(i>65535) return 1;
+
+  if(i>2193 && i<2197) return 1;
+  if(i>4488 && i<4500) return 1;
+  if(i>4953 && i<4969) return 1;
+  if(i>5569 && i<5573) return 1;
+  if(i>5646 && i<5670) return 1;
+  if(i>6657 && i<6665) return 1;
+  if(i>7491 && i<7500) return 1;
+  if(i>7784 && i<7790) return 1;
+  if(i>27999 && i<28119) return 1;
+  if(i>5554 && i<5558) return 1;
+  if(i>5999 && i<6064) return 1;
+  if(i>8615 && i<8665) return 1;
+  if(i>8801 && i<8804) return 1;
+  if(i>8887 && i<8891) return 1;
+  if(i>11430 && i<11489) return 1;
+  if(i>11623 && i<11720) return 1;
+  if(i>27009 && i<27345) return 1;
+  if(i>41797 && i<42508) return 1;
+  if(i>44444 && i<44544) return 1;
+  switch (i) {
+    case 78:
+    case 79:
+    case 100:
+    case 106:
+    case 787:
+    case 1053:
+    case 1491:
+    case 2662:
+    case 3060:
+    case 3131:
+    case 3145:
+    case 3300:
+    case 3301:
+    case 4045:
+    case 4315:
+    case 4443:
+    case 4967:
+    case 5151:
+    case 5152:
+    case 5162:
+    case 5444:
+    case 5555:
+    case 5556:
+    case 6100:
+    case 6200:
+    case 6501:
+    case 8882:
+    case 9001:
+    case 6632:
+    case 7001:
+    case 7002:
+    case 7005:
+    case 7011:
+    case 7012:
+    case 7501:
+    case 7777:
+    case 8001:
+    case 16000:
+    case 49151:
+      return 1;
+    default:
+      return 0;
+  }
+  return 0;
+}
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int check_URI(const char *uri_str){
+  int handle = 0;
+  if(uri_str == NULL){
+    return 2;
+  }
+ 
+  const char *x = uri_str;
+  
+  //fprintf(stderr, "%s\n",x);
+  while (*x != '\0'){
+      //octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+      if(*x < 32 || *x == 92 || *x == '"' || *x == '<' || *x == '>' || *x == '[' || *x == ']' || *x == '^' || *x == '`' || *x == '{' || 
+         *x == '|' || *x == '}' || *x == '%' || *x > 126) {
+              handle = 1;
+              break;
+      }
+      x = x+1;
+  }
+  //detect directory traversal attack
+  char *s0, *s1, *s2, *s3;
+  s0 = strstr(uri_str, ".."); //find the first occurrence of string ".." in string
+  s1 = strstr(uri_str, "./"); //find the first occurrence of string "./" in string
+  s2 = strstr(uri_str, "//"); //find the first occurrence of string "//" in string
+  s3 = strstr(uri_str, "/."); //find the first occurrence of string "//" in string
+  
+  if ((s0 !=NULL) || (s1 !=NULL) || (s2 !=NULL) || (s3 !=NULL))  
+   handle = 1;
+   
+//#ifdef DEBUG
+//  fprintf(stderr, "executing ceck_URI with parameters:h=%d:nb=%u:a1=%o:a2=%o\n", 
+//                                           handle, *(char*)(BLOC3+6),*(char*)(BLOC3+9));
+//#endif
+  return handle;
+}
+
+/*
+ * Nikto 
+ */
+static inline bool check_UA( const char *user_agent){
+   //find the first occurrence of string "Nikto" in string
+   return (strstr(user_agent, "Nikto") != NULL);     
+}
+static inline int check_sql_injection(const void *p_payload, double payload_len){
+   int key_word_len = 6;
+   char *key_words[6] = {"DROP", "UNION", "SELECT", "CHAR", "DELETE", "INSERT"};
+   size_t len = payload_len, i;
+   char *str  = malloc( len + 1 );
+   memcpy( str, p_payload, len );
+   str[ len ] = '\0';
+   
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+   for( i=0; i<key_word_len; i++)
+      if( strstr(str, key_words[i]  ) != NULL ){
+         free( str );
+         return 1;
+      }
+      
+   
+   free( str );
+   return 0;
+}
+
+
+int check_http_response(const char* p){
+  if(p == NULL){
+    return 1;
+  }
+  return 0;
+}
+
+int check_ip_add(const char *src, const char *dst, const char *src1, const char *dst1){
+  if((src == NULL) || (dst == NULL) || (src1 == NULL) || (dst1 == NULL)){
+    return 1;
+  }
+  if (((src = src1) && (dst = dst1)) || ((src = dst1) && (dst = src1))){
+     return 1;
+  }
+  return 0;
+}
+
+]]></embedded_functions>
+
+
+
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="1" type_property="ATTACK" 
+     description="TCP SYN requests on microsoft-ds port 445 with SYN ACK.">
+     <event value="COMPUTE" event_id="1"
+            description="SYN request"
+            boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 445)&amp;&amp;(ip.src != ip.dst)))"/>
+     <event value="COMPUTE" event_id="2" 
+            description="SYN ACK reply"
+            boolean_expression="((tcp.flags == 18)&amp;&amp;(ip.src == ip.dst.1))"/>
+ </property>
+ <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="2" type_property="ATTACK" 
+           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
+       <event value="COMPUTE" event_id="1" 
+              description="An arp reply with MAC address"
+              boolean_expression="((arp.ar_op == 2)&amp;&amp;(ethernet.src != ethernet.dst))"/>
+     <event value="COMPUTE" event_id="2" 
+            description="An arp reply but with different MAC address"
+            boolean_expression="((arp.ar_op == 2)&amp;&amp;((arp.ar_sip == arp.ar_sip.1)&amp;&amp;((arp.ar_sha != arp.ar_sha.1)&amp;&amp;(ethernet.src != ethernet.dst))))"/>
+ </property>
+ <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="3" type_property="EVASION" 
+     description="4_Analyse_03b : SYN and ACK paquets with a 0xC123D delta between TCP sequence numbers (scan done by SYNFUL attack).">
+     <event value="COMPUTE" event_id="1"
+            description="TCP SYN"
+            boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;((ip.src == ip.src)&amp;&amp;(tcp.seq_nb == tcp.seq_nb))))"/>
+     <event value="COMPUTE" event_id="2" 
+            description="TCP ACK"
+            boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((ip.src == ip.dst.1)&amp;&amp;(((tcp.ack_nb - tcp.seq_nb.1) == 791101)||((tcp.seq_nb.1 - tcp.ack_nb) == 791101)))))"/>
+ </property>
+ <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="4" type_property="EVASION" 
+     description="C4_Analyse_03g: The IP options field must be homogeneous in all IP fragments.">
+     <event value="COMPUTE" event_id="1" 
+            description="IP segment"
+            boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.options == ip.options)&amp;&amp;(ip.src != ip.dst)))"/>
+     <event value="COMPUTE" event_id="2" 
+            description="IP options"
+            boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#check_ip_options(ip.options,ip.options.1) == 1))))"/>
+ </property>
+ <property value="THEN" delay_units="ms" delay_min="0+" delay_max="5" property_id="5" type_property="ATTACK" 
+     description="Two successive TCP SYN requests but with different destination addresses.">
+     <event value="COMPUTE" event_id="1" 
+            description="SYN request"
+            boolean_expression="((tcp.flags == 2)&amp;&amp;(ip.src != ip.dst))"/>
+     <event value="COMPUTE" event_id="2" 
+            description="SYN request"
+            boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst != ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+ </property>
+ <property value="THEN" delay_units="ms" delay_min="0" delay_max="10" property_id="6" type_property="ATTACK" 
+     description="Invalid GRE version detected">
+    <event value="COMPUTE" event_id="1" 
+            description="Context: Gre protocol"
+            boolean_expression="((gre.proto &gt; 0)&amp;&amp;(gre.version != 0))"/>
+     <event value="COMPUTE" event_id="2" 
+            description="Trigger: Invalid GRE version"
+            boolean_expression="(ip.src != ip.dst)"/>
+ </property>
+ <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="7" type_property="EVASION" 
+     description="IP fragmentation : fragments with offset always = 0 (allowed but could be an evasion).">
+       <event value="COMPUTE" event_id="1" 
+              description="IP fragment with offset = 0 followed by another"
+              boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst))))"/>
+       <event value="COMPUTE" event_id="2" 
+              description="IP fragment with same identification and an offset = 0"
+              boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst)))"/>
+ </property>
+ <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="8" type_property="EVASION" 
+     description="IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).">
+       <event value="COMPUTE" event_id="1" 
+              description="IP fragment followed by another"
+              boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+       <event value="COMPUTE" event_id="2" 
+              description="IP fragment with same identification and an offset less than 9 bytes"
+              boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset - ip.frag_offset.1) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
+ </property>
+ <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="9" type_property="EVASION" 
+     description="Out of order IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).">
+       <event value="COMPUTE" event_id="1" 
+              description="IP fragment followed by another"
+              boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+       <event value="COMPUTE" event_id="2" 
+              description="IP fragment with same identification and an offset less than 9 bytes"
+              boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset.1 - ip.frag_offset) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
+ </property>
+ <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="10" type_property="EVASION" 
+     description="Overlapping IP fragmentation : difference in offset of concomitant fragments less than fragment length (allowed but could be an evasion).">
+       <event value="COMPUTE" event_id="1" 
+              description="IP fragment followed by another"
+              boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+       <event value="COMPUTE" event_id="2" 
+              description="IP fragment with same identification and diffenrences in offsets less than length"
+              boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset - ip.frag_offset.1) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
+ </property>
+ </beginning>

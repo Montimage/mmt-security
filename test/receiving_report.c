@@ -29,7 +29,7 @@
 #include "../src/lib/mmt_smp_security.h"
 #include "../src/dpi/mmt_dpi.h"
 #include "../src/dpi/types_defs.h"
-#include "../src/lib/mmt_sec_config.h"
+#include "../src/lib/config.h"
 
 #ifndef __FAVOR_BSD
 # define __FAVOR_BSD

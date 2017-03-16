@@ -54,20 +54,22 @@ static const char *log_level_name[] ={ "INFO", "DEBUG", "WARN", "ERROR", "HALT" 
 
 void mmt_log( log_level_t level, const char *format, ... ){
 	va_list arg;
-	char buffer[1024];
+	//TODO limit mmt_log on 100K characters
+	char buffer[100000];
 	/* Write the error message */
 	va_start(arg, format);
-	vsprintf(buffer, format, arg);
+	vsnprintf(buffer, 100000, format, arg);
 	if( level == HALT || level == ERROR || level == WARN )
 		fprintf(stderr, "%s - %s\n", log_level_name[level], buffer);
 	else
 		fprintf(stdout, "%s - %s\n", log_level_name[level], buffer);
-	va_end(arg);
-	if( level == HALT ){
 
+	va_end(arg);
+
+	if( level == HALT ){
 
 		mmt_print_execution_trace();
 
-		exit( 1 );
+		exit(1);
 	}
 }

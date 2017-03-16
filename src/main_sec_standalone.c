@@ -26,11 +26,9 @@
 #include "dpi/mmt_dpi.h"
 
 #include "lib/mmt_lib.h"
-#include "lib/plugin_header.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/verdict_printer.h"
 
-
+#define MAX_RULE_MASK_SIZE 100000
 #define MAX_FILENAME_SIZE 500
 #define TRACE_FILE 1
 #define LIVE_INTERFACE 2
@@ -58,11 +56,12 @@ static _sec_handler_t _sec_handler;
 
 void usage(const char * prg_name) {
 	fprintf(stderr, "MMT-Security version %s using DPI version %s\n", mmt_sec_get_version_info(), mmt_version() );
-	fprintf(stderr, "%s [<option>]\n", prg_name);
+	fprintf(stderr, "\nUsage: %s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");
 	fprintf(stderr, "\t-i <interface> : Gives the interface name for live traffic analysis.\n");
 	fprintf(stderr, "\t-c <string>    : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
+	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads using format (lcore:range) e.g., \"(1:1-8,10-13)(2:50)(4:1007-1010)\". Set lcore=0 to exclude rules from verification.\n");
 	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v             : Verbose.\n");
@@ -71,13 +70,13 @@ void usage(const char * prg_name) {
 	exit(1);
 }
 
-size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id, size_t *threads_count, uint8_t **core_mask, bool *verbose ) {
+size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id, size_t *threads_count, uint32_t **core_mask, char *rule_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
 	char file_string[MAX_FILENAME_SIZE]  = {0};
 	char redis_string[MAX_FILENAME_SIZE] = {0};
 	*verbose = NO;
 	filename[0] = '\0';
-	while ((opt = getopt(argc, argv, "t:i:f:r:c:lhv")) != EOF) {
+	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:lhv")) != EOF) {
 		switch (opt) {
 		case 't':
 			optcount++;
@@ -98,6 +97,10 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 		case 'f':
 			optcount++;
 			strncpy((char *) file_string, optarg, MAX_FILENAME_SIZE);
+			break;
+		case 'm':
+			optcount++;
+			strncpy( rule_mask, optarg, MAX_RULE_MASK_SIZE );
 			break;
 		case 'r':
 			optcount++;
@@ -148,9 +151,20 @@ static inline void* _get_data( const ipacket_t *pkt, uint32_t proto_id, uint32_t
 	const uint16_t buffer_size = 100;
 	uint16_t size;
 	void *new_data = NULL;
+	uint32_t *data_len;
 	uint8_t *data = (uint8_t *) get_attribute_extracted_data( pkt, proto_id, att_id );
 	//does not exist data for this proto_id and att_id
 	if( data == NULL ) return NULL;
+
+	//tcp.p_payload
+	if( proto_id == 354 && att_id == 4098 ){
+		data_len = (uint32_t *)get_attribute_extracted_data( pkt, 354, 23 );
+		if( data_len == NULL )
+			return NULL;
+
+		*new_type = VOID;
+		return mmt_mem_dup( data, *data_len );
+	}
 
 	if( mmt_sec_convert_data( data, data_type, &new_data, new_type ) == 0 )
 		return new_data;
@@ -177,6 +191,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 	//get a list of proto/attributes being used by mmt-security
 	for( i=0; i<proto_atts_count; i++ ){
 		data = _get_data( pkt, proto_atts[i].proto_id, proto_atts[i].att_id, proto_atts[i].data_type, &type );
+
 		if( data != NULL )
 			has_data = YES;
 
@@ -200,6 +215,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  * message to mmt-security.
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
+
 	message_t *msg = _get_packet_info( ipacket );
 
 	//if there is no interested information
@@ -210,7 +226,7 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	total_received_reports ++;
 
-	return 1;
+	return 0;
 }
 
 void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, const u_char *data ){
@@ -299,17 +315,17 @@ int main(int argc, char** argv) {
 	char errbuf[1024];
 	char filename[MAX_FILENAME_SIZE + 1];
 	size_t core_size;
-	uint8_t *core_mask = NULL;
+	uint32_t *core_mask = NULL;
 	int type;
 	size_t threads_count = 1;
 	bool verbose;
 	struct pkthdr header;
-
+	char rule_mask[ MAX_RULE_MASK_SIZE ];
 	size_t i, j, size;
 	uint16_t *rules_id_filter;
 	const proto_attribute_t **p_atts;
 
-	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count, &core_mask, &verbose );
+	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count, &core_mask, rule_mask, &verbose );
 
 	register_signals();
 
@@ -320,11 +336,11 @@ int main(int argc, char** argv) {
 
 	//init mmt-sec to verify the rules
 	if( _sec_handler.threads_count == 1 ){
-		_sec_handler.handler    = mmt_sec_register( rules_arr, size, _print_output, NULL );
+		_sec_handler.handler    = mmt_sec_register( rules_arr, size, verbose, _print_output, NULL );
 		_sec_handler.process_fn = &mmt_sec_process;
 		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}else if( _sec_handler.threads_count > 1 ){
-		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count - 1, core_mask, verbose, _print_output, NULL );
+		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count - 1, core_mask, rule_mask, verbose, _print_output, NULL );
 		_sec_handler.process_fn = &mmt_smp_sec_process;
 		size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 	}else{
@@ -354,6 +370,11 @@ int main(int argc, char** argv) {
 	for( i=0; i<size; i++ ){
 		//mmt_debug( "Registered attribute to extract: %s.%s", proto_atts[i]->proto, proto_atts[i]->att );
 		register_extraction_attribute( mmt_dpi_handler, p_atts[i]->proto_id, p_atts[i]->att_id );
+
+		//tcp.p_payload
+		if( p_atts[i]->proto_id == 354 && p_atts[i]->att_id == 4098)
+			//tcp.payload_len
+			register_extraction_attribute( mmt_dpi_handler, 354, 23 );
 
 		proto_atts[i].proto_id  = p_atts[i]->proto_id;
 		proto_atts[i].att_id    = p_atts[i]->att_id;

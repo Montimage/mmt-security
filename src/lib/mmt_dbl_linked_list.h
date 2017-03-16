@@ -88,12 +88,23 @@ link_node_t *insert_node_to_link_list( link_node_t *head, void *data ){
 }
 
 static inline
-link_node_t *remove_link_node_from_its_link_list( const link_node_t *node ){
-	if( node->prev == NULL )
+link_node_t *remove_link_node_from_its_link_list( const link_node_t *node, link_node_t *head ){
+	if( unlikely( node == NULL ))
+		return head;
+	//head?
+	if( node == head ){
+		if( node->next != NULL )
+			node->next->prev = NULL;
+
 		return node->next;
+	}
+	//node is not null && node->pre is not null as node != head
 	node->prev->next = node->next;
-	node->next->prev = node->prev;
-	return node->prev;
+
+	if( node->next != NULL )
+		node->next->prev = node->prev;
+
+	return head;
 }
 
 /**
@@ -110,22 +121,7 @@ link_node_t *remove_node_from_link_list( link_node_t *head, const void *data ){
 	if( ptr == NULL )
 		return head;
 
-/*
-	if( ptr == head ){
-		head = head->next;
-		if( head != NULL )
-			head->prev = NULL;
-		//free this node
-		mmt_mem_free( ptr );
-		return head;
-	}
-	//ptr is not null && ptr->pre is not null as ptr != head
-	ptr->prev->next = ptr->next;
-
-	if( ptr->next != NULL )
-		ptr->next->prev = ptr->prev;
-*/
-	head = remove_link_node_from_its_link_list( ptr );
+	head = remove_link_node_from_its_link_list( ptr, head );
 
 	//free this node
 	mmt_mem_force_free( ptr );

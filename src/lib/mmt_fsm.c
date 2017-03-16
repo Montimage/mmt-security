@@ -96,7 +96,9 @@ void fsm_reset( fsm_t *fsm ){
 
 	for( i=0; i< _fsm->events_trace->elements_count; i++ ){
 		mmt_mem_free(   _fsm->events_trace->data[ i ]   );
+		_fsm->events_trace->data[ i ] = NULL;
 		free_message_t( _fsm->messages_trace->data[ i ] );
+		_fsm->messages_trace->data[ i ] = NULL;
 	}
 }
 
@@ -122,7 +124,8 @@ static inline enum fsm_handle_event_value _fire_a_tran( fsm_t *fsm, uint16_t tra
 	ret = fsm_handle_event( fsm, transition_index, message_data, event_data, &new_fsm );
 
 	//Occasionally a new fsm may be created, we do not need it
-	if( unlikely( new_fsm != NULL ) ) fsm_free( new_fsm );
+	if( unlikely( new_fsm != NULL ) )
+		fsm_free( new_fsm );
 
 	return ret;
 }
@@ -163,25 +166,27 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 	_fsm->current_state  = new_state;
 
 	/* If the target state is a final one, notify user that the machine has stopped */
-	if (_fsm->current_state == _fsm->error_state){
-		//mmt_debug("FSM_ERROR_STATE_REACHED" );
-		return FSM_ERROR_STATE_REACHED;
-	}else if (_fsm->current_state == _fsm->incl_state){
-		//mmt_debug("FSM_INCONCLUSIVE_STATE_REACHED" );
-		return FSM_INCONCLUSIVE_STATE_REACHED;
-	}else if ( _fsm->current_state == _fsm->success_state ){
-		//mmt_debug("FSM_FINAL_STATE_REACHED" );
-		return FSM_FINAL_STATE_REACHED;
-	}else if( _fsm->current_state->transitions_count == 0 )
-		return FSM_ERROR_STATE_REACHED;
+	if( _fsm->current_state->transitions_count == 0 ){
+		if (_fsm->current_state == _fsm->error_state){
+			//mmt_debug("FSM_ERROR_STATE_REACHED" );
+			return FSM_ERROR_STATE_REACHED;
+		}else if (_fsm->current_state == _fsm->incl_state){
+			//mmt_debug("FSM_INCONCLUSIVE_STATE_REACHED" );
+			return FSM_INCONCLUSIVE_STATE_REACHED;
+		}else if ( _fsm->current_state == _fsm->success_state ){
+			//mmt_debug("FSM_FINAL_STATE_REACHED" );
+			return FSM_FINAL_STATE_REACHED;
+		}else
+			return FSM_ERROR_STATE_REACHED;
+	}
 
 	// We reach a state in which has delay = 0
 	// => we need to continue verifying the next outgoing transitions
 	//    against the current message_data and event_data
-	if( new_state->is_temporary ){
+	if( unlikely( _fsm->current_state->is_temporary )){
 		//for each outgoing transition of the target
 		//fire the timeout transition (at index 0) only if other transitions cannot be fired
-		for( i=new_state->transitions_count - 1; i>= 0; i-- ){
+		for( i=_fsm->current_state->transitions_count - 1; i>= 0; i-- ){
 			ret = _fire_a_tran( (fsm_t *) _fsm, (uint16_t)i, message_data, event_data );
 
 			if( ret != FSM_NO_STATE_CHANGE )
@@ -228,6 +233,7 @@ static inline enum fsm_handle_event_value _update_fsm( _fsm_t *_fsm, const fsm_s
 enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, const void *event_data, fsm_t **new_fsm ) {
 	const fsm_transition_t *tran;
 	_fsm_t *_fsm, *_new_fsm;
+	const fsm_state_t *state;
 	//uint64_t timer, counter;
 
 #ifdef DEBUG_MODE
@@ -239,6 +245,8 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 #ifdef DEBUG_MODE
 	if ( unlikely( !_fsm->current_state ))
 		mmt_halt( "Not found current state of fsm %d", _fsm->id );
+	if( transition_index >= _fsm->current_state->transitions_count )
+		mmt_halt("Transition_index is greater than transitions_count (%d >= %zu)", transition_index,  _fsm->current_state->transitions_count );
 #endif
 
 	//	mmt_debug( "Verify transition: %d of fsm %p", transition_index, fsm );
@@ -268,7 +276,6 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT )
 		return FSM_NO_STATE_CHANGE;
 
-
 	//must not be null
 //	if( tran == NULL ) return FSM_NO_STATE_CHANGE;
 
@@ -291,6 +298,99 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 	//add event to execution trace
 	return _update_fsm( _fsm, tran->target_state, tran, message_data, event_data );
+}
+
+bool fsm_is_verifying_single_packet( const fsm_t *fsm ){
+	_fsm_t *_fsm, *_new_fsm;
+
+#ifdef DEBUG_MODE
+	__check_null( fsm, FSM_ERR_ARG );
+#endif
+	const fsm_transition_t *tran;
+	_fsm = (_fsm_t *)fsm;
+
+	//has 2 real-events (one for zero and 2 real events)
+	if( _fsm->events_trace->elements_count != 3 )
+		return false;
+
+	//init_state has only one out-going transition
+	if( _fsm->init_state->transitions_count != 1 )
+		 return false;
+
+	tran = &_fsm->init_state->transitions[0];
+
+	//zero-delay for target state of init one
+	if( ! tran->target_state->is_temporary )
+		return false;
+
+	//the state has 2 transitions: 0-timeout 1-real-transition
+	if( tran->target_state->transitions_count != 2 )
+		return false;
+
+	tran = &tran->target_state->transitions[ 1 ];
+
+	//target of real-transition is one of final-states
+	if( tran->target_state != _fsm->error_state && tran->target_state != _fsm->success_state && tran->target_state != _fsm->incl_state )
+		return false;
+
+	return true;
+}
+
+enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *message_data, const void *event_data ){
+	const fsm_transition_t *tran;
+	_fsm_t *_fsm, *_new_fsm;
+	const fsm_state_t *state;
+	//uint64_t timer, counter;
+
+#ifdef DEBUG_MODE
+	__check_null( fsm, FSM_ERR_ARG );
+#endif
+
+	_fsm = (_fsm_t *)fsm;
+
+#ifdef DEBUG_MODE
+	if ( unlikely( !_fsm->current_state ))
+		mmt_halt( "Not found current state of fsm %d", _fsm->id );
+#endif
+
+	//special rule that verifies on one packet
+
+	//first event
+	tran = &_fsm->init_state->transitions[0];
+	if( tran->guard && tran->guard( event_data, fsm)  == NO )
+		return FSM_NO_STATE_CHANGE;
+	//first event is satisfied
+
+	//store execution log
+	_fsm->events_trace->data[   1 ] = (void *)event_data; //this is useful when the guard of second event need it
+	_fsm->messages_trace->data[ 1 ] = mmt_mem_atomic_retains( message_data, 2 );
+	/**
+	 * We check now the second event
+	 * first transition is timeout
+	 * second transition is real one
+	 */
+	tran = &_fsm->init_state->transitions[0].target_state->transitions[1];
+	//the second event is not satisfied => use timeout
+	if( tran->guard && tran->guard( event_data, fsm)  == NO )
+		state = _fsm->init_state->transitions[0].target_state->transitions[0].target_state;
+   else
+      state = tran->target_state;
+
+	_fsm->events_trace->data[   1 ] = NULL; //reset this to NULL
+	_fsm->events_trace->data[   2 ] = NULL;
+	_fsm->messages_trace->data[ 2 ] = message_data;
+
+	if (state == _fsm->error_state){
+		//mmt_debug("FSM_ERROR_STATE_REACHED" );
+		return FSM_ERROR_STATE_REACHED;
+	}else if (state == _fsm->incl_state){
+		//mmt_debug("FSM_INCONCLUSIVE_STATE_REACHED" );
+		return FSM_INCONCLUSIVE_STATE_REACHED;
+	}else if (state == _fsm->success_state ){
+		//mmt_debug("FSM_FINAL_STATE_REACHED" );
+		return FSM_FINAL_STATE_REACHED;
+	}else
+		return FSM_ERROR_STATE_REACHED;
 }
 
 /**

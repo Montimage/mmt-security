@@ -1,0 +1,2630 @@
+<!--This file is repeated from complex_rules/1rule/http.xml -->
+
+<!-- ================LOOP 0 ==================-->
+
+<!-- MMT_Security Copyright (C) 2014 Montimage Description: Detection of 
+	attacks in BGPost honeypot -->
+<beginning>
+
+
+	<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+
+static inline int check_http_response(const char* p){
+  if(p == NULL){
+    return 1;
+  }
+  return 0;
+}
+
+
+]]></embedded_functions>
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "1"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 1 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "2"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 2 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "3"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 3 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "4"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 4 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "5"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 5 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "6"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 6 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "7"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 7 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "8"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 8 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "9"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 9 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "10"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 10 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "11"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 11 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "12"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 12 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "13"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 13 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "14"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 14 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "15"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 15 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "16"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 16 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "17"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 17 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "18"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 18 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "19"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 19 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "20"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 20 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "21"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 21 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "22"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 22 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "23"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 23 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "24"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 24 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "25"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 25 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "26"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 26 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "27"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 27 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "28"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 28 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "29"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 29 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "30"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 30 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "31"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 31 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "32"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 32 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "33"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 33 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "34"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 34 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "35"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 35 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "36"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 36 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "37"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 37 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "38"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 38 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "39"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 39 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "40"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 40 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "41"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 41 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "42"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 42 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "43"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 43 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "44"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 44 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "45"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 45 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "46"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 46 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "47"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 47 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "48"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 48 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "49"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 49 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "50"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 50 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "51"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 51 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "52"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 52 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "53"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 53 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "54"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 54 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "55"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 55 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "56"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 56 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "57"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 57 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "58"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 58 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "59"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 59 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "60"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 60 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "61"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 61 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "62"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 62 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "63"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 63 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "64"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 64 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "65"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 65 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "66"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 66 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "67"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 67 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "68"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 68 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "69"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 69 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "70"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 70 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "71"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 71 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "72"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 72 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "73"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 73 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "74"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 74 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "75"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 75 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "76"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 76 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "77"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 77 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "78"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 78 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "79"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 79 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "80"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 80 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "81"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 81 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "82"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 82 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "83"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 83 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "84"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 84 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "85"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 85 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "86"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 86 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "87"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 87 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "88"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 88 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "89"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 89 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "90"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 90 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "91"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 91 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "92"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 92 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "93"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 93 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "94"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 94 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "95"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 95 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "96"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 96 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "97"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 97 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "98"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 98 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "99"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 99 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "100"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 100 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "101"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 101 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "102"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 102 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "103"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 103 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "104"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 104 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "105"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 105 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "106"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 106 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "107"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 107 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "108"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 108 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "109"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 109 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "110"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 110 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "111"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 111 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "112"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 112 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "113"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 113 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "114"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 114 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "115"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 115 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "116"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 116 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "117"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 117 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "118"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 118 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "119"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 119 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "120"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 120 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "121"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 121 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "122"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 122 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "123"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 123 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "124"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 124 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "125"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 125 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "126"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 126 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "127"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 127 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "128"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 128 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "129"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 129 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "130"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 130 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "131"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 131 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "132"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 132 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "133"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 133 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "134"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 134 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "135"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 135 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "136"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 136 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "137"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 137 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "138"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 138 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "139"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 139 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "140"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 140 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "141"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 141 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "142"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 142 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "143"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 143 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "144"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 144 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "145"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 145 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "146"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 146 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "147"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 147 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "148"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 148 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "149"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 149 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "150"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 150 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "151"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 151 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "152"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 152 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "153"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 153 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "154"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 154 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "155"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 155 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "156"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 156 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "157"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 157 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "158"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 158 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "159"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 159 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "160"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 160 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "161"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 161 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "162"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 162 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "163"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 163 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "164"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 164 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "165"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 165 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "166"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 166 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "167"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 167 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "168"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 168 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "169"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 169 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "170"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 170 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "171"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 171 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "172"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 172 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "173"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 173 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "174"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 174 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "175"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 175 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "176"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 176 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "177"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 177 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "178"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 178 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "179"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 179 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "180"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 180 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "181"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 181 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "182"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 182 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "183"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 183 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "184"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 184 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "185"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 185 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "186"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 186 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "187"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 187 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "188"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 188 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "189"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 189 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "190"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 190 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "191"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 191 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "192"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 192 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "193"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 193 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "194"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 194 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "195"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 195 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "196"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 196 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "197"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 197 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "198"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 198 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "199"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+<!-- ================LOOP 199 ==================-->
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id = "200"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+</beginning>
+
+<!-- 2017/03/14 10:48:21 Generated 200 from 1 distinct rules in 200 loops -->

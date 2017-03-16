@@ -1,0 +1,81 @@
+<beginning>
+
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+
+static inline int check_ip_options(const char *op2, const char *op1){
+  int handle = 0;
+  
+  int i2 = *((int*)op2);
+  int i1 = *((int*)op1);
+  int bit2 = (i2 >> 1) & 1;
+  int bit1 = (i1 >> 1) & 1;
+//  if(bit2 == 1 || bit1 == 1){
+      if(i2 != i1) handle = 1;
+//  }
+  return handle;
+}
+
+]]></embedded_functions>
+
+<!-- Property 9: C4_Analyse_03h : La taille minimum d un fragment IP est 
+	28 bytes. Pour un IP fragment de offset 0 c est 40. -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0"
+	property_id="9" type_property="EVASION"
+	description="C4_Analyse_03h: The minimum size of an IP fragment is 28 bytes and for an IP fragment with offset 0 it is 40.">
+	<event value="COMPUTE" event_id="1" description="IP segment and paquet size"
+		boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.tot_len &lt; 28)||((ip.frag_offset == 0)&amp;&amp;(ip.tot_len &lt; 40))))" />
+	<event value="COMPUTE" event_id="2" description="IP segment"
+		boolean_expression="(ip.src != ip.dst)" />
+</property>
+
+<!-- Property 11: C4_Analyse_03h : La taille d un IP incorrect (tronque). -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0"
+	property_id="11" type_property="EVASION"
+	description="C4_Analyse_03h: IP packet size and eth payload size not coherent.">
+	<event value="COMPUTE" event_id="1" description="Paquet size"
+		boolean_expression="((meta.packet_len &lt; 34)&amp;&amp;(ip.tot_len &gt; 0))" />
+	<!--boolean_expression="(meta.packet_len == ethernet.packet_count)"/ -->
+	<!--boolean_expression="((ip.mf_flag == 0)&amp;&amp;(meta.packet_len != 
+		(eth.packet_count + 14)))"/ -->
+	<event value="COMPUTE" event_id="2" description="IP segment"
+		boolean_expression="(ip.src != ip.dst)" />
+</property>
+
+<!-- Property 13: C4_Analyse_3b : Data in SYN packet. -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0"
+	property_id="13" type_property="EVASION" description="C4_Analyse_3b : Data in SYN packet.">
+	<event value="COMPUTE" event_id="1" description="SYN request"
+		boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.payload_len &gt; 0))" />
+	<event value="COMPUTE" event_id="2" description="SYN ACK reply"
+		boolean_expression="(ip.src != ip.dst)" />
+</property>
+
+<!-- Property 17: C4_Decod_01 : SMTP detection. -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0"
+	property_id="17" type_property="SECURITY_PROPERTY" description="SMTP detected">
+	<event value="COMPUTE" event_id="1" description="SYN request"
+		boolean_expression="(smtp.packet_count &gt; 0)" />
+	<event value="COMPUTE" event_id="2" description="ip check"
+		boolean_expression="(ip.src != ip.dst)" />
+</property>
+
+<!-- Property 28: XMAS s00can : TCP with all flags FIN, URG, PSH active. -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0"
+	property_id="28" type_property="ATTACK"
+	description="XMAS scan : TCP with all flags FIN, URG, PSH active.">
+	<event value="COMPUTE" event_id="1" description="TCP packet with flag FIN active"
+		boolean_expression="(tcp.urg == 1)" />
+	<event value="COMPUTE" event_id="2"
+		description="TCP packet with flags URG and PSH active"
+		boolean_expression="((tcp.fin == 1)&amp;&amp;(tcp.psh == 1))" />
+</property>
+
+</beginning>

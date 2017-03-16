@@ -22,6 +22,9 @@ typedef void mmt_smp_sec_handler_t;
  * 	+ threads_count: number of threads
  * 	+ core_mask    : a string indicating logical cores to be used,
  * 						  e.g., "1-8,11-12,19" => we use cores 1,2,..,8,11,12,19
+ *    + rule_mask    : a string indicating special rules being attributed to special threads
+ *    						e.g., "(1:10-13)(2:50)(4:1007-1010)"
+ *    						The other rules will be attributed equally to the rest of threads.
  * 	+ callback     : a function to be called when a rules is validated
  * 	+ user_data    : data will be passed to the #callback
  * - Return:
@@ -34,7 +37,8 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		const rule_info_t **rules_arr,
 		size_t rules_count,
 		uint8_t threads_count,
-		const uint8_t *core_mask,
+		const uint32_t *core_mask,
+		const char *rule_mask,
 		bool verbose,
 		mmt_sec_callback callback,
 		void *user_data);

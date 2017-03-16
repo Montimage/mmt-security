@@ -48,23 +48,23 @@ void force_free_message_t( message_t *msg );
  * One can increase number of references of a variable by using either
  * #mmt_mem_retain or #mmt_mem_retains
  */
-static inline size_t free_message_t( message_t *msg ){
+static inline size_t free_message_ts( message_t *msg, uint16_t size ){
 	size_t ret;
 	__check_null( msg, 0 );  // nothing to do
 
 	mmt_memory_t *mem = mmt_mem_revert( msg );
 
-	ret = __sync_fetch_and_sub( &mem->ref_count, 1 );
+	ret = __sync_sub_and_fetch( &mem->ref_count, size );
 
-	//free message only when there is one reference to its father
-	if( ret == 1 ){
+	//free message only when there is no more reference to it
+	if( ret == 0 )
 		force_free_message_t( msg );
-		return 0;
-	}
-	else if( ret < 1 ){
-		return 0;
-	}else
-		return ret;
+
+	return ret;
+}
+
+static inline size_t free_message_t( message_t *msg ){
+	return free_message_ts( msg, 1);
 }
 
 #endif /* SRC_LIB_MESSAGE_T_H_ */

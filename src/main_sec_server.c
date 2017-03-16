@@ -28,11 +28,12 @@
 
 #include "dpi/types_defs.h"
 #include "dpi/mmt_dpi.h"
+#include "lib/config.h"
 #include "lib/mmt_lib.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/mmt_sec_config.h"
 #include "lib/system_info.h"
 
+#define MAX_RULE_MASK_SIZE 100000
 //maximum length of a report sent from mmt-probe
 #define REPORT_SIZE 10000
 //maximum length of file name storing alerts
@@ -66,18 +67,23 @@ static pid_t parent_pid = 0;
 
 static char output_file_string[MAX_FILENAME_SIZE + 1]  = {0};
 static char output_redis_string[MAX_FILENAME_SIZE + 1] = {0};
-
+static size_t reports_count = 0;
+static size_t clients_count = 0;
+static struct timeval start_time, end_time;
+static size_t rules_count = 0;
 
 static inline double time_diff(struct timeval t1, struct timeval t2) {
 	return (double)(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)/1000000.0;
 }
 
 void usage(const char * prg_name) {
+	fprintf(stderr, "MMT-Security version %s\n",  mmt_sec_get_version_info() );
 	fprintf(stderr, "%s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-p <number/string> : If p is a number, it indicates port number of internet domain socket otherwise it indicates name of unix domain socket. Default: 5000\n");
 	fprintf(stderr, "\t-n <number> : Number of threads per process. Default = 1\n");
 	fprintf(stderr, "\t-c <string> : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
+	fprintf(stderr, "\t-m <string> : Attributes special rules to special threads e.g., \"(1:10-13)(2:50)(4:1007-1010)\"\n");
 	fprintf(stderr, "\t-f <string> : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string> : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v          : Verbose.\n");
@@ -87,10 +93,10 @@ void usage(const char * prg_name) {
 }
 
 size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, char *unix_domain, size_t *threads_count,
-		size_t *cores_count, uint8_t **core_mask, bool *verbose ) {
+		size_t *cores_count, uint32_t **core_mask, char *rule_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
 
-	while ((opt = getopt(argc, argv, "p:n:f:r:c:vlh")) != EOF) {
+	while ((opt = getopt(argc, argv, "p:n:f:r:c:m:vlh")) != EOF) {
 		switch (opt) {
 		case 'p':
 			optcount++;
@@ -119,6 +125,10 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 				*threads_count = x;
 			else
 				usage(argv[0]);
+			break;
+		case 'm':
+			optcount++;
+			strncpy( rule_mask, optarg, MAX_RULE_MASK_SIZE );
 			break;
 		case 'c':
 			optcount++;
@@ -149,7 +159,7 @@ static inline int _get_data_type( uint32_t proto_id, uint32_t att_id ){
 		}
 
 #ifdef DEBUG_MODE
-	mmt_warn( "Unknown data type of attribute %"PRIu32" of protocol %"PRIu32, att_id, proto_id );
+//	mmt_warn( "Unknown data type of attribute %"PRIu32" of protocol %"PRIu32, att_id, proto_id );
 #endif
 
 	return -1;
@@ -161,8 +171,7 @@ static inline int _get_data_type( uint32_t proto_id, uint32_t att_id ){
  *  then passes it to #mmt_security
  */
 static inline size_t receiving_reports( int sock ) {
-	size_t reports_count = 0;
-	size_t index = 0, n;
+	size_t index, n;
 	uint8_t buffer[ REPORT_SIZE ], *buf_ptr; //utf-8
 
 	uint32_t length_of_report = 0;
@@ -173,7 +182,9 @@ static inline size_t receiving_reports( int sock ) {
 	size_t counter;
 	size_t elements_count;
 
+	reports_count = 0;
 	while( 1 ){
+
 		//Read 4 bytes first to know the length of the report
 		n = recv( sock, &length_of_report, 4, MSG_WAITALL );
 
@@ -226,29 +237,41 @@ static inline size_t receiving_reports( int sock ) {
 			el_data_type = _get_data_type( el_ptr->proto_id, el_ptr->att_id );
 
 			//special processing for these data types
-			if( likely( el_data_type == MMT_HEADER_LINE || el_data_type == MMT_DATA_POINTER )){
-				el_ptr->data      = mmt_mem_force_dup( &buffer[index], el_data_length );
+			switch( el_data_type ){
+			case MMT_STRING_DATA_POINTER:
+			case MMT_GENERIC_HEADER_LINE :
+			case MMT_HEADER_LINE :
+				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
 				el_ptr->data_type = STRING;
-			}
-			else if( likely( el_data_type != -1 ))
-				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
-			else{
+				break;
+			case MMT_DATA_POINTER :
+				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
+				el_ptr->data_type = VOID;
+				break;
+			case -1:
 				el_ptr->data      = NULL;
 				el_ptr->data_type = VOID;
+				break;
+			default:
+				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
 			}
 
 			index += el_data_length;
 
+			//http.method
+//			if( el_ptr->proto_id == 153 && el_ptr->att_id == 1 ){
+//				printf("http %zu: len:%"PRIu32", data:[%s] \n", reports_count, el_data_length, (char *)el_ptr->data );
+//			}
+
 			if( unlikely( index >= length_of_report )){
-				mmt_halt( "Data format received from mmt-probe is not correct." );
+				mmt_halt( "Data format received from mmt-probe is not correct. Expected %zu but has only %"PRIu32" bytes", index, length_of_report );
 				break;
 			}
 		}
 
+		reports_count ++;
 		//call mmt_security
 		_sec_handler.process_fn( _sec_handler.handler, msg );
-
-		reports_count ++;
 	}
 
 	return reports_count;
@@ -256,11 +279,15 @@ static inline size_t receiving_reports( int sock ) {
 
 static inline size_t termination(){
 	size_t alerts_count = 0;
+	if( _sec_handler.handler == NULL )
+		return 0;
 
 	if( _sec_handler.threads_count > 1 )
 		alerts_count = mmt_smp_sec_unregister( _sec_handler.handler, NO );
 	else
 		alerts_count = mmt_sec_unregister( _sec_handler.handler );
+
+	_sec_handler.handler = NULL;
 
 	mmt_mem_free( proto_atts );
 	mmt_mem_free( rules_arr );
@@ -302,8 +329,17 @@ void signal_handler(int signal_type) {
 	alerts_count = termination();
 
 	//print only for child process
-	if( verbose && parent_pid != pid )
-		mmt_info("Process %d generated %zu alerts", pid, alerts_count );
+	if( verbose && parent_pid != pid ){
+		gettimeofday( &end_time, NULL );
+		mmt_info( "%3zuth connection sent %9zu reports, in %7.2fs, generated %9zu alerts",
+				clients_count, reports_count, time_diff( start_time, end_time ), alerts_count
+		);
+
+		//mmt_info("Process %d generated %zu alerts", pid, alerts_count );
+	}
+
+	if( alerts_count != 0 )
+		mmt_sec_print_verdict( NULL, 0, 0, rules_count, NULL, NULL );
 
 	//parent waits for all children
 	if( parent_pid == pid ) wait( &status );
@@ -340,15 +376,16 @@ int main( int argc, char** argv ) {
 	bool is_unix_socket = NO;
 
 	socklen_t socklen;
-	struct timeval start_time, end_time;
-	size_t size, rules_count, cores_count = 0, clients_count = 0, alerts_count = 0;
-	uint8_t *core_mask = NULL, *core_mask_ptr;
+	size_t size, cores_count = 0, alerts_count = 0;
+	uint32_t *core_mask = NULL, *core_mask_ptr;
 
 	mmt_sec_callback _print_output;
 
+	char rule_mask[ 100000 ];
+
 	parent_pid = getpid();
 
-	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count, &cores_count, &core_mask, &verbose );
+	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count, &cores_count, &core_mask, rule_mask, &verbose );
 
 	is_unix_socket = (port_number == 0);
 
@@ -365,12 +402,11 @@ int main( int argc, char** argv ) {
 	_sec_handler.threads_count = threads_count;
 
 	if( verbose ){
-		if( is_unix_socket == NO )
-			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on port %d\n",
-					mmt_sec_get_version_info(), rules_count, threads_count, port_number );
-		else
-			mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).\n\tIt is listening on \"%s\"\n",
-					mmt_sec_get_version_info(), rules_count, threads_count, un_domain_name );
+		//TODO: uncomment this after testing
+//		if( is_unix_socket == NO )
+//			mmt_info(" MMT-Security is listening on port %d\n", port_number );
+//		else
+//			mmt_info(" MMT-Security is listening on \"%s\"\n", un_domain_name );
 	}
 
 	/* create internet socket */
@@ -463,8 +499,9 @@ int main( int argc, char** argv ) {
 					mmt_info( "%3zuth connection is coming from %s:%d ... processed by proc. %d",
 							clients_count, str_buffer, in_cli_addr.sin_port, getpid() );
 				}else{
-					mmt_info( "%3zuth connection is coming from local ... processed by proc. %d",
-							clients_count, getpid() );
+					//TODO: uncomment this after testing
+//					mmt_info( "%3zuth connection is coming from local ... processed by proc. %d",
+//							clients_count, getpid() );
 				}
 			}
 
@@ -485,11 +522,11 @@ int main( int argc, char** argv ) {
 
 			//init mmt-sec to verify the rules
 			if( _sec_handler.threads_count == 1 ){
-				_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, _print_output, NULL );
+				_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, verbose, _print_output, NULL );
 				_sec_handler.process_fn = &mmt_sec_process;
 				size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 			}else if( _sec_handler.threads_count > 1 ){
-				_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, threads_count - 1, core_mask_ptr, verbose && clients_count == 1, _print_output, NULL );
+				_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, threads_count - 1, core_mask_ptr, rule_mask, verbose && clients_count == 1, _print_output, NULL );
 				_sec_handler.process_fn = &mmt_smp_sec_process;
 				size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
 			}

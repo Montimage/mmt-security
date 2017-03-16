@@ -19,6 +19,7 @@
 #include "base.h"
 #include "mmt_alloc.h"
 #include "mmt_log.h"
+#include "config.h"
 
 typedef struct mmt_memory_struct{
 	uint32_t  ref_count;

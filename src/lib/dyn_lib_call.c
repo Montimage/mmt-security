@@ -19,8 +19,6 @@
 
 #include "mmt_alloc.h"
 
-//TODO cache lib_pointer
-
 int funct_get_return_type_and_size(int *size, char *lib_name, char *funct_name){
 #ifdef WIN32
 	HMODULE lib_pointer;

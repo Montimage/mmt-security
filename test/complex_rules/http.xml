@@ -1,0 +1,266 @@
+<!-- MMT_Security Copyright (C) 2014 Montimage Description: Detection of 
+	attacks in BGPost honeypot -->
+<beginning>
+
+
+	<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+
+static inline int check_ip_options(const char *op2, const char *op1){
+  int handle = 0;
+  
+  int i2 = *((int*)op2);
+  int i1 = *((int*)op1);
+  int bit2 = (i2 >> 1) & 1;
+  int bit1 = (i1 >> 1) & 1;
+//  if(bit2 == 1 || bit1 == 1){
+      if(i2 != i1) handle = 1;
+//  }
+  return handle;
+}
+
+
+static inline int check_port(int i){
+  
+  //printf("Port:%d\n", i);
+  //according to: 
+  //https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+  //and
+  //https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
+
+  if(i<1023) return 0;
+  if(i>49151 && i< 65536) return 0;
+  if(i>65535) return 1;
+
+  if(i>2193 && i<2197) return 1;
+  if(i>4488 && i<4500) return 1;
+  if(i>4953 && i<4969) return 1;
+  if(i>5569 && i<5573) return 1;
+  if(i>5646 && i<5670) return 1;
+  if(i>6657 && i<6665) return 1;
+  if(i>7491 && i<7500) return 1;
+  if(i>7784 && i<7790) return 1;
+  if(i>27999 && i<28119) return 1;
+  if(i>5554 && i<5558) return 1;
+  if(i>5999 && i<6064) return 1;
+  if(i>8615 && i<8665) return 1;
+  if(i>8801 && i<8804) return 1;
+  if(i>8887 && i<8891) return 1;
+  if(i>11430 && i<11489) return 1;
+  if(i>11623 && i<11720) return 1;
+  if(i>27009 && i<27345) return 1;
+  if(i>41797 && i<42508) return 1;
+  if(i>44444 && i<44544) return 1;
+  switch (i) {
+    case 78:
+    case 79:
+    case 100:
+    case 106:
+    case 787:
+    case 1053:
+    case 1491:
+    case 2662:
+    case 3060:
+    case 3131:
+    case 3145:
+    case 3300:
+    case 3301:
+    case 4045:
+    case 4315:
+    case 4443:
+    case 4967:
+    case 5151:
+    case 5152:
+    case 5162:
+    case 5444:
+    case 5555:
+    case 5556:
+    case 6100:
+    case 6200:
+    case 6501:
+    case 8882:
+    case 9001:
+    case 6632:
+    case 7001:
+    case 7002:
+    case 7005:
+    case 7011:
+    case 7012:
+    case 7501:
+    case 7777:
+    case 8001:
+    case 16000:
+    case 49151:
+      return 1;
+    default:
+      return 0;
+  }
+  return 0;
+}
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int check_URI(const char *uri_str){
+  int handle = 0;
+  if(uri_str == NULL){
+    return 2;
+  }
+ 
+  const char *x = uri_str;
+  
+  //fprintf(stderr, "%s\n",x);
+  while (*x != '\0'){
+      //octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+      if(*x < 32 || *x == 92 || *x == '"' || *x == '<' || *x == '>' || *x == '[' || *x == ']' || *x == '^' || *x == '`' || *x == '{' || 
+         *x == '|' || *x == '}' || *x == '%' || *x > 126) {
+              handle = 1;
+              break;
+      }
+      x = x+1;
+  }
+  //detect directory traversal attack
+  char *s0, *s1, *s2, *s3;
+  s0 = strstr(uri_str, ".."); //find the first occurrence of string ".." in string
+  s1 = strstr(uri_str, "./"); //find the first occurrence of string "./" in string
+  s2 = strstr(uri_str, "//"); //find the first occurrence of string "//" in string
+  s3 = strstr(uri_str, "/."); //find the first occurrence of string "//" in string
+  
+  if ((s0 !=NULL) || (s1 !=NULL) || (s2 !=NULL) || (s3 !=NULL))  
+   handle = 1;
+   
+//#ifdef DEBUG
+//  fprintf(stderr, "executing ceck_URI with parameters:h=%d:nb=%u:a1=%o:a2=%o\n", 
+//                                           handle, *(char*)(BLOC3+6),*(char*)(BLOC3+9));
+//#endif
+  return handle;
+}
+
+/*
+ * Nikto 
+ */
+static inline bool check_UA( const char *user_agent){
+   //find the first occurrence of string "Nikto" in string
+   return (strstr(user_agent, "Nikto") != NULL);     
+}
+
+static inline int check_sql_injection(const void *p_payload, double payload_len){
+   int key_word_len = 6;
+   char *key_words[6] = {"DROP", "UNION", "SELECT", "CHAR", "DELETE", "INSERT"};
+   size_t len = payload_len, i;
+   char *str  = malloc( len + 1 );
+   memcpy( str, p_payload, len );
+   str[ len ] = '\0';
+   
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+   for( i=0; i<key_word_len; i++)
+      if( strstr(str, key_words[i]  ) != NULL ){
+         free( str );
+         return 1;
+      }
+   
+   free( str );
+   return 0;
+}
+
+
+
+static inline int check_http_response(const char* p){
+  if(p == NULL){
+    return 1;
+  }
+  return 0;
+}
+
+static inline  int check_ip_add(const char *src, const char *dst, const char *src1, const char *dst1){
+  if((src == NULL) || (dst == NULL) || (src1 == NULL) || (dst1 == NULL)){
+    return 1;
+  }
+  if (((src = src1) && (dst = dst1)) || ((src = dst1) && (dst = src1))){
+     return 1;
+  }
+  return 0;
+}
+
+]]></embedded_functions>
+
+
+	<!-- Property 10: C4_Analyse_03f : HTTP detecte avec un port different de 
+		80 et 8080. -->
+	<property value="THEN" delay_units="ms" delay_min="0"
+		delay_max="0" property_id="10" type_property="EVASION"
+		description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+		<event value="COMPUTE" event_id="1"
+			description="HTTP packet using a port different from 80 and 8080"
+			boolean_expression="((http.method == http.method)&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))" />
+		<event value="COMPUTE" event_id="2" description="HTTP packet"
+			boolean_expression="(ip.src != ip.dst)" />
+	</property>
+
+
+	<!-- Property 12: C4_Analyse_03c|d|e : l URI d un paquet HTTP contient des 
+		caracteres non authorises. -->
+	<!-- URN invalid character set: octets 0-32 (0-20 hex) | "\" | """ | "&" 
+		| "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 
+		(7F-FF hex) -->
+	<property value="THEN" delay_units="ms" delay_min="0"
+		delay_max="0" property_id="12" type_property="EVASION"
+		description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+		<event value="COMPUTE" event_id="1" description="HTTP URI invalid"
+			boolean_expression="((http.method == http.method)&amp;&amp;(#check_URI(http.uri) == 1))" />
+		<event value="COMPUTE" event_id="2" description="HTTP packet"
+			boolean_expression="(ip.src != ip.dst)" />
+	</property>
+
+	<!-- Property 15: C4_Analyse_02 : Web scan with Nikto. User-Agent based 
+		detection boolean_expression="((http.user_agent == '')||(#check_UA(http.user_agent) 
+		== 1))"/> -->
+	<property value="THEN" delay_units="ms" delay_min="0"
+		delay_max="0" property_id="15" type_property="ATTACK" description="Nikto detection">
+		<event event_id="1" value="COMPUTE"
+			description="Context: an  user agent in the HTTP header"
+			boolean_expression="((http.user_agent == http.user_agent)&amp;&amp;(#check_UA(http.user_agent) == 1))" />
+		<event event_id="2" value="COMPUTE" description="Trigger: Nikto detected. "
+			boolean_expression="(ip.src != ip.dst)" />
+	</property>
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id="29" type_property="EVASION"
+		description="HTTP response with no header (type 1)">
+		<operator value="THEN" delay_units="ms" delay_min="0+"
+			delay_max="250">
+			<event value="COMPUTE" event_id="1"
+				description="Context: Here it is a HTTP GET packet"
+				boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+			<event value="COMPUTE" event_id="2"
+				description="Context: TCP ACK after HTTP GET"
+				boolean_expression="((#check_ip_add(ip.src, ip.dst, ip.src.1, ip.dst.1) == 1)&amp;&amp;((http.packet_count == http.packet_count.1)&amp;&amp;(tcp.packet_count != 0)))" />
+		</operator>
+		<event value="COMPUTE" event_id="3"
+			description="Trigger: HTTP response contains no header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.2+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+
+	<property value="THEN" delay_units="ms" delay_min="0+"
+		delay_max="500" property_id="30" type_property="EVASION"
+		description="HTTP response with no header right after the GET (type 2)">
+		<event value="COMPUTE" event_id="1"
+			description="Context: Here it is a HTTP GET packet"
+			boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))" />
+		<event value="COMPUTE" event_id="2"
+			description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+			boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))" />
+	</property>
+</beginning>

@@ -13,7 +13,7 @@ INSTALL_DIR = /opt/mmt/security
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
-VERSION     := 1.0.0
+VERSION     := 1.0.1
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lhiredis
@@ -104,19 +104,28 @@ $(LIB_NAME).so: $(LIB_OBJS)
 lib: $(LIB_NAME).a $(LIB_NAME).so
 	
 INSTALL_DIR=/opt/mmt/security
+
 $(INSTALL_DIR):
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/rules
+	
 uninstall:
 	$(QUIET) $(RM) $(INSTALL_DIR)
 	
-install: uninstall $(INSTALL_DIR) clean sec_server_no_reorder standalone rule_info compile_rule lib
+sample_rules: compile_rule
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so rules/unauthorised_ports.xml
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so      rules/arp_poisoning.xml
+	
+install: uninstall $(INSTALL_DIR) clean all lib sample_rules
+	
+	$(QUIET) $(CP) rules/*.so $(INSTALL_DIR)/rules/
 	
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/include
 	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(INSTALL_DIR)/include/
 	
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/bin
-	$(QUIET) $(MV) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  $(INSTALL_DIR)/bin
+	$(QUIET) $(MV)  $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  $(INSTALL_DIR)/bin
 	$(QUIET) $(MV)  $(MAIN_STAND_ALONE) $(INSTALL_DIR)/bin/mmt_security
+	$(QUIET) $(MV)  $(MAIN_SEC_SERVER) $(INSTALL_DIR)/bin/
 	
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/lib
 	$(QUIET) $(MV)  $(LIB_NAME).so $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION)
@@ -128,7 +137,30 @@ install: uninstall $(INSTALL_DIR) clean sec_server_no_reorder standalone rule_in
 	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME).a
 	$(QUIET) chmod -x $(INSTALL_DIR)/lib/$(LIB_NAME).*
 	
+	@echo ""
 	@echo "Installed mmt-security in $(INSTALL_DIR)"
+	
+	
+DEB_NAME = mmt-security_$(VERSION)_$(GIT_VERSION)_`uname -s`_`uname -p`
+	
+deb: install
+	$(QUIET) $(MKDIR) $(DEB_NAME)/DEBIAN
+	$(QUIET) echo "Package: mmt-security \
+        \nVersion: $(VERSION) \
+        \nSection: base \
+        \nPriority: standard \
+        \nArchitecture: all \
+        \nMaintainer: Montimage <contact@montimage.com> \
+        \nDescription: MMT-Security: An intrusion detection system \
+        \n  Version id: $(GIT_VERSION). Build time: `date +"%Y-%m-%d %H:%M:%S"` \
+        \nHomepage: http://www.montimage.com" \
+		> $(DEB_NAME)/DEBIAN/control
+	
+	$(QUIET) $(MKDIR) $(DEB_NAME)$(INSTALL_DIR)
+	$(QUIET) $(CP) -r $(INSTALL_DIR)/* $(DEB_NAME)$(INSTALL_DIR)
+	
+	$(QUIET) dpkg-deb -b $(DEB_NAME)
+	$(QUIET) $(RM) $(DEB_NAME)
 	
 dist-clean: uninstall
 	@echo "Removed mmt-security from $(INSTALL_DIR)"

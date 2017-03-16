@@ -57,6 +57,7 @@ typedef void (*mmt_sec_callback)(
 mmt_sec_handler_t *mmt_sec_register(
 		const rule_info_t **rules_arr,
 		size_t rules_count,
+		bool verbose,
 		mmt_sec_callback callback,
 		void *user_data);
 

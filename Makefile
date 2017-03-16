@@ -13,7 +13,7 @@ INSTALL_DIR = /opt/mmt/security
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
-VERSION     := 1.0.0
+VERSION     := 1.0.1
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lhiredis

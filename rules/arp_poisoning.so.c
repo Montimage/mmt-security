@@ -1,6 +1,6 @@
 
  /** 927
-  * This file is generated automatically on 2017-03-16 12:54:04
+  * This file is generated automatically on 2017-03-16 15:42:26
   */
  #include <string.h>
  #include <stdio.h>
@@ -13,35 +13,6 @@
   * Embedded functions
   */
  
-
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
-
-static inline int check_sql_injection(const void *p_payload, double payload_len){
-   int key_word_len = 6;
-   char *key_words[6] = {"DROP", "UNION", "SELECT", "CHAR", "DELETE", "INSERT"};
-   size_t len = payload_len, i;
-   char *str  = malloc( len + 1 );
-   memcpy( str, p_payload, len );
-   str[ len ] = '\0';
-   //Signature based dection begin here. 
-   //(using  pattern matching techniques against signatures and 
-   //keyword-based stores to identify potentially malicious requests)
-   for( i=0; i<key_word_len; i++)
-      if( strstr(str, key_words[i]  ) != NULL ){
-         free( str );
-         return 1;
-      }
-   
-   free( str );
-   return 0;
-}
-
-
-
 
  //======================================RULE 1======================================
  #define EVENTS_COUNT_1 3
@@ -580,4 +551,4 @@ static inline int check_sql_injection(const void *p_payload, double payload_len)
   * Moment the rules being encoded
   * PUBLIC API
   */
- const char * __get_generated_date(){ return "2017-03-16 12:54:04, mmt-security version 1.0.0 (40da352 - Mar 16 2017 12:39:39)";};
+ const char * __get_generated_date(){ return "2017-03-16 15:42:26, mmt-security version 1.0.0 (40da352 - Mar 16 2017 13:51:09)";};

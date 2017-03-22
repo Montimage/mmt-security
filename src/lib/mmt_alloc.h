@@ -27,7 +27,7 @@ typedef struct mmt_memory_struct{
 	void*     data;
 }mmt_memory_t;
 
-#define SIZE_OF_MMT_MEMORY_T 16
+#define SIZE_OF_MMT_MEMORY_T sizeof( mmt_memory_t )
 
 #define mmt_mem_revert( x ) (mmt_memory_t *) ( (uint8_t*)x - SIZE_OF_MMT_MEMORY_T )
 

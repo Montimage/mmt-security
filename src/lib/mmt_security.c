@@ -92,17 +92,18 @@ static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
 	size_t i, j;
 
 	mmt_map_t *map = mmt_map_init( (void *) strcmp );
-	uint64_t *proto_att_key;
-	const proto_attribute_t *me;
+	char *proto_att_key;
+	const proto_attribute_t *me, *old;
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++ ){
 		rule = _handler->rules_array[i];
 		for( j=0; j<rule->proto_atts_count; j++ ){
 			me = &rule->proto_atts[j];
-			proto_att_key  = mmt_mem_alloc( sizeof( uint64_t) );
-			*proto_att_key = simple_hash_64( me->proto_id, me->att_id );
-			if( mmt_map_set_data( map, proto_att_key, (void *)me, NO ) != NULL ){
+			proto_att_key  = mmt_mem_alloc( 10 );
+			sprintf( proto_att_key, "%d.%d",  me->proto_id, me->att_id );
+
+			if( (old = mmt_map_set_data( map, proto_att_key, (void *)me, NO )) != NULL ){
 				//already exist
 				mmt_mem_free( proto_att_key );
 				continue;
@@ -126,8 +127,8 @@ static inline uint64_t _calculate_hash_number_of_a_rule( size_t rule_index, cons
 	size_t j, k;
 	const proto_attribute_t *me;
 	uint64_t  hash = 0;
-	//for each proto_att of this rules
 
+	//for each proto_att of this rules
 	for( j=0; j<rule->proto_atts_count; j++ ){
 		me = &rule->proto_atts[ j ];
 		for( k=0; k < handler->proto_atts_count; k++ )
@@ -172,10 +173,10 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 
 	_get_unique_proto_attts( handler );
 
-//	handler->rules_hash = mmt_mem_alloc( sizeof( uint64_t ) * rules_count );
-//	for( i=0; i<rules_count; i++ ){
-//		handler->rules_hash[ i ] = _calculate_hash_number_of_a_rule( i, handler );
-//	}
+	handler->rules_hash = mmt_mem_alloc( sizeof( uint64_t ) * rules_count );
+	for( i=0; i<rules_count; i++ ){
+		handler->rules_hash[ i ] = _calculate_hash_number_of_a_rule( i, handler );
+	}
 
 #ifdef DEBUG_MODE
 	handler->messages_count = 0;
@@ -209,6 +210,7 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 
 	mmt_mem_free( _handler->proto_atts_array );
 	mmt_mem_free( _handler->engines );
+	mmt_mem_free( _handler->rules_hash );
 	mmt_mem_free( _handler );
 
 	return alerts_count;
@@ -244,7 +246,7 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	const mmt_array_t *execution_trace;
 
 	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
-//	uint64_t hash = _calculate_hash_number_of_input_message( msg, _handler );
+	uint64_t hash = _calculate_hash_number_of_input_message( msg, _handler );
 
 #ifdef DEBUG_MODE
 	_handler->messages_count ++;
@@ -253,10 +255,12 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
 		//msg does not contain enough proto.att for i-th rule
-//		if( (hash & _handler->rules_hash[i]) == 0 )
-//			continue;
+		if( (hash & _handler->rules_hash[i]) == 0 )
+			continue;
 
-		//mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
+//		continue;
+
+		mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
 		verdict = rule_engine_process( _handler->engines[i], msg );
 
 		//found a validated/invalid trace
@@ -599,6 +603,7 @@ void mmt_sec_print_rules_info(){
  * Convert data in format of MMT-Probe to data in format of MMT-Sec
  */
 int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type ){
+	static __thread uint16_t alerts[100] = {0}; //per theread
 	double number = 0;
 
 	uint16_t size;
@@ -703,9 +708,10 @@ int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_
 	*new_type = VOID;
 	*new_data = NULL;
 
-#ifdef DEBUG_MODE
-	mmt_error("Data type %d has not yet implemented", type);
-#endif
+	if( alerts[type] == 0 ){
+		mmt_error("Data type %d has not yet implemented", type);
+		alerts[ type ] = 1;
+	}
 
 	return 1;
 }

@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/time.h>
 
+#include "mmt_lib.h"
 #include "plugin_header.h"
 #include "mmt_array_t.h"
 #include "verdict_printer.h"

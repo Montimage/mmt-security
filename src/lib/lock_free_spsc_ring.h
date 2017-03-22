@@ -185,7 +185,7 @@ static inline void ring_wait_for_pushing( lock_free_spsc_ring_t *q ){
 
 
 static inline void ring_wait_for_poping( lock_free_spsc_ring_t *q ){
-	nanosleep( (const struct timespec[]){{0, 100L}}, NULL );
+//	nanosleep( (const struct timespec[]){{0, 100L}}, NULL );
 }
 
 #endif /* SRC_QUEUE_LOCK_FREE_SPSC_RING_H_ */

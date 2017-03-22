@@ -83,16 +83,16 @@ static inline void _mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_
 			ret = pthread_join( _handler->threads_id[ i ], NULL );
 			switch( ret ){
 			case EDEADLK:
-				mmt_halt("A deadlock was detected or thread specifies the calling thread");
+				mmt_error("A deadlock was detected or thread specifies the calling thread");
 				break;
 			case EINVAL:
-				mmt_halt("Thread is not a joinable thread.");
+				mmt_error("Thread is not a joinable thread.");
 				break;
 //			case EINVAL:
 //				mmt_halt("Another thread is already waiting to join with this thread.");
 //				break;
 			case  ESRCH:
-				mmt_halt("No thread with the ID thread could be found.");
+				mmt_error("No thread with the ID thread could be found.");
 				break;
 			}
 		}
@@ -421,7 +421,7 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 	//retain message for each thread
 	//-1 since msg was cloned from message -> it has ref_count = 1
 	//=> we need to increase ref_count only ( _handler->threads_count - 1)
-	if( likely( _handler->threads_count > 1 ))
+	if( likely( _handler->threads_count > 1 && msg != NULL ))
 		msg = mmt_mem_retains( msg,  _handler->threads_count - 1 );
 
 	//all threads have not been yet put the message

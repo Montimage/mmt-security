@@ -590,7 +590,7 @@ void _iterate_variables_to_init_structure( void *key, void *data, void *user_dat
 	if( index == 0 ){
 		_gen_comment( fd, "Create an instance of _msg_t_%d", rule_id);
 		fprintf( fd, "static inline _msg_t_%d* _allocate_msg_t_%d(){", rule_id, rule_id );
-		fprintf( fd, "\n\t static _msg_t_%d _msg;", rule_id );
+		fprintf( fd, "\n\t static __thread _msg_t_%d _msg;", rule_id );
 		fprintf( fd, "\n\t _msg_t_%d *m = &_msg;", rule_id );
 	}
 	fprintf( fd, "\n\t m->%s_%s = NULL;", var->proto, var->att);
@@ -952,12 +952,12 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, con
 int compile_gen_code( const char *lib_file, const char *code_file, const char *incl_dir ){
 	char cmd_str[ 10000 ];
 
-	sprintf( cmd_str, "/usr/bin/gcc %s -fPIC -shared -O3  %s -o %s -I %s",
+	sprintf( cmd_str, "/usr/bin/gcc %s -fPIC -shared  %s -o %s -I %s",
 			//add debug flag if need
 #ifdef DEBUG_MODE
-			"-g",
+			"-g -O0",
 #else
-			"",
+			"-O3",
 #endif
 			code_file, lib_file, incl_dir );
 

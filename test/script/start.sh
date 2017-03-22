@@ -7,7 +7,7 @@ ssh root@192.168.0.7  "export TZ=Europe/Paris && date --set \"$(date)\""
 ssh root@192.168.0.35 "export TZ=Europe/Paris && date --set \"$(date)\""
 ssh root@192.168.0.36 "export TZ=Europe/Paris && date --set \"$(date)\""
 
-INDEX=0
+INDEX=30
 #print out header
 FIRST=0
 
@@ -30,17 +30,17 @@ function run_test() {
 function test_one_loop() {
   FIRST=1
   BW=3000
-  #run_test
+  run_test
   unset FIRST
 }
 
 #rm logs/*
 
-for test_loop in 1 2 3
+for test_loop in 1 2 3 4 5
 do
 
 #base
-for BW in $(seq 5100 200 5900)
+for BW in $(seq 4700 200 5700)
 do
   CORE=16
   RULE=200
@@ -53,7 +53,7 @@ done
 test_one_loop
 
 #pkt
-for BW in $(seq 6300 200 6900);
+for BW in $(seq 6100 200 6900);
 do
   CORE=16
   RULE=200
@@ -67,7 +67,7 @@ done
 test_one_loop
 
 #pkt
-for BW in $(seq 3700 200 4100);
+for BW in $(seq 3300 200 3900);
 do
   CORE=16
   RULE=200
@@ -81,7 +81,7 @@ done
 test_one_loop
 
 #a_rate
-for BW in $(seq 5900 200 6500);
+for BW in $(seq 5100 200 6100);
 do
   CORE=16
   RULE=200
@@ -95,7 +95,7 @@ done
 test_one_loop
 
 #a_rate
-for BW in $(seq 6900 200 6500);
+for BW in $(seq 5500 200 6500);
 do
   CORE=16
   RULE=200
@@ -110,7 +110,7 @@ test_one_loop
 
 
 #core
-for BW in $(seq 4300 200 4900);
+for BW in $(seq 3900 200 4900);
 do
   CORE=8 #
   RULE=200

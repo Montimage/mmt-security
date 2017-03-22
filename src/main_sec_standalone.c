@@ -21,11 +21,10 @@
 #include <signal.h>
 #include <errno.h>
 
-#include "mmt_core.h"
+#include <mmt_core.h>
 
-#include "dpi/mmt_dpi.h"
+//#include "dpi/mmt_dpi.h"
 
-#include "lib/mmt_lib.h"
 #include "lib/mmt_smp_security.h"
 
 #define MAX_RULE_MASK_SIZE 100000

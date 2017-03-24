@@ -21,9 +21,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#include <mmt_core.h>
-
-//#include "dpi/mmt_dpi.h"
+#include "lib/dpi_message_t.h"
 
 #include "lib/mmt_smp_security.h"
 
@@ -140,48 +138,15 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 }
 
 /**
- * Convert data encoded in a pcap packet to readable data that is either a double
- * or a string ending by '\0'.
- * This function will create a new memory segment to store its result.
- */
-static inline void* _get_data( const ipacket_t *pkt, uint32_t proto_id, uint32_t att_id, int data_type, int *new_type ){
-	double number;
-	char buffer[100], *new_string = NULL;
-	const uint16_t buffer_size = 100;
-	uint16_t size;
-	void *new_data = NULL;
-	uint32_t *data_len;
-	uint8_t *data = (uint8_t *) get_attribute_extracted_data( pkt, proto_id, att_id );
-	//does not exist data for this proto_id and att_id
-	if( data == NULL ) return NULL;
-
-	//tcp.p_payload
-	if( proto_id == 354 && att_id == 4098 ){
-		data_len = (uint32_t *)get_attribute_extracted_data( pkt, 354, 23 );
-		if( data_len == NULL )
-			return NULL;
-
-		*new_type = VOID;
-		return mmt_mem_dup( data, *data_len );
-	}
-
-	if( mmt_sec_convert_data( data, data_type, &new_data, new_type ) == 0 )
-		return new_data;
-	return NULL;
-
-}
-
-
-/**
  * Convert a pcap packet to a message being understandable by mmt-security.
  * The function returns NULL if the packet contains no interested information.
  * Otherwise it creates a new memory segment to store the result message. One need
  * to use #free_message_t to free the message.
  */
-static inline message_t* _get_packet_info( const ipacket_t *pkt ){
-	size_t size, i, index;
+static inline message_t* _get_packet_info( const ipacket_t *pkt, const message_element_t *proto_atts, size_t proto_atts_count ){
+	int i;
 	bool has_data = NO;
-	void *data = NULL;
+	void *data;
 	int type;
 	message_t *msg = create_message_t( proto_atts_count );
 	msg->timestamp = mmt_sec_encode_timeval( &pkt->p_hdr->ts );
@@ -189,24 +154,23 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 
 	//get a list of proto/attributes being used by mmt-security
 	for( i=0; i<proto_atts_count; i++ ){
-		data = _get_data( pkt, proto_atts[i].proto_id, proto_atts[i].att_id, proto_atts[i].data_type, &type );
-
-		if( data != NULL )
-			has_data = YES;
-
-		msg->elements[i].data      = data;
-		msg->elements[i].data_type = type;
 		msg->elements[i].att_id    = proto_atts[i].att_id;
 		msg->elements[i].proto_id  = proto_atts[i].proto_id;
+
+		dpi_message_set_data( pkt, proto_atts[i].data_type, msg, &msg->elements[i] );
+
+		if( msg->elements[i].data != NULL )
+			has_data = YES;
 	}
 
-	//need to free #msg when the packet contains no-interested information
 	if( likely( has_data ))
 		return msg;
 
+	//need to free #msg when the packet contains no-interested information
 	free_message_t( msg );
 	return NULL;
 }
+
 
 /**
  * This function is called by mmt-dpi for each incoming packet containing registered proto/att.
@@ -215,7 +179,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
 
-	message_t *msg = _get_packet_info( ipacket );
+	message_t *msg = _get_packet_info( ipacket, proto_atts, proto_atts_count );
 
 	//if there is no interested information
 	//TODO: to check if we still need to send timestamp/counter to mmt-sec?

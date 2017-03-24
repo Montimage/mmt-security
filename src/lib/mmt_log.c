@@ -60,9 +60,9 @@ void mmt_log( log_level_t level, const char *format, ... ){
 	va_start(arg, format);
 	vsnprintf(buffer, 100000, format, arg);
 	if( level == HALT || level == ERROR || level == WARN )
-		fprintf(stderr, "%s - %s\n", log_level_name[level], buffer);
+		fprintf(stderr, "%s: %s\n", log_level_name[level], buffer);
 	else
-		fprintf(stdout, "%s - %s\n", log_level_name[level], buffer);
+		fprintf(stdout, "%s: %s\n", log_level_name[level], buffer);
 
 	va_end(arg);
 

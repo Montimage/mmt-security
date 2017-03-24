@@ -179,62 +179,6 @@ static inline void *_process_one_thread( void *arg ){
 	return NULL;
 }
 
-static const size_t _get_special_rules_for_thread( uint32_t thread_id, const char *rule_mask, uint32_t **rule_range ){
-	uint32_t id = 0;
-	size_t size = 0, range_count = 0;
-	const char *c = rule_mask, *ptr;
-	char *string;
-	*rule_range = NULL;
-	while( *c != '\0'){
-		mmt_assert( *c == '(', "Rule mask is not correct: %s", c );
-		//jump over (
-		c ++;
-		//thread id
-		mmt_assert( isdigit( *c ), "Rule mask is not correct: %s", c );
-		id = atol( c );
-		//jump over thread id
-		while( isdigit( *c ) ) c ++;
-		//jump over separator between thread_id and rule_range
-		mmt_assert( *c == ':', "Rule mask is not correct: %s", c );
-		c++;
-		//rule range
-		ptr  = c;
-		size = 0;
-		while( *c != ')'){
-			switch( *c ){
-			case ',':
-			case '-':
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				break;
-			default:
-				mmt_halt("Rule mask is not correct: %s", c );
-			}
-			size ++;
-			c++;
-		}
-
-		//jump over )
-		c ++;
-		if( id == thread_id ){
-			//check if double range for this thread_id
-			mmt_assert( *rule_range == NULL, "Rule mask is not correct: %s", c );
-			string = mmt_mem_dup( ptr, size );
-			range_count = expand_number_range( string, rule_range );
-			mmt_mem_free( string );
-		}
-	}
-	return range_count;
-}
-
 /**
  * Public API
  */
@@ -261,7 +205,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	//Rules to be disabled
 	if( rule_mask != NULL ){
 		//rules are not verified
-		rules_count_per_thread = _get_special_rules_for_thread( 0, rule_mask, &rule_range );
+		rules_count_per_thread = get_special_rules_for_thread( 0, rule_mask, &rule_range );
 		if( rules_count_per_thread > 0 ){
 			//move ignored rules to the end
 			//rule_ptr will ignored the last n rules
@@ -318,7 +262,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	rule_ptr = rules_array;
 	if( rule_mask != NULL ){
 		for( i=0; i<handler->threads_count; i++ ){
-			rules_count_per_thread = _get_special_rules_for_thread( i+1, rule_mask, &rule_range );
+			rules_count_per_thread = get_special_rules_for_thread( i+1, rule_mask, &rule_range );
 			if( rules_count_per_thread == 0 )
 				continue;
 
@@ -447,10 +391,3 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 	}
 }
 
-void mmt_smp_sec_count_verdicts( mmt_smp_sec_handler_t *handler  ){
-	size_t i;
-	int ret;
-	__check_null( handler, );
-
-	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *)handler;
-}

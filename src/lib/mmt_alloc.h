@@ -192,6 +192,17 @@ static inline int mmt_mem_cmp( const void *x, const void *y){
 		return memcmp( mx->data, my->data, mx->size );
 }
 
+static inline void mmt_mem_reset( mmt_memory_t *mem, size_t size ){
+	//mem->data points to the memory segment after sizeof( mmt_memory_t )
+	mem->data      = mem + 1;
+	//safe string
+	((char *)mem->data)[ size ] = '\0';
+	//store size to head of the memory segment
+	mem->size      = size;
+	mem->ref_count = 1;
+}
+
+
 #define mmt_free_and_assign_to_null( x ) while( x != NULL ){ mmt_mem_free( x ); x = NULL; break; }
 
 #endif /* SRC_MMT_ALLOC_H_ */

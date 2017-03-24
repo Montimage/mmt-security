@@ -18,14 +18,14 @@ static config_t config = {
 			.max_instances = 100000,
 			.rules_mask    = NULL,
 			.smp = {
-				.ring_size = 1000
+				.ring_size = 5000
 			}
 		},
 		.output = {
 				.inorge_description = 20
 		},
 		.input = {
-				.max_report_size = 1000
+				.max_report_size = 3000
 		}
 };
 

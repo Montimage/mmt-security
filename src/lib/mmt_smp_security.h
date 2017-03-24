@@ -53,8 +53,6 @@ size_t mmt_smp_sec_unregister( mmt_smp_sec_handler_t *handler, bool stop_immedia
  */
 void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *message );
 
-uint64_t mmt_smp_sec_count_alerts( const mmt_smp_sec_handler_t *handler );
-
 /**
  * Get rules attached to a given #handler
  */

@@ -21,7 +21,7 @@
 #define YES true
 
 //thread local storage
-#define __t_scope __thread
+#define __thread_scope __thread
 
 //macroe
 #define __check_null( x, y ) if( unlikely( x == NULL )) return y; else

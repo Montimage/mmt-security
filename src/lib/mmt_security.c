@@ -37,6 +37,37 @@ size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
 	return load_mmt_sec_rules( rules_array );
 }
 
+size_t mmt_sec_filter_rules( const char *rule_mask, size_t rules_count, const rule_info_t **rules_array ){
+	uint32_t *rule_range, rule_id;
+	int i, j, k, rules_count_per_thread;
+
+	//Rules to be disabled
+	if( rule_mask == NULL || strlen( rule_mask) == 0 )
+		return rules_count;
+
+	//rules are not verified
+	rules_count_per_thread = get_special_rules_for_thread( 0, rule_mask, &rule_range );
+	if( rules_count_per_thread > 0 ){
+		//move ignored rules to the end
+		//rule_ptr will ignored the last n rules
+		for( j=rules_count_per_thread-1; j>=0; j-- ){
+			rule_id = rule_range[ j ];
+			if( rules_count == 0 )
+				return rules_count;
+
+			for( k=rules_count-1; k>=0; k-- )
+				if( rule_id == rules_array[k]->id ){
+					//ignore this rule: rules_array[rules_count--]
+					rules_count --;
+
+					rules_array[k] = rules_array[ rules_count ];;
+					break;
+				}
+		}
+	}
+	return rules_count;
+}
+
 typedef struct _mmt_sec_handler_struct{
 	size_t rules_count;
 	const rule_info_t **rules_array;
@@ -282,6 +313,7 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 			}
 		}
 	}
+
 	free_message_t( msg );
 }
 
@@ -299,7 +331,12 @@ static inline void _remove_special_character( char * tmp, size_t len ){
 		//case '\u': //  unicode
 			*tmp = '.';
 			break;
+		default:
+			//non printable
+			if( *tmp < 32 )
+				*tmp = '.';
 		}
+
 
 		tmp ++;
 		len --;
@@ -310,7 +347,7 @@ static inline void _remove_special_character( char * tmp, size_t len ){
 #define MAX_STR_SIZE 10000
 
 static const char* _convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
-	static __t_scope char buffer[ MAX_STR_SIZE + 1 ];
+	static __thread_scope char buffer[ MAX_STR_SIZE + 1 ];
 	char *str_ptr, *c_ptr;
 	size_t size, i, j, total_len, index;
 	const message_t *msg;
@@ -489,6 +526,11 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 	return buffer;
 }
 
+
+const char* mmt_convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
+	return _convert_execution_trace_to_json_string( trace, rule );
+}
+
 /**
  * PUBLIC API
  * Print verdicts to verdict printer
@@ -503,7 +545,7 @@ void mmt_sec_print_verdict(
 		const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
-		uint32_t counter,
+		uint64_t counter,
 		const mmt_array_t *const trace,
 		void *user_data )
 {
@@ -596,122 +638,4 @@ void mmt_sec_print_rules_info(){
 
 	mmt_mem_free( rules_arr );
 	unload_mmt_sec_rules();
-}
-
-/**
- * Public API
- * Convert data in format of MMT-Probe to data in format of MMT-Sec
- */
-int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type ){
-	static __thread uint16_t alerts[100] = {0}; //per theread
-	double number = 0;
-
-	uint16_t size;
-	char *new_string;
-
-	//does not exist data for this proto_id and att_id
-	__check_null( data, 1 );
-
-	switch( type ){
-	case MMT_UNDEFINED_TYPE: /**< no type constant value */
-		break;
-	case MMT_DATA_CHAR: /**< 1 character constant value */
-		number = *(char *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_U8_DATA: /**< unsigned 1-byte constant value */
-		number = *(uint8_t *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_DATA_PORT: /**< tcp/udp port constant value */
-	case MMT_U16_DATA: /**< unsigned 2-bytes constant value */
-		number = *(uint16_t *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_U32_DATA: /**< unsigned 4-bytes constant value */
-		number = *(uint32_t *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_U64_DATA: /**< unsigned 8-bytes constant value */
-		number = *(uint64_t *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_DATA_FLOAT: /**< float constant value */
-		number = *(float *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_DATA_MAC_ADDR: /**< ethernet mac address constant value */
-		*new_type = STRING;
-		*new_data = mmt_mem_force_dup( data, 6 );
-		return 0;
-
-	case MMT_DATA_IP_ADDR: /**< ip address constant value */
-		*new_type = STRING;
-		*new_data = mmt_mem_force_dup( data, 4 );
-		return 0;
-
-	case MMT_DATA_IP6_ADDR: /**< ip6 address constant value */
-		*new_type = STRING;
-		*new_data = mmt_mem_force_dup( data, 6 );
-		return 0;
-
-	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
-	case MMT_DATA_PATH: /**< protocol path constant value */
-	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
-	case MMT_DATA_BUFFER: /**< binary buffer content */
-	case MMT_DATA_POINT: /**< point constant value */
-	case MMT_DATA_PORT_RANGE: /**< tcp/udp port range constant value */
-	case MMT_DATA_DATE: /**< date constant value */
-	case MMT_DATA_TIMEARG: /**< time argument constant value */
-	case MMT_DATA_STRING_INDEX: /**< string index constant value (an association between a string and an integer) */
-	case MMT_DATA_IP_NET: /**< ip network address constant value */
-	case MMT_DATA_LAYERID: /**< Layer ID value */
-	case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
-	case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
-	case MMT_STATS: /**< pointer to MMT Protocol statistics */
-		break;
-
-	case MMT_BINARY_DATA: /**< binary constant value */
-	case MMT_BINARY_VAR_DATA: /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
-	case MMT_STRING_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum BINARY_64DATA_LEN long */
-	case MMT_STRING_LONG_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum STRING_DATA_LEN long */
-		*new_type = STRING;
-		*new_data = mmt_mem_dup( ((mmt_binary_var_data_t *)data)->data, ((mmt_binary_var_data_t *)data)->len );
-		return 0;
-
-	case MMT_HEADER_LINE: /**< string pointer value with a variable size. The string is not necessary null terminating */
-		*new_type = STRING;
-		*new_data = mmt_mem_dup( ((mmt_header_line_t *)data)->ptr, ((mmt_header_line_t *)data)->len );
-		return 0;
-
-	case MMT_STRING_DATA_POINTER: /**< pointer constant value (size is void *). The data pointed to is of type string with null terminating character included */
-		*new_type = STRING;
-		*new_data  = mmt_mem_dup( data, strlen( (char*) data) );
-		return 0;
-
-	default:
-		break;
-	}
-
-	*new_type = VOID;
-	*new_data = NULL;
-
-	if( alerts[type] == 0 ){
-		mmt_error("Data type %d has not yet implemented", type);
-		alerts[ type ] = 1;
-	}
-
-	return 1;
 }

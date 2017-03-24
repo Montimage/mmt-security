@@ -237,4 +237,62 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 	return size;
 }
 
+
+
+static inline const size_t get_special_rules_for_thread( uint32_t thread_id, const char *rule_mask, uint32_t **rule_range ){
+	uint32_t id = 0;
+	size_t size = 0, range_count = 0;
+	const char *c = rule_mask, *ptr;
+	char *string;
+	*rule_range = NULL;
+	while( *c != '\0'){
+		mmt_assert( *c == '(', "Rule mask is not correct: %s", c );
+		//jump over (
+		c ++;
+		//thread id
+		mmt_assert( isdigit( *c ), "Rule mask is not correct: %s", c );
+		id = atol( c );
+		//jump over thread id
+		while( isdigit( *c ) ) c ++;
+		//jump over separator between thread_id and rule_range
+		mmt_assert( *c == ':', "Rule mask is not correct: %s", c );
+		c++;
+		//rule range
+		ptr  = c;
+		size = 0;
+		while( *c != ')'){
+			switch( *c ){
+			case ',':
+			case '-':
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				break;
+			default:
+				mmt_halt("Rule mask is not correct: %s", c );
+			}
+			size ++;
+			c++;
+		}
+
+		//jump over )
+		c ++;
+		if( id == thread_id ){
+			//check if double range for this thread_id
+			mmt_assert( *rule_range == NULL, "Rule mask is not correct: %s", c );
+			string = mmt_mem_dup( ptr, size );
+			range_count = expand_number_range( string, rule_range );
+			mmt_mem_free( string );
+		}
+	}
+	return range_count;
+}
+
 #endif /* SRC_LIB_MMT_UTILS_H_ */

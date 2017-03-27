@@ -351,26 +351,23 @@ int main(int argc, char** argv) {
 		mmt_info("Analyzing pcap file %s", filename );
 		pcap = pcap_open_offline(filename, errbuf); // open offline trace
 		if (!pcap) { /* pcap error ? */
-			mmt_log(ERROR, "pcap_open failed for the following reason: %s\n", errbuf);
-			return EXIT_FAILURE;
+			mmt_halt("pcap_open failed for the following reason: %s\n", errbuf);
 		}
 		while ((data = pcap_next(pcap, &p_pkthdr)) ) {
 			header.ts     = p_pkthdr.ts;
 			header.caplen = p_pkthdr.caplen;
 			header.len    = p_pkthdr.len;
-			if (!packet_process(mmt_dpi_handler, &header, data)) {
-				mmt_log(ERROR, "Packet data extraction failure.\n");
-			}
+			if (!packet_process(mmt_dpi_handler, &header, data))
+				mmt_sec_log(ERROR, "Packet data extraction failure.\n");
 		}
 
 	} else {
 		mmt_info("Listening on interface %s", filename );
 
 		pcap = pcap_create( filename, errbuf);
-		if (pcap == NULL) {
-			fprintf(stderr, "Couldn't open device %s\n", errbuf);
-			exit( EXIT_FAILURE );
-		}
+		if (pcap == NULL)
+			mmt_halt("Couldn't open device %s\n", errbuf);
+
 		pcap_set_snaplen(pcap, SNAP_LEN);
 		pcap_set_promisc(pcap, 1);
 		pcap_set_timeout(pcap, 0);

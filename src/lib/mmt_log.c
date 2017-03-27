@@ -52,7 +52,7 @@ void mmt_print_execution_trace (void) {
 
 static const char *log_level_name[] ={ "INFO", "DEBUG", "WARN", "ERROR", "HALT" };
 
-void mmt_log( log_level_t level, const char *format, ... ){
+void mmt_sec_log( log_level_t level, const char *format, ... ){
 	va_list arg;
 	//TODO limit mmt_log on 100K characters
 	char buffer[100000];
@@ -70,6 +70,6 @@ void mmt_log( log_level_t level, const char *format, ... ){
 
 		mmt_print_execution_trace();
 
-		exit(1);
+		exit( EXIT_FAILURE );
 	}
 }

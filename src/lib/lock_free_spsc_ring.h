@@ -175,7 +175,7 @@ void ring_free( lock_free_spsc_ring_t *q );
  *
  */
 static inline void ring_wait_for_pushing( lock_free_spsc_ring_t *q ){
-	nanosleep( (const struct timespec[]){{0, 10000L}}, NULL );
+	nanosleep( (const struct timespec[]){{0, 5000L}}, NULL );
 //	if( unlikely( sem_trywait( &q->sem_wait_pushing) == 0 ))
 //		return; //already lock
 //	else{

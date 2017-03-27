@@ -23,24 +23,27 @@ typedef enum {
  * 		use HALT to exit the system after logging the message
  * 	+ format: same as #printf function
  */
-void mmt_log( log_level_t level, const char *format, ... )
+void mmt_sec_log( log_level_t level, const char *format, ... )
 	__attribute__((format (printf, 2, 3)));
 
-#define mmt_warn( ... )  mmt_log( WARN, __VA_ARGS__ )
-#define mmt_info( ... )  mmt_log( INFO, __VA_ARGS__ )
-#define mmt_error( ... ) mmt_log( ERROR, __VA_ARGS__ )
+#define mmt_warn( ... )  mmt_sec_log( WARN, __VA_ARGS__ )
+#define mmt_info( ... )  mmt_sec_log( INFO, __VA_ARGS__ )
+#define mmt_error( ... ) mmt_sec_log( ERROR, __VA_ARGS__ )
 
 
 #ifdef DEBUG_MODE
-	#define mmt_debug(...)   do{ printf("%s:%d ", __FILE__, __LINE__); mmt_log( DEBUG, __VA_ARGS__ ); fflush( stdout ); } while(0)
-	#define mmt_halt( ... )  do{ printf("%s:%d ", __FILE__, __LINE__); mmt_log( HALT, __VA_ARGS__ ); }while( 0 )
-	#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ printf("%s:%d ", __FILE__, __LINE__); mmt_log( HALT, __VA_ARGS__ ); break; }
+	#define mmt_debug(...)   do{ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( DEBUG, __VA_ARGS__ ); fflush( stdout ); } while(0)
+	#define mmt_halt( ... )  do{ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( HALT, __VA_ARGS__ ); }while( 0 )
+	#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( HALT, __VA_ARGS__ ); break; }
 #else
 	#define mmt_debug(...)
-	#define mmt_halt( ... ) mmt_log( HALT, __VA_ARGS__ )
-	#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ mmt_log( HALT, __VA_ARGS__ ); break; }
+	#define mmt_halt( ... ) mmt_sec_log( HALT, __VA_ARGS__ )
+	#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ mmt_sec_log( HALT, __VA_ARGS__ ); break; }
 #endif
 
+/**
+ * Print current execution trace to stderr
+ */
 void mmt_print_execution_trace();
 
 #endif /* SRC_LOG_H_ */

@@ -62,7 +62,7 @@ MAIN_SEC_SERVER = mmt_sec_server
 
 LIB_NAME = libmmt_security
 
-all: standalone compile_rule rule_info sec_server
+all: gen_dpi standalone compile_rule rule_info sec_server
 
 %.o: %.c src/dpi/mmt_dpi.h
 	@echo "[COMPILE] $(notdir $@)"
@@ -117,7 +117,8 @@ sample_rules: compile_rule
 	
 install: uninstall $(INSTALL_DIR) clean all lib sample_rules
 	
-	$(QUIET) $(CP) rules/*.so $(INSTALL_DIR)/rules/
+	$(QUIET) $(CP) rules/unauthorised_ports.so $(INSTALL_DIR)/rules/
+	$(QUIET) $(CP) rules/arp_poisoning.so      $(INSTALL_DIR)/rules/
 	
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/include
 	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(INSTALL_DIR)/include/
@@ -133,8 +134,8 @@ install: uninstall $(INSTALL_DIR) clean all lib sample_rules
 	
 	$(QUIET) $(RM)  $(INSTALL_DIR)/lib/$(LIB_NAME).so $(INSTALL_DIR)/lib/$(LIB_NAME).a
 	
-	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME).so 
-	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME).a
+	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME)2.so 
+	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME)2.a
 	$(QUIET) chmod -x $(INSTALL_DIR)/lib/$(LIB_NAME).*
 	
 	@echo ""
@@ -155,6 +156,9 @@ deb: install
         \n  Version id: $(GIT_VERSION). Build time: `date +"%Y-%m-%d %H:%M:%S"` \
         \nHomepage: http://www.montimage.com" \
 		> $(DEB_NAME)/DEBIAN/control
+		
+	$(QUIET) $(MKDIR) $(DEB_NAME)/etc/ld.so.conf.d/
+	@echo "/opt/mmt/security/lib" >> $(DEB_NAME)/etc/ld.so.conf.d/mmt-security.conf
 	
 	$(QUIET) $(MKDIR) $(DEB_NAME)$(INSTALL_DIR)
 	$(QUIET) $(CP) -r $(INSTALL_DIR)/* $(DEB_NAME)$(INSTALL_DIR)

@@ -180,12 +180,19 @@ static inline int em_check_sql_injection(const char *str, double pl){
  
 }
 
+static inline int check_ip_add( const void *ip_src, const void *ip_dst, const void *ip_src_1, const void *ip_dst_1){
+   return 0;
+}
+
+static inline int check_http_response( const void *response){
+   return response == NULL;
+}
 ]]></embedded_functions>
 
 <!-- Property 1: Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).-->
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="1" property_id="1" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="1" type_property="ATTACK" 
     description="Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).">
-    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
       <event value="COMPUTE" event_id="1" 
              description="SYN request"
              boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port &gt; 22))"/>
@@ -193,7 +200,7 @@ static inline int em_check_sql_injection(const char *str, double pl){
              description="SYN ACK reply"
              boolean_expression="((tcp.flags == 18)&amp;&amp;((tcp.src_port == 22)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;(ip.src == ip.dst.1))))"/>
     </operator>
-    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
       <event value="COMPUTE" event_id="3" 
              description="SYN request"
              boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))))"/>
@@ -206,7 +213,7 @@ static inline int em_check_sql_injection(const char *str, double pl){
 <!-- Property 2: Attempted to connect via ssh but reseted immediately. Source address is spoofed, infected machine or attacker.-->
 <property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="2" type_property="ATTACK" 
     description="Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).">
-    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
       <event value="COMPUTE" event_id="1" 
              description="SYN request"
              boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port == 22))"/>
@@ -220,7 +227,7 @@ static inline int em_check_sql_injection(const char *str, double pl){
 </property>
 
 <!-- Property 3: Several TCP SYN requests without SYN ACK. Source address is spoofed, infected machine or attacker. Note: done on port 445.-->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="6" property_id="3" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="6" property_id="3" type_property="ATTACK" 
     description="TCP SYN requests on microsoft-ds port 445 with SYN ACK."
     >
     <!--if_not_satisfied="py_createstix(3_BGPOST_TCP_SYN_request_without_SYN_ACK_could_be_a_spoofed_address, ip.src.8)"-->
@@ -244,38 +251,38 @@ static inline int em_check_sql_injection(const char *str, double pl){
 -->
 
 <!-- Property 4: One ARP request receives two replies with different MAC addresses.-->
-<!-- 
+
 <property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="4" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
     <operator value="THEN" delay_units="m" delay_min="0+" delay_max="5">
       <event value="COMPUTE" event_id="1" 
              description="An arp who was requested"
-             boolean_expression="(arp.ar_op == 1))"/>
+             boolean_expression="((arp.ar_op == 1)&amp;&amp;(ethernet.src != ethernet.dst))"/>
       <event value="COMPUTE" event_id="2" 
              description="An arp reply with MAC address"
-             boolean_expression="((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.10))"/>
+             boolean_expression="((arp.ar_op == 2)&amp;&amp;((arp.ar_sip == arp.ar_tip.1)&amp;&amp;(ethernet.src != ethernet.dst)))"/>
     </operator>
     <event value="COMPUTE" event_id="3" 
            description="An arp reply but with different MAC address"
-           boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.10))&amp;&amp;(arp.ar_sha != arp.ar_sha.11))"/>
+           boolean_expression="((arp.ar_op == 2)&amp;&amp;((arp.ar_sip == arp.ar_tip.1)&amp;&amp;((arp.ar_sha != arp.ar_sha.2)&amp;&amp;(ethernet.src != ethernet.dst))))"/>
 </property>
--->
+
 <!-- Property 5: Two ARP replies that should provide the same MAC address are different. This rule is simpler than Property 1 
                  above and detects the same potential attacks without generating a message for each combination of request-reply.-->
 
-<!-- <property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="5" type_property="ATTACK" 
+ <property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="5" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
       <event value="COMPUTE" event_id="1" 
              description="An arp reply with MAC address"
-             boolean_expression="(arp.ar_op == 2)"/>
+             boolean_expression="((arp.ar_op == 2)&amp;&amp;(ethernet.src != ethernet.dst))"/>
     <event value="COMPUTE" event_id="2" 
            description="An arp reply but with different MAC address"
-           boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_sip.13))&amp;&amp;(arp.ar_sha != arp.ar_sha.13))"/>
+           boolean_expression="((arp.ar_op == 2)&amp;&amp;((arp.ar_sip == arp.ar_sip.1)&amp;&amp;((arp.ar_sha != arp.ar_sha.1)&amp;&amp;(ethernet.src != ethernet.dst))))"/>
 </property>
--->
+
 
 <!-- Property 6: 4_Analyse_03b : TCP SYN scan to detect SYNFUL compromise) (|ack - seq| == 0xC123D ou 791101). -->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="6" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="6" type_property="EVASION" 
     description="4_Analyse_03b : SYN and ACK paquets with a 0xC123D delta between TCP sequence numbers (scan done by SYNFUL attack).">
     <event value="COMPUTE" event_id="1"
            description="TCP SYN"
@@ -287,7 +294,7 @@ static inline int em_check_sql_injection(const char *str, double pl){
 
 <!-- Property 7: R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb .-->
 <!--
-<property value="THEN" delay_units="s" delay_min="-6" delay_max="6" property_id="7" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="-6" delay_max="6" property_id="7" type_property="ATTACK" 
     description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK before belonging to the same session.">
     <event value="COMPUTE" event_id="1"#
            description="TCP RST"
@@ -297,7 +304,7 @@ static inline int em_check_sql_injection(const char *str, double pl){
            boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.dst.17)&amp;&amp;((ip.src == ip.src.17)&amp;&amp;((tcp.src_port == tcp.src_port.17)&amp;&amp;(tcp.dst_port == tcp.dst_port.17)))))"/>
 </property>
 -->
-<property value="BEFORE" delay_units="s" delay_min="0+" delay_max="6" property_id="7" type_property="SECURITY" 
+<property value="BEFORE" delay_units="ms" delay_min="0+" delay_max="6" property_id="7" type_property="SECURITY" 
     description="R4_Decod_1a : TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb.">
     <event value="COMPUTE" event_id="1"
            description="Context: TCP RST"
@@ -319,7 +326,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 -->
 
 <!-- Property 8: C4_Analyse_03g : Le champ Options doit etre homogene dans tous les fragments IP.-->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="10" property_id="8" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="8" type_property="EVASION" 
     description="C4_Analyse_03g: The IP options field must be homogeneous in all IP fragments.">
     <event value="COMPUTE" event_id="1" 
            description="IP segment"
@@ -330,7 +337,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 </property>
 
 <!-- Property 9: C4_Analyse_03h : La taille minimum d un fragment IP est 28 bytes. Pour un IP fragment de offset 0 c est 40.-->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="9" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="9" type_property="EVASION" 
     description="C4_Analyse_03h: The minimum size of an IP fragment is 28 bytes and for an IP fragment with offset 0 it is 40.">
     <event value="COMPUTE" event_id="1" 
            description="IP segment and paquet size"
@@ -341,7 +348,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 </property>
 
 <!-- Property 10: C4_Analyse_03f : HTTP detecte avec un port different de 80 et 3000.-->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="10" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="10" type_property="EVASION" 
     description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
     <event value="COMPUTE" event_id="1" 
         description="HTTP packet using a port different from 80 and 8080"
@@ -352,7 +359,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 </property>
 
 <!-- Property 11: C4_Analyse_03h : La taille d un IP incorrect (tronque).-->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="11" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="11" type_property="EVASION" 
     description="C4_Analyse_03h: IP packet size and eth payload size not coherent.">
     <event value="COMPUTE" event_id="1" 
            description="Paquet size"
@@ -368,7 +375,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 <!-- URN invalid character set:
      octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
 -->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="12" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="12" type_property="EVASION" 
     description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
     <event value="COMPUTE" event_id="1" 
            description="HTTP URI invalid"
@@ -379,7 +386,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 </property>
 
 <!-- Property 13: C4_Analyse_3b : Data in SYN packet.-->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="13" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="13" type_property="EVASION" 
     description="C4_Analyse_3b : Data in SYN packet.">
       <event value="COMPUTE" event_id="1" 
              description="SYN request"
@@ -395,7 +402,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
                   and
                        https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
 -->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="14" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="14" type_property="EVASION" 
     description="C4_Analyse_3f bis: Unauthorized port number.">
       <event value="COMPUTE" event_id="1" 
              description="TCP packet with non-authorized port number."
@@ -407,7 +414,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 
 <!-- Property 15: C4_Analyse_02 : Web scan with Nikto. User-Agent based detection-->
 
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="15" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="15" type_property="ATTACK" 
      description="Nikto detection" >
    <event event_id="1" value="COMPUTE" 
            description="Context: an  user agent in the HTTP header"
@@ -419,7 +426,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
  
  <!-- Property 16: C4_Analyse_02 : Web scan with Nikto. Two successive TCP SYN requests but with different destination addresses.-->
 
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="16" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="16" type_property="ATTACK" 
     description="Two successive TCP SYN requests but with different destnation addresses."
     >
     <!--if_satisfied="py_createstix(5_two_successive_TCP_SYN_requests_could_be_a_spoofed_address, ip.src.12)"-->
@@ -433,7 +440,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 
 <!-- Property 17: C4_Decod_01 : SMTP detection.-->
 
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="6" property_id="17" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="6" property_id="17" type_property="ATTACK" 
     description="SMTP detected"
     >
    <event value="COMPUTE" event_id="1" 
@@ -446,7 +453,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 
 <!-- Property 18: C4_Analyse_03l : Invalid GRE version detection.-->
 
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="18" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="18" type_property="ATTACK" 
     description="Invalid GRE version detected"
     >
    <event value="COMPUTE" event_id="1" 
@@ -459,7 +466,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 
 <!-- Property 19: C4_Analyse_04g : SQL Injection detection.-->
 
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="19" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="19" type_property="ATTACK" 
     description="SQL Injection detected"
     >
    <event value="COMPUTE" event_id="1" 
@@ -481,10 +488,10 @@ Since ICMP redirects are dynamic and may not reflect the most current topology
 it is nice to have an automated method of redirect expiration.
 -->
 
-<property value="THEN" delay_units="s" delay_min="0" delay_max="6" property_id="20" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="6" property_id="20" type_property="ATTACK" 
     description="4 consecutive ICMP redirect packets. Possibly ICMP redirect flood."
     >
-   <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+   <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="3">
    <event value="COMPUTE" event_id="1" 
            description="Context: ICMP redirect"
            boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src)))"/>
@@ -492,7 +499,7 @@ it is nice to have an automated method of redirect expiration.
            description="Trigger: 2nd consecutive ICMP redirect packet"
            boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
    </operator>
-   <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+   <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="3">
    <event value="COMPUTE" event_id="3" 
            description="Trigger: 3rd consecutive ICMP redirect packet"
            boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
@@ -500,6 +507,156 @@ it is nice to have an automated method of redirect expiration.
            description="Trigger: 4th consecutive ICMP redirect packet"
            boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
    </operator>
+</property>
+
+
+<!-- Property 21: IP fragmentation : fragments with offset always = 0 (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="21" type_property="EVASION" 
+    description="IP fragmentation : fragments with offset always = 0 (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment with offset = 0 followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and an offset = 0"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst)))"/>
+</property>
+<!--
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.1)&amp;&amp;((((ip.frag_offset - ip.frag_offset.1) &lt; 101)&amp;&amp;ip.src != ip.dst))))"/>
+-->
+
+<!-- Property 22: IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="22" type_property="EVASION" 
+    description="IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and an offset less than 9 bytes"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset - ip.frag_offset.1) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+
+<!-- Property 23: Out of order IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="23" type_property="EVASION" 
+    description="Out of order IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and an offset less than 9 bytes"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset.1 - ip.frag_offset) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+
+<!-- Property 24: Overlapping IP fragmentation : difference in offset of concomitant fragments < fragment length (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="24" type_property="EVASION" 
+    description="Overlapping IP fragmentation : difference in offset of concomitant fragments less than fragment length (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and diffenrences in offsets less than length"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset - ip.frag_offset.1) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+
+<!-- Property 25: Overlapping unordered IP fragmentation : difference in offset of concomitant fragments < fragment length (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="25" type_property="EVASION" 
+    description="Overlapping unordered IP fragmentation : difference in offset of concomitant fragments less than fragment length (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and diffenrences in offsets less than length"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset.1 - ip.frag_offset) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+
+<!-- Property 26: Probable IP protocol scan (4 different attempts in a row on different protocols).
+Eat CPU
+-->
+
+<!-- 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="26" type_property="ATTACK" 
+    description="Probable IP protocol scan (4 different attempts in a row on different protocols)."
+    >
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="5">
+      <event value="COMPUTE" event_id="1" 
+          description="IP packet header with the eight-bit IP protocol field set (1)"
+             boolean_expression="((ip.proto_id != 0)&amp;&amp;(ip.src != ip.dst))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP packet header with another eight-bit IP protocol field set (2)"
+             boolean_expression="((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+    </operator>
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="5">
+      <event value="COMPUTE" event_id="3" 
+             description="IP packet header with another eight-bit IP protocol field set (3)"
+             boolean_expression="((ip.proto_id != ip.proto_id.2)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
+      <event value="COMPUTE" event_id="4" 
+             description="IP packet header with another eight-bit IP protocol field set (4)"
+             boolean_expression="((ip.proto_id != ip.proto_id.3)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
+    </operator>
+</property>
+ -->
+ 
+<!-- Property 27: Probable UDP protocol scan (4 different attempts in a row on different ports).
+-->
+
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="27" type_property="ATTACK" 
+    description="Probable UDP protocol scan (4 different attempts in a row on different ports)."
+    >
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="1" 
+             description="UDP packet header with a destination port field set (1)"
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != 0)&amp;&amp;(ip.src != ip.dst)))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="UDP packet header with another destination port field set (2)"
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
+    </operator>
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="3" 
+             description="UDP packet header with another destination port field set (3)"
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.2)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
+      <event value="COMPUTE" event_id="4"
+             description="UDP packet header with another destination port field set (4)"
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.3)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
+    </operator>
+</property>
+
+    <!-- Property 28: XMAS s00can : TCP with all flags FIN, URG, PSH active.-->
+    <property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="28" type_property="ATTACK"
+         description="XMAS scan : TCP with all flags FIN, URG, PSH active.">
+    <event value="COMPUTE" event_id="1"
+         description="TCP packet with flag FIN active"
+         boolean_expression="(tcp.urg == 1)"/>
+    <event value="COMPUTE" event_id="2"
+         description="TCP packet with flags URG and PSH active"
+         boolean_expression="((tcp.fin == 1)&amp;&amp;(tcp.psh == 1))"/>
+    </property>
+   
+   <!-- Property 29, 30: HTTP version 0.9 detection-->
+
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="29" type_property="EVASION" 
+    description="HTTP response with no header (type 1)"
+    >
+   <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="250">
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a HTTP GET packet"
+           boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))"/>
+   <event value="COMPUTE" event_id="2" 
+         description="Context: TCP ACK after HTTP GET"
+           boolean_expression="((#check_ip_add(ip.src, ip.dst, ip.src.1, ip.dst.1) == 1)&amp;&amp;((http.packet_count == http.packet_count.1)&amp;&amp;(tcp.packet_count != 0)))"/>
+   </operator>
+   <event value="COMPUTE" event_id="3" 
+           description="Trigger: HTTP response contains no header"
+         boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.2+1))&amp;&amp;(#check_http_response(http.response)==1)))))"/>
+</property>
+
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="30" type_property="EVASION" 
+    description="HTTP response with no header right after the GET (type 2)"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a HTTP GET packet"
+           boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))"/>
+   <event value="COMPUTE" event_id="2" 
+           description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
+         boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))"/>
 </property>
 
 </beginning>

@@ -241,11 +241,11 @@ static inline size_t receiving_reports( int sock ) {
 			case MMT_STRING_DATA_POINTER:
 			case MMT_GENERIC_HEADER_LINE :
 			case MMT_HEADER_LINE :
-				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
+				set_data_of_one_element_message_t( msg, el_ptr,  &buffer[index], el_data_length );
 				el_ptr->data_type = STRING;
 				break;
 			case MMT_DATA_POINTER :
-				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
+				set_data_of_one_element_message_t( msg, el_ptr,  &buffer[index], el_data_length );
 				el_ptr->data_type = VOID;
 				break;
 			case -1:
@@ -253,7 +253,7 @@ static inline size_t receiving_reports( int sock ) {
 				el_ptr->data_type = VOID;
 				break;
 			default:
-				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
+				set_dpi_data_to_one_element_message_t( &buffer[index], el_data_type, msg, el_ptr );
 			}
 
 			index += el_data_length;

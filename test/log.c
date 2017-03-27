@@ -33,12 +33,12 @@ static char * all_tests() {
 int main() {
 	char *result = all_tests();
 	if (result != 0) {
-		mmt_log( HALT,"Tests fail: %s", result );
+		mmt_sec_log( HALT,"Tests fail: %s", result );
 	}
 	else {
 		printf("ALL TESTS PASSED\n");
 	}
-	mmt_log( INFO,"Tests run: %d\n", tests_run );
+	mmt_sec_log( INFO,"Tests run: %d\n", tests_run );
 
 	return result != 0;
 }

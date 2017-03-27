@@ -176,7 +176,9 @@ static inline void _reset_engine_for_fsm( rule_engine_t *_engine, fsm_t *fsm ){
 	_engine->fsm_by_instance_id[ fsm_id ] = NULL;
 }
 /**
- * Remove only one instance from (1) list of expecting events and from (2) list of instances
+ * Remove only one instance from
+ * - (1) list of expecting events, and from
+ * - (2) list of instances
  */
 static inline void _reset_engine_for_instance( rule_engine_t *_engine, fsm_t *fsm ){
 	size_t i;
@@ -378,12 +380,13 @@ enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *mess
 
 
 enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *message ){
-	const void *data        = engine->rule_info->convert_message( message );
-	const uint64_t hash     = engine->rule_info->hash_message( data );
+	const void *data    = engine->rule_info->convert_message( message );
+	const uint64_t hash = engine->rule_info->hash_message( data );
 	uint8_t event_id;
 	link_node_t *node, *node_ptr;
 	_fsm_tran_index_t *fsm_ind;
 	enum verdict_type ret;
+
 
 	//there are no transitions that can receive the message
 	if( hash == 0 ){
@@ -521,12 +524,13 @@ void rule_engine_free( rule_engine_t *_engine ){
 
 	for( i=0; i<_engine->max_events_size; i++ )
 		free_link_list(_engine->fsm_by_expecting_event_id[ i ], YES );
+	_engine->max_events_size = 0;
 
 	mmt_mem_free( _engine->fsm_by_expecting_event_id );
 	mmt_mem_free( _engine->tmp_fsm_by_expecting_event_id );
 
-	for( i=0; i<_engine->max_instances_size; i++ )
-		free_link_list_and_data( _engine->fsm_by_instance_id[ i ], (void *)fsm_free );
+	//for( i=0; i<_engine->max_instances_size; i++ )
+	//	free_link_list_and_data( _engine->fsm_by_instance_id[ i ], (void *)fsm_free );
 
 	mmt_mem_free( _engine->fsm_by_instance_id );
 

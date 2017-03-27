@@ -67,7 +67,7 @@ case "$ATTACK_RATE-$PKT_SIZE" in
   "40-1000")     LOOP=1000 ;;
 esac
 
-LOOP=$((LOOP*$BANDWIDTH/24000))
+LOOP=$((LOOP*$BANDWIDTH/5000))
 
 
 if [[ $7 -ne 0 ]]; then

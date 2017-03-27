@@ -11,15 +11,7 @@
 ////memory
 ///////////////////////////////////////////////////////////////////////////////
 
-static inline void _mem_reset( mmt_memory_t *mem, size_t size ){
-	//mem->data points to the memory segment after sizeof( mmt_memory_t )
-	mem->data      = mem + 1;
-	//safe string
-	((char *)mem->data)[ size ] = '\0';
-	//store size to head of the memory segment
-	mem->size      = size;
-	mem->ref_count = 1;
-}
+
 
 static inline void *_mem_alloc(size_t size){
 	mmt_memory_t *mem = malloc( SIZE_OF_MMT_MEMORY_T + size + 1 );
@@ -29,7 +21,7 @@ static inline void *_mem_alloc(size_t size){
 	//remember size of memory being allocated
 	//allocated_memory_size += size;
 
-	_mem_reset( mem, size );
+	mmt_mem_reset( mem, size );
 
 	return mem->data;
 }
@@ -203,7 +195,7 @@ static inline void *_pools_alloc( uint32_t elem_size ){
 
 	mmt_memory_t *mem = mmt_mem_revert( ret );
 
-	_mem_reset( mem, elem_size );
+	mmt_mem_reset( mem, elem_size );
 
 	return ret;
 }

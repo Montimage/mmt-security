@@ -12,7 +12,7 @@
 #define SRC_LIB_VERSION_H_
 
 #ifndef VERSION
-	#define VERSION "1.0"
+	#define VERSION "1.0.1"
 #endif
 
 #define __NOW__ __DATE__ " " __TIME__

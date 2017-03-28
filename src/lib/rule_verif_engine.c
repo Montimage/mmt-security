@@ -529,8 +529,8 @@ void rule_engine_free( rule_engine_t *_engine ){
 	mmt_mem_free( _engine->fsm_by_expecting_event_id );
 	mmt_mem_free( _engine->tmp_fsm_by_expecting_event_id );
 
-	//for( i=0; i<_engine->max_instances_size; i++ )
-	//	free_link_list_and_data( _engine->fsm_by_instance_id[ i ], (void *)fsm_free );
+	for( i=0; i<_engine->max_instances_size; i++ )
+		free_link_list_and_data( _engine->fsm_by_instance_id[ i ], (void *)fsm_free );
 
 	mmt_mem_free( _engine->fsm_by_instance_id );
 

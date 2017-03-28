@@ -110,6 +110,7 @@ $(INSTALL_DIR):
 	
 uninstall:
 	$(QUIET) $(RM) $(INSTALL_DIR)
+	$(QUIET) $(RM) /etc/ld.so.conf.d/mmt-security.conf
 	
 sample_rules: compile_rule
 	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so rules/unauthorised_ports.xml
@@ -137,6 +138,9 @@ install: uninstall $(INSTALL_DIR) clean all lib sample_rules
 	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME)2.so 
 	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME)2.a
 	$(QUIET) chmod -x $(INSTALL_DIR)/lib/$(LIB_NAME).*
+	
+	@echo "/opt/mmt/security/lib" >> /etc/ld.so.conf.d/mmt-security.conf
+	ldconfig
 	
 	@echo ""
 	@echo "Installed mmt-security in $(INSTALL_DIR)"

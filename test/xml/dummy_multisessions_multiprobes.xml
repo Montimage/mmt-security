@@ -2,7 +2,7 @@
 <?xml-stylesheet type="text/xsl" href="properties.xsl"?>
 <!-- MMT_Security Copyright (C) 2014  Montimage-->
 <beginning>
-	<!-- Simple multi-session, multi-probe property -->
+	<!-- Simple dummy multi-session, multi-probe property-->
 	
 <embedded_functions><![CDATA[
 
@@ -23,17 +23,18 @@
 * - 2: NULL
 */
 
-
-static inline int em_check_nfs_redis(const char *p_payload){
+static inline int em_dummy_ef(const char *http_method, const int http_packet_count){
 	//printf("entering the EM\n");
 	//return 0;
 	
-    if(p_payload == NULL){
+    if(http_method == NULL){
     return 2;
   }
   
-  //printf("Payload: %s. Payload len: %4.3f\n", p_payload, payload_len);
-  
+  //printf("HTTP method: %s. HTTP packet count: %d\n", http_method, http_packet_count);
+  if (strstr(http_method, "GET")== NULL){
+  return 0;
+  }
   
   redisContext *c, *command;
   redisReply *reply;
@@ -53,7 +54,7 @@ static inline int em_check_nfs_redis(const char *p_payload){
         }
         exit(0);
     }
-  
+ 
     /* Let's check what we have inside the list */
     reply = redisCommand(c,"LRANGE multisession.report 0 -1");
     if (reply->type == REDIS_REPLY_ARRAY) {
@@ -66,7 +67,7 @@ static inline int em_check_nfs_redis(const char *p_payload){
             token = strtok(reply->element[j]->str, ",");
             int i = 0;
 			while (token != NULL) {
-				//printf("Token:%s\n", token);
+				//printf("Token:%s, i: %d\n", token, i);
 				if (i==1) {
 					//check the validity of the report
 					struct timeval now;
@@ -83,19 +84,33 @@ static inline int em_check_nfs_redis(const char *p_payload){
 				if (i==2){
 					if (token[0] == ' '){
 					//printf("NULL report\n");
+					i++;
 					break;
 					}
-					//printf("Filename: %s\n", token);
-					if (strstr(p_payload, token) != NULL){
-					//printf ("Detected\n");
-					redisFree(c);
-					return 1;
-					}        
+					//printf("nfs_packet_count: %d\n", atoi(token));
+					if ((atoi(token) != http_packet_count)){
+						i++;
+						break;
+						}
+					}
+				if (i==3){
+					if (token[0] == ' '){
+					//printf("NULL report\n");
+					i++;
+					break;
+					}
+					//printf("nfs_ip_src: %s\n", token);
+					i++;
+					}		
+				if (i>3){
+				//printf ("Detected\n");
+				redisFree(c);
+				return 1;
 					}
 				token = strtok(NULL, ",");
 				i++;
 				}
-			    
+			            
         }
     }
   redisFree(c);
@@ -109,14 +124,14 @@ return 1;
 */
 ]]></embedded_functions>
 
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1" type_property="ATTACK" 
-    description="Upload a file comming from NFS server (detection based on two probes)">
+<property value="THEN" delay_units="s" delay_min="0" delay_max="180" property_id="1" type_property="ATTACK" 
+    description="A dummy rule for testing">
     <event value="COMPUTE" event_id="1" 
            description="Context: HTTP packet"
-           boolean_expression="((ip.src == ip.server_addr) &amp;&amp; ((http.packet_count != 0) &amp;&amp; (tcp.payload_len != 0)))"/>
+           boolean_expression="(http.packet_count &gt; 0)"/>
     <event value="COMPUTE" event_id="2" 
-           description="Trigger: HTTP payload contains the file comming from NFS server"
-           boolean_expression="(#em_check_nfs_redis(tcp.p_payload) == 1)"/>
+           description="Trigger: HTTP packet sent from the same client to a different server"
+           boolean_expression="((ip.src == ip.client_addr) &amp;&amp; (#em_dummy_ef(http.method, http.packet_count) == 1))"/>
 </property>
 
 </beginning>

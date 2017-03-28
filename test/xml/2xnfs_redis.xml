@@ -119,4 +119,14 @@ return 1;
            boolean_expression="(#em_check_nfs_redis(tcp.p_payload) == 1)"/>
 </property>
 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="2" type_property="ATTACK" 
+    description="Upload a file comming from NFS server (detection based on two probes)">
+    <event value="COMPUTE" event_id="1" 
+           description="Context: HTTP packet"
+           boolean_expression="((ip.src == ip.server_addr) &amp;&amp; ((http.packet_count != 0) &amp;&amp; (tcp.payload_len != 0)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: HTTP payload contains the file comming from NFS server"
+           boolean_expression="(#em_check_nfs_redis(tcp.p_payload) == 1)"/>
+</property>
+
 </beginning>

@@ -306,11 +306,34 @@ bool fsm_is_verifying_single_packet( const fsm_t *fsm ){
 #ifdef DEBUG_MODE
 	__check_null( fsm, FSM_ERR_ARG );
 #endif
-
+	const fsm_transition_t *tran;
 	_fsm = (_fsm_t *)fsm;
-	if( _fsm->events_trace->elements_count == 3 && _fsm->init_state->transitions[0].target_state->is_temporary )
-		return true;
-	return false;
+
+	//has 2 real-events (one for zero and 2 real events)
+	if( _fsm->events_trace->elements_count != 3 )
+		return false;
+
+	//init_state has only one out-going transition
+	if( _fsm->init_state->transitions_count != 1 )
+		 return false;
+
+	tran = &_fsm->init_state->transitions[0];
+
+	//zero-delay for target state of init one
+	if( ! tran->target_state->is_temporary )
+		return false;
+
+	//the state has 2 transitions: 0-timeout 1-real-transition
+	if( tran->target_state->transitions_count != 2 )
+		return false;
+
+	tran = &tran->target_state->transitions[ 1 ];
+
+	//target of real-transition is one of final-states
+	if( tran->target_state != _fsm->error_state && tran->target_state != _fsm->success_state && tran->target_state != _fsm->incl_state )
+		return false;
+
+	return true;
 }
 
 enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *message_data, const void *event_data ){
@@ -328,8 +351,6 @@ enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *mes
 #ifdef DEBUG_MODE
 	if ( unlikely( !_fsm->current_state ))
 		mmt_halt( "Not found current state of fsm %d", _fsm->id );
-	if( transition_index >= _fsm->current_state->transitions_count )
-		mmt_halt("Transition_index is greater than transitions_count (%d >= %zu)", transition_index,  _fsm->current_state->transitions_count );
 #endif
 
 	//special rule that verifies on one packet

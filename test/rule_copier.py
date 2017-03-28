@@ -39,7 +39,7 @@ while rules_count <= p_id_to :
 		if line.find( "</beginning>" ) != -1:
 			break;
 		
-		new_line = re.sub('property_id=".*"', 'property_id = "' + str( rules_count ) + '"', line );
+		new_line = re.sub('property_id="\d*"', 'property_id = "' + str( rules_count ) + '"', line );
 		if new_line != line:
 			rules_count += 1
 			distinct_rule_count += 1
@@ -47,7 +47,7 @@ while rules_count <= p_id_to :
 		foutput.write( new_line )
 		
 		#we got enough rules
-		if rules_count == p_id_to and line == "</property>":
+		if rules_count == p_id_to + 1 and line.find("</property>") != -1:
 			break
 	finput.close()
 	

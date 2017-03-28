@@ -37,6 +37,37 @@ size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
 	return load_mmt_sec_rules( rules_array );
 }
 
+size_t mmt_sec_filter_rules( const char *rule_mask, size_t rules_count, const rule_info_t **rules_array ){
+	uint32_t *rule_range, rule_id;
+	int i, j, k, rules_count_per_thread;
+
+	//Rules to be disabled
+	if( rule_mask == NULL || strlen( rule_mask) == 0 )
+		return rules_count;
+
+	//rules are not verified
+	rules_count_per_thread = get_special_rules_for_thread( 0, rule_mask, &rule_range );
+	if( rules_count_per_thread > 0 ){
+		//move ignored rules to the end
+		//rule_ptr will ignored the last n rules
+		for( j=rules_count_per_thread-1; j>=0; j-- ){
+			rule_id = rule_range[ j ];
+			if( rules_count == 0 )
+				return rules_count;
+
+			for( k=rules_count-1; k>=0; k-- )
+				if( rule_id == rules_array[k]->id ){
+					//ignore this rule: rules_array[rules_count--]
+					rules_count --;
+
+					rules_array[k] = rules_array[ rules_count ];;
+					break;
+				}
+		}
+	}
+	return rules_count;
+}
+
 typedef struct _mmt_sec_handler_struct{
 	size_t rules_count;
 	const rule_info_t **rules_array;
@@ -51,6 +82,10 @@ typedef struct _mmt_sec_handler_struct{
 
 	//number of generated alerts
 	size_t *alerts_count;
+
+	//TODO: this limits 64 events per mmt_security, i.e., set of rules processed
+	//by this handler have maximally 64 events
+	uint64_t *rules_hash; //a 64-bit hash number of each rule
 
 	bool verbose;
 #ifdef DEBUG_MODE
@@ -79,7 +114,7 @@ size_t mmt_sec_get_unique_protocol_attributes( const mmt_sec_handler_t *handler,
 static inline void _iterate_proto_atts( void *key, void *data, void *user_data, size_t index, size_t total ){
 	void **array = user_data;
 	array[ index ] = data;
-	//free the key being created on line 97
+	//free the key being created on line 99
 	mmt_mem_free( key );
 }
 
@@ -88,29 +123,58 @@ static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
 	size_t i, j;
 
 	mmt_map_t *map = mmt_map_init( (void *) strcmp );
-	char *string;
-	const proto_attribute_t *me;
+	char *proto_att_key;
+	const proto_attribute_t *me, *old;
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++ ){
 		rule = _handler->rules_array[i];
 		for( j=0; j<rule->proto_atts_count; j++ ){
 			me = &rule->proto_atts[j];
-			string = mmt_mem_alloc( strlen( me->att) + strlen( me->proto ) + 1 );
-			sprintf( string, "%s.%s", me->proto, me->att );
-			if( mmt_map_set_data( map, string, (void *)me, NO ) != NULL ){
+			proto_att_key  = mmt_mem_alloc( 10 );
+			sprintf( proto_att_key, "%d.%d",  me->proto_id, me->att_id );
+
+			if( (old = mmt_map_set_data( map, proto_att_key, (void *)me, NO )) != NULL ){
 				//already exist
-				mmt_mem_free( string );
+				mmt_mem_free( proto_att_key );
 				continue;
 			}
 		}
 	}
 
 	_handler->proto_atts_count = mmt_map_count( map );
+	if( _handler->proto_atts_count > 64 )
+		mmt_halt( "A single mmt_security cannot handler more than 64 different proto.att. You might need to use mmt_smp_sec to divide work load." );
+
 	_handler->proto_atts_array = mmt_mem_alloc( _handler->proto_atts_count * sizeof( void* ));
 	mmt_map_iterate( map, _iterate_proto_atts, _handler->proto_atts_array );
 
 	mmt_map_free( map, NO );
+}
+
+
+static inline uint64_t _calculate_hash_number_of_a_rule( size_t rule_index, const _mmt_sec_handler_t * handler ){
+	const rule_info_t *rule = handler->rules_array[ rule_index ];
+	size_t j, k;
+	const proto_attribute_t *me;
+	uint64_t  hash = 0;
+
+	//for each proto_att of this rules
+	for( j=0; j<rule->proto_atts_count; j++ ){
+		me = &rule->proto_atts[ j ];
+		for( k=0; k < handler->proto_atts_count; k++ )
+			if( handler->proto_atts_array[k]->proto_id == me->proto_id  &&
+					handler->proto_atts_array[k]->att_id == me->att_id  ){
+
+				//this rule need proto_att in k-th of handler->proto_atts_array
+				BIT_SET( hash, k );
+			}
+	}
+
+	if( unlikely( hash == 0 ) )
+		mmt_warn( "Rule %"PRIu32" does not concerns to any protocol (%s)", rule->id, rule->description );
+
+	return hash;
 }
 
 /**
@@ -132,13 +196,18 @@ mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rul
 	//one fsm for one rule
 	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
 	for( i=0; i<rules_count; i++ ){
-		handler->engines[i] = rule_engine_init( rules_array[i], max_instance_count );
+		handler->engines[i]      = rule_engine_init( rules_array[i], max_instance_count );
 		handler->alerts_count[i] = 0;
 	}
 
 	//printf(" Thread pid=%2d processes %4zu rules: ", gettid(), rules_count );
 
 	_get_unique_proto_attts( handler );
+
+	handler->rules_hash = mmt_mem_alloc( sizeof( uint64_t ) * rules_count );
+	for( i=0; i<rules_count; i++ ){
+		handler->rules_hash[ i ] = _calculate_hash_number_of_a_rule( i, handler );
+	}
 
 #ifdef DEBUG_MODE
 	handler->messages_count = 0;
@@ -161,8 +230,7 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 		if( _handler->alerts_count[ i ] == 0 )
 			continue;
 
-		//TODO: this is for test only (uncomment after testing)
-		//if( _handler->verbose )
+		if( _handler->verbose )
 			printf(" - rule %"PRIu32" generated %"PRIu64" verdicts\n", _handler->rules_array[i]->id, _handler->alerts_count[ i ] );
 		alerts_count += _handler->alerts_count[ i ];
 	}
@@ -173,11 +241,28 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 
 	mmt_mem_free( _handler->proto_atts_array );
 	mmt_mem_free( _handler->engines );
+	mmt_mem_free( _handler->rules_hash );
 	mmt_mem_free( _handler );
 
 	return alerts_count;
 }
 
+static inline uint64_t _calculate_hash_number_of_input_message( const message_t *msg, const _mmt_sec_handler_t *_handler ){
+	uint64_t hash = 0;
+	size_t k, i;
+	const message_element_t *el;
+
+	for( i=0; i<msg->elements_count; i++ ){
+		el = & msg->elements[ i ];
+		for( k=0; k < _handler->proto_atts_count; k++ )
+			if( el->proto_id == _handler->proto_atts_array[ k ]->proto_id
+					&& el->att_id == _handler->proto_atts_array[ k ]->att_id
+					&& el->data != NULL )
+				BIT_SET( hash, k );
+	}
+
+	return hash;
+}
 /**
  * Public API (used by mmt_sec_smp)
  */
@@ -186,12 +271,13 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	mmt_assert( handler != NULL, "msg cannot be null");
 	mmt_assert( msg != NULL, "msg cannot be null");
 #endif
-	_mmt_sec_handler_t *_handler;
+
 	size_t i;
 	int verdict;
 	const mmt_array_t *execution_trace;
 
-	_handler = (_mmt_sec_handler_t *)handler;
+	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
+	uint64_t hash = _calculate_hash_number_of_input_message( msg, _handler );
 
 #ifdef DEBUG_MODE
 	_handler->messages_count ++;
@@ -199,10 +285,16 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
-		//mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
+		//msg does not contain enough proto.att for i-th rule
+		if( (hash & _handler->rules_hash[i]) == 0 )
+			continue;
+
+//		continue;
+
+		mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
 		verdict = rule_engine_process( _handler->engines[i], msg );
 
-		//find a validated/invalid trace
+		//found a validated/invalid trace
 		if( verdict != VERDICT_UNKNOWN ){
 			_handler->alerts_count[i] ++;
 
@@ -221,6 +313,7 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 			}
 		}
 	}
+
 	free_message_t( msg );
 }
 
@@ -238,7 +331,12 @@ static inline void _remove_special_character( char * tmp, size_t len ){
 		//case '\u': //  unicode
 			*tmp = '.';
 			break;
+		default:
+			//non printable
+			if( *tmp < 32 )
+				*tmp = '.';
 		}
+
 
 		tmp ++;
 		len --;
@@ -249,7 +347,7 @@ static inline void _remove_special_character( char * tmp, size_t len ){
 #define MAX_STR_SIZE 10000
 
 static const char* _convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
-	static __t_scope char buffer[ MAX_STR_SIZE + 1 ];
+	static __thread_scope char buffer[ MAX_STR_SIZE + 1 ];
 	char *str_ptr, *c_ptr;
 	size_t size, i, j, total_len, index;
 	const message_t *msg;
@@ -351,6 +449,17 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				u8_ptr = NULL;
 
 				switch( pro_ptr->proto_id ){
+				//ARP
+				case 30:
+					switch ( pro_ptr->att_id ){
+					case 7:   //AR_SIP
+					case 9:   //AR_TIP
+						u8_ptr = (uint8_t *) me->data;
+						size   = sprintf(str_ptr, "\"%d.%d.%d.%d\"",
+								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
+					}
+
+					break;
 				//IP SRC = 12, DEST = 13
 				case 178:
 					switch ( pro_ptr->att_id ){
@@ -417,6 +526,11 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 	return buffer;
 }
 
+
+const char* mmt_convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
+	return _convert_execution_trace_to_json_string( trace, rule );
+}
+
 /**
  * PUBLIC API
  * Print verdicts to verdict printer
@@ -431,7 +545,7 @@ void mmt_sec_print_verdict(
 		const rule_info_t *rule,		//id of rule
 		enum verdict_type verdict,
 		uint64_t timestamp,  //moment the rule is validated
-		uint32_t counter,
+		uint64_t counter,
 		const mmt_array_t *const trace,
 		void *user_data )
 {
@@ -524,120 +638,4 @@ void mmt_sec_print_rules_info(){
 
 	mmt_mem_free( rules_arr );
 	unload_mmt_sec_rules();
-}
-
-/**
- * Public API
- * Convert data in format of MMT-Probe to data in format of MMT-Sec
- */
-int mmt_sec_convert_data( const void *data, int type, void **new_data, int *new_type ){
-	double number = 0;
-
-	uint16_t size;
-	char *new_string;
-
-	//does not exist data for this proto_id and att_id
-	__check_null( data, 1 );
-
-	switch( type ){
-	case MMT_UNDEFINED_TYPE: /**< no type constant value */
-		break;
-	case MMT_DATA_CHAR: /**< 1 character constant value */
-		number = *(char *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_U8_DATA: /**< unsigned 1-byte constant value */
-		number = *(uint8_t *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_DATA_PORT: /**< tcp/udp port constant value */
-	case MMT_U16_DATA: /**< unsigned 2-bytes constant value */
-		number = *(uint16_t *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_U32_DATA: /**< unsigned 4-bytes constant value */
-		number = *(uint32_t *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_U64_DATA: /**< unsigned 8-bytes constant value */
-		number = *(uint64_t *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_DATA_FLOAT: /**< float constant value */
-		number = *(float *) data;
-		*new_type = NUMERIC;
-		*new_data = mmt_mem_force_dup( &number, sizeof( number ));
-		return 0;
-
-	case MMT_DATA_MAC_ADDR: /**< ethernet mac address constant value */
-		*new_type = STRING;
-		*new_data = mmt_mem_force_dup( data, 6 );
-		return 0;
-
-	case MMT_DATA_IP_ADDR: /**< ip address constant value */
-		*new_type = STRING;
-		*new_data = mmt_mem_force_dup( data, 4 );
-		return 0;
-
-	case MMT_DATA_IP6_ADDR: /**< ip6 address constant value */
-		*new_type = STRING;
-		*new_data = mmt_mem_force_dup( data, 6 );
-		return 0;
-
-	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
-	case MMT_DATA_PATH: /**< protocol path constant value */
-	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
-	case MMT_DATA_BUFFER: /**< binary buffer content */
-	case MMT_DATA_POINT: /**< point constant value */
-	case MMT_DATA_PORT_RANGE: /**< tcp/udp port range constant value */
-	case MMT_DATA_DATE: /**< date constant value */
-	case MMT_DATA_TIMEARG: /**< time argument constant value */
-	case MMT_DATA_STRING_INDEX: /**< string index constant value (an association between a string and an integer) */
-	case MMT_DATA_IP_NET: /**< ip network address constant value */
-	case MMT_DATA_LAYERID: /**< Layer ID value */
-	case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
-	case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
-	case MMT_STATS: /**< pointer to MMT Protocol statistics */
-		break;
-
-	case MMT_BINARY_DATA: /**< binary constant value */
-	case MMT_BINARY_VAR_DATA: /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
-	case MMT_STRING_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum BINARY_64DATA_LEN long */
-	case MMT_STRING_LONG_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum STRING_DATA_LEN long */
-		*new_type = STRING;
-		*new_data = mmt_mem_dup( ((mmt_binary_var_data_t *)data)->data, ((mmt_binary_var_data_t *)data)->len );
-		return 0;
-
-	case MMT_HEADER_LINE: /**< string pointer value with a variable size. The string is not necessary null terminating */
-		*new_type = STRING;
-		*new_data = mmt_mem_dup( ((mmt_header_line_t *)data)->ptr, ((mmt_header_line_t *)data)->len );
-		return 0;
-
-	case MMT_STRING_DATA_POINTER: /**< pointer constant value (size is void *). The data pointed to is of type string with null terminating character included */
-		*new_type = STRING;
-		*new_data  = mmt_mem_dup( data, strlen( (char*) data) );
-		return 0;
-
-	default:
-		break;
-	}
-
-	*new_type = VOID;
-	*new_data = NULL;
-
-#ifdef DEBUG_MODE
-	mmt_error("Data type %d has not yet implemented", type);
-#endif
-
-	return 1;
 }

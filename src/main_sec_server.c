@@ -77,6 +77,7 @@ static inline double time_diff(struct timeval t1, struct timeval t2) {
 }
 
 void usage(const char * prg_name) {
+	fprintf(stderr, "MMT-Security version %s\n",  mmt_sec_get_version_info() );
 	fprintf(stderr, "%s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-p <number/string> : If p is a number, it indicates port number of internet domain socket otherwise it indicates name of unix domain socket. Default: 5000\n");
@@ -240,11 +241,11 @@ static inline size_t receiving_reports( int sock ) {
 			case MMT_STRING_DATA_POINTER:
 			case MMT_GENERIC_HEADER_LINE :
 			case MMT_HEADER_LINE :
-				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
+				set_data_of_one_element_message_t( msg, el_ptr,  &buffer[index], el_data_length );
 				el_ptr->data_type = STRING;
 				break;
 			case MMT_DATA_POINTER :
-				el_ptr->data      = mmt_mem_dup( &buffer[index], el_data_length );
+				set_data_of_one_element_message_t( msg, el_ptr,  &buffer[index], el_data_length );
 				el_ptr->data_type = VOID;
 				break;
 			case -1:
@@ -252,7 +253,7 @@ static inline size_t receiving_reports( int sock ) {
 				el_ptr->data_type = VOID;
 				break;
 			default:
-				mmt_sec_convert_data( &buffer[index], el_data_type, &el_ptr->data, &el_ptr->data_type );
+				set_dpi_data_to_one_element_message_t( &buffer[index], el_data_type, msg, el_ptr );
 			}
 
 			index += el_data_length;
@@ -401,10 +402,11 @@ int main( int argc, char** argv ) {
 	_sec_handler.threads_count = threads_count;
 
 	if( verbose ){
-		if( is_unix_socket == NO )
-			mmt_info(" MMT-Security is listening on port %d\n", port_number );
-		else
-			mmt_info(" MMT-Security is listening on \"%s\"\n", un_domain_name );
+		//TODO: uncomment this after testing
+//		if( is_unix_socket == NO )
+//			mmt_info(" MMT-Security is listening on port %d\n", port_number );
+//		else
+//			mmt_info(" MMT-Security is listening on \"%s\"\n", un_domain_name );
 	}
 
 	/* create internet socket */
@@ -497,8 +499,9 @@ int main( int argc, char** argv ) {
 					mmt_info( "%3zuth connection is coming from %s:%d ... processed by proc. %d",
 							clients_count, str_buffer, in_cli_addr.sin_port, getpid() );
 				}else{
-					mmt_info( "%3zuth connection is coming from local ... processed by proc. %d",
-							clients_count, getpid() );
+					//TODO: uncomment this after testing
+//					mmt_info( "%3zuth connection is coming from local ... processed by proc. %d",
+//							clients_count, getpid() );
 				}
 			}
 

@@ -1,0 +1,47 @@
+<beginning>
+
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/*
+ * Nikto 
+ */
+static inline bool check_UA( const char *user_agent){
+   //find the first occurrence of string "Nikto" in string
+   return (strstr(user_agent, "Nikto") != NULL);     
+}
+
+
+]]></embedded_functions>
+
+
+<!-- Property 10: C4_Analyse_03f : HTTP detecte avec un port different de 
+	80 et 8080. -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0"
+	property_id="10" type_property="EVASION"
+	description="C4_Analyse_03f : HTTP using a port different from 80 and 8080.">
+	<event value="COMPUTE" event_id="1"
+		description="HTTP packet using a port different from 80 and 8080"
+		boolean_expression="((http.method == http.method)&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))" />
+	<event value="COMPUTE" event_id="2" description="HTTP packet"
+		boolean_expression="(ip.src != ip.dst)" />
+</property>
+
+
+<!-- Property 15: C4_Analyse_02 : Web scan with Nikto. User-Agent based detection 
+	boolean_expression="((http.user_agent == '')||(#check_UA(http.user_agent) 
+	== 1))"/> -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0"
+	property_id="15" type_property="ATTACK" description="Nikto detection">
+	<event event_id="1" value="COMPUTE"
+		description="Context: an  user agent in the HTTP header"
+		boolean_expression="((http.user_agent == http.user_agent)&amp;&amp;(#check_UA(http.user_agent) == 1))" />
+	<event event_id="2" value="COMPUTE" description="Trigger: Nikto detected. "
+		boolean_expression="(ip.src != ip.dst)" />
+</property>
+</beginning>

@@ -12,14 +12,16 @@
 #define SRC_LIB_VERSION_H_
 
 #ifndef VERSION
-	#define VERSION "1.0"
+	#define VERSION "1.0.1"
 #endif
+
+#define __NOW__ __DATE__ " " __TIME__
 
 #ifdef GIT_VERSION
 	//GIT_VERSION is given by Makefile
-	#define MMT_SEC_VERSION VERSION " (" GIT_VERSION ")"
+	#define MMT_SEC_VERSION VERSION " (" GIT_VERSION " - " __NOW__ ")"
 #else
-	#define MMT_SEC_VERSION VERSION
+	#define MMT_SEC_VERSION VERSION " (" __NOW__ ")"
 #endif
 
 #endif /* SRC_LIB_VERSION_H_ */

@@ -226,7 +226,7 @@ static rule_event_t *_parse_an_event(const xmlNode *xml_node ){
 		else if( str_equal( xml_attr_name, "value" ) ){
 			//do nothing
 		}else
-			mmt_log(WARN, "Warning 13e: Unexpected attribute %s in tag event", xml_attr_name );
+			mmt_warn( "Warning 13e: Unexpected attribute %s in tag event", xml_attr_name );
 
 		xmlFree( xml_attr_value );
 		xml_attr = xml_attr->next;
@@ -284,7 +284,7 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 			operator.description = mmt_mem_dup( xml_attr_value, strlen( (const char*) xml_attr_value ));
 		/*
 			else
-				mmt_log(WARN, "Warning 13e: Unexpected attribute %s in tag operator", xml_attr_name );
+				mmt_warn( "Warning 13e: Unexpected attribute %s in tag operator", xml_attr_name );
 		 */
 		xmlFree( xml_attr_value );
 		xml_attr = xml_attr->next;
@@ -324,7 +324,7 @@ static rule_node_t *_parse_a_rule_node( const xmlNode *xml_node ){
 		rule_node->event = _parse_an_event( xml_node );
 	}
 	else{
-		mmt_log(WARN, "Warning 13g: Unexpected tag %s", xml_node->name );
+		mmt_warn( "Warning 13g: Unexpected tag %s", xml_node->name );
 		mmt_free_and_assign_to_null( rule_node );
 		rule_node = NULL;
 	}

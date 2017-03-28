@@ -21,14 +21,9 @@
 #include <signal.h>
 #include <errno.h>
 
-#include "mmt_core.h"
+#include "lib/dpi_message_t.h"
 
-#include "dpi/mmt_dpi.h"
-
-#include "lib/mmt_lib.h"
-#include "lib/plugin_header.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/verdict_printer.h"
 
 #define MAX_RULE_MASK_SIZE 100000
 #define MAX_FILENAME_SIZE 500
@@ -58,12 +53,12 @@ static _sec_handler_t _sec_handler;
 
 void usage(const char * prg_name) {
 	fprintf(stderr, "MMT-Security version %s using DPI version %s\n", mmt_sec_get_version_info(), mmt_version() );
-	fprintf(stderr, "%s [<option>]\n", prg_name);
+	fprintf(stderr, "\nUsage: %s [<option>]\n", prg_name);
 	fprintf(stderr, "Option:\n");
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");
 	fprintf(stderr, "\t-i <interface> : Gives the interface name for live traffic analysis.\n");
 	fprintf(stderr, "\t-c <string>    : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
-	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads e.g., \"(1:10-13)(2:50)(4:1007-1010)\"\n");
+	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads using format (lcore:range) e.g., \"(1:1-8,10-13)(2:50)(4:1007-1010)\". Set lcore=0 to exclude rules from verification.\n");
 	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v             : Verbose.\n");
@@ -143,48 +138,15 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 }
 
 /**
- * Convert data encoded in a pcap packet to readable data that is either a double
- * or a string ending by '\0'.
- * This function will create a new memory segment to store its result.
- */
-static inline void* _get_data( const ipacket_t *pkt, uint32_t proto_id, uint32_t att_id, int data_type, int *new_type ){
-	double number;
-	char buffer[100], *new_string = NULL;
-	const uint16_t buffer_size = 100;
-	uint16_t size;
-	void *new_data = NULL;
-	uint32_t *data_len;
-	uint8_t *data = (uint8_t *) get_attribute_extracted_data( pkt, proto_id, att_id );
-	//does not exist data for this proto_id and att_id
-	if( data == NULL ) return NULL;
-
-	//tcp.p_payload
-	if( proto_id == 354 && att_id == 4098 ){
-		data_len = (uint32_t *)get_attribute_extracted_data( pkt, 354, 23 );
-		if( data_len == NULL )
-			return NULL;
-
-		*new_type = VOID;
-		return mmt_mem_dup( data, *data_len );
-	}
-
-	if( mmt_sec_convert_data( data, data_type, &new_data, new_type ) == 0 )
-		return new_data;
-	return NULL;
-
-}
-
-
-/**
  * Convert a pcap packet to a message being understandable by mmt-security.
  * The function returns NULL if the packet contains no interested information.
  * Otherwise it creates a new memory segment to store the result message. One need
  * to use #free_message_t to free the message.
  */
-static inline message_t* _get_packet_info( const ipacket_t *pkt ){
-	size_t size, i, index;
+static inline message_t* _get_packet_info( const ipacket_t *pkt, const message_element_t *proto_atts, size_t proto_atts_count ){
+	int i;
 	bool has_data = NO;
-	void *data = NULL;
+	void *data;
 	int type;
 	message_t *msg = create_message_t( proto_atts_count );
 	msg->timestamp = mmt_sec_encode_timeval( &pkt->p_hdr->ts );
@@ -192,23 +154,23 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 
 	//get a list of proto/attributes being used by mmt-security
 	for( i=0; i<proto_atts_count; i++ ){
-		data = _get_data( pkt, proto_atts[i].proto_id, proto_atts[i].att_id, proto_atts[i].data_type, &type );
-		if( data != NULL )
-			has_data = YES;
-
-		msg->elements[i].data      = data;
-		msg->elements[i].data_type = type;
 		msg->elements[i].att_id    = proto_atts[i].att_id;
 		msg->elements[i].proto_id  = proto_atts[i].proto_id;
+
+		dpi_message_set_data( pkt, proto_atts[i].data_type, msg, &msg->elements[i] );
+
+		if( msg->elements[i].data != NULL )
+			has_data = YES;
 	}
 
-	//need to free #msg when the packet contains no-interested information
 	if( likely( has_data ))
 		return msg;
 
+	//need to free #msg when the packet contains no-interested information
 	free_message_t( msg );
 	return NULL;
 }
+
 
 /**
  * This function is called by mmt-dpi for each incoming packet containing registered proto/att.
@@ -216,7 +178,8 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  * message to mmt-security.
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
-	message_t *msg = _get_packet_info( ipacket );
+
+	message_t *msg = _get_packet_info( ipacket, proto_atts, proto_atts_count );
 
 	//if there is no interested information
 	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
@@ -226,7 +189,7 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	total_received_reports ++;
 
-	return 1;
+	return 0;
 }
 
 void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, const u_char *data ){
@@ -388,26 +351,23 @@ int main(int argc, char** argv) {
 		mmt_info("Analyzing pcap file %s", filename );
 		pcap = pcap_open_offline(filename, errbuf); // open offline trace
 		if (!pcap) { /* pcap error ? */
-			mmt_log(ERROR, "pcap_open failed for the following reason: %s\n", errbuf);
-			return EXIT_FAILURE;
+			mmt_halt("pcap_open failed for the following reason: %s\n", errbuf);
 		}
 		while ((data = pcap_next(pcap, &p_pkthdr)) ) {
 			header.ts     = p_pkthdr.ts;
 			header.caplen = p_pkthdr.caplen;
 			header.len    = p_pkthdr.len;
-			if (!packet_process(mmt_dpi_handler, &header, data)) {
-				mmt_log(ERROR, "Packet data extraction failure.\n");
-			}
+			if (!packet_process(mmt_dpi_handler, &header, data))
+				mmt_sec_log(ERROR, "Packet data extraction failure.\n");
 		}
 
 	} else {
 		mmt_info("Listening on interface %s", filename );
 
 		pcap = pcap_create( filename, errbuf);
-		if (pcap == NULL) {
-			fprintf(stderr, "Couldn't open device %s\n", errbuf);
-			exit( EXIT_FAILURE );
-		}
+		if (pcap == NULL)
+			mmt_halt("Couldn't open device %s\n", errbuf);
+
 		pcap_set_snaplen(pcap, SNAP_LEN);
 		pcap_set_promisc(pcap, 1);
 		pcap_set_timeout(pcap, 0);

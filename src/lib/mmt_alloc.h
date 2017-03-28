@@ -27,7 +27,7 @@ typedef struct mmt_memory_struct{
 	void*     data;
 }mmt_memory_t;
 
-#define SIZE_OF_MMT_MEMORY_T 16
+#define SIZE_OF_MMT_MEMORY_T sizeof( mmt_memory_t )
 
 #define mmt_mem_revert( x ) (mmt_memory_t *) ( (uint8_t*)x - SIZE_OF_MMT_MEMORY_T )
 
@@ -191,6 +191,17 @@ static inline int mmt_mem_cmp( const void *x, const void *y){
 	else
 		return memcmp( mx->data, my->data, mx->size );
 }
+
+static inline void mmt_mem_reset( mmt_memory_t *mem, size_t size ){
+	//mem->data points to the memory segment after sizeof( mmt_memory_t )
+	mem->data      = mem + 1;
+	//safe string
+	((char *)mem->data)[ size ] = '\0';
+	//store size to head of the memory segment
+	mem->size      = size;
+	mem->ref_count = 1;
+}
+
 
 #define mmt_free_and_assign_to_null( x ) while( x != NULL ){ mmt_mem_free( x ); x = NULL; break; }
 

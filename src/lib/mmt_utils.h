@@ -238,7 +238,15 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 }
 
 
-
+/**
+ * Note: this function create a new memory segment to contain rule_range
+ * ==> user must free it using mmt_mem_free after using
+ *
+ * @param thread_id
+ * @param rule_mask
+ * @param rule_range
+ * @return
+ */
 static inline const size_t get_special_rules_for_thread( uint32_t thread_id, const char *rule_mask, uint32_t **rule_range ){
 	uint32_t id = 0;
 	size_t size = 0, range_count = 0;

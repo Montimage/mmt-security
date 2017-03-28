@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml-stylesheet type="text/xsl" href="properties.xsl"?>
+<!-- MMT_Security Copyright (C) 2014  Montimage-->
+<beginning>
+	<!-- Simple dummy multi-session, multi-probe property-->
+	
+<embedded_functions><![CDATA[
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+#include "hiredis/hiredis.h"
+#include <sys/time.h>
+
+
+static inline int em_ip_print(const char *ip_src, const char *ip_client){
+printf("Ip source: %s, IP client: %s\n", ip_src, ip_client);
+return 1;
+}
+
+]]></embedded_functions>
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="30" property_id="1" type_property="ATTACK" 
+    description="A dummy rule for testing">
+    <event value="COMPUTE" event_id="1" 
+           description="Context: NFS synchronisation"
+           boolean_expression="((ip.src == ip.client_addr) &amp;&amp; (nfs.packet_count &gt; 35))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: HTTP packet sent from the same client to a different server"
+           boolean_expression="((ip.src == ip.src.1) &amp;&amp; ((ip.src == ip.client_addr) &amp;&amp; ((http.packet_count &gt; 0)&amp;&amp;(#em_ip_print(ip.src, ip.client_addr) == 1))))"/>
+</property>
+
+</beginning>

@@ -222,6 +222,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 					}
 			}
 		}
+		mmt_mem_free( rule_range );
 	}
 
 	//number of threads <= number of rules
@@ -298,6 +299,8 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 			rule_ptr      += rules_count_per_thread;
 			rules_count   -= rules_count_per_thread; //number of remaining rules
 			threads_count --;//number of remaining threads
+
+			mmt_mem_free( rule_range );
 		}
 	}//end if( rule_mask != NULL )
 

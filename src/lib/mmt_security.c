@@ -242,6 +242,7 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 	mmt_mem_free( _handler->proto_atts_array );
 	mmt_mem_free( _handler->engines );
 	mmt_mem_free( _handler->rules_hash );
+	mmt_mem_free( _handler->alerts_count );
 	mmt_mem_free( _handler );
 
 	return alerts_count;
@@ -291,7 +292,7 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 
 //		continue;
 
-		mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
+//		mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
 		verdict = rule_engine_process( _handler->engines[i], msg );
 
 		//found a validated/invalid trace

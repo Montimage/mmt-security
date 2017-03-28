@@ -23,11 +23,11 @@
 
 typedef struct lock_free_spsc_ring_struct
 {
-    volatile uint32_t _head __attribute__ ((aligned(16)));
-    volatile uint32_t _tail __attribute__ ((aligned(16)));
+    volatile uint32_t _head __attribute__ ((aligned(64)));
+    volatile uint32_t _tail;
 
-    uint32_t _cached_head __attribute__ ((aligned(16)));
-    uint32_t _cached_tail __attribute__ ((aligned(16)));
+    uint32_t _cached_head;
+    uint32_t _cached_tail;
 
     uint32_t _size;
 

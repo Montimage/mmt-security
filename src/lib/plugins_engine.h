@@ -30,6 +30,8 @@ size_t load_mmt_sec_rules( rule_info_t const *** plugins_arr );
  * Loads one plugin.
  * - Return
  * 	+ number of loaded rules
+ * - Note: This function creates a new memory segment to store array of plugins.
+ * 	==> user need to free it after using
  */
 size_t load_mmt_sec_rule( rule_info_t const ***plugins_arr, const char *plugin_path_name );
 /**

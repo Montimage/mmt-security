@@ -361,8 +361,8 @@ enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *mess
 		if( verdict != VERDICT_UNKNOWN )
 			_store_valid_execution_trace( engine, engine->fsm_bootstrap );
 
-		//the message has been retained 2 times for 2 events of the #fsm_bootstrap
-		free_message_ts( message, 2 );
+		//reset #fsm_bootstrap so it is clean for the next tests
+		fsm_reset( engine->fsm_bootstrap );
 
 		break;
 

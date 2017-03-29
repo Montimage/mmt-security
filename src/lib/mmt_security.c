@@ -65,6 +65,7 @@ size_t mmt_sec_filter_rules( const char *rule_mask, size_t rules_count, const ru
 				}
 		}
 	}
+	mmt_mem_free( rule_range );
 	return rules_count;
 }
 

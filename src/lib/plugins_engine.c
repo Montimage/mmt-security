@@ -14,6 +14,9 @@
 //TODO: this limit 100K rules
 #define MAX_PLUGIN_COUNT 100000
 
+static void *dl_libs[MAX_PLUGIN_COUNT];
+static uint32_t dl_libs_index = 0;
+
 static int load_filter( const struct dirent *entry ){
 	char *ext = strrchr( entry->d_name, '.' );
 	return( ext && !strcmp( ext, ".so" ));
@@ -43,6 +46,8 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	rule_info_t const *  plugins_array[ MAX_PLUGIN_COUNT ];
 	rule_info_t const ** tmp_array;
 	int n;
+
+	unload_mmt_sec_rules();
 
 	n = scandir( MMT_SEC_PLUGINS_REPOSITORY, &entries, load_filter, alphasort );
 	if( n < 0 ) {
@@ -91,11 +96,6 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	return index;
 }
 
-//TODO: this limit 100K files .so
-#define MAX_LIBS_COUNT 100000
-static void *dl_libs[MAX_LIBS_COUNT];
-static uint32_t dl_libs_index = 0;
-
 size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_path_name ){
 
 	void *lib = dlopen( plugin_path_name, RTLD_NOW );
@@ -115,16 +115,20 @@ size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_
 
 	*plugins_arr = ret_array;
 
-	if( dl_libs_index < MAX_LIBS_COUNT )
+	if( dl_libs_index < MAX_PLUGIN_COUNT )
 		dl_libs[ dl_libs_index ++ ] = lib;
 
 	return size;
 }
 
 void unload_mmt_sec_rules() {
-	size_t i;
+	size_t i, ret = 0;
 	for( i=0; i<dl_libs_index; i++ )
-		dlclose( dl_libs[ i ] );
+		ret |= dlclose( dl_libs[ i ] );
+
+	if( ret != 0 )
+		mmt_warn("Cannot close properly mmt-security .so rules");
+
 	dl_libs_index = 0;
 }
 

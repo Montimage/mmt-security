@@ -46,7 +46,6 @@ message_t *create_message_t( size_t elements_count ){
 	return msg;
 }
 
-
 void force_free_message_t( message_t *msg ){
 //	size_t i;
 //	for( i=0; i<msg->elements_count; i++ )
@@ -57,6 +56,58 @@ void force_free_message_t( message_t *msg ){
 	mmt_mem_force_free( msg );
 }
 
+
+size_t free_message_ts( message_t *msg, uint16_t size ){
+	size_t ret;
+	__check_null( msg, 0 );  // nothing to do
+
+	mmt_memory_t *mem = mmt_mem_revert( msg );
+
+	//free message only when there is no more reference to it
+	if( mem->ref_count <= size ){
+		mmt_mem_force_free( msg );
+		return 0;
+	}
+
+	ret = __sync_sub_and_fetch( &mem->ref_count, size );
+
+	return ret;
+}
+
+/**
+ * public API
+ * @param msg
+ * @param elem
+ * @param data
+ * @param length
+ * @return
+ */
+int set_data_of_one_element_message_t( message_t *msg, message_element_t *elem, const void *data, size_t length ){
+	mmt_memory_t *mem;
+	if( unlikely (msg->_data_index + length + SIZE_OF_MMT_MEMORY_T  >= msg->_data_length )){
+		mmt_warn( "Report for %d.%d is too big (%zu bytes), must increase config.input.max_report_size",
+				elem->proto_id, elem->att_id,
+				length + SIZE_OF_MMT_MEMORY_T);
+		return MSG_OVERFLOW;
+	}else if( length == 0 ){
+		elem->data = NULL;
+		return 0;
+	}
+
+	//convert to mmt_memory_t
+	mem = (mmt_memory_t *) &msg->_data[ msg->_data_index ];
+	mmt_mem_reset( mem, length );
+
+	elem->data = mem->data;
+	memcpy( elem->data, data, length );
+
+	msg->_data_index += length + SIZE_OF_MMT_MEMORY_T;
+
+	//update hash to mark the present of elem->data
+	msg->hash |= elem->proto_id | elem->att_id;
+
+	return 0;
+}
 
 /**
  * Convert data encoded by mmt-dpi to one element of message_t.

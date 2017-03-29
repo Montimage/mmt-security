@@ -55,49 +55,21 @@ void force_free_message_t( message_t *msg );
  * One can increase number of references of a variable by using either
  * #mmt_mem_retain or #mmt_mem_retains
  */
-static inline size_t free_message_ts( message_t *msg, uint16_t size ){
-	size_t ret;
-	__check_null( msg, 0 );  // nothing to do
-
-	mmt_memory_t *mem = mmt_mem_revert( msg );
-
-	ret = __sync_sub_and_fetch( &mem->ref_count, size );
-
-	//free message only when there is no more reference to it
-	if( ret == 0 )
-		force_free_message_t( msg );
-
-	return ret;
-}
+size_t free_message_ts( message_t *msg, uint16_t size );
 
 static inline size_t free_message_t( message_t *msg ){
 	return free_message_ts( msg, 1);
 }
 
-static inline int set_data_of_one_element_message_t( message_t *msg, message_element_t *elem, const void *data, size_t length ){
-	mmt_memory_t *mem;
-	if( unlikely (msg->_data_index + length + SIZE_OF_MMT_MEMORY_T  >= msg->_data_length )){
-		mmt_warn( "Report for %d.%d is too big (%zu bytes), must increase config.input.max_report_size",
-				elem->proto_id, elem->att_id,
-				length + SIZE_OF_MMT_MEMORY_T);
-		return MSG_OVERFLOW;
-	}else if( length == 0 ){
-		elem->data = NULL;
-		return 0;
-	}
-
-	//convert to mmt_memory_t
-	mem = (mmt_memory_t *) &msg->_data[ msg->_data_index ];
-	mmt_mem_reset( mem, length );
-
-	elem->data = mem->data;
-	memcpy( elem->data, data, length );
-
-	msg->_data_index += length + SIZE_OF_MMT_MEMORY_T;
-
-	return 0;
-}
-
+/**
+ * Copy data to elem->data
+ * @param msg
+ * @param elem
+ * @param data
+ * @param length
+ * @return
+ */
+int set_data_of_one_element_message_t( message_t *msg, message_element_t *elem, const void *data, size_t length );
 
 
 /**

@@ -341,7 +341,7 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 
 
 enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *message ){
-	enum verdict_type verdict;
+	enum verdict_type verdict = VERDICT_UNKNOWN;
 	const void *data = engine->rule_info->convert_message( message );
 	enum fsm_handle_event_value val = fsm_handle_single_packet( engine->fsm_bootstrap, message, data );
 	const mmt_array_t *array;
@@ -358,12 +358,12 @@ enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *mess
 	case FSM_ERROR_STATE_REACHED:
 		verdict = _get_verdict( engine->rule_info->type_id, val );
 
-		if( verdict != VERDICT_UNKNOWN ){
+		if( verdict != VERDICT_UNKNOWN )
 			_store_valid_execution_trace( engine, engine->fsm_bootstrap );
-			return verdict;
-		}else{
-			free_message_ts( message, 2 );
-		}
+
+		//the message has been retained 2 times for 2 events of the #fsm_bootstrap
+		free_message_ts( message, 2 );
+
 		break;
 
 	case FSM_ERR_ARG:
@@ -375,7 +375,7 @@ enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *mess
 	}
 
 
-	return VERDICT_UNKNOWN;
+	return verdict;
 }
 
 

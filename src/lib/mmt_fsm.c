@@ -377,6 +377,7 @@ enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *mes
       state = tran->target_state;
 
 	_fsm->events_trace->data[   1 ] = NULL; //reset this to NULL
+
 	_fsm->events_trace->data[   2 ] = NULL;
 	_fsm->messages_trace->data[ 2 ] = message_data;
 

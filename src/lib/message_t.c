@@ -106,7 +106,7 @@ int set_data_of_one_element_message_t( message_t *msg, message_element_t *elem, 
 	//update hash to mark the present of elem->data
 	msg->hash |= elem->proto_id | elem->att_id;
 
-	return 0;
+	return MSG_CONTINUE;
 }
 
 /**

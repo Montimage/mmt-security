@@ -37,12 +37,12 @@
 
 /* a=target variable, i=bit number to act upon 0-n  (n == sizeof(a))*/
 //set bit i-th to 1
-#define BIT_SET(a,i)   ((a) |= (1<<(i)))
+#define BIT_SET(number,i)   ((number) |= (1<<(i)))
 //set bit i-th to 0
-#define BIT_CLEAR(a,i) ((a) &= ~(1<<(i)))
+#define BIT_CLEAR(number,i) ((number) &= ~(1<<(i)))
 //flip bit i-th
-#define BIT_FLIP(a,i)  ((a) ^= (1<<(i)))
+#define BIT_FLIP(number,i)  ((number) ^= (1<<(i)))
 //check bit i-th
-#define BIT_CHECK(a,i) ((a) &  (1<<(i)))
+#define BIT_CHECK(number,i) ((number) &  (1<<(i)))
 
 #endif /* SRC_LIB_BASE_H_ */

@@ -30,7 +30,6 @@ typedef struct _mmt_smp_sec_handler_struct{
 	//one buffer per thread
 	lock_free_spsc_ring_t **messages_buffers;
 
-	uint8_t *hash_array;
 	bool verbose;
 }_mmt_smp_sec_handler_t;
 
@@ -128,8 +127,6 @@ size_t mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately
 	mmt_mem_free( _handler->threads_id );
 
 	mmt_mem_free( _handler->proto_atts_array );
-
-	mmt_mem_free( _handler->hash_array );
 
 	mmt_mem_free( _handler );
 	return alerts_count;
@@ -326,7 +323,6 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 //
 //			mmt_info("Thread %2d processes %4d rules: %s", i + 1, rules_count_per_thread, buffer );
 //		}
-
 		handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, verbose, callback, user_data );
 		rule_ptr    += rules_count_per_thread;
 		rules_count -= rules_count_per_thread; //number of remaining rules
@@ -345,7 +341,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 		mmt_assert( ret == 0, "Cannot create thread %d", (i+1) );
 	}
 
-	handler->hash_array = mmt_mem_alloc( handler->threads_count );
+
 
 	return (mmt_smp_sec_handler_t *)handler;
 }
@@ -358,10 +354,18 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 	int ret;
 	lock_free_spsc_ring_t *ring;
 	size_t total, i;
+	//TODO: this limit 64 threads of mmt_smp_sec
+	uint64_t hash_index;
 
 #ifdef DEBUG_MODE
 	mmt_assert( handler != NULL, "handler cannot be null");
 #endif
+
+	//TODO: remove this
+//	if( msg != NULL ){
+//		free_message_t( msg );
+//		return;
+//	}
 
 	_handler = (_mmt_smp_sec_handler_t *)handler;
 
@@ -371,25 +375,21 @@ void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg )
 	if( likely( _handler->threads_count > 1 && msg != NULL ))
 		msg = mmt_mem_retains( msg,  _handler->threads_count - 1 );
 
-	//all threads have not been yet put the message
-//	memset( _handler->hash_array, 0, _handler->threads_count );
-	for( i=0; i<_handler->threads_count; i++ )
-		_handler->hash_array[ i ] = 0;
+	//all threads does not receive receive message: turn on the first #threads_count bits
+	hash_index =  (1 << _handler->threads_count) - 1;
 
-	total = 0;
-	while( total < _handler->threads_count ){
+	//still have one threads is not received msg
+	while( hash_index != 0 ){
 		for( i=0; i<_handler->threads_count; i++ ){
 			//if ring i-th has been put the message
-			if( unlikely( _handler->hash_array[ i ] == 1 ))
+			if( unlikely( BIT_CHECK( hash_index, i ) == 0 ))
 				continue;
 
 			//insert msg to a buffer
 			// if we cannot insert (e.g., ring is full), we omit the current ring and continue for next rules
 			// then, go back to the current one after processing the last rule
-			if( ring_push( _handler->messages_buffers[ i ], msg ) == RING_SUCCESS ){
-				total ++;
-				_handler->hash_array[ i ] = 1;
-			}
+			if( ring_push( _handler->messages_buffers[ i ], msg ) == RING_SUCCESS )
+				BIT_CLEAR( hash_index, i );
 		}
 	}
 }

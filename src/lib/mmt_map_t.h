@@ -151,4 +151,78 @@ mmt_map_t* mmt_map_clone( const mmt_map_t *map );
 mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_fn)( void *), void* (*clone_data_fn)( void *)  );
 
 mmt_array_t *mmt_map_convert_to_array( const mmt_map_t *map );
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+////binary-map for uint64_t
+///////////////////////////////////////////////////////////////////////////////
+typedef struct mmt_map64_struct{
+	uint64_t  key __attribute__ ((aligned(64)));
+	void *data;
+   struct mmt_map64_struct *left, *right;
+} mmt_map64_t;
+
+
+static inline  mmt_map64_t *_create_node(uint64_t key, void * data){
+	mmt_map64_t *ret = ( mmt_map64_t *)malloc( sizeof(  mmt_map64_t) );
+	ret->left  = NULL;
+	ret->right = NULL;
+	ret->key   = key;
+	ret->data  = data;
+	return ret;
+}
+
+static inline  mmt_map64_t* mmt_map64_get_node(  mmt_map64_t *node, uint64_t key ){
+	if( node == NULL )
+		return NULL;
+
+	if( key < node->key )
+		return mmt_map64_get_node( node->left, key );
+	if( node->key < key )
+		return mmt_map64_get_node( node->right, key );
+
+	return node;
+}
+
+static inline int mmt_map64_set_data(  mmt_map64_t **root, uint64_t key, void * data ){
+	 mmt_map64_t *node = *root;
+
+	if( node == NULL ){
+		*root = _create_node( key, data );
+		return 0;
+	}
+
+	if( key < node->key )
+		return mmt_map64_set_data( &node->left, key, data );
+	if( node->key < key )
+		return mmt_map64_set_data( &node->right, key, data );
+
+	return 1;
+}
+
+static inline void mmt_map64_free(  mmt_map64_t *node ){
+	if( node == NULL ) return;
+
+	mmt_map64_free( node->left );
+
+	mmt_map64_free( node->right );
+
+	free( node );
+}
+
+static inline void mmt_map64_iterate(  mmt_map64_t * node, void (*callback) (uint64_t key, void *data, void * args), void *args ){
+	if( node == NULL ) return;
+
+	mmt_map64_iterate( node->left, callback, args );
+
+	callback( node->key, node->data, args );
+
+	mmt_map64_iterate( node->right, callback, args );
+}
+
+///End binary-map
+///////////////////////////////////////////////////////////////////////////////
 #endif /* SRC_LIB_MMT_MAP_T_H_ */

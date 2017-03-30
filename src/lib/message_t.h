@@ -40,7 +40,9 @@ typedef struct message_struct{
 	size_t _data_length;
 }message_t;
 
+#define MSG_CONTINUE 0
 #define MSG_OVERFLOW 1
+#define MSG_DROP     2
 
 message_t *create_message_t( size_t elements_count );
 
@@ -68,6 +70,11 @@ static inline size_t free_message_t( message_t *msg ){
  * @param data
  * @param length
  * @return
+ *		- MSG_CONTINUE if data is successfully put to #msg
+ *		- MSG_OVERFLOW if #msg has no more place to store #data
+ *		- MSG_DROP     if security is not interested on the rest of #msg.
+ *		                  It occurs when #msg contains enough information.
+ *		                  Thus mmt-probe should stop extracting the other proto.att
  */
 int set_data_of_one_element_message_t( message_t *msg, message_element_t *elem, const void *data, size_t length );
 

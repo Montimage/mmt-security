@@ -251,17 +251,11 @@ size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
 
 static inline uint64_t _calculate_hash_number_of_input_message( const message_t *msg, const _mmt_sec_handler_t *_handler ){
 	uint64_t hash = 0;
-	size_t k, i;
-	const message_element_t *el;
+	size_t i;
 
-	for( i=0; i<msg->elements_count; i++ ){
-		el = & msg->elements[ i ];
-		for( k=0; k < _handler->proto_atts_count; k++ )
-			if( el->proto_id == _handler->proto_atts_array[ k ]->proto_id
-					&& el->att_id == _handler->proto_atts_array[ k ]->att_id
-					&& el->data != NULL )
-				BIT_SET( hash, k );
-	}
+	for( i=0; i < _handler->proto_atts_count; i++ )
+		if( get_element_data_message_t( msg, _handler->proto_atts_array[ i ]->proto_id, _handler->proto_atts_array[ i ]->att_id ) != NULL )
+			BIT_SET( hash, i );
 
 	return hash;
 }
@@ -288,7 +282,7 @@ void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
 	//for each rule
 	for( i=0; i<_handler->rules_count; i++){
 		//msg does not contain enough proto.att for i-th rule
-		if( (hash & _handler->rules_hash[i]) == 0 )
+		if( (hash | _handler->rules_hash[i]) != hash )
 			continue;
 
 //		continue;
@@ -622,7 +616,8 @@ void mmt_sec_print_rules_info(){
 			proto_atts = &(rules_arr[i]->proto_atts_events[ j+1 ]);
 			for( k=0; k<proto_atts->elements_count; k++ ){
 				proto = proto_atts->data[k];
-				printf("%c %s.%s", k==0?':':',', proto->proto, proto->att );
+				printf("%c %s.%s (%d.%d)", k==0?':':',', proto->proto, proto->att,
+						 proto->proto_id, proto->att_id );
 
 				//add to unique set
 				sprintf( tmp_string, "%s.%s", proto->proto, proto->att );

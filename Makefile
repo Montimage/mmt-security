@@ -13,7 +13,7 @@ INSTALL_DIR = /opt/mmt/security
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
-VERSION     := 1.0.1
+VERSION     := 1.0.2
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lhiredis
@@ -78,7 +78,7 @@ compile_rule: src/dpi/mmt_dpi.h $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen
 	
 sec_server: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CLDFLAGS) $^ $(LIBS) -ldl
+	$(QUIET) $(CC) -Wl,--export-dynamic -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CLDFLAGS) $^ $(LIBS) -ldl
 	
 standalone: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"

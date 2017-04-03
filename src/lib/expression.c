@@ -62,11 +62,6 @@ inline enum data_type convert_data_type( int type ){
 	return STRING;
 }
 
-static inline enum data_type _get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
-	long type = get_attribute_data_type( p_id, a_id );
-	return convert_data_type( type );
-}
-
 size_t str_trim( uint8_t *string, size_t size ){
 	return size;
 }
@@ -95,7 +90,8 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint16_t ref_index 
 	var->ref_index = ref_index;
 	var->proto_id  = get_protocol_id_by_name( var->proto );
 	var->att_id    = get_attribute_id_by_protocol_id_and_attribute_name( var->proto_id, var->att );
-	var->data_type = _get_attribute_data_type( var->proto_id, var->att_id );
+	var->dpi_type  = get_attribute_data_type( var->proto_id, var->att_id  );
+	var->data_type = convert_data_type( var->dpi_type );
 
 	mmt_assert( var->data_type != UNKNOWN, "Error 2: Data type for %s.%s has not implemented yet.", proto, attr);
 

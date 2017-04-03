@@ -102,99 +102,10 @@ static inline int check_port(int i){
   return 0;
 }
 
-/**
-* Return:
-* - 0: ok
-* - 1: invalid
-* - 2: NULL
-*/
-static inline int check_URI(const char *uri_str){
-  int handle = 0;
-  if(uri_str == NULL){
-    return 2;
-  }
- 
-  const char *x = uri_str;
-  
-  //fprintf(stderr, "%s\n",x);
-  while (*x != '\0'){
-      //octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
-      if(*x < 32 || *x == 92 || *x == '"' || *x == '<' || *x == '>' || *x == '[' || *x == ']' || *x == '^' || *x == '`' || *x == '{' || 
-         *x == '|' || *x == '}' || *x == '%' || *x > 126) {
-              handle = 1;
-              break;
-      }
-      x = x+1;
-  }
-  //detect directory traversal attack
-  char *s0, *s1, *s2, *s3;
-  s0 = strstr(uri_str, ".."); //find the first occurrence of string ".." in string
-  s1 = strstr(uri_str, "./"); //find the first occurrence of string "./" in string
-  s2 = strstr(uri_str, "//"); //find the first occurrence of string "//" in string
-  s3 = strstr(uri_str, "/."); //find the first occurrence of string "//" in string
-  
-  if ((s0 !=NULL) || (s1 !=NULL) || (s2 !=NULL) || (s3 !=NULL))  
-   handle = 1;
-   
-//#ifdef DEBUG
-//  fprintf(stderr, "executing ceck_URI with parameters:h=%d:nb=%u:a1=%o:a2=%o\n", 
-//                                           handle, *(char*)(BLOC3+6),*(char*)(BLOC3+9));
-//#endif
-  return handle;
-}
-
-/*
- * Nikto 
- */
-static inline bool check_UA( const char *user_agent){
-   //find the first occurrence of string "Nikto" in string
-   return (strstr(user_agent, "Nikto") != NULL);     
-}
-
-static inline int check_sql_injection(const void *p_payload, double payload_len){
-   int key_word_len = 6;
-   char *key_words[6] = {"DROP", "UNION", "SELECT", "CHAR", "DELETE", "INSERT"};
-   size_t len = payload_len, i;
-   char *str  = malloc( len + 1 );
-   memcpy( str, p_payload, len );
-   str[ len ] = '\0';
-   
-   //Signature based dection begin here. 
-   //(using  pattern matching techniques against signatures and 
-   //keyword-based stores to identify potentially malicious requests)
-   for( i=0; i<key_word_len; i++)
-      if( strstr(str, key_words[i]  ) != NULL ){
-         free( str );
-         return 1;
-      }
-   
-   free( str );
-   return 0;
-}
-
-
-
-int check_http_response(const char* p){
-  if(p == NULL){
-    return 1;
-  }
-  return 0;
-}
-
-int check_ip_add(const char *src, const char *dst, const char *src1, const char *dst1){
-  if((src == NULL) || (dst == NULL) || (src1 == NULL) || (dst1 == NULL)){
-    return 1;
-  }
-  if (((src = src1) && (dst = dst1)) || ((src = dst1) && (dst = src1))){
-     return 1;
-  }
-  return 0;
-}
-
 ]]></embedded_functions>
 
 <!-- Property 1: Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).-->
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="1" property_id="1" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="1" type_property="ATTACK" 
     description="Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).">
     <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
       <event value="COMPUTE" event_id="1" 
@@ -256,9 +167,9 @@ int check_ip_add(const char *src, const char *dst, const char *src1, const char 
 
 <!-- Property 4: One ARP request receives two replies with different MAC addresses.-->
  
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="4" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="5" property_id="4" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
-    <operator value="THEN" delay_units="m" delay_min="0+" delay_max="5">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="5">
       <event value="COMPUTE" event_id="1" 
              description="An arp who was requested"
              boolean_expression="((arp.ar_op == 1)&amp;&amp;(ethernet.src != ethernet.dst))"/>
@@ -274,7 +185,7 @@ int check_ip_add(const char *src, const char *dst, const char *src1, const char 
 <!-- Property 5: Two ARP replies that should provide the same MAC address are different. This rule is simpler than Property 1 
                  above and detects the same potential attacks without generating a message for each combination of request-reply.-->
 
- <property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="5" type_property="ATTACK" 
+ <property value="THEN" delay_units="ms" delay_min="0+" delay_max="5" property_id="5" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
       <event value="COMPUTE" event_id="1" 
              description="An arp reply with MAC address"
@@ -433,54 +344,6 @@ it is nice to have an automated method of redirect expiration.
       <event value="COMPUTE" event_id="2" 
              description="IP fragment with same identification and diffenrences in offsets less than length"
              boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset.1 - ip.frag_offset) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
-</property>
-
-<!-- Property 26: Probable IP protocol scan (4 different attempts in a row on different protocols).
--->
-
-<property value="THEN" delay_units="ms" delay_min="0+" delay_max="20" property_id="26" type_property="ATTACK" 
-    description="Probable IP protocol scan (4 different attempts in a row on different protocols)."
-    >
-    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
-      <event value="COMPUTE" event_id="1" 
-          description="IP packet header with the eight-bit IP protocol field set (1)"
-             boolean_expression="((ip.proto_id != 0)&amp;&amp;(ip.src != ip.dst))"/>
-      <event value="COMPUTE" event_id="2" 
-             description="IP packet header with another eight-bit IP protocol field set (2)"
-             boolean_expression="((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
-    </operator>
-    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
-      <event value="COMPUTE" event_id="3" 
-             description="IP packet header with another eight-bit IP protocol field set (3)"
-             boolean_expression="((ip.proto_id != ip.proto_id.2)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
-      <event value="COMPUTE" event_id="4" 
-             description="IP packet header with another eight-bit IP protocol field set (4)"
-             boolean_expression="((ip.proto_id != ip.proto_id.3)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
-    </operator>
-</property>
-
-<!-- Property 27: Probable UDP protocol scan (4 different attempts in a row on different ports).
--->
-
-<property value="THEN" delay_units="ms" delay_min="0+" delay_max="20" property_id="27" type_property="ATTACK" 
-    description="Probable UDP protocol scan (4 different attempts in a row on different ports)."
-    >
-    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
-      <event value="COMPUTE" event_id="1" 
-             description="UDP packet header with a destination port field set (1)"
-             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != 0)&amp;&amp;(ip.src != ip.dst)))"/>
-      <event value="COMPUTE" event_id="2" 
-             description="UDP packet header with another destination port field set (2)"
-             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
-    </operator>
-    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
-      <event value="COMPUTE" event_id="3" 
-             description="UDP packet header with another destination port field set (3)"
-             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.2)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
-      <event value="COMPUTE" event_id="4"
-             description="UDP packet header with another destination port field set (4)"
-             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.3)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
-    </operator>
 </property>
 
 </beginning>

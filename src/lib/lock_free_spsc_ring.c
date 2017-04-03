@@ -32,7 +32,7 @@ lock_free_spsc_ring_t* ring_init( uint32_t size ){
 	q->_head = q->_tail = 0;
 	q->_cached_head = q->_cached_tail = 0;
 
-	sem_init( &q->sem_wait_pushing, 0, 0 );
+//	sem_init( &q->sem_wait_pushing, 0, 0 );
 
 	return q;
 }

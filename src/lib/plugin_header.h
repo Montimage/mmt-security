@@ -23,9 +23,42 @@ typedef struct proto_attribute_struct{
 	const char *att;
 	uint32_t proto_id;
 	uint32_t att_id;
-	int data_type; //NUMERIC, STRING
+	/**
+	 * Data type defined by MMT-Security such as NUMERIC, STRING
+	 */
+	int data_type;
+	/**
+	 * data type defined by MMT-DPI such as MMT_U8_DATA, MMT_DATA_IP_ADDR, ...
+	 */
+	int dpi_type;
 }proto_attribute_t;
 
+/**
+ * Information of the moment the rules was created
+ */
+typedef struct rule_version_info_struct{
+	/**
+	 * Moment C code of the rule was generated
+	 */
+	time_t created_date;
+	/**
+	 * A hash string represent GIT version of source code from that the rule_compile was created
+	 */
+	const char *hash;
+	/**
+	 * Version number in string format, e.g., 1.2.18
+	 */
+	const char *number;
+	/**
+	 * A number represent the number string above, e.g., 56
+	 * A recent version must has an index that is greater than the one of older version
+	 */
+	uint16_t index;
+	/**
+	 * Version string of MMT-DPI
+	 */
+	const char *dpi;
+}rule_version_info_t;
 
 /**
  * Information of a rule in generated lib
@@ -62,7 +95,7 @@ typedef struct rule_info_struct{
 	/**
 	 * Create an internal struct using by guard of FSM above, e.g., _msg_t_1
 	 *
-	 * This function is not thread-safe
+	 * This function is thread-safe
 	 */
 
 	const void* (* convert_message )( const message_t * message);
@@ -75,9 +108,14 @@ typedef struct rule_info_struct{
 	/**
 	 * - Return:
 	 * 	+ a hash number.
-	 * This function is not thread-safe
+	 * This function is thread-safe
 	 */
 	uint64_t (* hash_message )( const void *data );
+
+	/**
+	 * Information at the moment the rule was created
+	 */
+	const rule_version_info_t version;
 }rule_info_t;
 
 /**

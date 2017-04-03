@@ -17,10 +17,8 @@
 #include "mmt_dbl_linked_list.h"
 #include "mmt_map_t.h"
 #include "mmt_log.h"
+#include "message_t.h"
 
-enum data_type{
-	NUMERIC, STRING, VOID
-};
 /**
  * Constant
  */
@@ -44,6 +42,7 @@ enum data_type convert_data_type( int mmt_dpi_data_type );
  */
 typedef struct{
 	enum data_type data_type;
+	int dpi_type;
 	//a variable: TCP.SRC or TCP.SRC.1
 	char *proto, *att;
 	uint32_t proto_id, att_id;//those are generated from their name: tcp => 354

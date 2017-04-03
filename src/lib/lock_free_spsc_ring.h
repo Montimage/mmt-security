@@ -35,7 +35,7 @@ typedef struct lock_free_spsc_ring_struct
 
     //pthread_mutex_t mutex_wait_pushing, mutex_wait_poping;
     //pthread_cond_t cond_wait_pushing, cond_wait_poping;
-    sem_t sem_wait_pushing, sem_wait_poping;
+    //sem_t sem_wait_pushing, sem_wait_poping;
 
 }lock_free_spsc_ring_t;
 
@@ -88,6 +88,32 @@ static inline int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
 	return RING_SUCCESS;
 }
 
+static inline int  ring_push_burst( lock_free_spsc_ring_t *q, size_t count, void** array  ){
+	uint32_t h;
+	int i;
+	h = q->_head;
+
+	//I always let 2 available elements between head -- tail
+	//1 empty element for future inserting, 1 element being reading by the consumer
+	if( ( h + 3 ) % ( q->_size ) == q->_cached_tail ){
+		q->_cached_tail = atomic_load_explicit( &q->_tail, memory_order_acquire );
+
+	/* tail can only increase since the last time we read it, which means we can only get more space to push into.
+		 If we still have space left from the last time we read, we don't have to read again. */
+		if( ( h + 3 ) % ( q->_size ) == q->_cached_tail )
+			return RING_FULL;
+	}
+
+	//not full
+	for( i = 0; i<count && ((h + i + 2) % q->_size != q->_cached_tail); i++ )
+		q->_data[ h + i ] = array[ i ];
+
+	atomic_store_explicit( &q->_head, (h + i) % q->_size, memory_order_release );
+
+//	sem_post( &q->sem_wait_pushing );
+
+	return count-i;
+}
 
 /**
  * Pop an element of buffer.
@@ -126,19 +152,18 @@ static inline int  ring_pop ( lock_free_spsc_ring_t *q, void **val ){
  * Pop all elements of buffer.
  * This function can be called only by consumer
  * - Input:
- * 	+q: ring to pop
+ * 	+ q: ring to pop
+ * 	+ length: maximum number of elements to pop
+ * 	+ array: array of pointers to contain results.
+ * 				This array must have at least #length elements
  * - Ouput:
- * 	+ val_arr: array of pointers points to data
+ * 	+ array: array of pointers points to data
  * - Return:
  * 	- number of elements popped successfully
- * - Note:
- * 	In the case this function can pop at least one element, it will create a
- * 	new array, pointed by #val_arr, to contain the elements.
- * 	Therefore one need to free this array by calling mmt_mem_free( val_arr ) after
- * 	using the array.
+ * 		This number must be less than or equal to #length
  */
-static inline size_t ring_pop_burst( lock_free_spsc_ring_t *q, void ***val_arr ){
-	int size, j;
+static inline size_t ring_pop_burst( lock_free_spsc_ring_t *q, int length, void **array ){
+	int size;
 	uint32_t t = q->_tail;
 
 	if( q->_cached_head == t ){
@@ -158,8 +183,14 @@ static inline size_t ring_pop_burst( lock_free_spsc_ring_t *q, void ***val_arr )
 		size = q->_size - t;
 	}
 
-	*val_arr = mmt_mem_dup( &(q->_data[t]), size * sizeof( void *) );
+	//check limit
+	if( unlikely( size > length ))
+		size = length;
 
+	//copy result
+	memcpy( array, &(q->_data[t]), size * sizeof( void *) );
+
+	//seek tail of ring to the new position
 	atomic_store_explicit( &q->_tail, (t + size) % q->_size, memory_order_release );
 
 	return size;

@@ -22,7 +22,6 @@
 #include <errno.h>
 
 #include "lib/dpi_message_t.h"
-
 #include "lib/mmt_smp_security.h"
 
 #define MAX_RULE_MASK_SIZE 100000
@@ -32,7 +31,7 @@
 #define SNAP_LEN 65355
 
 static size_t proto_atts_count       = 0;
-static message_element_t *proto_atts = NULL;
+const proto_attribute_t **proto_atts = NULL;
 //Statistic
 static size_t total_received_reports = 0;
 
@@ -143,9 +142,8 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
  * Otherwise it creates a new memory segment to store the result message. One need
  * to use #free_message_t to free the message.
  */
-static inline message_t* _get_packet_info( const ipacket_t *pkt, const message_element_t *proto_atts, size_t proto_atts_count ){
+static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 	int i;
-	bool has_data = NO;
 	void *data;
 	int type;
 	message_t *msg = create_message_t( proto_atts_count );
@@ -153,17 +151,10 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt, const message_e
 	msg->counter   = pkt->packet_id;
 
 	//get a list of proto/attributes being used by mmt-security
-	for( i=0; i<proto_atts_count; i++ ){
-		msg->elements[i].att_id    = proto_atts[i].att_id;
-		msg->elements[i].proto_id  = proto_atts[i].proto_id;
+	for( i=0; i<proto_atts_count; i++ )
+		dpi_message_set_data( pkt, proto_atts[i]->dpi_type, msg, proto_atts[i]->proto_id, proto_atts[i]->att_id );
 
-		dpi_message_set_data( pkt, proto_atts[i].data_type, msg, &msg->elements[i] );
-
-		if( msg->elements[i].data != NULL )
-			has_data = YES;
-	}
-
-	if( likely( has_data ))
+	if( likely( msg->elements_count ))
 		return msg;
 
 	//need to free #msg when the packet contains no-interested information
@@ -179,7 +170,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt, const message_e
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
 
-	message_t *msg = _get_packet_info( ipacket, proto_atts, proto_atts_count );
+	message_t *msg = _get_packet_info( ipacket );
 
 	//if there is no interested information
 	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
@@ -229,8 +220,6 @@ static inline void termination(){
 
 	if( _print_output != NULL )
 		verdict_printer_free();
-
-	mmt_mem_free( proto_atts );
 
 	mmt_mem_free( rules_arr );
 }
@@ -286,7 +275,6 @@ int main(int argc, char** argv) {
 	char rule_mask[ MAX_RULE_MASK_SIZE ];
 	size_t i, j, size;
 	uint16_t *rules_id_filter;
-	const proto_attribute_t **p_atts;
 
 	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count, &core_mask, rule_mask, &verbose );
 
@@ -301,11 +289,11 @@ int main(int argc, char** argv) {
 	if( _sec_handler.threads_count == 1 ){
 		_sec_handler.handler    = mmt_sec_register( rules_arr, size, verbose, _print_output, NULL );
 		_sec_handler.process_fn = &mmt_sec_process;
-		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
+		proto_atts_count = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &proto_atts );
 	}else if( _sec_handler.threads_count > 1 ){
 		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count - 1, core_mask, rule_mask, verbose, _print_output, NULL );
 		_sec_handler.process_fn = &mmt_smp_sec_process;
-		size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
+		proto_atts_count = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &proto_atts );
 	}else{
 		usage( argv[0] );
 	}
@@ -317,6 +305,7 @@ int main(int argc, char** argv) {
 
 		mmt_mem_free( core_mask );
 	}
+
 	//init mmt_dpi extraction
 	init_extraction();
 	//Initialize dpi handler
@@ -326,23 +315,20 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	//register protocols and their attributes using by mmt-sec
-	proto_atts_count = size;
 
-	proto_atts = mmt_mem_alloc( size * sizeof( message_element_t ));
-	for( i=0; i<size; i++ ){
-		//mmt_debug( "Registered attribute to extract: %s.%s", proto_atts[i]->proto, proto_atts[i]->att );
-		register_extraction_attribute( mmt_dpi_handler, p_atts[i]->proto_id, p_atts[i]->att_id );
+	for( i=0; i<proto_atts_count; i++ ){
+		mmt_debug( "Registered attribute to extract: %s.%s (%d.%d)",
+				proto_atts[i]->proto, proto_atts[i]->att,
+				proto_atts[i]->proto_id, proto_atts[i]->att_id );
+
+		register_extraction_attribute( mmt_dpi_handler, proto_atts[i]->proto_id, proto_atts[i]->att_id );
 
 		//tcp.p_payload
-		if( p_atts[i]->proto_id == 354 && p_atts[i]->att_id == 4098)
+		if( proto_atts[i]->proto_id == 354 && proto_atts[i]->att_id == 4098)
 			//tcp.payload_len
 			register_extraction_attribute( mmt_dpi_handler, 354, 23 );
-
-		proto_atts[i].proto_id  = p_atts[i]->proto_id;
-		proto_atts[i].att_id    = p_atts[i]->att_id;
-		proto_atts[i].data_type = get_attribute_data_type( p_atts[i]->proto_id, p_atts[i]->att_id );
 	}
+
 
 	//Register a packet handler, it will be called for every processed packet
 	register_packet_handler(mmt_dpi_handler, 1, packet_handler, NULL );

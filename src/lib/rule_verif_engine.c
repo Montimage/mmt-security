@@ -146,7 +146,7 @@ static inline void _reset_engine_for_fsm( rule_engine_t *_engine, fsm_t *fsm ){
 		node = _engine->fsm_by_expecting_event_id[ i ];
 		while( node != NULL ){
 			ptr = node->next;
-			//prefetch1( ptr );
+			prefetch2( ptr );
 			fsm_ind = (_fsm_tran_index_t *) node->data;
 
 			//found a node containing fsm having id = #fsm_id
@@ -195,7 +195,7 @@ static inline void _reset_engine_for_instance( rule_engine_t *_engine, fsm_t *fs
 		node = _engine->fsm_by_expecting_event_id[ i ];
 		while( node != NULL ){
 			ptr     = node->next;
-			//prefetch1( ptr );
+			prefetch2( ptr );
 			fsm_ind = (_fsm_tran_index_t *) node->data;
 
 			//found a node containing #fsm
@@ -425,12 +425,11 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 			fsm_ind  = (_fsm_tran_index_t *)node->data;
 			node_ptr = node;
 			node     = node->next;
+			prefetch2( node );
 
 			//put this after node = node->next
 			// because #node can be freed( or inserted a new node) in the function #_fire_transition
 			ret = _process_a_node( node_ptr, event_id, message, data, engine );
-
-			prefetch1( node );
 
 			//get only one verdict per packet
 			if( ret != VERDICT_UNKNOWN ){
@@ -450,6 +449,8 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 		node_ptr = node;
 		node     = node->next;
 
+		prefetch2( node );
+
 		//check whether the #fsm_ind was verified above
 		if( fsm_ind->counter == message->counter )
 			continue;
@@ -457,8 +458,6 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 		//put this after node = node->next
 		// because #node can be freed( or inserted a new node) in the function #_fire_transition
 		ret = _process_a_node( node_ptr, FSM_EVENT_TYPE_TIMEOUT, message, data, engine );
-
-		prefetch1( node );
 
 		//get only one verdict per packet
 		if( ret != VERDICT_UNKNOWN ){

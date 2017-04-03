@@ -26,12 +26,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "dpi/types_defs.h"
-#include "dpi/mmt_dpi.h"
-#include "lib/config.h"
-#include "lib/mmt_lib.h"
+#include "lib/dpi_message_t.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/system_info.h"
 
 #define MAX_RULE_MASK_SIZE 100000
 //maximum length of a report sent from mmt-probe
@@ -59,7 +55,7 @@ static bool verbose                     = NO;
 static _sec_handler_t _sec_handler;
 static const rule_info_t **rules_arr    = NULL;
 static size_t proto_atts_count          = 0;
-static message_element_t *proto_atts    = NULL;
+const proto_attribute_t **proto_atts    = NULL;
 //id of socket
 static int socket_server                = 0;
 
@@ -151,11 +147,11 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 }
 
 
-static inline int _get_data_type( uint32_t proto_id, uint32_t att_id ){
+static inline int _get_dpi_data_type( uint32_t proto_id, uint32_t att_id ){
 	size_t i;
 	for( i=0; i<proto_atts_count; i++ )
-		if( proto_atts[ i ].proto_id == proto_id && proto_atts[ i ].att_id == att_id ){
-			return proto_atts[ i ].data_type;
+		if( proto_atts[ i ]->proto_id == proto_id && proto_atts[ i ]->att_id == att_id ){
+			return proto_atts[ i ]->dpi_type;
 		}
 
 #ifdef DEBUG_MODE
@@ -176,9 +172,9 @@ static inline size_t receiving_reports( int sock ) {
 
 	uint32_t length_of_report = 0;
 	message_t *msg;
-	message_element_t *el_ptr;
-	uint16_t el_data_length;
-	int el_data_type;
+	uint32_t proto_id, att_id;
+	uint16_t data_length;
+	int dpi_data_type;
 	size_t counter;
 	size_t elements_count;
 
@@ -220,43 +216,28 @@ static inline size_t receiving_reports( int sock ) {
 		msg->counter = reports_count; //TODO
 
 		for(counter = 0; counter < msg->elements_count; counter ++){
-			el_ptr = &msg->elements[ counter ];
 			//protocol ID
-			el_ptr->proto_id = *(uint32_t *) &buffer[index];
+			proto_id = *(uint32_t *) &buffer[index];
 			index += 4;
 
 			//attribute ID
-			el_ptr->att_id = *(uint32_t*) &buffer[index];
+			att_id = *(uint32_t*) &buffer[index];
 			index += 4;
 
 			//data length
-			el_data_length = *(uint16_t *) &buffer[index];
+			data_length = *(uint16_t *) &buffer[index];
 			index += 2;
 
 			//data
-			el_data_type = _get_data_type( el_ptr->proto_id, el_ptr->att_id );
+			dpi_data_type = _get_dpi_data_type( proto_id, att_id );
 
 			//special processing for these data types
-			switch( el_data_type ){
-			case MMT_STRING_DATA_POINTER:
-			case MMT_GENERIC_HEADER_LINE :
-			case MMT_HEADER_LINE :
-				set_data_of_one_element_message_t( msg, el_ptr,  &buffer[index], el_data_length );
-				el_ptr->data_type = STRING;
-				break;
-			case MMT_DATA_POINTER :
-				set_data_of_one_element_message_t( msg, el_ptr,  &buffer[index], el_data_length );
-				el_ptr->data_type = VOID;
-				break;
-			case -1:
-				el_ptr->data      = NULL;
-				el_ptr->data_type = VOID;
-				break;
-			default:
-				set_dpi_data_to_one_element_message_t( &buffer[index], el_data_type, msg, el_ptr );
-			}
+			if( dpi_data_type == MMT_DATA_POINTER )
+				set_element_data_message_t( msg, proto_id, att_id,  &buffer[index], VOID, data_length );
+			else
+				dpi_message_set_dpi_data( &buffer[index], dpi_data_type, msg, proto_id, att_id );
 
-			index += el_data_length;
+			index += data_length;
 
 			//http.method
 //			if( el_ptr->proto_id == 153 && el_ptr->att_id == 1 ){
@@ -289,7 +270,6 @@ static inline size_t termination(){
 
 	_sec_handler.handler = NULL;
 
-	mmt_mem_free( proto_atts );
 	mmt_mem_free( rules_arr );
 
 	return alerts_count;
@@ -363,7 +343,6 @@ int main( int argc, char** argv ) {
 	size_t threads_count = 1;    //number of threads for each process
 
 	uint16_t *rules_id_filter;
-	const proto_attribute_t **p_atts;
 	int client_socket, pid, i;
 
 	char str_buffer[256];
@@ -524,21 +503,11 @@ int main( int argc, char** argv ) {
 			if( _sec_handler.threads_count == 1 ){
 				_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, verbose, _print_output, NULL );
 				_sec_handler.process_fn = &mmt_sec_process;
-				size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
+				proto_atts_count = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &proto_atts );
 			}else if( _sec_handler.threads_count > 1 ){
 				_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, threads_count - 1, core_mask_ptr, rule_mask, verbose && clients_count == 1, _print_output, NULL );
 				_sec_handler.process_fn = &mmt_smp_sec_process;
-				size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
-			}
-
-			//Remember proto_id/att_id to get data_type for each report element receveived from mmt-probe
-			proto_atts_count = size;
-			proto_atts = mmt_mem_alloc( size * sizeof( message_element_t ));
-			for( i=0; i<size; i++ ){
-				proto_atts[i].proto_id  = p_atts[i]->proto_id;
-				proto_atts[i].att_id    = p_atts[i]->att_id;
-				proto_atts[i].data_type = get_attribute_data_type( p_atts[i]->proto_id, p_atts[i]->att_id );
-				mmt_debug("p_atts[i]->proto_id = %u, p_atts[i]->att_id = %u, proto_atts[i].data_type = %d", p_atts[i]->proto_id, p_atts[i]->att_id, proto_atts[i].data_type);
+				proto_atts_count = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &proto_atts );
 			}
 
 			//init output

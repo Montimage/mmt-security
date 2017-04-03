@@ -14,7 +14,11 @@
 #include <string.h>
 #include <sys/time.h>
 #include "mmt_lib.h"
-#include "expression.h"
+
+
+enum data_type{
+	NUMERIC, STRING, VOID
+};
 
 /**
  *
@@ -30,14 +34,17 @@ typedef struct message_element_struct{
 typedef struct message_struct{
 	uint64_t counter;
 	uint64_t timestamp;
-	size_t elements_count;
-	message_element_t *elements;
 
-	uint64_t hash;
+	message_element_t *elements;
+	//number of total elements being allocated
+	uint16_t elements_length;
+	//number of elements having initialized data
+	uint16_t elements_count;
 	//for internal usage
 	uint8_t *_data;
-	size_t _data_index; //index of data
-	size_t _data_length;
+	uint32_t _data_index; //index of data
+	uint32_t _data_length;
+
 }message_t;
 
 #define MSG_CONTINUE 0
@@ -45,6 +52,8 @@ typedef struct message_struct{
 #define MSG_DROP     2
 
 message_t *create_message_t( size_t elements_count );
+
+message_t *clone_message_t( const message_t msg, bool is_copy_data );
 
 void force_free_message_t( message_t *msg );
 
@@ -66,8 +75,11 @@ static inline size_t free_message_t( message_t *msg ){
 /**
  * Copy data to elem->data
  * @param msg
- * @param elem
+ * @param proto_id
+ * @param att_id
  * @param data
+ * @param data_type
+ * @param data_length
  * @param length
  * @return
  *		- MSG_CONTINUE if data is successfully put to #msg
@@ -76,21 +88,19 @@ static inline size_t free_message_t( message_t *msg ){
  *		                  It occurs when #msg contains enough information.
  *		                  Thus mmt-probe should stop extracting the other proto.att
  */
-int set_data_of_one_element_message_t( message_t *msg, message_element_t *elem, const void *data, size_t length );
-
+int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_id, const void *data, enum data_type data_type, size_t data_length );
 
 /**
- * Convert data encoded by mmt-dpi to one element of message_t.
- * - Input:
- * 	+ data    : data to be converted
- * 	+ type    : type of #data
- * - Output:
- * 	+ el  : element to be updated in message_t
- * 	+ msg : message containing el
- * - return:
- * 	+ 0 if success
+ * Get one element of message by proto_id and att_id
+ * @param msg
+ * @param proto_id
+ * @param att_id
+ * @return
  */
-int set_dpi_data_to_one_element_message_t( const void *data, int data_type, message_t *msg, message_element_t *el );
+message_element_t *get_element_message_t( const message_t *msg, uint32_t proto_id, uint32_t att_id );
+
+
+const void *get_element_data_message_t( const message_t *msg, uint32_t proto_id, uint32_t att_id );
 
 
 #endif /* SRC_LIB_MESSAGE_T_H_ */

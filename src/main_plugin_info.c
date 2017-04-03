@@ -44,9 +44,10 @@ int main( int argc, char** argv ){
 		printf("\n\t- variables_count : %zu",  rules_arr[i]->proto_atts_count );
 		printf("\n\t- variables       : " );
 		for( j=0; j<rules_arr[i]->proto_atts_count; j++ )
-			printf( "%s%s.%s",
+			printf( "%s%s.%s (%d.%d)",
 					j==0? "":", ",
-					rules_arr[i]->proto_atts[j].proto, rules_arr[i]->proto_atts[j].att);
+					rules_arr[i]->proto_atts[j].proto, rules_arr[i]->proto_atts[j].att,
+					rules_arr[i]->proto_atts[j].proto_id, rules_arr[i]->proto_atts[j].att_id);
 
 		printf("\n\t- description     : %s",  rules_arr[i]->description );
 		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );

@@ -17,13 +17,13 @@ set terminal png
 
 set xdata time
 set timefmt "%s"
-set format x "%M:%S"
+set format x "%H:%M:%S"
 set xlabel "time"
 set xtics 60
 set xrange [$XRANGE]
 
 set ylabel "percent"
-set yrange [0:100]
+set yrange [0:110]
 
 set y2label "GB"
 set y2range [0:25]

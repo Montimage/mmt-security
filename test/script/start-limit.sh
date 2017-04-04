@@ -7,12 +7,10 @@ ssh root@192.168.0.7  "export TZ=Europe/Paris && date --set \"$(date)\""
 ssh root@192.168.0.35 "export TZ=Europe/Paris && date --set \"$(date)\""
 ssh root@192.168.0.36 "export TZ=Europe/Paris && date --set \"$(date)\""
 
-TYPE="complex"
-#TYPE="simple"
-
-INDEX=1
+INDEX=10
 #print out header
 FIRST=0
+TYPE="complex"
 
 function run_test() {
   
@@ -39,11 +37,11 @@ function test_one_loop() {
 
 #rm logs/*
 
-for test_loop in 1 2 3
+for test_loop in 1 3
 do
 
 #base
-for BW in $(seq 8900 200 9900)
+for BW in $(seq 9400 100 9700)
 do
   CORE=16
   RULE=400
@@ -56,91 +54,6 @@ done
 test_one_loop
 
 #pkt
-for BW in $(seq 7900 200 8900);
-do
-  CORE=16
-  RULE=400
-  PKT=600 #
-  A_RATE=10
-  
-  run_test
-done
-
-
-test_one_loop
-
-#pkt
-for BW in $(seq 5900 200 6900);
-do
-  CORE=16
-  RULE=400
-  PKT=1000 #
-  A_RATE=10
-  
-  run_test
-done
-
-
-test_one_loop
-
-#a_rate
-for BW in $(seq 8500 200 9900);
-do
-  CORE=16
-  RULE=400
-  PKT=800
-  A_RATE=20 #
-  
-  run_test
-done
-
-
-test_one_loop
-
-#a_rate
-for BW in $(seq 8500 200 9900);
-do
-  CORE=16
-  RULE=400
-  PKT=800
-  A_RATE=40 #
-  
-  run_test
-done
-
-
-test_one_loop
-
-
-#core
-for BW in $(seq 3900 200 5900);
-do
-  CORE=8 #
-  RULE=400
-  PKT=800
-  A_RATE=10
-  
-  run_test
-done
-
-
-
-test_one_loop
-
-#rule
-#for BW in $(seq 6900 200 7500)
-#do
-#  CORE=16
-#  RULE=400
-#  PKT=800
-#  A_RATE=10
-#  
-#  run_test
-#done
-
-
-#test_one_loop
-
 echo "$INDEX,test_loop,$test_loop" >> logs/output.csv
 
 done

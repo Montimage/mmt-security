@@ -375,6 +375,9 @@ int main( int argc, char** argv ) {
 	//get all available rules
 	rules_count = mmt_sec_get_rules_info( &rules_arr );
 
+	//remove rules being attributed to thread id = 0
+	rules_count = mmt_sec_filter_rules( rule_mask, rules_count, rules_arr );
+
 	mmt_assert( rules_count > 0, "No rule to verify.");
 
 	//init mmt-sec to verify the rules
@@ -382,10 +385,12 @@ int main( int argc, char** argv ) {
 
 	if( verbose ){
 		//TODO: uncomment this after testing
+//		mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).",
+//						mmt_sec_get_version_info(), rules_count, threads_count );
 //		if( is_unix_socket == NO )
-//			mmt_info(" MMT-Security is listening on port %d\n", port_number );
+//			mmt_info(" It is listening on port %d\n", port_number );
 //		else
-//			mmt_info(" MMT-Security is listening on \"%s\"\n", un_domain_name );
+//			mmt_info(" It is listening on \"%s\"\n", un_domain_name );
 	}
 
 	/* create internet socket */

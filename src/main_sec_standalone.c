@@ -283,6 +283,15 @@ int main(int argc, char** argv) {
 	//get all available rules
 	size = mmt_sec_get_rules_info( &rules_arr );
 
+	//remove rules being attributed to thread id = 0
+	size = mmt_sec_filter_rules( rule_mask, size, rules_arr );
+
+	mmt_assert( size > 0, "No rule to verify.");
+
+	if( verbose )
+		mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).",
+				mmt_sec_get_version_info(), size, threads_count );
+
 	_sec_handler.threads_count = threads_count;
 
 	//init mmt-sec to verify the rules

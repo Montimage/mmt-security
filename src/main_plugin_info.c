@@ -17,6 +17,7 @@ int main( int argc, char** argv ){
 	const rule_info_t **rules_arr;
 	size_t i, j, n;
 	void* lib;
+	struct tm tm;
 
 	mmt_assert( argc <= 2, "Usage: %s [lib_file.so]", argv[0] );
 
@@ -55,6 +56,11 @@ int main( int argc, char** argv ){
 		printf("\n\t- create_instance : %p",  rules_arr[i]->create_instance );
 		printf("\n\t- convert_message : %p",  rules_arr[i]->convert_message );
 		printf("\n\t- hash_message    : %p",  rules_arr[i]->hash_message );
+		tm = *localtime(& rules_arr[i]->version.created_date );
+		printf("\n\t- version         : %s (%s - %d-%d-%d %d:%d:%d), dpi version %s",  rules_arr[i]->version.number,
+				rules_arr[i]->version.hash,
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
+				rules_arr[i]->version.dpi );
 	}
 	printf("\n");
 

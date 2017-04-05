@@ -5,6 +5,7 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
 
+#include <mmt_core.h>
 #include "gen_code.h"
 #include "mmt_utils.h"
 #include "mmt_lib.h"
@@ -639,11 +640,10 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 		fprintf( fd, "\n\t\t\t .convert_message  = &_allocate_msg_t_%d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .message_size     = sizeof( _msg_t_%d ),", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .hash_message     = &hash_message_%d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t .version          = {.created_date=%ld, .hash = \"%s\", .number=\"%s\", .index=%ld, .dpi=\"%s\"},",
+		fprintf( fd, "\n\t\t\t .version          = {.created_date=%ld, .hash = \"%s\", .number=\"%s\", .index=%d, .dpi=\"%s\"},",
 				time( NULL ), GIT_VERSION, VERSION,
 				mmt_sec_get_version_number(),
-				//mmt_version() //dpi
-				""
+				mmt_version() //dpi
 				);
 
 

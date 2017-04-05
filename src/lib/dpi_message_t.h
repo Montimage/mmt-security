@@ -87,7 +87,11 @@ static inline size_t dpi_get_data_len( const ipacket_t * ipacket, uint32_t proto
 	return 0;
 }
 
+//TODO: check how to get option length
 static inline size_t dpi_get_ip_option_len(const ipacket_t * ipacket ){
+	return 0;
+
+
 	int  j = 0;
 	uint16_t offset = 0;
 	uint8_t length;

@@ -26,10 +26,28 @@
 #endif
 
 
-static inline long mmt_sec_get_version_number(){
-	const char *string = VERSION;
-	long v = 0;
-	return v;
+static inline uint32_t mmt_sec_get_version_number(){
+	const char *str = VERSION;
+	uint32_t val = 0;
+	int percent = 100*100*100;
+
+	do{
+		val += percent * atoi( str );
+
+		//jump over number
+		while( 1 ){
+			if( *str > '9' || *str < '0' )
+				break;
+			str ++;
+		}
+		//jump over .
+		str ++;
+
+		percent /= 100;
+
+	}while( *str != '\0' && percent != 1 );
+
+	return val;
 }
 
 #endif /* SRC_LIB_VERSION_H_ */

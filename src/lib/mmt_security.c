@@ -430,6 +430,8 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					}
 				}
 
+
+
 				break;
 
 			default:
@@ -497,16 +499,16 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					size = sprintf( str_ptr, "\"%s\"", (char *) me->data );
 					_remove_special_character(  str_ptr + 1, size - 2 );
 				}
-
-				//close } here
-				str_ptr += size;
-				*str_ptr = '}';
-				*(str_ptr + 1 ) = '\0';
-
-				size = 1;
 				//
 
 			}//end of switch( me->data_type )
+
+			//close } here
+			str_ptr += size;
+			*str_ptr = '}';
+			*(str_ptr + 1 ) = '\0';
+
+			size = 1;
 
 			is_first = NO;
 		}
@@ -515,7 +517,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		if( unlikely( total_len <= 0 )) break;
 
 		str_ptr += size;
-		snprintf( str_ptr, total_len, "]}%s", //end attributes, end event_
+		str_ptr += snprintf( str_ptr, total_len, "]}%s", //end attributes, end event_
 				(index == trace->elements_count - 1)? "}": ""  );
 	}
 
@@ -572,7 +574,7 @@ void mmt_sec_print_verdict(
 		break;
 	}
 
-	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld,%"PRIu32",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
+	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld,%"PRIu32",%"PRIu32",\"%s\",\"%s\",\"%s\", %s",
 			time( NULL ),
 			alert_index, //index of alarm
 			rule->id,
@@ -594,7 +596,7 @@ void mmt_sec_print_rules_info(){
 	size_t i, j, k, n  = 0, size;
 	const mmt_array_t *proto_atts;
 	const proto_attribute_t *proto;
-
+	struct tm tm;
 	char string[ 100000 ], *ch_ptr, tmp_string[ 1000 ];
 	string[ 0 ] = '\0';
 	ch_ptr = &string[ 0 ];
@@ -611,7 +613,7 @@ void mmt_sec_print_rules_info(){
 		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
 		//for each event
 		for(j=0; j<rules_arr[i]->events_count; j++ ){
-			printf("\n\t- event %2zu        ", j+1 );
+			printf("\n\t- event %-2zu        ", j+1 );
 			//visite each proto/att of one event
 			proto_atts = &(rules_arr[i]->proto_atts_events[ j+1 ]);
 			for( k=0; k<proto_atts->elements_count; k++ ){
@@ -625,6 +627,13 @@ void mmt_sec_print_rules_info(){
 					ch_ptr += sprintf( ch_ptr, "\"%s.%s\",", proto->proto, proto->att );
 			}
 		}
+
+		tm = *localtime(& rules_arr[i]->version.created_date );
+		printf("\n\t- version         : %s (%s - %d-%d-%d %d:%d:%d), dpi version %s",
+				 rules_arr[i]->version.number,
+				 rules_arr[i]->version.hash,
+				 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
+				 rules_arr[i]->version.dpi );
 	}
 
 	//remove the last comma

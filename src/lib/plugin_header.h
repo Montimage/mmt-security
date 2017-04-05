@@ -53,7 +53,7 @@ typedef struct rule_version_info_struct{
 	 * A number represent the number string above, e.g., 56
 	 * A recent version must has an index that is greater than the one of older version
 	 */
-	uint16_t index;
+	uint32_t index;
 	/**
 	 * Version string of MMT-DPI
 	 */

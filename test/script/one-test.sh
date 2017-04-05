@@ -120,7 +120,7 @@ function kill_proc () {
   
   echo "kill $PROG"
 
-  ssh $1 "cd $APP_PATH && pkill -INT $PROG && sleep $TIME && pkill -INT $PROG && sleep 3 && pkill -TERM $PROG" > /dev/null
+	ssh $1 "cd $APP_PATH && pkill -INT $PROG && sleep $TIME && pkill -INT $PROG && sleep 3 && pkill -TERM $PROG" 2> /dev/null
 }
 
 # note:

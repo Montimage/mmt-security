@@ -16,10 +16,10 @@ GIT_VERSION := $(shell git log --format="%h" -n 1)
 VERSION     := 1.0.2
 
 #set of library
-LIBS     = -ldl -lpthread -lxml2 -lhiredis
+LIBS     = -ldl -lpthread -lxml2 -lhiredis -lmmt_core
 
-CFLAGS   = -fPIC -Wall -DVERSION=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
-CLDFLAGS = 
+CFLAGS   = -fPIC -Wall -DVERSION=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/  -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib 
+CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib
 
 #for debuging
 ifdef DEBUG
@@ -78,11 +78,11 @@ compile_rule: src/dpi/mmt_dpi.h $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen
 	
 sec_server: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CLDFLAGS) $^ $(LIBS) -ldl
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CLDFLAGS) $^ $(LIBS) -ldl
 	
 standalone: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
 
 rule_info: src/dpi/mmt_dpi.h $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"

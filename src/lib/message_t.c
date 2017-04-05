@@ -78,60 +78,67 @@ size_t free_message_ts( message_t *msg, uint16_t size ){
 
 
 static inline message_element_t * _find_element( const message_t *msg, uint32_t proto_id, uint32_t att_id, bool swept ){
-	const uint64_t *key, *val;
+//	const uint64_t *key, *val;
 	int i;
-	int low = 0, high = msg->elements_count - 1, mid = 0;
+//	int low = 0, high = msg->elements_count - 1, mid = 0;
 
-	message_element_t key_struct;
+//	message_element_t key_struct;
 
-	if( msg->elements_count == 0 )
-		return & msg->elements[ msg->elements_count ];
+//	if( msg->elements_count == 0 )
+//		return & msg->elements[ msg->elements_count ];
 
 	//encode proto_id and att_id into 64bits
-	key_struct.proto_id = proto_id;
-	key_struct.att_id   = att_id;
-
-	key = (uint64_t *) &key_struct.proto_id;
-
-	//this is done by supposing that elements in #msg is sorteds by ascending of proto_id && att_id
-	while( low <= high ) {
-		mid = (low + high)/2;
-
-		// low path
-		prefetch_r (& msg->elements[(mid + 1 + high)/2], 1);
-		// high path
-		prefetch_r (& msg->elements[(low + mid - 1)/2],  1);
-
-		val = (uint64_t *) &msg->elements[ mid ].proto_id;
-
-		if( *val == *key)
-			return & msg->elements[ mid ] ;
-		else if( *val < *key)
-			low = mid + 1;
-		else// if( *val > key)
-			high = mid-1;
-	}
-
-	if( !swept )
-		//not found => return the first available element
-		return & msg->elements[ msg->elements_count ];
+//	key_struct.proto_id = proto_id;
+//	key_struct.att_id   = att_id;
+//
+//	key = (uint64_t *) &key_struct.proto_id;
 
 
-	//We did not find any element in msg->elements that has proto_id.att_id
-	//=> we "insert" a element to a suitable position to ensure that the elements is an increased array
-
-	//push a high part of elements go forward 1 element
-	//so we can insert a new element for proto_id.att_id
-	for( i = msg->elements_count ; i>0; i--){
-
-		val = (uint64_t *) &msg->elements[ i-1 ].proto_id;
-		if( *val < *key )
+	for( i=0; i<msg->elements_count; i++ )
+		if( msg->elements[ i ].att_id  == att_id && msg->elements[ i ].proto_id  == proto_id )
 			break;
 
-		msg->elements[i] = msg->elements[ i-1 ];
-	}
-
 	return & msg->elements[ i ];
+
+	//this is done by supposing that elements in #msg is sorteds by ascending of proto_id && att_id
+//	while( low <= high ) {
+//		mid = (low + high)/2;
+//
+//		// low path
+//		prefetch_r (& msg->elements[(mid + 1 + high)/2], 1);
+//		// high path
+//		prefetch_r (& msg->elements[(low + mid - 1)/2],  1);
+//
+//		val = (uint64_t *) &msg->elements[ mid ].proto_id;
+//
+//		if( *val == *key)
+//			return & msg->elements[ mid ] ;
+//		else if( *val < *key)
+//			low = mid + 1;
+//		else// if( *val > key)
+//			high = mid-1;
+//	}
+//
+//	if( !swept )
+//		//not found => return the first available element
+//		return & msg->elements[ msg->elements_count ];
+//
+//
+//	//We did not find any element in msg->elements that has proto_id.att_id
+//	//=> we "insert" a element to a suitable position to ensure that the elements is an increased array
+//
+//	//push a high part of elements go forward 1 element
+//	//so we can insert a new element for proto_id.att_id
+//	for( i = msg->elements_count ; i>0; i--){
+//
+//		val = (uint64_t *) &msg->elements[ i-1 ].proto_id;
+//		if( *val < *key )
+//			break;
+//
+//		msg->elements[i] = msg->elements[ i-1 ];
+//	}
+//
+//	return & msg->elements[ i ];
 }
 
 message_element_t * get_element_message_t( const message_t *msg, uint32_t proto_id, uint32_t att_id ){
@@ -148,12 +155,12 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 	message_element_t *el;
 	int i;
 
-	if( unlikely (msg->_data_index + data_length + SIZE_OF_MMT_MEMORY_T  >= msg->_data_length )){
+	if( unlikely (msg->_data_index + data_length + SIZE_OF_MMT_MEMORY_T + 1 >= msg->_data_length )){
 		mmt_warn( "Report for %d.%d is too big (%zu bytes), must increase config.input.max_report_size",
 				proto_id, att_id, data_length + SIZE_OF_MMT_MEMORY_T);
 		return MSG_OVERFLOW;
 	}
-	//do not need to consider NULL
+	//do not need NULL
 	else if( data_length == 0 || data == NULL ){
 		return MSG_CONTINUE;
 	}
@@ -178,7 +185,7 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 	el->data = mem->data;
 	memcpy( el->data, data, data_length );
 
-	msg->_data_index += data_length + SIZE_OF_MMT_MEMORY_T;
+	msg->_data_index += data_length + SIZE_OF_MMT_MEMORY_T + 1;
 
 	//update hash to mark the present of elem->data
 	//msg->hash |= elem->proto_id | elem->att_id;

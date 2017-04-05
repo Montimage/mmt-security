@@ -232,10 +232,6 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 		threads_count = rules_count;
 	}
 
-	if( verbose )
-		mmt_info(" MMT-Security version %s verifies %zu rule(s) using %d thread(s).",
-				mmt_sec_get_version_info(), rules_count, threads_count );
-
 	_mmt_smp_sec_handler_t *handler = mmt_mem_alloc( sizeof( _mmt_smp_sec_handler_t ));
 
 	handler->verbose         = verbose;

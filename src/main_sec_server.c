@@ -215,7 +215,7 @@ static inline size_t receiving_reports( int sock ) {
 
 		msg->counter = reports_count; //TODO
 
-		for(counter = 0; counter < msg->elements_count; counter ++){
+		for(counter = 0; counter < elements_count; counter ++){
 			//protocol ID
 			proto_id = *(uint32_t *) &buffer[index];
 			index += 4;

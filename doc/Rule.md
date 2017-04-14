@@ -1,6 +1,6 @@
 # Sample rules
 
-There are two sample rules in [rules/](rules/)
+There are two sample rules in [../rules/](../rules/)
 
 # Embedded functions
 

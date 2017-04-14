@@ -1,6 +1,14 @@
 # MMT-Security
 
-This repository contains mmt-security toolset:
+This repository contains the following folders:
+
+- `src` : C code of mmt-security
+- `rules`: 2 sample rules in xml files and their encoded in C code
+- `check`: sample pcap files and expected results to validate mmt-security
+- `doc`: documentation
+- `test`: diversity of testing code
+
+The repository contains mmt-security toolset:
 
 - `compile_rule`: encode .xml rules into a shared library (file .so)
 - `rule_info`: get information of one or all encoded rules

@@ -33,4 +33,4 @@ that will be verified against `msg`.
 
 ## Solution
 
-We create a tree containing all possible of
+Using bit hash to check the present of each proto.att in message

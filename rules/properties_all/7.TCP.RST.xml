@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 7: TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb .-->
+<property value="BEFORE" delay_units="s" delay_min="0+" delay_max="1" property_id="7" type_property="ATTACK" 
+    description="R4_Decod_1a : TCP RST is invalid: there is no corresponding TCP ACK before belonging to the same session containing correct seq_nb and ack_nb.">
+    <event value="COMPUTE" event_id="1"
+           description="Context: TCP RST"
+           boolean_expression="((tcp.rst == 1)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;((tcp.ack_nb.2 != tcp.seq_nb)&amp;&amp;((ip.src.2 == ip.dst)&amp;&amp;(ip.dst.2 == ip.src)))))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: the last TCP ACK packets have different seg_nb and ack_nb"
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((tcp.ack_nb == tcp.ack_nb)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+</beginning>

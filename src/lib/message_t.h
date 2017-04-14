@@ -37,21 +37,24 @@ typedef struct message_struct{
 
 	message_element_t *elements;
 	//number of total elements being allocated
-	uint16_t elements_length;
-	//number of elements having initialized data
 	uint16_t elements_count;
+
+	//a hash number represents the present of its elements
+	// bit i-th of the number is 1 if data of i-th element is not null,
+	// otherwise, the data is null
+	uint64_t hash;
+
 	//for internal usage
 	uint8_t *_data;
 	uint32_t _data_index; //index of data
 	uint32_t _data_length;
-
 }message_t;
 
 #define MSG_CONTINUE 0
 #define MSG_OVERFLOW 1
 #define MSG_DROP     2
 
-message_t *create_message_t( size_t elements_count );
+message_t *create_message_t();
 
 message_t *clone_message_t( const message_t msg, bool is_copy_data );
 
@@ -100,7 +103,7 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 message_element_t *get_element_message_t( const message_t *msg, uint32_t proto_id, uint32_t att_id );
 
 
-const void *get_element_data_message_t( const message_t *msg, uint32_t proto_id, uint32_t att_id );
+const void *get_element_data_message_t( const message_t *msg, uint16_t index );
 
 
 #endif /* SRC_LIB_MESSAGE_T_H_ */

@@ -12,8 +12,10 @@
 #define SRC_LIB_VERSION_H_
 
 #ifndef VERSION
-	#define VERSION "1.0.2"
+	#define VERSION "1.1.0"
 #endif
+
+#define REQUIRE_PLUGIN "1.1.0"
 
 #define __NOW__ __DATE__ " " __TIME__
 
@@ -25,9 +27,8 @@
 	#define GIT_VERSION ""
 #endif
 
-
-static inline uint32_t mmt_sec_get_version_number(){
-	const char *str = VERSION;
+static inline uint32_t mmt_sec_get_version_number_from_string( const char *version){
+	const char *str = version;
 	uint32_t val = 0;
 	int percent = 100*100*100;
 
@@ -48,6 +49,14 @@ static inline uint32_t mmt_sec_get_version_number(){
 	}while( *str != '\0' && percent != 1 );
 
 	return val;
+}
+
+static inline uint32_t mmt_sec_get_version_number(){
+	return mmt_sec_get_version_number_from_string( VERSION );
+}
+
+static inline uint32_t mmt_sec_get_required_plugin_version_number(){
+	return mmt_sec_get_version_number_from_string( REQUIRE_PLUGIN );
 }
 
 #endif /* SRC_LIB_VERSION_H_ */

@@ -25,7 +25,7 @@ static config_t config = {
 				.inorge_description = 20
 		},
 		.input = {
-				.max_report_size = 3000
+				.max_message_size = 4000
 		}
 };
 

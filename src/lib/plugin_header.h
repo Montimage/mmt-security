@@ -19,9 +19,21 @@
 #include "mmt_array_t.h"
 
 typedef struct proto_attribute_struct{
+	/**
+	 * Protocol name
+	 */
 	const char *proto;
+	/**
+	 * Attribute name
+	 */
 	const char *att;
+	/**
+	 * Protocol ID
+	 */
 	uint32_t proto_id;
+	/**
+	 * Attribute ID
+	 */
 	uint32_t att_id;
 	/**
 	 * Data type defined by MMT-Security such as NUMERIC, STRING
@@ -69,8 +81,7 @@ typedef struct rule_info_struct{
 	int type_id;
 	/** rule type that is either "attack", "security", "test", "evasion"*/
 	const char *type_string;
-	/** number of events existing in the rules  */
-	uint8_t events_count;
+
 	/**
 	 * Description of the rule
 	 */
@@ -81,11 +92,19 @@ typedef struct rule_info_struct{
 	const char *if_not_satisfied;
 
 	/** Size of #proto_atts */
-	size_t proto_atts_count;
-	/** Array of protocols and their attributes being used in this rule */
+	uint8_t proto_atts_count;
+
+	/** number of events existing in the rules  */
+	uint8_t events_count;
+
+	/** Array of unique protocols and their attributes being used in this rule */
 	const proto_attribute_t *proto_atts;
 	/**
 	 * Each array represents detail protocols and their attributes of each event.
+	 * There are #events_count elements. Each element is an mmt_array_t
+	 *  that represents unique proto.att of an event. Specifically,
+	 *   - array.elements_count = number of proto.atts in the event
+	 *   - array.data = array of pointers. Each pointer has type of proto_attribute_t
 	 */
 	const mmt_array_t *proto_atts_events;
 
@@ -93,29 +112,20 @@ typedef struct rule_info_struct{
 	void* (* create_instance )();
 
 	/**
-	 * Create an internal struct using by guard of FSM above, e.g., _msg_t_1
+	 * Set a unique number to represent a proto.att.
+	 * This function must be called firstly, inside #mmt_sec_init, before #create_instance.
+	 * In any processing of this rule, e.g., verification of a transition guard, the rule will
+	 * not use proto.att or proto_id and att_id to request its data
+	 * but it will use this unique number.
 	 *
-	 * This function is thread-safe
+	 * Note: This function is not thread-safe
 	 */
-
-	const void* (* convert_message )( const message_t * message);
-
-	/**
-	 * Size of message returned by #convert_message
-	 */
-	const size_t message_size;
-
-	/**
-	 * - Return:
-	 * 	+ a hash number.
-	 * This function is thread-safe
-	 */
-	uint64_t (* hash_message )( const void *data );
+	void (* hash_message )( const char *proto, const char *att, uint16_t index );
 
 	/**
 	 * Information at the moment the rule was created
 	 */
-	const rule_version_info_t version;
+	const rule_version_info_t *version;
 }rule_info_t;
 
 /**

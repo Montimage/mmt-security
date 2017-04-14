@@ -1,12 +1,5 @@
 #!/bin/bash
 
-echo "Compiling `pwd` ... "
-
-#rsync -e "ssh -i /Users/nhnghia/.ssh/id_rsa -p 2222" -rca ./* .git mmt@localhost:/home/mmt/mmt-security
-#ssh -p 2222 mmt@localhost "cd mmt-security; make clean PCAP=1; make PCAP=1 && ./copy security"
-
-#exit 0
-
 TARGET=/home/server10g/huunghia/mmt-security
 USER=root
 IP=192.168.0.7
@@ -18,10 +11,35 @@ IP=192.168.0.7
 #USER=root
 #IP=192.168.0.36
 
-rsync -e "ssh -i /Users/nhnghia/.ssh/id_rsa" -rca ./* .git $USER@$IP:$TARGET
+TARGET=/home/mmt/mmt-security
+USER=mmt
+IP=localhost
+PORT=2222
 
-#DEBUG="DEBUG=1"
 
-RUN="make install"
+#TARGET=/home/server10g/huunghia/mmt-security
+#USER=root
+#IP=192.168.0.7
+#PORT=22
 
-ssh $USER@$IP "cd $TARGET && $RUN"
+rsync -e "ssh -i /Users/nhnghia/.ssh/id_rsa -p $PORT" -rca ./* .git $USER@$IP:$TARGET
+
+DEBUG="DEBUG=1"
+
+
+#RUN="make install $DEBUG"
+
+RUN="cd /home/server10g/huunghia/ && rm \"callgrind.out.*\" ; valgrind --tool=callgrind ./mmt_sec_standalone -t 10_800_116kfps.pcap -c 1 -x '101-1000' -v"
+RUN="make standalone $DEBUG && ./copy mmt_sec_standalone && ssh root@192.168.0.7 \"$RUN\" && ./rcopy \"callgrind*\" "
+
+#TEST="message_t"
+#RUN="make test.$TEST DEBUG=1 && ./test.$TEST"
+
+#RUN="make sample_rules"
+RUN="make $DEBUG"
+
+RUN="make check $DEBUG"
+
+echo "Compiling `pwd` ... on $USER@$IP:$TARGET"
+
+ssh -p $PORT $USER@$IP "cd $TARGET && $RUN"

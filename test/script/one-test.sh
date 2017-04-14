@@ -1,7 +1,7 @@
 #!/bin/bash 
 
 #do statistic in at most 3 minutes
-INTERVAL=180
+INTERVAL=210
 
 #rate of #noHTTP_rules/#HTTP_rules
 #rate = x => there is 1 rule HTTP and x rules noHTTP
@@ -61,7 +61,7 @@ case "$ATTACK_RATE-$PKT_SIZE" in
   "40-600")      LOOP=1200 ;;
 
   "normal-800")  LOOP=11000 ;;
-  "10-800")      LOOP=35000 ;;
+  "10-800")      LOOP=45000 ;;
   "20-800")      LOOP=500 ;;
   "40-800")      LOOP=1200 ;;
 
@@ -112,15 +112,17 @@ CONFIG="$TEST_ID,$BANDWIDTH,$PKT_SIZE,$ATTACK_RATE,$PROBE_CORE,$RULES_COUNT*$((H
 function kill_proc () {
   IP=$1
   PROG=$2
-	TIME=10
 
-  if [[ "$PROG" == "sec" ]]; then
-    TIME=5
-  fi
+  TIME=10
+  case "$PROG" in
+    "sec")   TIME=5 ;;
+    "lb")    TIME=15 ;;
+    "probe") TIME=7 ;;
+  esac
   
   echo "kill $PROG"
 
-	ssh $1 "cd $APP_PATH && pkill -INT $PROG && sleep $TIME && pkill -INT $PROG && sleep 3 && pkill -TERM $PROG" 2> /dev/null
+  ssh $1 "cd $APP_PATH && pkill -INT $PROG && sleep $TIME && pkill -INT $PROG && sleep 3 && pkill -TERM $PROG" &> /dev/null
 }
 
 # note:

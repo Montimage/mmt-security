@@ -67,14 +67,14 @@ static inline int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
 	uint32_t h;
 	h = q->_head;
 
-	//I always let 2 available elements between head -- tail
-	//1 empty element for future inserting, 1 element being reading by the consumer
-	if( ( h + 3 ) % ( q->_size ) == q->_cached_tail ){
+	//I always let 1 available elements between head -- tail
+	//it is reading by the consumer
+	if( ( h + 2 ) % ( q->_size ) == q->_cached_tail ){
 		q->_cached_tail = atomic_load_explicit( &q->_tail, memory_order_acquire );
 
 	/* tail can only increase since the last time we read it, which means we can only get more space to push into.
 		 If we still have space left from the last time we read, we don't have to read again. */
-		if( ( h + 3 ) % ( q->_size ) == q->_cached_tail )
+		if( ( h + 2 ) % ( q->_size ) == q->_cached_tail )
 			return RING_FULL;
 	}
 	//not full
@@ -93,19 +93,19 @@ static inline int  ring_push_burst( lock_free_spsc_ring_t *q, size_t count, void
 	int i;
 	h = q->_head;
 
-	//I always let 2 available elements between head -- tail
-	//1 empty element for future inserting, 1 element being reading by the consumer
-	if( ( h + 3 ) % ( q->_size ) == q->_cached_tail ){
+	//I always let 1 available elements between head -- tail
+	//that is the element being reading by the consumer
+	if( ( h + 2 ) % ( q->_size ) == q->_cached_tail ){
 		q->_cached_tail = atomic_load_explicit( &q->_tail, memory_order_acquire );
 
 	/* tail can only increase since the last time we read it, which means we can only get more space to push into.
 		 If we still have space left from the last time we read, we don't have to read again. */
-		if( ( h + 3 ) % ( q->_size ) == q->_cached_tail )
+		if( ( h + 2 ) % ( q->_size ) == q->_cached_tail )
 			return RING_FULL;
 	}
 
 	//not full
-	for( i = 0; i<count && ((h + i + 2) % q->_size != q->_cached_tail); i++ )
+	for( i = 0; i<count && ((h + i + 1) % q->_size != q->_cached_tail); i++ )
 		q->_data[ h + i ] = array[ i ];
 
 	atomic_store_explicit( &q->_head, (h + i) % q->_size, memory_order_release );
@@ -216,7 +216,7 @@ static inline void ring_wait_for_pushing( lock_free_spsc_ring_t *q ){
 
 
 static inline void ring_wait_for_poping( lock_free_spsc_ring_t *q ){
-//	nanosleep( (const struct timespec[]){{0, 100L}}, NULL );
+	nanosleep( (const struct timespec[]){{0, 100L}}, NULL );
 }
 
 #endif /* SRC_QUEUE_LOCK_FREE_SPSC_RING_H_ */

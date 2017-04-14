@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <ctype.h>
-#include "mmt_core.h"
+#include <mmt_core.h>
 
 static uint32_t total_proto_att = 0;
 
@@ -116,10 +116,15 @@ int main(int argc, char** argv) {
 	printf("\n\n #ifndef TYPES_DEFS_H" );
 	printf("\n #define TYPES_DEFS_H" );
 	printf("\nenum data_types { ");
-		for( i=0; i<data_type_count; i++ )
-			printf("\n\t %s, %s", data_type_name[i*2], data_type_name[i*2+1] );
+	for( i=0; i<data_type_count; i++ )
+		printf("\n\t %s, %s", data_type_name[i*2], data_type_name[i*2+1] );
 	printf("\n};");
 	printf("\n #endif //end TYPES_DEFS_H\n" );
+
+	printf("\n\n static const char *dpi_data_types_name[] = {" );
+	for( i=0; i<data_type_count; i++ )
+		printf("\n\t \"%s\", %s", data_type_name[i*2], data_type_name[i*2+1] );
+	printf("\n };\n");
 
 	printf("\n struct dpi_attribute{\n\t uint32_t gid; \n\t uint16_t id;\n\t const char *name;\n\t long data_type;};");
 	printf("\n struct dpi_proto{\n\t uint16_t id;\n\t const char *name;\n\t struct dpi_attribute *attributes;\n\t size_t attributes_count;};");

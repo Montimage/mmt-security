@@ -21,6 +21,7 @@
 #define _num( x ) (x==NULL? 0: x)
 #define _string( v, a,b,c, x,y,z  ) (v==NULL? a:x), (v==NULL? b:y), (v==NULL? c:z)
 
+static FILE * code_file = NULL;
 
 struct _user_data{
 	uint16_t uint16_val;
@@ -52,30 +53,31 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	if( index == 0 ) __got_history = NO;
 
 	if( var->ref_index != (uint16_t)UNKNOWN && __got_history == NO ){
-		fprintf(fd, "\n\t his_data = (_msg_t_%d *)fsm_get_history( fsm, %d);", rule_id, var->ref_index );
+		fprintf(fd, "\n\t his_msg = fsm_get_history( fsm, %d );", var->ref_index );
 		//TODO: not need to check ?
-		fprintf(fd, "\n\t if( unlikely( his_data == NULL )) return 0;");
+		fprintf(fd, "\n\t if( unlikely( his_msg == NULL )) return 0;");
 
 		__got_history = YES;
 	}
 
 	_gen_code_line( fd );
-	//TODO: not need to check before validate the guard's boolean expression ?
-	//YES, still need to check NULL in the case 2 events occurs in the same time
-	//in such a case, the hash function can ensure only the first event is not NULL
-	fprintf( fd, "\n\t if( unlikely( %s->%s_%s == NULL )) return 0;",
-					( var->ref_index == (uint16_t)UNKNOWN )? "ev_data" : "his_data",
+
+	fprintf( fd, "\n\n\t data = get_element_data_message_t( %s, _m_index_%d._%s__%s );",
+					( var->ref_index == (uint16_t)UNKNOWN )? "msg" : "his_msg",
+					rule_id,
 					var->proto, var->att
 	);
 
+	//TODO: not need to check before validate the guard's boolean expression ?
+	//YES, still need to check NULL in the case 2 events occurs in the same time
+	//in such a case, the hash function can ensure only the first event is not NULL
+	fprintf( fd, "\n\t if( unlikely( data == NULL )) return 0;" );
+
 	//TODO: what happen if a proto's name starts by a number
-	fprintf( fd, "\n\t %s%s = %s %s->%s_%s %s;",
+	fprintf( fd, "\n\t %s%s = %s data;",
 			((var->data_type == NUMERIC)? "double " : ((var->data_type == STRING)? "const char *" : "const void *") ),
 			str,
-			((var->data_type == NUMERIC)? "*(" : ""),
-			( var->ref_index == (uint16_t)UNKNOWN )? "ev_data" : "his_data",
-			var->proto, var->att,
-			((var->data_type == NUMERIC)? ")" : "")
+			((var->data_type == NUMERIC)? "*(double*) " : ((var->data_type == STRING)? "(char *)" : "") )
 	);
 
 	mmt_mem_free( str );
@@ -105,11 +107,12 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	guard_fun_name = mmt_mem_dup( buffer, size );
 
 	//guard function header
-	fprintf(fd, "static inline int %s( const void *event_data, const fsm_t *fsm ){",
+	fprintf(fd, "static inline int %s( const message_t *msg, const fsm_t *fsm ){",
 			guard_fun_name );
 	if( var_count != 0 ){
-		fprintf(fd, "\n\t if( unlikely( event_data == NULL )) return 0;" );
-		fprintf(fd, "\n\t const _msg_t_%d *his_data, *ev_data = (_msg_t_%d *) event_data;", rule_id, rule_id);
+		fprintf(fd, "\n\t if( unlikely( msg == NULL || fsm == NULL )) return 0;" );
+		fprintf(fd, "\n\t const message_t *his_msg;");
+		fprintf(fd, "\n\t const void *data;");
 		mmt_map_iterate( map, _iterate_variable, user_data );
 	}
 	fprintf(fd, "\n\n\t return %s;\n }\n ",  str);
@@ -434,7 +437,7 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 		fprintf( fd, " s_%d_%zu = {", rule_id, state->index );
 		if( state->delay == NULL ){
 			fprintf( fd, "\n\t .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},");
-			fprintf( fd, "\n\t .is_temporary = %d,//init or final states", state != s_init && state != s_fail && state != s_incl && state != s_pass );
+			fprintf( fd, "\n\t .is_temporary = 0," );
 		}else{
 			fprintf( fd, "\n\t .delay        = {.time_min = %"PRIu64"LL, .time_max = %"PRIu64"LL, .counter_min = %"PRIu64"LL, .counter_max = %"PRIu64"LL},",
 					state->delay->time_min,    state->delay->time_max,
@@ -446,7 +449,6 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 		fprintf( fd, "\n\t .description  = %c%s%c,", _string( state->description, ' ', "NULL", ' ', '"', state->description, '"'));
 		fprintf( fd, "\n\t .entry_action = %d, //%s", state->entry_action, fsm_action_string[ state->entry_action ] );
 		fprintf( fd, "\n\t .exit_action  = %d, //%s", state->exit_action,  fsm_action_string[ state->exit_action ] );
-		fprintf( fd, "\n\t .data         = NULL,");
 		size = 0;
 		//print list of outgoing transitions of this state
 		if( state->transitions == NULL ){
@@ -509,42 +511,6 @@ void _iterate_variable_to_print_hash_function_body( void *key, void *data, void 
 		fprintf( fd, " )");
 }
 
-void _iterate_events_to_gen_hash_function( void *key, void *data, void *user_data, size_t index, size_t total){
-	struct _user_data *_u_data = ( struct _user_data *) user_data;
-	FILE *fd         = _u_data->file;
-	uint32_t rule_id = _u_data->uint32_val;
-	mmt_map_t *variables_map = NULL;
-	uint16_t event_id = * (uint16_t *)key;
-	size_t size;
-	uint64_t hash = 0;
-
-	//first element
-	if( index == 0 ){
-		_gen_comment( fd, "Public API" );
-		fprintf( fd, "static uint64_t hash_message_%d( const void *data ){", rule_id );
-		fprintf( fd, "\n\t uint64_t hash = 0;" );
-		fprintf( fd, "\n\t size_t i;\t _msg_t_%d *msg = (_msg_t_%d *) data;", rule_id, rule_id );
-
-		fprintf( fd, "\n\t //if( msg == NULL ) return hash;\n");
-	}
-
-	//body
-
-	//create a new map that contains unique variables (2 variables are differed by its #proto and #att)
-	variables_map = (mmt_map_t *)data;
-	if( mmt_map_count( variables_map) > 0 )
-		mmt_map_iterate( variables_map, _iterate_variable_to_print_hash_function_body, fd );
-	else
-		fprintf(fd, "\n\t//always need to check the event %d", event_id );
-	fprintf( fd, "\n\t\t hash  |= %"PRIu64"; //event_id = %d", BIT_SET(hash, event_id), event_id );
-
-	//last
-	if( index == total-1 ){
-		fprintf( fd, "\n\t return hash;");
-		fprintf( fd, "\n }");//end function
-	}
-}
-
 void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data, size_t index, size_t total ){
 	struct _user_data *_u_data = (struct _user_data *)user_data;
 	FILE *fd         = _u_data->file;
@@ -555,12 +521,9 @@ void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data
 	if( index == 0 ){
 		_gen_comment( fd, "Structure to represent event data");
 		fprintf( fd, "typedef struct _msg_struct_%d{", rule_id );
-		fprintf( fd, "\n\t uint64_t timestamp;//timestamp");
-		fprintf( fd, "\n\t uint64_t counter;//index of packet");
 	}
-	fprintf( fd, "\n\t %s%s_%s;",
-			(var->data_type == NUMERIC? "const double *": (var->data_type == STRING ? "const char *" : "const void *" ) ),
-			var->proto, var->att);
+	//first underscore, before proto, ensures to cover the case that proto_name starts by a number
+	fprintf( fd, "\n\t uint16_t _%s__%s;", var->proto, var->att);
 
 	//last element
 	if( index + 1 == total ){
@@ -591,20 +554,18 @@ void _iterate_variables_to_init_structure( void *key, void *data, void *user_dat
 	//first element
 	if( index == 0 ){
 		_gen_comment( fd, "Create an instance of _msg_t_%d", rule_id);
-		fprintf( fd, "static const void* _allocate_msg_t_%d( const message_t *msg  ){", rule_id );
-		//TODO: this is supported by gcc
-		fprintf( fd, "\n\t static __thread _msg_t_%d m;", rule_id );
+		fprintf( fd, "static _msg_t_%d _m_index_%d;", rule_id, rule_id );
+		fprintf( fd, "\n static void _allocate_msg_t_%d( const char* proto, const char* att, uint16_t index ){", rule_id );
 	}
-	fprintf( fd, "\n\t m.%s_%s = get_element_data_message_t( msg, %d, %d );",
+
+	fprintf( fd, "\n\t if( strcmp( proto, \"%s\" ) == 0 && strcmp( att, \"%s\" ) == 0 ){ _m_index_%d._%s__%s = index; return; }",
 			var->proto, var->att,
-			//var->data_type == NUMERIC? "double": (var->data_type == STRING ? "char" : "void" ),
-			var->proto_id, var->att_id );
+			rule_id,
+			var->proto, var->att );
 
 	//last element
 	if( index + 1 == total ){
-		fprintf( fd, "\n\t m.timestamp = msg->timestamp; //timestamp");
-		fprintf( fd, "\n\t m.counter   = msg->counter;   //index of packet");
-		fprintf( fd, "\n\t return &m; \n }" );
+		fprintf( fd, "\n }" );
 	}
 }
 
@@ -614,6 +575,16 @@ void _iterate_variables_to_init_structure( void *key, void *data, void *user_dat
 static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t count ){
 	size_t i;
 	char *string;
+
+	_gen_comment(fd, "Moment the rules being encoded\n  * PUBLIC API");
+	fprintf( fd, "\nstatic const rule_version_info_t version = {.created_date=%ld, .hash = \"%s\", .number=\"%s\", .index=%d, .dpi=\"%s\"};",
+					time( NULL ), GIT_VERSION, VERSION,
+					mmt_sec_get_version_number(),
+					mmt_version() //dpi
+					);
+	fprintf( fd, "\nconst rule_version_info_t * mmt_sec_get_rule_version_info(){ return &version;};" );
+
+
 	fprintf(fd, "\n\n //======================================GENERAL======================================");
 	_gen_comment( fd, "Information of %zu rules\n  * PUBLIC API", count );
 	fprintf( fd, "size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){");
@@ -637,14 +608,8 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 		fprintf( fd, "\n\t\t\t .proto_atts_events= proto_atts_events_%d,", rules[i]->id );
 
 		fprintf( fd, "\n\t\t\t .create_instance  = &create_new_fsm_%d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t .convert_message  = &_allocate_msg_t_%d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t .message_size     = sizeof( _msg_t_%d ),", rules[i]->id );
-		fprintf( fd, "\n\t\t\t .hash_message     = &hash_message_%d,", rules[i]->id );
-		fprintf( fd, "\n\t\t\t .version          = {.created_date=%ld, .hash = \"%s\", .number=\"%s\", .index=%d, .dpi=\"%s\"},",
-				time( NULL ), GIT_VERSION, VERSION,
-				mmt_sec_get_version_number(),
-				mmt_version() //dpi
-				);
+		fprintf( fd, "\n\t\t\t .hash_message     = &_allocate_msg_t_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .version          = &version,");
 
 
 		if( i < count -1 )
@@ -654,12 +619,6 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 	}
 	fprintf( fd, "\n\t };\n\t *rules_arr = rules;");
 	fprintf( fd, "\n\t return %zu;\n }", count);
-
-	_gen_comment(fd, "Moment the rules being encoded\n  * PUBLIC API");
-	string = get_current_date_time_string("%Y-%m-%d %H:%M:%S");
-	fprintf( fd, "const char * __get_generated_date(){ return \"%s, mmt-security version %s\";};",
-				string, MMT_SEC_VERSION );
-	mmt_mem_free( string );
 }
 
 
@@ -777,14 +736,6 @@ static inline void _free_a_map( void *v ){
 	mmt_map_free( (mmt_map_t *) v, NO );
 }
 
-static inline void _gen_hash_function( FILE *fd, const mmt_map_t *event_variables_map, uint32_t rule_id ){
-	struct _user_data _u_data;
-	_u_data.uint32_val = rule_id;
-	_u_data.file       = fd;
-
-	mmt_map_iterate(event_variables_map, _iterate_events_to_gen_hash_function, &_u_data );
-}
-
 static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 	size_t events_count, variables_count;
 	struct _user_data _u_data;
@@ -858,9 +809,7 @@ static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 	if( variables_count > 0 )
 		mmt_map_iterate(variables_map, _iterate_variables_to_init_structure, &_u_data );
 	else
-		fprintf( fd, "\n const void* _allocate_msg_t_%d(const message_t *msg){ return NULL; }", rule->id );
-
-	_gen_hash_function( fd, event_variables_map, rule->id );
+		fprintf( fd, "\n void _allocate_msg_t_%d(const char* proto, const char* att, uint16_t index){ }", rule->id );
 
 	mmt_map_iterate(events_map, _iterate_event_to_gen_guards, &_u_data );
 

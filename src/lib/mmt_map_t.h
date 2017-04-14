@@ -152,5 +152,4 @@ mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_f
 
 mmt_array_t *mmt_map_convert_to_array( const mmt_map_t *map );
 
-
 #endif /* SRC_LIB_MMT_MAP_T_H_ */

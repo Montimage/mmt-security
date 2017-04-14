@@ -10,6 +10,7 @@
 
 #include "plugins_engine.h"
 #include "mmt_lib.h"
+#include "version.h"
 
 //TODO: this limit 100K rules
 #define MAX_PLUGIN_COUNT 100000
@@ -102,7 +103,9 @@ size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_
 
 	rule_info_t const* tmp_array;
 	rule_info_t const** ret_array;
-	size_t size, i;
+	size_t size, i, index = 0;
+	uint32_t required_plugin = mmt_sec_get_required_plugin_version_number();
+
 	mmt_assert( lib != NULL, "Cannot open library: %s.\n%s", plugin_path_name, dlerror() );
 
 	size_t ( *fn ) ( const rule_info_t ** ) = dlsym ( lib, "mmt_sec_get_plugin_info" );
@@ -110,8 +113,14 @@ size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_
 
 	size = fn( &tmp_array );
 	ret_array = mmt_mem_alloc( sizeof( rule_info_t *) * size );
-	for( i=0; i<size; i++ )
-		ret_array[i] = & (tmp_array[i]);
+	for( i=0; i<size; i++ ){
+		if( tmp_array[i].version->index < required_plugin )
+			mmt_warn( "Ignored rule %d as it is not up to date.\nRule description: %s",
+					tmp_array[i].id,
+					tmp_array[i].description );
+		else
+			ret_array[ index++ ] = & (tmp_array[i] );
+	}
 
 	*plugins_arr = ret_array;
 

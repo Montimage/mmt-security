@@ -42,18 +42,9 @@
 #define __FAVOR_BSD
 #endif
 
-typedef struct _sec_handler_struct{
-	void *handler;
-
-	void (*process_fn)( const void *, message_t *);
-
-	int threads_count;
-}_sec_handler_t;
-
 //print out detailed message
 static bool verbose                     = NO;
-static _sec_handler_t _sec_handler;
-static const rule_info_t **rules_arr    = NULL;
+static mmt_sec_handler_t *sec_handler   = NULL;
 static size_t proto_atts_count          = 0;
 const proto_attribute_t **proto_atts    = NULL;
 //id of socket
@@ -66,7 +57,6 @@ static char output_redis_string[MAX_FILENAME_SIZE + 1] = {0};
 static size_t reports_count = 0;
 static size_t clients_count = 0;
 static struct timeval start_time, end_time;
-static size_t rules_count = 0;
 
 static inline double time_diff(struct timeval t1, struct timeval t2) {
 	return (double)(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)/1000000.0;
@@ -79,6 +69,7 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-p <number/string> : If p is a number, it indicates port number of internet domain socket otherwise it indicates name of unix domain socket. Default: 5000\n");
 	fprintf(stderr, "\t-n <number> : Number of threads per process. Default = 1\n");
 	fprintf(stderr, "\t-c <string> : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
+	fprintf(stderr, "\t-x <string> : Gives the range of rules id to be excluded from verification, e.g., \"1,3-8,16\"\n");
 	fprintf(stderr, "\t-m <string> : Attributes special rules to special threads e.g., \"(1:10-13)(2:50)(4:1007-1010)\"\n");
 	fprintf(stderr, "\t-f <string> : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string> : Output results to redis, e.g., \"localhost:6379\"\n");
@@ -89,10 +80,11 @@ void usage(const char * prg_name) {
 }
 
 size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, char *unix_domain, size_t *threads_count,
-		size_t *cores_count, uint32_t **core_mask, char *rule_mask, bool *verbose ) {
+		size_t *cores_count, uint32_t **core_mask, char *excluded_rules_mask, char *rule_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
-
-	while ((opt = getopt(argc, argv, "p:n:f:r:c:m:vlh")) != EOF) {
+	excluded_rules_mask[0] = '\0';
+	rule_mask[0]           = '\0';
+	while ((opt = getopt(argc, argv, "p:n:f:r:c:m:x:vlh")) != EOF) {
 		switch (opt) {
 		case 'p':
 			optcount++;
@@ -126,6 +118,10 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 			optcount++;
 			strncpy( rule_mask, optarg, MAX_RULE_MASK_SIZE );
 			break;
+		case 'x':
+			optcount++;
+			strncpy( excluded_rules_mask, optarg, MAX_RULE_MASK_SIZE );
+			break;
 		case 'c':
 			optcount++;
 			*cores_count = expand_number_range( optarg, core_mask );
@@ -133,7 +129,9 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 				usage(argv[0]);
 			break;
 		case 'l':
+			mmt_sec_init( excluded_rules_mask );
 			mmt_sec_print_rules_info();
+			mmt_sec_close();
 			exit( 0 );
 		case 'v':
 			optcount++;
@@ -208,7 +206,7 @@ static inline size_t receiving_reports( int sock ) {
 		elements_count = (uint8_t) buffer[ index ];
 		index += 1;
 
-		msg = create_message_t( elements_count );
+		msg = create_message_t();
 
 		msg->timestamp = mmt_sec_encode_timeval( ( struct timeval * ) &( buffer[index] ) );
 		index += sizeof (struct timeval);//16
@@ -252,7 +250,7 @@ static inline size_t receiving_reports( int sock ) {
 
 		reports_count ++;
 		//call mmt_security
-		_sec_handler.process_fn( _sec_handler.handler, msg );
+		mmt_sec_process( sec_handler, msg );
 	}
 
 	return reports_count;
@@ -260,18 +258,12 @@ static inline size_t receiving_reports( int sock ) {
 
 static inline size_t termination(){
 	size_t alerts_count = 0;
-	if( _sec_handler.handler == NULL )
-		return 0;
+	if( sec_handler != NULL ){
+		alerts_count = mmt_sec_unregister( sec_handler );
+	}
+	sec_handler = NULL;
 
-	if( _sec_handler.threads_count > 1 )
-		alerts_count = mmt_smp_sec_unregister( _sec_handler.handler, NO );
-	else
-		alerts_count = mmt_sec_unregister( _sec_handler.handler );
-
-	_sec_handler.handler = NULL;
-
-	mmt_mem_free( rules_arr );
-
+	mmt_sec_close();
 	return alerts_count;
 }
 
@@ -318,9 +310,6 @@ void signal_handler(int signal_type) {
 		//mmt_info("Process %d generated %zu alerts", pid, alerts_count );
 	}
 
-	if( alerts_count != 0 )
-		mmt_sec_print_verdict( NULL, 0, 0, rules_count, NULL, NULL );
-
 	//parent waits for all children
 	if( parent_pid == pid ) wait( &status );
 
@@ -360,11 +349,12 @@ int main( int argc, char** argv ) {
 
 	mmt_sec_callback _print_output;
 
-	char rule_mask[ 100000 ];
+	char rule_mask[ MAX_RULE_MASK_SIZE ], excluded_rules_mask[ MAX_RULE_MASK_SIZE ];
 
 	parent_pid = getpid();
 
-	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count, &cores_count, &core_mask, rule_mask, &verbose );
+	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count,
+			&cores_count, &core_mask, excluded_rules_mask, rule_mask, &verbose );
 
 	is_unix_socket = (port_number == 0);
 
@@ -372,16 +362,10 @@ int main( int argc, char** argv ) {
 
 	mmt_assert( threads_count > 0 && cores_count % threads_count == 0, "Number of lcores must be multiple of %zu", threads_count );
 
-	//get all available rules
-	rules_count = mmt_sec_get_rules_info( &rules_arr );
+	mmt_sec_init( excluded_rules_mask );
 
-	//remove rules being attributed to thread id = 0
-	rules_count = mmt_sec_filter_rules( rule_mask, rules_count, rules_arr );
-
-	mmt_assert( rules_count > 0, "No rule to verify.");
-
+	proto_atts_count = mmt_sec_get_unique_protocol_attributes( & proto_atts );
 	//init mmt-sec to verify the rules
-	_sec_handler.threads_count = threads_count;
 
 	if( verbose ){
 		//TODO: uncomment this after testing
@@ -501,22 +485,15 @@ int main( int argc, char** argv ) {
 			//do not need output
 			if( output_file_string[0] == '\0' &&  output_redis_string[0] == '\0' )
 				_print_output = NULL;
-			else
+			else{
+				//init output
+				verdict_printer_init( output_file_string, output_redis_string );
 				_print_output = mmt_sec_print_verdict;
-
-			//init mmt-sec to verify the rules
-			if( _sec_handler.threads_count == 1 ){
-				_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, verbose, _print_output, NULL );
-				_sec_handler.process_fn = &mmt_sec_process;
-				proto_atts_count = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &proto_atts );
-			}else if( _sec_handler.threads_count > 1 ){
-				_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, threads_count - 1, core_mask_ptr, rule_mask, verbose && clients_count == 1, _print_output, NULL );
-				_sec_handler.process_fn = &mmt_smp_sec_process;
-				proto_atts_count = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &proto_atts );
 			}
 
-			//init output
-			verdict_printer_init( output_file_string, output_redis_string );
+			//init mmt-sec to verify the rules
+			sec_handler = mmt_sec_register( threads_count, core_mask_ptr, rule_mask, verbose, _print_output, NULL );
+
 
 			//mark the starting moment
 			if( verbose )

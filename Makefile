@@ -6,6 +6,11 @@ CP     = cp
 MV     = mv
 LN     = ln -s
 
+######color
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+GREEN='\033[0;32m'
+
 #name of executable file to generate
 OUTPUT   = security
 #directory where probe will be installed on
@@ -198,8 +203,9 @@ _print.%:
 _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 	$(QUIET) $(RM) /tmp/mmt-security*.csv
 	$(QUIET) bash -c "./$(MAIN_STAND_ALONE) -t check/pcap/$*.pcap -f /tmp/ &> /tmp/$*.log"
-	$(QUIET) bash -c "diff <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) && echo '  => OK'"
+	$(QUIET) bash -c "diff <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) || (echo \"====================execution log:\" && cat /tmp/$*.log && exit 1)"
+	@echo '  => OK'
 	
-check: _prepare _check.http_mal _check.arp_spoof
+check: _prepare _check.http_mal _check.arp_spoof _check.http_1flow_p30
 	@echo "All test passed!"
 ################################################################################

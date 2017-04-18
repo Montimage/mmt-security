@@ -20,6 +20,6 @@ code C
 
 In boolean expressions of rules, one can use one or many embedded functions
 
-- `exist( proto.att )`
+- `is_exist( proto.att )`
 
-- `not_exist( proto.att )`, e.g., `not_exist(http.uri)`
+- `is_empty( proto.att )`, e.g., `is_empty(http.uri)`

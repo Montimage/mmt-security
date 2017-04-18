@@ -474,19 +474,34 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 }
 
 static inline void _calculate_hash_number( rule_engine_t *_engine ){
-	int i, j, index;
+	int i, j, k, index;
 	const rule_info_t *rule = _engine->rule_info;
 	const mmt_array_t *ev;
 	const proto_attribute_t *p;
+	bool is_in_excluded_list;
 	for( i=0; i<_engine->events_count; i++ ){
 		_engine->events_hash[i] = 0;
 		ev = &( rule->proto_atts_events[i] );
+
 		//for each proto.att
 		for( j=0; j<ev->elements_count; j++ ){
 			p = ev->data[ j ];
-			index = mmt_sec_hash_proto_attribute( p->proto_id, p->att_id );
-			BIT_SET( _engine->events_hash[i], index );
+
+			is_in_excluded_list = false;
+			//check whether p in the excluded list
+			for( k=0; k<rule->excluded_filter[i].elements_count; k++ )
+				if( p == rule->excluded_filter[i].data[ k ] ){
+					is_in_excluded_list = true;
+					mmt_debug("Exclude present checking of %s.%s from event %d of rule %d", p->proto, p->att, i, rule->id );
+					break;
+				}
+
+			if( !is_in_excluded_list ){
+				index = mmt_sec_hash_proto_attribute( p->proto_id, p->att_id );
+				BIT_SET( _engine->events_hash[i], index );
+			}
 		}
+
 	}
 }
 

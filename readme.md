@@ -48,7 +48,7 @@ git clone https://bitbucket.org/montimage/mmt-security
 ## Compile
 
 
-- *compile mmt-security on its local directory
+- *compile mmt-security on its local directory*
 ```
 make
 ```

@@ -12,6 +12,7 @@
 #include "plugin_header.h"
 #include "mmt_array_t.h"
 #include "verdict_printer.h"
+#include "version.h"
 
 typedef struct mmt_sec_handler_struct mmt_sec_handler_t;
 
@@ -70,12 +71,6 @@ void mmt_sec_process( mmt_sec_handler_t *handler, message_t *msg );
  * @return number of alerts being generated
  */
 size_t mmt_sec_unregister( mmt_sec_handler_t* );
-
-/**
- * Get version information of smp-security
- * @return
- */
-const char* mmt_sec_get_version_info();
 
 
 /**

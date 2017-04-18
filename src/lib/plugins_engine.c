@@ -108,10 +108,19 @@ size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_
 
 	mmt_assert( lib != NULL, "Cannot open library: %s.\n%s", plugin_path_name, dlerror() );
 
-	size_t ( *fn ) ( const rule_info_t ** ) = dlsym ( lib, "mmt_sec_get_plugin_info" );
-	mmt_assert( fn != NULL, "Cannot find function: mmt_sec_get_plugin_info");
+	const rule_version_info_t* ( *mmt_sec_get_rule_version_info ) () = dlsym ( lib, "mmt_sec_get_rule_version_info" );
 
-	size = fn( &tmp_array );
+	mmt_assert( mmt_sec_get_rule_version_info != NULL, "File %s is incorrect!", plugin_path_name );
+
+	if( mmt_sec_get_rule_version_info()->index < required_plugin ){
+		mmt_warn( "Ignored rules in file %s as it is not up to date.", plugin_path_name );
+		return 0;
+	}
+
+	size_t ( *mmt_sec_get_plugin_info ) ( const rule_info_t ** ) = dlsym ( lib, "mmt_sec_get_plugin_info" );
+	mmt_assert( mmt_sec_get_plugin_info != NULL, "File %s is incorrect!", plugin_path_name );
+
+	size = mmt_sec_get_plugin_info( &tmp_array );
 	ret_array = mmt_mem_alloc( sizeof( rule_info_t *) * size );
 	for( i=0; i<size; i++ ){
 		if( tmp_array[i].version->index < required_plugin )

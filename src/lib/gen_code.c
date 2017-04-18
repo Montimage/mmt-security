@@ -62,7 +62,7 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 
 	_gen_code_line( fd );
 
-	fprintf( fd, "\n\n\t data = get_element_data_message_t( %s, _m_index_%d._%s__%s );",
+	fprintf( fd, "\n\n\t data = get_element_data_message_t( %s, _m%d._%s_%s );",
 					( var->ref_index == (uint16_t)UNKNOWN )? "msg" : "his_msg",
 					rule_id,
 					var->proto, var->att
@@ -71,7 +71,8 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	//TODO: not need to check before validate the guard's boolean expression ?
 	//YES, still need to check NULL in the case 2 events occurs in the same time
 	//in such a case, the hash function can ensure only the first event is not NULL
-	fprintf( fd, "\n\t if( unlikely( data == NULL )) return 0;" );
+	//NO, this will be check before calling this guard
+	//fprintf( fd, "\n\t if( unlikely( data == NULL )) return 0;" );
 
 	//TODO: what happen if a proto's name starts by a number
 	fprintf( fd, "\n\t %s%s = %s data;",
@@ -523,7 +524,7 @@ void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data
 		fprintf( fd, "typedef struct _msg_struct_%d{", rule_id );
 	}
 	//first underscore, before proto, ensures to cover the case that proto_name starts by a number
-	fprintf( fd, "\n\t uint16_t _%s__%s;", var->proto, var->att);
+	fprintf( fd, "\n\t uint16_t _%s_%s;", var->proto, var->att);
 
 	//last element
 	if( index + 1 == total ){
@@ -554,11 +555,11 @@ void _iterate_variables_to_init_structure( void *key, void *data, void *user_dat
 	//first element
 	if( index == 0 ){
 		_gen_comment( fd, "Create an instance of _msg_t_%d", rule_id);
-		fprintf( fd, "static _msg_t_%d _m_index_%d;", rule_id, rule_id );
+		fprintf( fd, "static _msg_t_%d _m%d;", rule_id, rule_id );
 		fprintf( fd, "\n static void _allocate_msg_t_%d( const char* proto, const char* att, uint16_t index ){", rule_id );
 	}
 
-	fprintf( fd, "\n\t if( strcmp( proto, \"%s\" ) == 0 && strcmp( att, \"%s\" ) == 0 ){ _m_index_%d._%s__%s = index; return; }",
+	fprintf( fd, "\n\t if( strcmp( proto, \"%s\" ) == 0 && strcmp( att, \"%s\" ) == 0 ){ _m%d._%s_%s = index; return; }",
 			var->proto, var->att,
 			rule_id,
 			var->proto, var->att );
@@ -578,8 +579,10 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 
 	_gen_comment(fd, "Moment the rules being encoded\n  * PUBLIC API");
 	fprintf( fd, "\nstatic const rule_version_info_t version = {.created_date=%ld, .hash = \"%s\", .number=\"%s\", .index=%d, .dpi=\"%s\"};",
-					time( NULL ), GIT_VERSION, VERSION,
+					time( NULL ),
+					mmt_sec_get_version_hash(),
 					mmt_sec_get_version_number(),
+					mmt_sec_get_version_index(),
 					mmt_version() //dpi
 					);
 	fprintf( fd, "\nconst rule_version_info_t * mmt_sec_get_rule_version_info(){ return &version;};" );
@@ -606,6 +609,8 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 		fprintf( fd, "\n\t\t\t .proto_atts_count = PROTO_ATTS_COUNT_%d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .proto_atts       = proto_atts_%d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .proto_atts_events= proto_atts_events_%d,", rules[i]->id );
+		fprintf( fd, "\n\t\t\t .excluded_filter  = excluded_filter_%d,", rules[i]->id );
+
 
 		fprintf( fd, "\n\t\t\t .create_instance  = &create_new_fsm_%d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .hash_message     = &_allocate_msg_t_%d,", rules[i]->id );
@@ -664,13 +669,60 @@ static inline void _iterate_events_to_gen_array_proto_att( void *key, void *data
 	//variables of each event
 	fprintf( u_data->file, "\n\t\t .elements_count = %zu,", variables_count );
 
-	fprintf( u_data->file, "\n\t\t .data = (void* []) " );
-	if( variables_count > 0 )
+
+	if( variables_count > 0 ){
+		fprintf( u_data->file, "\n\t\t .data = (void* []) " );
 		mmt_map_iterate( variables_map, _iterate_variables_to_gen_pointer_proto_att, user_data );
-	else
-		fprintf( u_data->file, "{}");
+	}else
+		fprintf( u_data->file, "\n\t\t .data = NULL" );
+	fprintf( u_data->file, "\n\t }%c", index + 1 == total ? ' ':',' );
+}
+
+
+static inline void _get_excluded_proto_atts( expression_t *expr, mmt_map_t *result, bool to_add ){
+	const link_node_t *node;
+
+	if( expr->type == VARIABLE && to_add == YES ){
+		mmt_map_set_data( result, expr->variable, expr->variable, NO );
+		return;
+	}
+
+	if( expr->type != OPERATION )
+		return;
+
+	if( expr->operation->operator == FUNCTION && strcmp( expr->operation->name, "is_exist") == 0 )
+		to_add = YES;
+
+	//check for each parameter of the operation
+	for( node=expr->operation->params_list; node != NULL; node = node->next )
+		_get_excluded_proto_atts( (expression_t *) node->data, result, to_add );
+}
+
+static inline void _iterate_events_to_gen_excluded_proto_att( void *key, void *data, void *user_data, size_t index, size_t total ){
+	struct _user_data *u_data = (struct _user_data *)user_data;
+	const rule_event_t *rule_ev = (rule_event_t *)data;
+	uint16_t event_id = * (uint16_t *)key;
+
+	mmt_map_t *exclude_variables_map = mmt_map_init( compare_variable_name );
+
+	_get_excluded_proto_atts( rule_ev->expression, exclude_variables_map, NO );
+
+	size_t variables_count = mmt_map_count( exclude_variables_map );
+
+	//each event
+	fprintf( u_data->file, "\n\t {//event_%d", event_id );
+
+	//variables of each event
+	fprintf( u_data->file, "\n\t\t .elements_count = %zu,", variables_count );
+
+	if( variables_count > 0 ){
+		fprintf( u_data->file, "\n\t\t .data = (void* []) " );
+		mmt_map_iterate( exclude_variables_map, _iterate_variables_to_gen_pointer_proto_att, user_data );
+	}else
+		fprintf( u_data->file, "\n\t\t .data = NULL" );
 
 	fprintf( u_data->file, "\n\t }%c", index + 1 == total ? ' ':',' );
+	mmt_map_free( exclude_variables_map, NO );
 }
 
 static inline void _iterate_event_to_verify_id( void *key, void *data, void *user_data, size_t index, size_t total ){
@@ -798,6 +850,11 @@ static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 	mmt_map_iterate(event_variables_map, _iterate_events_to_gen_array_proto_att, &_u_data );
 	fprintf( fd, "\n };//end proto_atts_events_\n" );
 
+	fprintf( fd, "\n static mmt_array_t excluded_filter_%d[ %zu ] = { {.elements_count = 0, .data = NULL}, ",
+			rule->id, events_count + 1 );
+	_u_data.map = variables_map;
+	mmt_map_iterate(events_map, _iterate_events_to_gen_excluded_proto_att, &_u_data );
+	fprintf( fd, "\n };//end excluded_filter_\n" );
 
 	//define a structure using in guard functions
 	if( variables_count > 0 )
@@ -836,7 +893,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, con
 	mmt_mem_free( str_ptr );
 
 	//include
-	fprintf( fd, "#include <string.h>\n #include <stdio.h>\n #include <stdlib.h>\n #include \"plugin_header.h\"\n #include \"mmt_fsm.h\"\n #include \"mmt_lib.h\"\n ");
+	fprintf( fd, "#include <string.h>\n #include <stdio.h>\n #include <stdlib.h>\n #include \"plugin_header.h\"\n #include \"mmt_fsm.h\"\n #include \"mmt_lib.h\"\n #include \"pre_embedded_functions.h\"\n");
 
 	//embedded_functions
 	_gen_comment(fd, "Embedded functions");
@@ -863,7 +920,7 @@ int compile_gen_code( const char *lib_file, const char *code_file, const char *i
 	sprintf( cmd_str, "/usr/bin/gcc %s -fPIC -shared  %s -o %s -I %s",
 			//add debug flag if need
 #ifdef DEBUG_MODE
-			"-g -O0",
+			"-g -O0 -DDEBUG_MODE",
 #else
 			"-O3",
 #endif

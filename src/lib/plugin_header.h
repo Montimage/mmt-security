@@ -108,6 +108,13 @@ typedef struct rule_info_struct{
 	 */
 	const mmt_array_t *proto_atts_events;
 
+	/**
+	 * Each array represents the protocols and attributes will be excluded from its event mask.
+	 * This means that MMT-Security will not check the presents of these proto.atts before verifying
+	 * an event. (Such a checking is done normally to ensure all proto.atts are present)
+	 */
+	const mmt_array_t *excluded_filter;
+
 	/** Create a FSM instance */
 	void* (* create_instance )();
 

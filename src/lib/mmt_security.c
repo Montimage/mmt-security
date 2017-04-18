@@ -33,6 +33,8 @@ static size_t rules_count = 0;
 static const proto_attribute_t **proto_atts = NULL;
 static size_t proto_atts_count = 0;
 
+static bool is_init = NO;
+
 //string size of an alert in JSON format
 #define MAX_MSG_SIZE 10000
 
@@ -141,7 +143,7 @@ static inline void _update_rule_hash_proto_att( ){
  * @return
  */
 int mmt_sec_init( const char* excluded_rules_id ){
-
+	is_init = YES;
 	//get all available rules
 	rules_count = load_mmt_sec_rules( &rules );
 
@@ -191,6 +193,10 @@ mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores
 	//number of threads
 	ret->threads_count = threads_count;
 
+	//
+	if( unlikely( is_init == NO) )
+		mmt_halt("mmt_sec_init must be called before any mmt_sec_register" );
+
 	if( verbose ){
 		if( threads_count == 0 )
 			mmt_info( "MMT-Security %s is verifying %zu rules having %zu proto.atts using the main thread",
@@ -239,11 +245,6 @@ size_t mmt_sec_unregister( mmt_sec_handler_t* ret ){
 	return alerts_count;
 }
 
-
-const char *mmt_sec_get_version_info(){
-	//define in version.h
-	return MMT_SEC_VERSION;
-}
 
 size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
 	*rules_array = rules;

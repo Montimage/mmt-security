@@ -80,7 +80,7 @@ size_t mmt_smp_sec_unregister( mmt_smp_sec_handler_t *handler, bool stop_immedia
 		messages_count = mmt_single_sec_get_processed_messages( handler->mmt_single_sec_handlers[i] );
 		alerts_count   = mmt_single_sec_unregister( handler->mmt_single_sec_handlers[i] );
 		if( handler->verbose )
-			mmt_info("Thread %2zu processed %8zu messages and generated %8zu alerts", i+1, messages_count, alerts_count );
+			mmt_info("MMT-Security thread %2zu processed %8zu messages and generated %8zu alerts", i+1, messages_count, alerts_count );
 
 		total_alerts += alerts_count;
 	}

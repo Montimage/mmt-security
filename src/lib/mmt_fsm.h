@@ -288,17 +288,6 @@ enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *mes
 const fsm_state_t *fsm_get_current_state( const fsm_t *fsm );
 
 /**
- *  Get the previous state
- *
- *	- Input:
- * 	+ the state machine to get the previous state from.
- * - Return:
- * 	+ the previous state, otherwise, NULL if #fsm is NULL
- * 		or if there has not yet been any transitions.
- */
-const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm );
-
-/**
  *  Check if the state machine has stopped
  *
  * - Input:

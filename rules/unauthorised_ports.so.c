@@ -1,6 +1,6 @@
 
- /** 835
-  * This file is generated automatically on 2017-04-13 18:41:50
+ /** 892
+  * This file is generated automatically on 2017-04-18 17:33:11
   */
  #include <string.h>
  #include <stdio.h>
@@ -8,8 +8,9 @@
  #include "plugin_header.h"
  #include "mmt_fsm.h"
  #include "mmt_lib.h"
- 
- /** 842
+ #include "pre_embedded_functions.h"
+
+ /** 899
   * Embedded functions
   */
  
@@ -108,14 +109,14 @@ static inline int check_port(int i){
 
  #define PROTO_ATTS_COUNT_3 3
 
- /** 779
+ /** 831
   * Proto_atts for rule 3
   */
  
  static proto_attribute_t proto_atts_3[ PROTO_ATTS_COUNT_3 ] = {{.proto = "ip", .proto_id = 178, .att = "dst", .att_id = 13, .data_type = 1, .dpi_type = 8},
  {.proto = "ip", .proto_id = 178, .att = "src", .att_id = 12, .data_type = 1, .dpi_type = 8},
  {.proto = "tcp", .proto_id = 354, .att = "dest_port", .att_id = 2, .data_type = 0, .dpi_type = 2}};
- /** 791
+ /** 843
   * Detail of proto_atts for each event
   */
  
@@ -130,24 +131,35 @@ static inline int check_port(int i){
 	 } 
  };//end proto_atts_events_
 
- /** 522
+ static mmt_array_t excluded_filter_3[ 3 ] = { {.elements_count = 0, .data = NULL}, 
+	 {//event_1
+		 .elements_count = 0,
+		 .data = NULL
+	 },
+	 {//event_2
+		 .elements_count = 0,
+		 .data = NULL
+	 } 
+ };//end excluded_filter_
+
+ /** 523
   * Structure to represent event data
   */
  typedef struct _msg_struct_3{
-	 uint16_t _ip__dst;
-	 uint16_t _ip__src;
-	 uint16_t _tcp__dest_port;
+	 uint16_t _ip_dst;
+	 uint16_t _ip_src;
+	 uint16_t _tcp_dest_port;
  }_msg_t_3;
- /** 556
+ /** 557
   * Create an instance of _msg_t_3
   */
- static _msg_t_3 _m_index_3;
+ static _msg_t_3 _m3;
  static void _allocate_msg_t_3( const char* proto, const char* att, uint16_t index ){
-	 if( strcmp( proto, "ip" ) == 0 && strcmp( att, "dst" ) == 0 ){ _m_index_3._ip__dst = index; return; }
-	 if( strcmp( proto, "ip" ) == 0 && strcmp( att, "src" ) == 0 ){ _m_index_3._ip__src = index; return; }
-	 if( strcmp( proto, "tcp" ) == 0 && strcmp( att, "dest_port" ) == 0 ){ _m_index_3._tcp__dest_port = index; return; }
+	 if( strcmp( proto, "ip" ) == 0 && strcmp( att, "dst" ) == 0 ){ _m3._ip_dst = index; return; }
+	 if( strcmp( proto, "ip" ) == 0 && strcmp( att, "src" ) == 0 ){ _m3._ip_src = index; return; }
+	 if( strcmp( proto, "tcp" ) == 0 && strcmp( att, "dest_port" ) == 0 ){ _m3._tcp_dest_port = index; return; }
  }
- /** 97
+ /** 98
   * Rule 3, event 1
   * TCP packet with non-authorized port number.
   */
@@ -156,14 +168,13 @@ static inline int check_port(int i){
 	 const message_t *his_msg;
 	 const void *data;/* 63 */
 
-	 data = get_element_data_message_t( msg, _m_index_3._tcp__dest_port );
-	 if( unlikely( data == NULL )) return 0;
+	 data = get_element_data_message_t( msg, _m3._tcp_dest_port );
 	 double tcp_dest_port = *(double*)  data;
 
 	 return (check_port(tcp_dest_port) == 1);
  }
  
- /** 97
+ /** 98
   * Rule 3, event 2
   * Print out src and dst of IP
   */
@@ -172,30 +183,28 @@ static inline int check_port(int i){
 	 const message_t *his_msg;
 	 const void *data;/* 63 */
 
-	 data = get_element_data_message_t( msg, _m_index_3._ip__dst );
-	 if( unlikely( data == NULL )) return 0;
+	 data = get_element_data_message_t( msg, _m3._ip_dst );
 	 const char *ip_dst = (char *) data;/* 63 */
 
-	 data = get_element_data_message_t( msg, _m_index_3._ip__src );
-	 if( unlikely( data == NULL )) return 0;
+	 data = get_element_data_message_t( msg, _m3._ip_src );
 	 const char *ip_src = (char *) data;
 
 	 return 0 != mmt_mem_cmp(ip_src , ip_dst);
  }
  
- /** 415
+ /** 416
   * States of FSM for rule 3
   */
  
- /** 416
+ /** 417
   * Predefine list of states: init, fail, pass, ...
   */
  static fsm_state_t s_3_0, s_3_1, s_3_2, s_3_3, s_3_4;
- /** 429
+ /** 430
   * Initialize states: init, error, final, ...
   */
  static fsm_state_t
- /** 435
+ /** 436
   * initial state
   */
   s_3_0 = {
@@ -205,13 +214,13 @@ static inline int check_port(int i){
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 1, //FSM_ACTION_CREATE_INSTANCE
 	 .transitions  = (fsm_transition_t[]){
-		 /** 463 TCP packet with non-authorized port number. */
-		 /** 465 A real event */
+		 /** 464 TCP packet with non-authorized port number. */
+		 /** 466 A real event */
 		 { .event_type = 1, .guard = &g_3_1, .action = 1, .target_state = &s_3_4}  //FSM_ACTION_CREATE_INSTANCE
 	 },
 	 .transitions_count = 1
  },
- /** 435
+ /** 436
   * timeout/error state
   */
   s_3_1 = {
@@ -223,7 +232,7 @@ static inline int check_port(int i){
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 435
+ /** 436
   * pass state
   */
   s_3_2 = {
@@ -235,7 +244,7 @@ static inline int check_port(int i){
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 435
+ /** 436
   * inconclusive state
   */
   s_3_3 = {
@@ -247,7 +256,7 @@ static inline int check_port(int i){
 	 .transitions  = NULL,
 	 .transitions_count = 0
  },
- /** 435
+ /** 436
   * root node
   */
   s_3_4 = {
@@ -257,30 +266,30 @@ static inline int check_port(int i){
 	 .entry_action = 0, //FSM_ACTION_DO_NOTHING
 	 .exit_action  = 0, //FSM_ACTION_DO_NOTHING
 	 .transitions  = (fsm_transition_t[]){
-		 /** 465 Timeout event will fire this transition */
+		 /** 466 Timeout event will fire this transition */
 		 { .event_type = 0, .guard = NULL  , .action = 0, .target_state = &s_3_1}, //FSM_ACTION_DO_NOTHING
-		 /** 463 Print out src and dst of IP */
-		 /** 465 A real event */
+		 /** 464 Print out src and dst of IP */
+		 /** 466 A real event */
 		 { .event_type = 2, .guard = &g_3_2, .action = 2, .target_state = &s_3_2}  //FSM_ACTION_RESET_TIMER
 	 },
 	 .transitions_count = 2
  };
- /** 492
+ /** 493
   * Create a new FSM for this rule
   */
  static void *create_new_fsm_3(){
 		 return fsm_init( &s_3_0, &s_3_1, &s_3_2, &s_3_3, EVENTS_COUNT_3, sizeof( _msg_t_3 ) );//init, error, final, inconclusive, events_count
  }//end function
- /** 579
+ /** 580
   * Moment the rules being encoded
   * PUBLIC API
   */
  
-static const rule_version_info_t version = {.created_date=1492101710, .hash = "8eeb2e7", .number="1.6.7.0", .index=1060700, .dpi="1.6.7.0-light (ef1364e)"};
+static const rule_version_info_t version = {.created_date=1492529591, .hash = "c186c33", .number="1.1.1", .index=1010100, .dpi="1.6.7.0-light (ef1364e)"};
 const rule_version_info_t * mmt_sec_get_rule_version_info(){ return &version;};
 
  //======================================GENERAL======================================
- /** 589
+ /** 592
   * Information of 1 rules
   * PUBLIC API
   */
@@ -297,6 +306,7 @@ const rule_version_info_t * mmt_sec_get_rule_version_info(){ return &version;};
 			 .proto_atts_count = PROTO_ATTS_COUNT_3,
 			 .proto_atts       = proto_atts_3,
 			 .proto_atts_events= proto_atts_events_3,
+			 .excluded_filter  = excluded_filter_3,
 			 .create_instance  = &create_new_fsm_3,
 			 .hash_message     = &_allocate_msg_t_3,
 			 .version          = &version,

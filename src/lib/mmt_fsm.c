@@ -26,13 +26,6 @@ struct fsm_struct{
 
    /**  Pointer to the current fsm_state_struct */
    const fsm_state_t *current_state;
-   /**
-    *  Pointer to previous fsm_state_struct
-    *
-    * The previous state is stored for convenience in case the user needs to
-    * keep track of previous states.
-    */
-   const fsm_state_t *previous_state;
 
    const fsm_state_t *init_state;
 
@@ -41,8 +34,6 @@ struct fsm_struct{
    const fsm_state_t *incl_state;
 
    const fsm_state_t *success_state;
-
-   size_t message_size;
 
    mmt_array_t *execution_trace;
 
@@ -59,7 +50,6 @@ fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state
 
 	fsm->init_state      = initial_state;
 	fsm->current_state   = initial_state;
-	fsm->previous_state  = NULL;
 	fsm->error_state     = error_state;
 	fsm->incl_state      = incl_state;
 	fsm->success_state   = final;
@@ -68,7 +58,6 @@ fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state
 	fsm->time_max        = fsm->time_min    = 0;
 //	fsm->counter_max     = fsm->counter_min = 0;
 	fsm->current_event_id= 0;
-	fsm->message_size      = message_size;
 
 	return fsm;
 }
@@ -82,7 +71,6 @@ void fsm_reset( fsm_t *fsm ){
 
 	//reset the current state to the initial one
 	fsm->current_state    = fsm->init_state;
-	fsm->previous_state   = NULL;
 	fsm->current_event_id = 0;
 
 	for( i=0; i< fsm->execution_trace->elements_count; i++ ){
@@ -102,7 +90,7 @@ static inline fsm_t* _fsm_clone( const fsm_t *fsm ){
 
 fsm_t *fsm_clone( const fsm_t *fsm ) {
 	__check_null( fsm, NULL );
-	return (fsm_t *) _fsm_clone( (fsm_t *) fsm);
+	return _fsm_clone( (fsm_t *) fsm);
 }
 
 static inline enum fsm_handle_event_value _fire_a_tran( fsm_t *fsm, uint16_t transition_index, message_t *message_data ) {
@@ -123,6 +111,7 @@ static inline enum fsm_handle_event_value _update_fsm( fsm_t *fsm, const fsm_sta
 	void *ptr = NULL;
 	uint64_t val;
 	size_t i;
+	const fsm_state_t *previous_state;
 	enum fsm_handle_event_value ret;
 
 #ifdef DEBUG_MODE
@@ -147,8 +136,8 @@ static inline enum fsm_handle_event_value _update_fsm( fsm_t *fsm, const fsm_sta
 //
 
 	// Update the states in FSM
-	fsm->previous_state = fsm->current_state;
-	fsm->current_state  = new_state;
+	previous_state     = fsm->current_state;
+	fsm->current_state = new_state;
 
 	/* If the target state is a final one, notify user that the machine has stopped */
 	if( fsm->current_state->transitions_count == 0 ){
@@ -184,7 +173,7 @@ static inline enum fsm_handle_event_value _update_fsm( fsm_t *fsm, const fsm_sta
 
 	//update deadline
 	//outgoing from init state
-	if( tran->action == FSM_ACTION_RESET_TIMER || fsm->previous_state == fsm->init_state ){
+	if( tran->action == FSM_ACTION_RESET_TIMER || previous_state == fsm->init_state ){
 //		fsm->counter_min = new_state->delay.counter_min + message_data->counter;
 		fsm->time_min    = new_state->delay.time_min    + message->timestamp;
 
@@ -255,15 +244,15 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 	tran = &fsm->current_state->transitions[ transition_index ];// _get_transition(fsm, state, event);
 
-	//if we intend to check TIMEOUT but fsm is not timeout => stop checking
-	if( tran->event_type == FSM_EVENT_TYPE_TIMEOUT )
+	//if we intend to check TIMEOUT but transition is not timeout => stop checking
+	if( unlikely( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ))
 		return FSM_NO_STATE_CHANGE;
 
 	//must not be null
 //	if( tran == NULL ) return FSM_NO_STATE_CHANGE;
 
 	/* If transition is guarded, ensure that the condition is held: */
-	if (tran->guard != NULL && tran->guard( message, fsm)  == NO )
+	if (tran->guard != NULL && tran->guard( message, fsm )  == NO )
 		return FSM_NO_STATE_CHANGE;
 
 	/* A transition must have a next _state defined
@@ -339,13 +328,16 @@ enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *mes
 	//first event is satisfied
 
 	//store execution log
+	//increase its references to 2 as another is used for the second event fsm->execution_trace->data[ 2 ]
 	fsm->execution_trace->data[ 1 ] = mmt_mem_atomic_retains( message_data, 2 );
+
 	/**
 	 * We check now the second event
 	 * first transition is timeout
 	 * second transition is real one
 	 */
 	tran = &fsm->init_state->transitions[0].target_state->transitions[1];
+
 	//the second event is not satisfied => use timeout
 	if( tran->guard && tran->guard( message_data, fsm)  == NO )
 		state = fsm->init_state->transitions[0].target_state->transitions[0].target_state;
@@ -376,14 +368,6 @@ const fsm_state_t *fsm_get_current_state( const fsm_t *fsm) {
 	return fsm->current_state;
 }
 
-/**
- * Public API
- */
-const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm) {
-	__check_null( fsm, NULL );
-
-	return fsm->previous_state;
-}
 
 /**
  * Public API

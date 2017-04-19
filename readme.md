@@ -110,7 +110,7 @@ This application can analyze
 # Auto testing
 
 After modified code, you should run `make check` to validate the modifications.
-This command will do the following things:
+This command will do the followings:
 
 - run `mmt_sec_standalone` to check all properties in `check/properties.xml`
 against the pcap files in `check/pcap/`

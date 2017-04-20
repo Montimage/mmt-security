@@ -23,6 +23,13 @@
 //thread local storage
 #define __thread_scope __thread
 
+//Force alignment to cache line.
+#ifdef LEVEL1_DCACHE_LINESIZE
+#define __aligned __attribute__ ((aligned(LEVEL1_DCACHE_LINESIZE)))
+#else
+#define __aligned __attribute__ ((aligned(64)))
+#endif
+
 //macroe
 #define __check_null( x, y ) while( unlikely( x == NULL )) return y
 

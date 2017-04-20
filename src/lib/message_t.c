@@ -13,7 +13,7 @@
 
 
 #define INIT_ID_VALUE 0
-static mmt_memory_t *_memory = NULL;
+static __aligned mmt_memory_t *_memory = NULL;
 
 message_t *create_message_t(){
 	int i;

@@ -88,10 +88,7 @@ static inline size_t dpi_get_data_len( const ipacket_t * ipacket, uint32_t proto
 }
 
 //TODO: check how to get option length
-static inline size_t dpi_get_ip_option_len(const ipacket_t * ipacket ){
-	return 0;
-
-
+static inline size_t _dpi_get_ip_option_len(const ipacket_t * ipacket ){
 	int  j = 0;
 	uint16_t offset = 0;
 	uint8_t length;
@@ -109,7 +106,7 @@ static inline size_t dpi_get_ip_option_len(const ipacket_t * ipacket ){
 
 			length =  ((uint8_t* ) ipacket->data)[ index ];
 			if( length + index > ipacket->p_hdr->caplen ){
-				//mmt_warn( "Error when getting ip.options or %"PRIu64"-th packet is mal-formatted", ipacket->packet_id );
+				mmt_warn( "Error when getting ip.options or %"PRIu64"-th packet is mal-formatted", ipacket->packet_id );
 				return 0;
 			}
 
@@ -119,6 +116,28 @@ static inline size_t dpi_get_ip_option_len(const ipacket_t * ipacket ){
 	return 0;
 }
 
+
+static inline size_t dpi_get_ip_option_len(const ipacket_t * ipacket ){
+	int  j = 0;
+	int length = 0;
+	int offset = 0;
+	int offset_ip = 0;
+	for (j = 1; j < ipacket->proto_hierarchy->len; j++){
+		offset +=ipacket->proto_headers_offset->proto_path[j];
+		if (ipacket->proto_hierarchy->proto_path[j] == PROTO_IP ){
+			//if (j < ipacket->proto_hierarchy->len){
+				offset_ip = offset;
+				offset += ipacket->proto_headers_offset->proto_path[j+1];
+				length = ipacket->p_hdr->caplen - offset - offset_ip - 20;
+				mmt_assert( length >= 0, "Error when getting ip.options or %"PRIu64"-th packet is mal-formatted. Length = %d",
+						ipacket->packet_id, length );
+				return length;
+			//}
+		}
+	}
+
+	return 0;
+}
 
 /**
  * Public API

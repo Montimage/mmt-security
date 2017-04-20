@@ -24,7 +24,7 @@ struct mmt_smp_sec_handler_struct{
 	lock_free_spsc_ring_t **rings;
 
 	bool verbose;
-};
+}__aligned;
 
 struct _thread_arg{
 	uint32_t index; //index of thread

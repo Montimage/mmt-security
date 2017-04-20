@@ -6,7 +6,7 @@
  */
 #include "../src/lib/mmt_alloc.h"
 #include "../src/lib/mmt_log.h"
-#include "../src/lib/mmt_security.h"
+#include "../src/lib/mmt_single_security.h"
 
 double double_2 = 2;
 double double_22 = 22;
@@ -43,7 +43,7 @@ void callback( const rule_info_t *rule,		//id of rule
 int main( int argc, char **argv ){
 	const rule_info_t **rules_array;
 	size_t size, i,j;
-	mmt_sec_handler_t *handler;
+	mmt_single_sec_handler_t *handler;
 	size = mmt_sec_get_rules_info( &rules_array );
 	handler = mmt_sec_register( rules_array, size, callback, NULL );
 

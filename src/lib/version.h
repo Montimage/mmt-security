@@ -5,23 +5,39 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  *
  *  Define version of mmt-security
- *  One may change #VERSION and #GIT_VERSION from Makefile
+ *  One may change #VERSION_NUMBER and #GIT_VERSION from Makefile
  */
 
 #ifndef SRC_LIB_VERSION_H_
 #define SRC_LIB_VERSION_H_
 
-#ifndef VERSION
-	#define VERSION "1.0.1"
-#endif
+#include <inttypes.h>
 
-#define __NOW__ __DATE__ " " __TIME__
+/**
+ * Get version number of MMT-Security
+ * @return a string, e.g., "1.1.0"
+ */
+const char* mmt_sec_get_version_number();
 
-#ifdef GIT_VERSION
-	//GIT_VERSION is given by Makefile
-	#define MMT_SEC_VERSION VERSION " (" GIT_VERSION " - " __NOW__ ")"
-#else
-	#define MMT_SEC_VERSION VERSION " (" __NOW__ ")"
-#endif
+/**
+ * Get version number of MMT-Security
+ * @return a string representing a hash of its git version
+ * e.g., c186c33
+ */
+const char* mmt_sec_get_version_hash();
+
+/**
+ * Get version number of MMT-Security
+ * @return a number, e.g., 101000
+ */
+uint32_t mmt_sec_get_version_index();
+
+/**
+ * Get version number of rules
+ * @return
+ */
+uint32_t mmt_sec_get_required_plugin_version_number();
+
+const char *mmt_sec_get_version_info();
 
 #endif /* SRC_LIB_VERSION_H_ */

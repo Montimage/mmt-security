@@ -6,6 +6,11 @@ CP     = cp
 MV     = mv
 LN     = ln -s
 
+######color
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+GREEN='\033[0;32m'
+
 #name of executable file to generate
 OUTPUT   = security
 #directory where probe will be installed on
@@ -13,13 +18,12 @@ INSTALL_DIR = /opt/mmt/security
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
-VERSION     := 1.0.1
 
 #set of library
-LIBS     = -ldl -lpthread -lxml2 -lhiredis
+LIBS     = -ldl -lpthread -lxml2 -lhiredis -lmmt_core
 
-CFLAGS   = -fPIC -Wall -DVERSION=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/
-CLDFLAGS = 
+CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/  -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib 
+CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib
 
 #for debuging
 ifdef DEBUG
@@ -62,7 +66,7 @@ MAIN_SEC_SERVER = mmt_sec_server
 
 LIB_NAME = libmmt_security
 
-all: gen_dpi standalone compile_rule rule_info sec_server
+all: standalone compile_rule rule_info sec_server
 
 %.o: %.c src/dpi/mmt_dpi.h
 	@echo "[COMPILE] $(notdir $@)"
@@ -82,7 +86,7 @@ sec_server: src/dpi/mmt_dpi.h $(LIB_OBJS)
 	
 standalone: src/dpi/mmt_dpi.h $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
 
 rule_info: src/dpi/mmt_dpi.h $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"
@@ -115,6 +119,8 @@ uninstall:
 sample_rules: compile_rule
 	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so rules/unauthorised_ports.xml
 	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so      rules/arp_poisoning.xml
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so.c rules/unauthorised_ports.xml -c
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so.c      rules/arp_poisoning.xml -c
 	
 install: uninstall $(INSTALL_DIR) clean all lib sample_rules
 	
@@ -175,3 +181,31 @@ dist-clean: uninstall
 	
 clean:
 	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)
+	
+################################################################################
+#auto test 
+################################################################################
+TEST_INDEX=1
+_prepare: compile_rule standalone
+	$(QUIET) $(RM) rules/*
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/properties.so check/properties.xml
+	@echo "==============================="
+check/expect/%.csv :
+	@echo "  => not found expected result: $@"
+	@exit 1
+check/pcap/%.pcap :
+	@echo "  => not found sample pcap file: $@"
+	@exit 1
+_print.%:
+	@echo "$(TEST_INDEX). Testing $*"
+	$(eval TEST_INDEX=$(shell echo $$(($(TEST_INDEX)+1))))
+#one test
+_check.%: _print.% check/expect/%.csv check/pcap/%.pcap
+	$(QUIET) $(RM) /tmp/mmt-security*.csv
+	$(QUIET) bash -c "./$(MAIN_STAND_ALONE) -t check/pcap/$*.pcap -f /tmp/ &> /tmp/$*.log"
+	$(QUIET) bash -c "diff <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) || (echo \"====================execution log:\" && cat /tmp/$*.log && exit 1)"
+	@echo '  => OK'
+	
+check: _prepare _check.http_mal _check.arp_spoof _check.http_1flow_p30
+	@echo "All test passed!"
+################################################################################

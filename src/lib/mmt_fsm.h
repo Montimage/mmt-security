@@ -50,7 +50,7 @@ typedef struct fsm_delay_struct{
 /**
  *  Finite State Machine
  */
-typedef void fsm_t;
+typedef struct fsm_struct fsm_t;
 
 #define FSM_EVENT_TYPE_TIMEOUT 0
 
@@ -107,7 +107,7 @@ typedef struct fsm_transition_struct
     * - Return
     * 	+ YES if the event's data fulfills the condition, otherwise NO.
     */
-   int ( *guard )( const void *event_data, const fsm_t *fsm );
+   int ( *guard )( const message_t *msg, const fsm_t *fsm );
 
    /**
     * When the #guard is fulfilled, some pre-defined action will be performed.
@@ -154,10 +154,6 @@ typedef struct fsm_state_struct{
     *  Number of outgoing transitions in the #transitions array above.
     */
    size_t transitions_count;
-   /**
-    *  Data that will be available in its #entry_action and #exit_action
-    */
-   void *data;
    /**
     *  This function is called whenever the state is being entered. May be NULL.
     */
@@ -257,9 +253,6 @@ enum fsm_handle_event_value{
  * 	+ transition_index: indicates the transition T at index #transition_index of
  * 		the current state of #fsm will be verified to fire.
  * 	+ message_data: data to be stored in the execution trace of the machine if T fired.
- * 	+ event_data: is a representation of #message_data. In fact #event_data is generated
- * 		from #message_data by a convert function defined in each rule (being encoded in file .so).
- * 		#event_data will be stored in execution history of the machine if T fired.
  * - Output:
  * 	+ new_fsm: points to a new instance of #fsm if the #action of the transition T
  * 		is #FSM_ACTION_CREATE_INSTANCE and the transition has been fired, otherwise
@@ -272,7 +265,7 @@ enum fsm_handle_event_value{
  * 	be verified firstly, before the transition having index == #transition_index. Thus if one of them
  * 	can fire, the machine will fire that transition, not the one having index == #transition_index
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, const void *event_data, fsm_t **new_fsm );
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message, fsm_t **new_fsm );
 
 
 bool fsm_is_verifying_single_packet( const fsm_t *fsm );
@@ -283,7 +276,7 @@ bool fsm_is_verifying_single_packet( const fsm_t *fsm );
  * @param event_data
  * @return FSM_ERR_ARG if this fsm verifies on multiple packets
  */
-enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *message_data, const void *event_data );
+enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *message );
 /**
  *  Get the current state
  *
@@ -293,17 +286,6 @@ enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *mes
  *		+ a pointer to the current state, otherwise, NULL if fsm is NULL.
  */
 const fsm_state_t *fsm_get_current_state( const fsm_t *fsm );
-
-/**
- *  Get the previous state
- *
- *	- Input:
- * 	+ the state machine to get the previous state from.
- * - Return:
- * 	+ the previous state, otherwise, NULL if #fsm is NULL
- * 		or if there has not yet been any transitions.
- */
-const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm );
 
 /**
  *  Check if the state machine has stopped
@@ -356,7 +338,7 @@ const mmt_array_t* fsm_get_execution_trace( const fsm_t *fsm );
 /**
  * Get data of an event_id
  */
-const void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
+const message_t *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
 
 /**
  * Free a #fsm_event_t object

@@ -10,9 +10,13 @@
 
 #include "plugins_engine.h"
 #include "mmt_lib.h"
+#include "version.h"
 
 //TODO: this limit 100K rules
 #define MAX_PLUGIN_COUNT 100000
+
+static void *dl_libs[MAX_PLUGIN_COUNT];
+static uint32_t dl_libs_index = 0;
 
 static int load_filter( const struct dirent *entry ){
 	char *ext = strrchr( entry->d_name, '.' );
@@ -43,6 +47,8 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	rule_info_t const *  plugins_array[ MAX_PLUGIN_COUNT ];
 	rule_info_t const ** tmp_array;
 	int n;
+
+	unload_mmt_sec_rules();
 
 	n = scandir( MMT_SEC_PLUGINS_REPOSITORY, &entries, load_filter, alphasort );
 	if( n < 0 ) {
@@ -91,40 +97,56 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	return index;
 }
 
-//TODO: this limit 100K files .so
-#define MAX_LIBS_COUNT 100000
-static void *dl_libs[MAX_LIBS_COUNT];
-static uint32_t dl_libs_index = 0;
-
 size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_path_name ){
 
 	void *lib = dlopen( plugin_path_name, RTLD_NOW );
 
 	rule_info_t const* tmp_array;
 	rule_info_t const** ret_array;
-	size_t size, i;
+	size_t size, i, index = 0;
+	uint32_t required_plugin = mmt_sec_get_required_plugin_version_number();
+
 	mmt_assert( lib != NULL, "Cannot open library: %s.\n%s", plugin_path_name, dlerror() );
 
-	size_t ( *fn ) ( const rule_info_t ** ) = dlsym ( lib, "mmt_sec_get_plugin_info" );
-	mmt_assert( fn != NULL, "Cannot find function: mmt_sec_get_plugin_info");
+	const rule_version_info_t* ( *mmt_sec_get_rule_version_info ) () = dlsym ( lib, "mmt_sec_get_rule_version_info" );
 
-	size = fn( &tmp_array );
+	mmt_assert( mmt_sec_get_rule_version_info != NULL, "File %s is incorrect!", plugin_path_name );
+
+	if( mmt_sec_get_rule_version_info()->index < required_plugin ){
+		mmt_warn( "Ignored rules in file %s as it is not up to date.", plugin_path_name );
+		return 0;
+	}
+
+	size_t ( *mmt_sec_get_plugin_info ) ( const rule_info_t ** ) = dlsym ( lib, "mmt_sec_get_plugin_info" );
+	mmt_assert( mmt_sec_get_plugin_info != NULL, "File %s is incorrect!", plugin_path_name );
+
+	size = mmt_sec_get_plugin_info( &tmp_array );
 	ret_array = mmt_mem_alloc( sizeof( rule_info_t *) * size );
-	for( i=0; i<size; i++ )
-		ret_array[i] = & (tmp_array[i]);
+	for( i=0; i<size; i++ ){
+		if( tmp_array[i].version->index < required_plugin )
+			mmt_warn( "Ignored rule %d as it is not up to date.\nRule description: %s",
+					tmp_array[i].id,
+					tmp_array[i].description );
+		else
+			ret_array[ index++ ] = & (tmp_array[i] );
+	}
 
 	*plugins_arr = ret_array;
 
-	if( dl_libs_index < MAX_LIBS_COUNT )
+	if( dl_libs_index < MAX_PLUGIN_COUNT )
 		dl_libs[ dl_libs_index ++ ] = lib;
 
 	return size;
 }
 
 void unload_mmt_sec_rules() {
-	size_t i;
+	size_t i, ret = 0;
 	for( i=0; i<dl_libs_index; i++ )
-		dlclose( dl_libs[ i ] );
+		ret |= dlclose( dl_libs[ i ] );
+
+	if( ret != 0 )
+		mmt_warn("Cannot close properly mmt-security .so rules");
+
 	dl_libs_index = 0;
 }
 

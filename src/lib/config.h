@@ -68,7 +68,7 @@ typedef struct config_struct {
 		/**
 		 * maximum size, in bytes, of a report received from mmt-probe
 		 */
-		uint32_t max_report_size;
+		uint32_t max_message_size;
 	}input;
 }config_t;
 

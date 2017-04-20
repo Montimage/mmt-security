@@ -62,11 +62,6 @@ inline enum data_type convert_data_type( int type ){
 	return STRING;
 }
 
-static inline enum data_type _get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
-	long type = get_attribute_data_type( p_id, a_id );
-	return convert_data_type( type );
-}
-
 size_t str_trim( uint8_t *string, size_t size ){
 	return size;
 }
@@ -95,7 +90,8 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint16_t ref_index 
 	var->ref_index = ref_index;
 	var->proto_id  = get_protocol_id_by_name( var->proto );
 	var->att_id    = get_attribute_id_by_protocol_id_and_attribute_name( var->proto_id, var->att );
-	var->data_type = _get_attribute_data_type( var->proto_id, var->att_id );
+	var->dpi_type  = get_attribute_data_type( var->proto_id, var->att_id  );
+	var->data_type = convert_data_type( var->dpi_type );
 
 	mmt_assert( var->data_type != UNKNOWN, "Error 2: Data type for %s.%s has not implemented yet.", proto, attr);
 
@@ -471,13 +467,35 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 	} else if (isalpha(*temp) || *temp == '_') {
 		//a variable: PROTO.FIELD.EVENT
 		index = _parse_variable( &new_var, temp, MAX_STR_SIZE );
-		mmt_assert( new_var != NULL, "Error 37c: Illegal variable name: %s", temp );
-		new_expr = expr_create_an_expression( VARIABLE, new_var );
-		new_expr->father = expr;
-		//append new_expr to expr->params_list
-		expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
-		expr->operation->params_size ++;
+
+		//not a variable
+		//=> give one more chance to check constant
+		if( new_var == NULL ){
+			index = _parse_a_name( &new_string, temp, MAX_STR_SIZE );
+			new_number = mmt_mem_alloc( sizeof( double ) );
+			if( strcmp( new_string, "true") == 0 ){
+				*new_number = true;
+			}else if( strcmp( new_string, "false") == 0 ){
+				*new_number = false;
+			}else {
+				mmt_mem_free( new_number );
+				mmt_halt("Error 37c: Illegal name:\"%s\".\nExpected either \"true\", \"false\", or proto.att or proto.att.ref", temp + 1 );
+			}
+			new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(NUMERIC, sizeof( double), new_number) );
+			new_expr->father = expr;
+			//append new_expr to expr->params_list
+			expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
+			expr->operation->params_size ++;
+		}else{
+			new_expr = expr_create_an_expression( VARIABLE, new_var );
+			new_expr->father = expr;
+			//append new_expr to expr->params_list
+			expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
+			expr->operation->params_size ++;
+		}
+
 		_parse_a_boolean_expression(NO, expr, temp + index);
+
 	} else if (*temp == '#') {
 		//an embedded function: #func(param_1, param_2)
 		temp ++;

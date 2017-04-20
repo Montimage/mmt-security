@@ -19,13 +19,58 @@
 #include "mmt_array_t.h"
 
 typedef struct proto_attribute_struct{
+	/**
+	 * Protocol name
+	 */
 	const char *proto;
+	/**
+	 * Attribute name
+	 */
 	const char *att;
+	/**
+	 * Protocol ID
+	 */
 	uint32_t proto_id;
+	/**
+	 * Attribute ID
+	 */
 	uint32_t att_id;
-	int data_type; //NUMERIC, STRING
+	/**
+	 * Data type defined by MMT-Security such as NUMERIC, STRING
+	 */
+	int data_type;
+	/**
+	 * data type defined by MMT-DPI such as MMT_U8_DATA, MMT_DATA_IP_ADDR, ...
+	 */
+	int dpi_type;
 }proto_attribute_t;
 
+/**
+ * Information of the moment the rules was created
+ */
+typedef struct rule_version_info_struct{
+	/**
+	 * Moment C code of the rule was generated
+	 */
+	time_t created_date;
+	/**
+	 * A hash string represent GIT version of source code from that the rule_compile was created
+	 */
+	const char *hash;
+	/**
+	 * Version number in string format, e.g., 1.2.18
+	 */
+	const char *number;
+	/**
+	 * A number represent the number string above, e.g., 56
+	 * A recent version must has an index that is greater than the one of older version
+	 */
+	uint32_t index;
+	/**
+	 * Version string of MMT-DPI
+	 */
+	const char *dpi;
+}rule_version_info_t;
 
 /**
  * Information of a rule in generated lib
@@ -36,8 +81,7 @@ typedef struct rule_info_struct{
 	int type_id;
 	/** rule type that is either "attack", "security", "test", "evasion"*/
 	const char *type_string;
-	/** number of events existing in the rules  */
-	uint8_t events_count;
+
 	/**
 	 * Description of the rule
 	 */
@@ -48,36 +92,47 @@ typedef struct rule_info_struct{
 	const char *if_not_satisfied;
 
 	/** Size of #proto_atts */
-	size_t proto_atts_count;
-	/** Array of protocols and their attributes being used in this rule */
+	uint8_t proto_atts_count;
+
+	/** number of events existing in the rules  */
+	uint8_t events_count;
+
+	/** Array of unique protocols and their attributes being used in this rule */
 	const proto_attribute_t *proto_atts;
 	/**
 	 * Each array represents detail protocols and their attributes of each event.
+	 * There are #events_count elements. Each element is an mmt_array_t
+	 *  that represents unique proto.att of an event. Specifically,
+	 *   - array.elements_count = number of proto.atts in the event
+	 *   - array.data = array of pointers. Each pointer has type of proto_attribute_t
 	 */
 	const mmt_array_t *proto_atts_events;
+
+	/**
+	 * Each array represents the protocols and attributes will be excluded from its event mask.
+	 * This means that MMT-Security will not check the presents of these proto.atts before verifying
+	 * an event. (Such a checking is done normally to ensure all proto.atts are present)
+	 */
+	const mmt_array_t *excluded_filter;
 
 	/** Create a FSM instance */
 	void* (* create_instance )();
 
 	/**
-	 * Create an internal struct using by guard of FSM above, e.g., _msg_t_1
+	 * Set a unique number to represent a proto.att.
+	 * This function must be called firstly, inside #mmt_sec_init, before #create_instance.
+	 * In any processing of this rule, e.g., verification of a transition guard, the rule will
+	 * not use proto.att or proto_id and att_id to request its data
+	 * but it will use this unique number.
 	 *
-	 * This function is not thread-safe
+	 * Note: This function is not thread-safe
 	 */
-
-	const void* (* convert_message )( const message_t * message);
-
-	/**
-	 * Size of message returned by #convert_message
-	 */
-	const size_t message_size;
+	void (* hash_message )( const char *proto, const char *att, uint16_t index );
 
 	/**
-	 * - Return:
-	 * 	+ a hash number.
-	 * This function is not thread-safe
+	 * Information at the moment the rule was created
 	 */
-	uint64_t (* hash_message )( const void *data );
+	const rule_version_info_t *version;
 }rule_info_t;
 
 /**

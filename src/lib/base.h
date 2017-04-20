@@ -24,7 +24,7 @@
 #define __thread_scope __thread
 
 //macroe
-#define __check_null( x, y ) if( unlikely( x == NULL )) return y; else
+#define __check_null( x, y ) while( unlikely( x == NULL )) return y
 
 //branch prediction
 #ifndef likely
@@ -37,12 +37,12 @@
 
 /* a=target variable, i=bit number to act upon 0-n  (n == sizeof(a))*/
 //set bit i-th to 1
-#define BIT_SET(a,i)   ((a) |= (1<<(i)))
+#define BIT_SET(number,i)   ((number) |= (1ULL<<(i)))
 //set bit i-th to 0
-#define BIT_CLEAR(a,i) ((a) &= ~(1<<(i)))
+#define BIT_CLEAR(number,i) ((number) &= ~(1ULL<<(i)))
 //flip bit i-th
-#define BIT_FLIP(a,i)  ((a) ^= (1<<(i)))
+#define BIT_FLIP(number,i)  ((number) ^= (1ULL<<(i)))
 //check bit i-th
-#define BIT_CHECK(a,i) ((a) &  (1<<(i)))
+#define BIT_CHECK(number,i) ((number) &  (1ULL<<(i)))
 
 #endif /* SRC_LIB_BASE_H_ */

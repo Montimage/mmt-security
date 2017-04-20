@@ -1,16 +1,18 @@
 /*
- * mmt_security.c
+ * security.c
  *
- *  Created on: Oct 10, 2016
+ *  Created on: Mar 17, 2017
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/syscall.h>
-#include <pthread.h>
-#include <math.h>
 
+
+#include <signal.h>
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "mmt_security.h"
+#include "mmt_lib.h"
+
 #include "base.h"
 #include "mmt_lib.h"
 
@@ -22,103 +24,69 @@
 #include "version.h"
 #include "plugin_header.h"
 
-#include "../dpi/types_defs.h"
-#include "../dpi/mmt_dpi.h"
+#include "mmt_single_security.h"
+#include "mmt_smp_security.h"
+
+static const rule_info_t **rules = NULL;
+static size_t rules_count = 0;
+
+static const proto_attribute_t **proto_atts = NULL;
+static size_t proto_atts_count = 0;
+
+static bool is_init = NO;
 
 //string size of an alert in JSON format
 #define MAX_MSG_SIZE 10000
 
-const char *mmt_sec_get_version_info(){
-	//define in version.h
-	return MMT_SEC_VERSION;
-}
 
-size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
-	return load_mmt_sec_rules( rules_array );
-}
+struct mmt_sec_handler_struct{
+	void *sec_handler;
 
-size_t mmt_sec_filter_rules( const char *rule_mask, size_t rules_count, const rule_info_t **rules_array ){
+	void (*process)( void *, message_t *);
+
+	int threads_count;
+};
+
+
+
+void _filter_rules( const char *rule_mask ){
 	uint32_t *rule_range, rule_id;
-	int i, j, k, rules_count_per_thread;
+	int i, j, k, count;
 
-	//Rules to be disabled
-	if( rule_mask == NULL || strlen( rule_mask) == 0 )
-		return rules_count;
+	if( rule_mask == NULL || strlen( rule_mask ) == 0 )
+		return;
 
 	//rules are not verified
-	rules_count_per_thread = get_special_rules_for_thread( 0, rule_mask, &rule_range );
-	if( rules_count_per_thread > 0 ){
+	count = expand_number_range( rule_mask, &rule_range );
+	if( count > 0 ){
 		//move ignored rules to the end
 		//rule_ptr will ignored the last n rules
-		for( j=rules_count_per_thread-1; j>=0; j-- ){
+		for( j=count-1; j>=0; j-- ){
 			rule_id = rule_range[ j ];
 			if( rules_count == 0 )
-				return rules_count;
+				return;
 
 			for( k=rules_count-1; k>=0; k-- )
-				if( rule_id == rules_array[k]->id ){
+				if( rule_id == rules[k]->id ){
 					//ignore this rule: rules_array[rules_count--]
 					rules_count --;
 
-					rules_array[k] = rules_array[ rules_count ];;
+					rules[k] = rules[ rules_count ];;
 					break;
 				}
 		}
 	}
-	return rules_count;
-}
-
-typedef struct _mmt_sec_handler_struct{
-	size_t rules_count;
-	const rule_info_t **rules_array;
-	//this is called each time we reach final/error state
-	mmt_sec_callback callback;
-	//a parameter will give to the #callback
-	void *user_data_for_callback;
-	rule_engine_t **engines;
-
-	size_t proto_atts_count;
-	const proto_attribute_t **proto_atts_array;
-
-	//number of generated alerts
-	size_t *alerts_count;
-
-	//TODO: this limits 64 events per mmt_security, i.e., set of rules processed
-	//by this handler have maximally 64 events
-	uint64_t *rules_hash; //a 64-bit hash number of each rule
-
-	bool verbose;
-#ifdef DEBUG_MODE
-	size_t messages_count;
-#endif
-}_mmt_sec_handler_t;
-
-
-size_t mmt_sec_get_rules(  const mmt_sec_handler_t *handler, const rule_info_t ***rules_array ){
-	__check_null( handler, 0 );
-	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *) handler;
-
-	*rules_array = _handler->rules_array;
-	return _handler->rules_count;
-}
-
-size_t mmt_sec_get_unique_protocol_attributes( const mmt_sec_handler_t *handler, const proto_attribute_t ***proto_atts_array ){
-	__check_null( handler, 0 );
-
-	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *) handler;
-
-	*proto_atts_array = _handler->proto_atts_array;
-	return _handler->proto_atts_count;
+	mmt_mem_free( rule_range );
 }
 
 static inline void _iterate_proto_atts( void *key, void *data, void *user_data, size_t index, size_t total ){
-	void **array = user_data;
-	array[ index ] = data;
-	//free the key being created on line 99
+	proto_atts[ index ] = data;
+	//free the key being created on line 88 of function _get_unique_proto_attts
 	mmt_mem_free( key );
 }
 
-static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
+
+static inline void _get_unique_proto_attts( ){
 	const rule_info_t *rule;
 	size_t i, j;
 
@@ -127,196 +95,163 @@ static inline void _get_unique_proto_attts( _mmt_sec_handler_t *_handler ){
 	const proto_attribute_t *me, *old;
 
 	//for each rule
-	for( i=0; i<_handler->rules_count; i++ ){
-		rule = _handler->rules_array[i];
+	for( i=0; i<rules_count; i++ ){
+		rule = rules[i];
 		for( j=0; j<rule->proto_atts_count; j++ ){
 			me = &rule->proto_atts[j];
-			proto_att_key  = mmt_mem_alloc( 10 );
-			sprintf( proto_att_key, "%d.%d",  me->proto_id, me->att_id );
+			proto_att_key  = mmt_mem_alloc( 12 );
+			snprintf( proto_att_key, 10, "%4d.%4d",  me->proto_id, me->att_id );
 
 			if( (old = mmt_map_set_data( map, proto_att_key, (void *)me, NO )) != NULL ){
 				//already exist
 				mmt_mem_free( proto_att_key );
-				continue;
 			}
 		}
 	}
 
-	_handler->proto_atts_count = mmt_map_count( map );
-	if( _handler->proto_atts_count > 64 )
+	proto_atts_count = mmt_map_count( map );
+	//TODO: limit to 64 proto.att ???
+	if( proto_atts_count > 64 )
 		mmt_halt( "A single mmt_security cannot handler more than 64 different proto.att. You might need to use mmt_smp_sec to divide work load." );
 
-	_handler->proto_atts_array = mmt_mem_alloc( _handler->proto_atts_count * sizeof( void* ));
-	mmt_map_iterate( map, _iterate_proto_atts, _handler->proto_atts_array );
+	proto_atts = mmt_mem_alloc( proto_atts_count * sizeof( void* ));
+	mmt_map_iterate( map, _iterate_proto_atts, NULL );
 
 	mmt_map_free( map, NO );
 }
 
+static inline void _update_rule_hash_proto_att( ){
+	int index, i, j;
+	const rule_info_t *rule;
+	const proto_attribute_t *p;
 
-static inline uint64_t _calculate_hash_number_of_a_rule( size_t rule_index, const _mmt_sec_handler_t * handler ){
-	const rule_info_t *rule = handler->rules_array[ rule_index ];
-	size_t j, k;
-	const proto_attribute_t *me;
-	uint64_t  hash = 0;
-
-	//for each proto_att of this rules
-	for( j=0; j<rule->proto_atts_count; j++ ){
-		me = &rule->proto_atts[ j ];
-		for( k=0; k < handler->proto_atts_count; k++ )
-			if( handler->proto_atts_array[k]->proto_id == me->proto_id  &&
-					handler->proto_atts_array[k]->att_id == me->att_id  ){
-
-				//this rule need proto_att in k-th of handler->proto_atts_array
-				BIT_SET( hash, k );
-			}
+	//for each index
+	for( index=0; index< proto_atts_count; index++ ){
+		p = proto_atts[ index ];
+		//for each rule
+		for( i=0; i< rules_count; i++ ){
+			rule = rules[ i ];
+			rule->hash_message( p->proto, p->att, index );
+		}
+		mmt_debug("%2d <- hash(%s, %s)", index, p->proto, p->att );
 	}
-
-	if( unlikely( hash == 0 ) )
-		mmt_warn( "Rule %"PRIu32" does not concerns to any protocol (%s)", rule->id, rule->description );
-
-	return hash;
-}
-
-/**
- * Public API
- */
-mmt_sec_handler_t *mmt_sec_register( const rule_info_t **rules_array, size_t rules_count, bool verbose,
-		mmt_sec_callback callback, void *user_data){
-	size_t i;
-	uint32_t max_instance_count = get_config()->security.max_instances;
-	__check_null( rules_array, NULL );
-
-	_mmt_sec_handler_t *handler = mmt_mem_alloc( sizeof( _mmt_sec_handler_t ));
-	handler->rules_count = rules_count;
-	handler->rules_array = rules_array;
-	handler->callback    = callback;
-	handler->user_data_for_callback = user_data;
-	handler->alerts_count = mmt_mem_alloc( sizeof (size_t ) * rules_count );
-	handler->verbose     = verbose;
-	//one fsm for one rule
-	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
-	for( i=0; i<rules_count; i++ ){
-		handler->engines[i]      = rule_engine_init( rules_array[i], max_instance_count );
-		handler->alerts_count[i] = 0;
-	}
-
-	//printf(" Thread pid=%2d processes %4zu rules: ", gettid(), rules_count );
-
-	_get_unique_proto_attts( handler );
-
-	handler->rules_hash = mmt_mem_alloc( sizeof( uint64_t ) * rules_count );
-	for( i=0; i<rules_count; i++ ){
-		handler->rules_hash[ i ] = _calculate_hash_number_of_a_rule( i, handler );
-	}
-
-#ifdef DEBUG_MODE
-	handler->messages_count = 0;
-#endif
-
-	return (mmt_sec_handler_t *)handler;
 }
 
 
 /**
- * Public API
+ * This function inits security rules
+ * @return
  */
-size_t mmt_sec_unregister( mmt_sec_handler_t *handler ){
-	size_t i, alerts_count = 0;
-	__check_null( handler, 0);
+int mmt_sec_init( const char* excluded_rules_id ){
+	is_init = YES;
+	//get all available rules
+	rules_count = load_mmt_sec_rules( &rules );
 
-	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
+	//Rules to be disabled
+	_filter_rules( excluded_rules_id );
 
-	for( i=0; i<_handler->rules_count; i++ ){
-		if( _handler->alerts_count[ i ] == 0 )
-			continue;
-
-		if( _handler->verbose )
-			printf(" - rule %"PRIu32" generated %"PRIu64" verdicts\n", _handler->rules_array[i]->id, _handler->alerts_count[ i ] );
-		alerts_count += _handler->alerts_count[ i ];
+	if( rules_count == 0 ){
+		mmt_warn("There are no security rules to verify.");
+		return 1;
 	}
 
-	//free data elements of _handler
-	for( i=0; i<_handler->rules_count; i++ )
-		rule_engine_free( _handler->engines[i] );
+	_get_unique_proto_attts();
+	_update_rule_hash_proto_att();
 
-	mmt_mem_free( _handler->proto_atts_array );
-	mmt_mem_free( _handler->engines );
-	mmt_mem_free( _handler->rules_hash );
-	mmt_mem_free( _handler->alerts_count );
-	mmt_mem_free( _handler );
+	return 0;
+}
+
+
+void mmt_sec_close(){
+	mmt_mem_free( rules );
+	rules = NULL;
+	rules_count = 0;
+
+	mmt_mem_free( proto_atts );
+	proto_atts = NULL;
+	proto_atts_count = 0;
+}
+
+/**
+ *
+ * @param dpi_handler
+ * @param threads_count: if 0, security will use the lcore of caller
+ * @param cores_id
+ * @param rules_mask
+ * @param verbose
+ * @param callback
+ * @param user_data
+ * @return
+ */
+mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores_id, const char *rules_mask,
+		bool verbose, mmt_sec_callback callback, void *args ){
+
+	mmt_sec_handler_t *ret = mmt_mem_alloc(sizeof( mmt_sec_handler_t ));
+
+	size_t i, j;
+
+	//number of threads
+	ret->threads_count = threads_count;
+
+	//
+	if( unlikely( is_init == NO) )
+		mmt_halt("mmt_sec_init must be called before any mmt_sec_register" );
+
+	if( verbose ){
+		if( threads_count == 0 )
+			mmt_info( "MMT-Security %s is verifying %zu rules having %zu proto.atts using the main thread",
+				mmt_sec_get_version_info(),
+				rules_count, proto_atts_count );
+		else
+			mmt_info( "MMT-Security %s is verifying %zu rules having %zu proto.atts using %zu threads",
+							mmt_sec_get_version_info(),
+							rules_count, proto_atts_count, threads_count );
+	}
+	//init mmt-sec to verify the rules
+	if( threads_count == 0 ){
+		ret->sec_handler = mmt_single_sec_register( rules, rules_count, verbose, callback, args );
+		ret->process = (void *)&mmt_single_sec_process;
+	} else {
+		ret->sec_handler = mmt_smp_sec_register( threads_count,
+												cores_id, rules_mask, verbose, callback, args );
+		ret->process = (void *)&mmt_smp_sec_process;
+	}
+
+	return ret;
+}
+
+void mmt_sec_process( mmt_sec_handler_t *handler, message_t *msg ){
+	handler->process( handler->sec_handler, msg );
+}
+
+/**
+ * Stop and free mmt_security
+ * @param wrapper
+ * @return
+ */
+size_t mmt_sec_unregister( mmt_sec_handler_t* ret ){
+	size_t alerts_count = 0;
+
+	if( unlikely( ret == NULL) )
+		return 0;
+
+	if( ret->threads_count > 0 )
+		alerts_count = mmt_smp_sec_unregister( ret->sec_handler, NO );
+	else
+		alerts_count = mmt_single_sec_unregister( ret->sec_handler );
+
+	mmt_mem_free( ret );
 
 	return alerts_count;
 }
 
-static inline uint64_t _calculate_hash_number_of_input_message( const message_t *msg, const _mmt_sec_handler_t *_handler ){
-	uint64_t hash = 0;
-	size_t k, i;
-	const message_element_t *el;
 
-	for( i=0; i<msg->elements_count; i++ ){
-		el = & msg->elements[ i ];
-		for( k=0; k < _handler->proto_atts_count; k++ )
-			if( el->proto_id == _handler->proto_atts_array[ k ]->proto_id
-					&& el->att_id == _handler->proto_atts_array[ k ]->att_id
-					&& el->data != NULL )
-				BIT_SET( hash, k );
-	}
-
-	return hash;
+size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
+	*rules_array = rules;
+	return rules_count;
 }
-/**
- * Public API (used by mmt_sec_smp)
- */
-void mmt_sec_process( const mmt_sec_handler_t *handler, message_t *msg ){
-#ifdef DEBUG_MODE
-	mmt_assert( handler != NULL, "msg cannot be null");
-	mmt_assert( msg != NULL, "msg cannot be null");
-#endif
 
-	size_t i;
-	int verdict;
-	const mmt_array_t *execution_trace;
 
-	_mmt_sec_handler_t *_handler = (_mmt_sec_handler_t *)handler;
-	uint64_t hash = _calculate_hash_number_of_input_message( msg, _handler );
-
-#ifdef DEBUG_MODE
-	_handler->messages_count ++;
-#endif
-
-	//for each rule
-	for( i=0; i<_handler->rules_count; i++){
-		//msg does not contain enough proto.att for i-th rule
-		if( (hash & _handler->rules_hash[i]) == 0 )
-			continue;
-
-//		continue;
-
-//		mmt_debug("verify rule %d\n", _handler->rules_array[i]->id );
-		verdict = rule_engine_process( _handler->engines[i], msg );
-
-		//found a validated/invalid trace
-		if( verdict != VERDICT_UNKNOWN ){
-			_handler->alerts_count[i] ++;
-
-			if( _handler->callback != NULL ){
-				//get execution trace
-				execution_trace = rule_engine_get_valide_trace( _handler->engines[i] );
-
-				//call user-callback function
-				_handler->callback(
-					_handler->rules_array[i],
-					verdict,
-					msg->timestamp,
-					msg->counter,
-					execution_trace,
-					_handler->user_data_for_callback );
-			}
-		}
-	}
-
-	free_message_t( msg );
-}
 
 static inline void _remove_special_character( char * tmp, size_t len ){
 	while( len != 0 ){
@@ -502,16 +437,16 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					size = sprintf( str_ptr, "\"%s\"", (char *) me->data );
 					_remove_special_character(  str_ptr + 1, size - 2 );
 				}
-
-				//close } here
-				str_ptr += size;
-				*str_ptr = '}';
-				*(str_ptr + 1 ) = '\0';
-
-				size = 1;
 				//
 
 			}//end of switch( me->data_type )
+
+			//close } here
+			str_ptr += size;
+			*str_ptr = '}';
+			*(str_ptr + 1 ) = '\0';
+
+			size = 1;
 
 			is_first = NO;
 		}
@@ -520,7 +455,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		if( unlikely( total_len <= 0 )) break;
 
 		str_ptr += size;
-		snprintf( str_ptr, total_len, "]}%s", //end attributes, end event_
+		str_ptr += snprintf( str_ptr, total_len, "]}%s", //end attributes, end event_
 				(index == trace->elements_count - 1)? "}": ""  );
 	}
 
@@ -554,11 +489,11 @@ void mmt_sec_print_verdict(
 	char message[ MAX_MSG_SIZE + 1 ];
 	const char *description = "";
 	const char *string = _convert_execution_trace_to_json_string( trace, rule );
-	static uint32_t alert_index = 0;
+//	static uint32_t alert_index = 0;
 	//TODO this limit mmt-sec on max 100 K rules
 	static uint8_t  prop_index[100000] = {0}, *p;
 
-	__sync_add_and_fetch( &alert_index, 1 );
+//	__sync_add_and_fetch( &alert_index, 1 );
 
 
 	//each rule is processed by only one thread
@@ -577,9 +512,8 @@ void mmt_sec_print_verdict(
 		break;
 	}
 
-	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"eth0\",%ld,%"PRIu32",%"PRIu32",\"%s\",\"%s\",\"%s\", {%s}",
+	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"\",%ld,%"PRIu32",\"%s\",\"%s\",\"%s\", %s",
 			time( NULL ),
-			alert_index, //index of alarm
 			rule->id,
 			verdict_type_string[verdict],
 			rule->type_string,
@@ -595,33 +529,31 @@ void mmt_sec_print_verdict(
  * Print information of available rules
  */
 void mmt_sec_print_rules_info(){
-	const rule_info_t **rules_arr;
-	size_t i, j, k, n  = 0, size;
+	size_t i, j, k, size;
 	const mmt_array_t *proto_atts;
 	const proto_attribute_t *proto;
-
+	struct tm tm;
 	char string[ 100000 ], *ch_ptr, tmp_string[ 1000 ];
 	string[ 0 ] = '\0';
 	ch_ptr = &string[ 0 ];
 
-	n = load_mmt_sec_rules( &rules_arr );
+	printf("Found %zu rule%s", rules_count, rules_count<=1? ".": "s." );
 
-	printf("Found %zu rule%s", n, n<=1? ".": "s." );
-
-	for( i=0; i<n; i++ ){
-		printf("\n%zu - Rule id: %d", (i+1), rules_arr[i]->id );
-		printf("\n\t- type            : %s",  rules_arr[i]->type_string );
-		printf("\n\t- description     : %s",  rules_arr[i]->description );
-		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
-		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
+	for( i=0; i<rules_count; i++ ){
+		printf("\n%zu - Rule id: %d", (i+1), rules[i]->id );
+		printf("\n\t- type            : %s",  rules[i]->type_string );
+		printf("\n\t- description     : %s",  rules[i]->description );
+		printf("\n\t- if_satisfied    : %s",  rules[i]->if_satisfied );
+		printf("\n\t- if_not_satisfied: %s",  rules[i]->if_not_satisfied );
 		//for each event
-		for(j=0; j<rules_arr[i]->events_count; j++ ){
-			printf("\n\t- event %2zu        ", j+1 );
+		for(j=0; j<rules[i]->events_count; j++ ){
+			printf("\n\t- event %-2zu        ", j+1 );
 			//visite each proto/att of one event
-			proto_atts = &(rules_arr[i]->proto_atts_events[ j+1 ]);
+			proto_atts = &(rules[i]->proto_atts_events[ j+1 ]);
 			for( k=0; k<proto_atts->elements_count; k++ ){
 				proto = proto_atts->data[k];
-				printf("%c %s.%s", k==0?':':',', proto->proto, proto->att );
+				printf("%c %s.%s (%d.%d)", k==0?':':',', proto->proto, proto->att,
+						 proto->proto_id, proto->att_id );
 
 				//add to unique set
 				sprintf( tmp_string, "%s.%s", proto->proto, proto->att );
@@ -629,6 +561,13 @@ void mmt_sec_print_rules_info(){
 					ch_ptr += sprintf( ch_ptr, "\"%s.%s\",", proto->proto, proto->att );
 			}
 		}
+
+		tm = *localtime(& rules[i]->version->created_date );
+		printf("\n\t- version         : %s (%s - %d-%d-%d %d:%d:%d), dpi version %s",
+				 rules[i]->version->number,
+				 rules[i]->version->hash,
+				 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
+				 rules[i]->version->dpi );
 	}
 
 	//remove the last comma
@@ -636,7 +575,21 @@ void mmt_sec_print_rules_info(){
 	if( size > 0 ) string[ size - 1 ] = '\0';
 
 	printf("\n\nProtocols and their attributes used in these rules:\n\t %s\n\n", string );
+}
 
-	mmt_mem_free( rules_arr );
-	unload_mmt_sec_rules();
+
+size_t mmt_sec_get_unique_protocol_attributes( const proto_attribute_t ***proto_atts_array ){
+	*proto_atts_array = proto_atts;
+	return proto_atts_count;
+}
+
+
+uint16_t mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id ){
+	int i;
+	for( i=0; i<proto_atts_count; i++ )
+		if( proto_atts[ i ]->att_id  == att_id && proto_atts[ i ]->proto_id  == proto_id )
+			return i;
+
+	mmt_halt( "Attribute %d.%d has not been registered in MMT-Security", proto_id, att_id );
+	return 0;
 }

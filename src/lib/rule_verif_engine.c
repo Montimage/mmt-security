@@ -5,6 +5,7 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
 #include "rule_verif_engine.h"
+#include "prefetch.h"
 
 /**
  * In the next event,
@@ -37,9 +38,9 @@ static inline void _set_expecting_events_id( rule_engine_t *_engine, fsm_t *fsm,
 
 	//from a state: 2 outgoing transitions have 2 different events
 #ifdef DEBUG_MODE
-	mmt_assert( _engine->max_events_size >= state->transitions_count,
-			"Error: Number of outgoing transition must not be greater than number of events (%zu <= %zu)",
-			state->transitions_count, _engine->max_events_size );
+	mmt_assert( _engine->events_count >= state->transitions_count,
+			"Error: Number of outgoing transition must not be greater than number of events (%zu <= %d)",
+			state->transitions_count, _engine->events_count );
 #endif
 
 	//for each outgoing transition, we add it to the list of expecting events
@@ -72,12 +73,23 @@ static inline void _set_expecting_events_id( rule_engine_t *_engine, fsm_t *fsm,
 static inline enum verdict_type _get_verdict( int rule_type, enum fsm_handle_event_value result ){
 	switch ( rule_type ) {
 	case RULE_TYPE_TEST:
-	case RULE_TYPE_SECURITY:
 		switch( result ){
 		case FSM_ERROR_STATE_REACHED:
 			return VERDICT_NOT_RESPECTED;
 		case FSM_FINAL_STATE_REACHED:
 			return VERDICT_RESPECTED;
+		default:
+			return VERDICT_UNKNOWN;
+		}
+		break;
+
+	case RULE_TYPE_SECURITY:
+		switch( result ){
+		case FSM_ERROR_STATE_REACHED:
+			return VERDICT_NOT_RESPECTED;
+		case FSM_FINAL_STATE_REACHED:
+//			return VERDICT_RESPECTED;
+			return VERDICT_UNKNOWN;
 		default:
 			return VERDICT_UNKNOWN;
 		}
@@ -107,10 +119,10 @@ static inline void _store_valid_execution_trace( rule_engine_t *_engine, fsm_t *
 	const mmt_array_t *array = fsm_get_execution_trace( fsm );
 
 #ifdef DEBUG_MODE
-	mmt_assert( array->elements_count == _engine->max_events_size, "Impossible" );
+	mmt_assert( array->elements_count == _engine->events_count, "Impossible" );
 #endif
 
-	for( i=0; i<_engine->max_events_size; i++ ){
+	for( i=0; i<_engine->events_count; i++ ){
 		//free old message
 		free_message_t( _engine->valid_execution_trace->data[i] );
 
@@ -141,10 +153,11 @@ static inline void _reset_engine_for_fsm( rule_engine_t *_engine, fsm_t *fsm ){
 	_fsm_tran_index_t *fsm_ind;
 	uint16_t fsm_id = fsm_get_id( fsm );
 	//remove all fsm having #fsm_id from the list #fsm_by_expecting_event_id
-	for( i=0; i<_engine->max_events_size; i++ ){
+	for( i=0; i<_engine->events_count; i++ ){
 		node = _engine->fsm_by_expecting_event_id[ i ];
 		while( node != NULL ){
 			ptr = node->next;
+//			prefetch2( ptr );
 			fsm_ind = (_fsm_tran_index_t *) node->data;
 
 			//found a node containing fsm having id = #fsm_id
@@ -189,10 +202,11 @@ static inline void _reset_engine_for_instance( rule_engine_t *_engine, fsm_t *fs
 	//(1) - remove fsm from the list #fsm_by_expecting_event_id
 
 	//for each entry (that is a list) of expecting event i
-	for( i=0; i<_engine->max_events_size; i++ ){
+	for( i=0; i<_engine->events_count; i++ ){
 		node = _engine->fsm_by_expecting_event_id[ i ];
 		while( node != NULL ){
 			ptr     = node->next;
+//			prefetch2( ptr );
 			fsm_ind = (_fsm_tran_index_t *) node->data;
 
 			//found a node containing #fsm
@@ -234,7 +248,7 @@ static inline uint16_t _find_an_available_id( rule_engine_t *_engine ){
 }
 
 static inline
-enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message_t *message_data, const void *event_data, rule_engine_t *_engine ){
+enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message_t *message, rule_engine_t *_engine ){
 	_fsm_tran_index_t *fsm_ind = node->data;
 	fsm_t *fsm = fsm_ind->fsm;
 	//fire a specific transition of the current state of #node->fsm
@@ -245,7 +259,7 @@ enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message
 	enum verdict_type verdict;
 
 	//mmt_debug( "  transition to verify: %zu", fsm_ind->index );
-	val = fsm_handle_event( fsm, fsm_ind->index, message_data, event_data, &new_fsm );
+	val = fsm_handle_event( fsm, fsm_ind->index, message, &new_fsm );
 
 //	mmt_debug( "Verify transition: %zu of fsm %p", fsm_ind->index, fsm );
 
@@ -261,7 +275,6 @@ enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message
 
 		//add the new_fsm to the list of fsm(s) having the same id
 		_engine->fsm_by_instance_id[ new_fsm_id  ] = insert_node_to_link_list( _engine->fsm_by_instance_id[ new_fsm_id ], new_fsm );
-		_engine->total_instances_count ++;
 
 		//TODO: refine this
 //		if( _engine->total_instances_count >= 400 ){
@@ -271,7 +284,7 @@ enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message
 //		}
 
 		fsm = new_fsm;
-		fsm_set_user_data( fsm, _engine );
+//		fsm_set_user_data( fsm, _engine );
 	}
 	else{
 		if( val == FSM_STATE_CHANGED ){
@@ -292,7 +305,7 @@ enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message
 	case FSM_STATE_CHANGED:
 		//mmt_debug( "FSM_STATE_CHANGED" );
 		//add to new list(s) that waiting for a new event
-		_set_expecting_events_id( _engine, fsm, new_fsm != NULL,  message_data->counter );
+		_set_expecting_events_id( _engine, fsm, new_fsm != NULL,  message->counter );
 		break;
 
 	//a final state that is either valid state or invalid one
@@ -342,11 +355,21 @@ enum verdict_type rule_engine_process( rule_engine_t *engine, message_t *message
 
 enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *message ){
 	enum verdict_type verdict;
-	const void *data = engine->rule_info->convert_message( message );
-	enum fsm_handle_event_value val = fsm_handle_single_packet( engine->fsm_bootstrap, message, data );
+	enum fsm_handle_event_value val;
 	const mmt_array_t *array;
 	size_t i;
 
+	//check if message contains enough data to verify 2 consecutive events of the rule
+	if( (message->hash & engine->events_hash[ 1 ]) != engine->events_hash[ 1 ] ||
+		 (message->hash & engine->events_hash[ 2 ]) != engine->events_hash[ 2 ] ){
+//		mmt_debug("Filtered out %"PRIu64" verify rule %d", message->counter, engine->rule_info->id );
+		return VERDICT_UNKNOWN;
+	}
+
+//	mmt_debug("%"PRIu64" verify rule %d", message->counter, engine->rule_info->id );
+
+	verdict = VERDICT_UNKNOWN;
+	val     = fsm_handle_single_packet( engine->fsm_bootstrap, message );
 	switch( val ){
 	case FSM_NO_STATE_CHANGE:
 		return VERDICT_UNKNOWN;
@@ -358,12 +381,12 @@ enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *mess
 	case FSM_ERROR_STATE_REACHED:
 		verdict = _get_verdict( engine->rule_info->type_id, val );
 
-		if( verdict != VERDICT_UNKNOWN ){
+		if( verdict != VERDICT_UNKNOWN )
 			_store_valid_execution_trace( engine, engine->fsm_bootstrap );
-			return verdict;
-		}else{
-			free_message_ts( message, 2 );
-		}
+
+		//reset #fsm_bootstrap so it is clean for the next tests
+		fsm_reset( engine->fsm_bootstrap );
+
 		break;
 
 	case FSM_ERR_ARG:
@@ -374,47 +397,30 @@ enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *mess
 		break;
 	}
 
-
-	return VERDICT_UNKNOWN;
+	return verdict;
 }
 
 
 enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *message ){
-	const void *data    = engine->rule_info->convert_message( message );
-	const uint64_t hash = engine->rule_info->hash_message( data );
 	uint8_t event_id;
 	link_node_t *node, *node_ptr;
 	_fsm_tran_index_t *fsm_ind;
 	enum verdict_type ret;
 
-
-	//there are no transitions that can receive the message
-	if( hash == 0 ){
-		return VERDICT_UNKNOWN;
-	}
-
-	/**
-	 * We need to store the head of each entry in #fsm_by_expecting_event_id
-	 * as when verifying one event, a new fsm instance can be created and inserted
-	 * to the head of one entry
-	 * memcpy is slower than for-each
-	 */
-	//memcpy( _engine->tmp_fsm_by_expecting_event_id, _engine->fsm_by_expecting_event_id, _engine->max_events_count * sizeof( void *) );
-	for( event_id=0; event_id<engine->max_events_size; event_id++ )
-		engine->tmp_fsm_by_expecting_event_id[ event_id ] =  engine->fsm_by_expecting_event_id[event_id ];
-
 	//mmt_debug( "Verify message counter: %"PRIu64", ts: %"PRIu64, message->counter, message->timestamp );
 	//mmt_debug( "===Verify Rule %d=== %zu", _engine->rule_info->id, _engine->max_events_count );
 
 	//get from hash table the list of events to be verified
-	for( event_id=0; event_id<engine->max_events_size; event_id++ ){
+	for( event_id=0; event_id<engine->events_count; event_id++ ){
 
-		//this event does not fire
-		if(  BIT_CHECK( hash, event_id ) == 0 ) continue;
-		//mmt_debug( "Event_id : %d", event_id );
+		//message does not contain enough data required by this event
+		if( (message->hash & engine->events_hash[ event_id ] ) != engine->events_hash[ event_id ] )
+			continue;
+
+//		mmt_debug( "Event_id : %d", event_id );
 
 		//verify fsm instances that are waiting for event_id
-		node = engine->tmp_fsm_by_expecting_event_id[ event_id ];
+		node = engine->fsm_by_expecting_event_id[ event_id ];
 
 		//for each instance
 		while( node != NULL ){
@@ -423,9 +429,13 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 			node_ptr = node;
 			node     = node->next;
 
+			//check whether the #fsm_ind was verified above
+			if( fsm_ind->counter == message->counter )
+				continue;
+
 			//put this after node = node->next
 			// because #node can be freed( or inserted a new node) in the function #_fire_transition
-			ret = _process_a_node( node_ptr, event_id, message, data, engine );
+			ret = _process_a_node( node_ptr, event_id, message, engine );
 
 			//get only one verdict per packet
 			if( ret != VERDICT_UNKNOWN ){
@@ -451,7 +461,7 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 
 		//put this after node = node->next
 		// because #node can be freed( or inserted a new node) in the function #_fire_transition
-		ret = _process_a_node( node_ptr, FSM_EVENT_TYPE_TIMEOUT, message, data, engine );
+		ret = _process_a_node( node_ptr, FSM_EVENT_TYPE_TIMEOUT, message, engine );
 
 		//get only one verdict per packet
 		if( ret != VERDICT_UNKNOWN ){
@@ -462,7 +472,42 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 	return VERDICT_UNKNOWN;
 }
 
+/**
+ * Calculate hash of each event
+ * This is called only one time at initiation of #_engine
+ * @param _engine
+ */
+static inline void _calculate_hash_number( rule_engine_t *_engine ){
+	int i, j, k, index;
+	const rule_info_t *rule = _engine->rule_info;
+	const mmt_array_t *ev;
+	const proto_attribute_t *p;
+	bool is_in_excluded_list;
+	for( i=0; i<_engine->events_count; i++ ){
+		_engine->events_hash[i] = 0;
+		ev = &( rule->proto_atts_events[i] );
 
+		//for each proto.att
+		for( j=0; j<ev->elements_count; j++ ){
+			p = ev->data[ j ];
+
+			is_in_excluded_list = false;
+			//check whether p in the excluded list
+			for( k=0; k<rule->excluded_filter[i].elements_count; k++ )
+				if( p == rule->excluded_filter[i].data[ k ] ){
+					is_in_excluded_list = true;
+					mmt_debug("Exclude present checking of %s.%s from event %d of rule %d", p->proto, p->att, i, rule->id );
+					break;
+				}
+
+			if( !is_in_excluded_list ){
+				index = mmt_sec_hash_proto_attribute( p->proto_id, p->att_id );
+				BIT_SET( _engine->events_hash[i], index );
+			}
+		}
+
+	}
+}
 
 /**
  * Public API
@@ -475,15 +520,14 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 	_engine->fsm_bootstrap      = rule_info->create_instance();
 	fsm_set_id( _engine->fsm_bootstrap, 0 );
 
-	_engine->rule_info          = rule_info;
-	_engine->max_events_size    = rule_info->events_count + 1; //event_id start from 1
-	mmt_assert( _engine->max_events_size <= 64, "Cannot hold more than 64 events in a property" );
+	_engine->rule_info     = rule_info;
+	_engine->events_count  = rule_info->events_count + 1; //event_id start from 1 (0 is timeout)
+	mmt_assert( _engine->events_count <= 64, "Cannot hold more than 64 events in a property" );
 	_engine->max_instances_size = max_instances_count;
 	_engine->instances_count    = 1; //fsm_bootstrap
 	//linked-list of fsm instances indexed by their expected event_id
-	_engine->tmp_fsm_by_expecting_event_id = mmt_mem_alloc( _engine->max_events_size * sizeof( void *) );
-	_engine->fsm_by_expecting_event_id     = mmt_mem_alloc( _engine->max_events_size * sizeof( void *) );
-	for( i=0; i<_engine->max_events_size; i++ )
+	_engine->fsm_by_expecting_event_id = mmt_mem_alloc( _engine->events_count * sizeof( void *) );
+	for( i=0; i<_engine->events_count; i++ )
 		_engine->fsm_by_expecting_event_id[ i ] = NULL;
 
 	//add fsm_bootstrap to the list
@@ -497,10 +541,10 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 	//add fsm_bootstrap to the first element of
 	_engine->fsm_by_instance_id[ 0 ] = insert_node_to_link_list(_engine->fsm_by_instance_id[ 0 ], _engine->fsm_bootstrap );
 
-	_engine->valid_execution_trace = mmt_array_init( _engine->max_events_size );
+	_engine->valid_execution_trace = mmt_array_init( _engine->events_count );
 
-	_engine->total_instances_count = 0;
-
+	_engine->events_hash = mmt_mem_alloc( sizeof( uint64_t) * _engine->events_count );
+	_calculate_hash_number( _engine );
 	fsm_set_user_data( _engine->fsm_bootstrap, _engine );
 
 
@@ -522,17 +566,17 @@ void rule_engine_free( rule_engine_t *_engine ){
 
 	__check_null( _engine, );
 
-	for( i=0; i<_engine->max_events_size; i++ )
+	for( i=0; i<_engine->events_count; i++ )
 		free_link_list(_engine->fsm_by_expecting_event_id[ i ], YES );
-	_engine->max_events_size = 0;
+	_engine->events_count = 0;
 
 	mmt_mem_free( _engine->fsm_by_expecting_event_id );
-	mmt_mem_free( _engine->tmp_fsm_by_expecting_event_id );
 
 	for( i=0; i<_engine->max_instances_size; i++ )
 		free_link_list_and_data( _engine->fsm_by_instance_id[ i ], (void *)fsm_free );
 
 	mmt_mem_free( _engine->fsm_by_instance_id );
+	mmt_mem_free( _engine->events_hash );
 
 	if( _engine->valid_execution_trace != NULL )
 		mmt_array_free( _engine->valid_execution_trace, (void *)free_message_t );

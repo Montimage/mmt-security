@@ -22,7 +22,6 @@
 #include <errno.h>
 
 #include "lib/dpi_message_t.h"
-
 #include "lib/mmt_smp_security.h"
 
 #define MAX_RULE_MASK_SIZE 100000
@@ -31,25 +30,18 @@
 #define LIVE_INTERFACE 2
 #define SNAP_LEN 65355
 
-static size_t proto_atts_count       = 0;
-static message_element_t *proto_atts = NULL;
 //Statistic
 static size_t total_received_reports = 0;
 
 static mmt_sec_callback _print_output = NULL;
 
-static const rule_info_t **rules_arr = NULL;
+static size_t proto_atts_count        = 0;
+const proto_attribute_t **proto_atts  = NULL;
+
 static pcap_t *pcap;
 
-typedef struct _sec_handler_struct{
-	void *handler;
 
-	void (*process_fn)( const void *, message_t *);
-
-	int threads_count;
-}_sec_handler_t;
-
-static _sec_handler_t _sec_handler;
+static mmt_sec_handler_t *sec_handler  = NULL;
 
 void usage(const char * prg_name) {
 	fprintf(stderr, "MMT-Security version %s using DPI version %s\n", mmt_sec_get_version_info(), mmt_version() );
@@ -58,7 +50,8 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");
 	fprintf(stderr, "\t-i <interface> : Gives the interface name for live traffic analysis.\n");
 	fprintf(stderr, "\t-c <string>    : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
-	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads using format (lcore:range) e.g., \"(1:1-8,10-13)(2:50)(4:1007-1010)\". Set lcore=0 to exclude rules from verification.\n");
+	fprintf(stderr, "\t-x <string>    : Gives the range of rules id to be excluded, e.g., \"99,107-1010\".");
+	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads using format (lcore:range) e.g., \"(1:1-8,10-13)(2:50)(4:1007-1010)\".");
 	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v             : Verbose.\n");
@@ -67,13 +60,18 @@ void usage(const char * prg_name) {
 	exit(1);
 }
 
-size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id, size_t *threads_count, uint32_t **core_mask, char *rule_mask, bool *verbose ) {
+size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id,
+		size_t *threads_count, uint32_t **core_mask, char *excludes_rules_mask, char *rule_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
 	char file_string[MAX_FILENAME_SIZE]  = {0};
 	char redis_string[MAX_FILENAME_SIZE] = {0};
+
+	excludes_rules_mask[0] = '\0';
+	rule_mask[0]           = '\0';
+
 	*verbose = NO;
 	filename[0] = '\0';
-	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:lhv")) != EOF) {
+	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:x:lhv")) != EOF) {
 		switch (opt) {
 		case 't':
 			optcount++;
@@ -103,8 +101,14 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			optcount++;
 			strncpy((char *) redis_string, optarg, MAX_FILENAME_SIZE);
 			break;
+		case 'x':
+			optcount++;
+			strncpy((char *) excludes_rules_mask, optarg, MAX_FILENAME_SIZE);
+			break;
 		case 'l':
+			mmt_sec_init( excludes_rules_mask );
 			mmt_sec_print_rules_info();
+			mmt_sec_close();
 			exit( 0 );
 		case 'v':
 			optcount++;
@@ -143,27 +147,19 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
  * Otherwise it creates a new memory segment to store the result message. One need
  * to use #free_message_t to free the message.
  */
-static inline message_t* _get_packet_info( const ipacket_t *pkt, const message_element_t *proto_atts, size_t proto_atts_count ){
+static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 	int i;
-	bool has_data = NO;
 	void *data;
 	int type;
-	message_t *msg = create_message_t( proto_atts_count );
+	message_t *msg = create_message_t();
 	msg->timestamp = mmt_sec_encode_timeval( &pkt->p_hdr->ts );
 	msg->counter   = pkt->packet_id;
 
 	//get a list of proto/attributes being used by mmt-security
-	for( i=0; i<proto_atts_count; i++ ){
-		msg->elements[i].att_id    = proto_atts[i].att_id;
-		msg->elements[i].proto_id  = proto_atts[i].proto_id;
+	for( i=0; i<proto_atts_count; i++ )
+		dpi_message_set_data( pkt, proto_atts[i]->dpi_type, msg, proto_atts[i]->proto_id, proto_atts[i]->att_id );
 
-		dpi_message_set_data( pkt, proto_atts[i].data_type, msg, &msg->elements[i] );
-
-		if( msg->elements[i].data != NULL )
-			has_data = YES;
-	}
-
-	if( likely( has_data ))
+	if( likely( msg->elements_count ))
 		return msg;
 
 	//need to free #msg when the packet contains no-interested information
@@ -179,13 +175,14 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt, const message_e
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
 
-	message_t *msg = _get_packet_info( ipacket, proto_atts, proto_atts_count );
+	mmt_sec_handler_t *handler = (mmt_sec_handler_t *)args;
+	message_t *msg = _get_packet_info( ipacket );
 
 	//if there is no interested information
 	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
 	if( unlikely( msg == NULL )) return 1;
 
-	_sec_handler.process_fn( _sec_handler.handler, msg );
+	mmt_sec_process( handler, msg );
 
 	total_received_reports ++;
 
@@ -210,10 +207,7 @@ static inline void termination(){
 
 	pcap_breakloop( pcap );
 
-	if( _sec_handler.threads_count > 1 )
-		alerts_count = mmt_smp_sec_unregister( _sec_handler.handler, NO );
-	else
-		alerts_count = mmt_sec_unregister( _sec_handler.handler );
+	alerts_count = mmt_sec_unregister( sec_handler );
 
 	if (pcap_stats(pcap, &pcs) < 0) {
 //		(void) fprintf(stderr, "pcap_stats: %s\n", pcap_geterr( pcap ));//Statistics aren't available from savefiles
@@ -224,15 +218,13 @@ static inline void termination(){
 		fflush(stderr);
 	}
 
-	fprintf(stderr, "%12zu reports received\n", total_received_reports );
+	fprintf(stderr, "%12zu messages received\n", total_received_reports );
 	fprintf(stderr, "%12"PRIu64" alerts generated\n", alerts_count );
 
 	if( _print_output != NULL )
 		verdict_printer_free();
 
-	mmt_mem_free( proto_atts );
-
-	mmt_mem_free( rules_arr );
+	mmt_sec_close();
 }
 
 void signal_handler_seg(int signal_type) {
@@ -261,9 +253,9 @@ void signal_handler(int signal_type) {
 
 
 void register_signals(){
-//#ifndef DEBUG_MODE
+#ifndef DEBUG_MODE
 	signal(SIGSEGV, signal_handler_seg );
-//#endif
+#endif
 	signal(SIGINT,  signal_handler);
 	signal(SIGTERM, signal_handler);
 	signal(SIGABRT, signal_handler);
@@ -280,43 +272,34 @@ int main(int argc, char** argv) {
 	size_t core_size;
 	uint32_t *core_mask = NULL;
 	int type;
-	size_t threads_count = 1;
+	size_t threads_count = 0;
 	bool verbose;
 	struct pkthdr header;
-	char rule_mask[ MAX_RULE_MASK_SIZE ];
+	char rule_mask[ MAX_RULE_MASK_SIZE ], excludes_rules_mask[ MAX_RULE_MASK_SIZE ];
 	size_t i, j, size;
 	uint16_t *rules_id_filter;
-	const proto_attribute_t **p_atts;
 
-	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count, &core_mask, rule_mask, &verbose );
+	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count,
+			&core_mask, excludes_rules_mask, rule_mask, &verbose );
 
 	register_signals();
 
-	//get all available rules
-	size = mmt_sec_get_rules_info( &rules_arr );
+	mmt_sec_init( excludes_rules_mask );
 
-	_sec_handler.threads_count = threads_count;
+	//the last thread is used as main thread
+	if( threads_count > 0 )
+		threads_count --;
 
-	//init mmt-sec to verify the rules
-	if( _sec_handler.threads_count == 1 ){
-		_sec_handler.handler    = mmt_sec_register( rules_arr, size, verbose, _print_output, NULL );
-		_sec_handler.process_fn = &mmt_sec_process;
-		size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
-	}else if( _sec_handler.threads_count > 1 ){
-		_sec_handler.handler    = mmt_smp_sec_register( rules_arr, size, _sec_handler.threads_count - 1, core_mask, rule_mask, verbose, _print_output, NULL );
-		_sec_handler.process_fn = &mmt_smp_sec_process;
-		size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
-	}else{
-		usage( argv[0] );
-	}
+	sec_handler =  mmt_sec_register( threads_count, core_mask, rule_mask, verbose, _print_output, NULL );
 
 	if( core_mask != NULL ){
 		//main thread on the last core
-		if( move_the_current_thread_to_a_processor( core_mask[ threads_count - 1 ], -15 ) )
-			mmt_warn("Cannot set affinity of process %d on lcore %d", gettid(), core_mask[ threads_count - 1 ] );
+		if( move_the_current_thread_to_a_processor( core_mask[ threads_count ], -15 ) )
+			mmt_warn("Cannot set affinity of process %d on lcore %d", gettid(), core_mask[ threads_count ] );
 
 		mmt_mem_free( core_mask );
 	}
+
 	//init mmt_dpi extraction
 	init_extraction();
 	//Initialize dpi handler
@@ -326,26 +309,25 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	//register protocols and their attributes using by mmt-sec
-	proto_atts_count = size;
 
-	proto_atts = mmt_mem_alloc( size * sizeof( message_element_t ));
-	for( i=0; i<size; i++ ){
-		//mmt_debug( "Registered attribute to extract: %s.%s", proto_atts[i]->proto, proto_atts[i]->att );
-		register_extraction_attribute( mmt_dpi_handler, p_atts[i]->proto_id, p_atts[i]->att_id );
+	proto_atts_count = mmt_sec_get_unique_protocol_attributes( & proto_atts );
+
+	for( i=0; i<proto_atts_count; i++ ){
+		mmt_debug( "Registered attribute to extract: %s.%s (%d.%d)",
+				proto_atts[i]->proto, proto_atts[i]->att,
+				proto_atts[i]->proto_id, proto_atts[i]->att_id );
+
+		register_extraction_attribute( mmt_dpi_handler, proto_atts[i]->proto_id, proto_atts[i]->att_id );
 
 		//tcp.p_payload
-		if( p_atts[i]->proto_id == 354 && p_atts[i]->att_id == 4098)
+		if( proto_atts[i]->proto_id == 354 && proto_atts[i]->att_id == 4098)
 			//tcp.payload_len
 			register_extraction_attribute( mmt_dpi_handler, 354, 23 );
-
-		proto_atts[i].proto_id  = p_atts[i]->proto_id;
-		proto_atts[i].att_id    = p_atts[i]->att_id;
-		proto_atts[i].data_type = get_attribute_data_type( p_atts[i]->proto_id, p_atts[i]->att_id );
 	}
 
+
 	//Register a packet handler, it will be called for every processed packet
-	register_packet_handler(mmt_dpi_handler, 1, packet_handler, NULL );
+	register_packet_handler(mmt_dpi_handler, 1, packet_handler, sec_handler );
 
 	if (type == TRACE_FILE) {
 		mmt_info("Analyzing pcap file %s", filename );

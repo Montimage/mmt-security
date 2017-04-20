@@ -1,7 +1,10 @@
 #!/bin/bash
 
 export TZ=Europe/Paris
+#number of cores used by program
 CPUS_COUNT=$(nproc --all)
+#number of processes of program
+PROC_COUNT=1
 
 function print_ts () {
   TIMESTAMP="$(date +%s)"
@@ -12,7 +15,10 @@ function print_ts () {
 # $2: proc name
 # $3: output file
 function stat () {
-  CPU=$(ps -C "$2" -o "%cpu" | tail -n +2 | xargs  | sed -e 's/\ /+/g' | bc)
+  #CPU=$(ps -C "$2" -o "%cpu" | tail -n +2 | xargs  | sed -e 's/\ /+/g' | bc)
+  #top -n2 will sleep 1 second
+  CPU=$(top -bd1 -n2 | grep $2 | cut -c 48-54 | tail -n $PROC_COUNT | xargs  | sed -e 's/\ /+/g' | bc | cut -d '.' -f1)
+
   if [ -z "$CPU" ]; then
     CPU=0
     MEM=0
@@ -36,7 +42,7 @@ function stat_proc () {
   echo > $3 
   for (( i=0; i < $2; ++i ))
   do
-    stat $i $1 $3
+    stat $i $1 $3 &
     sleep 1
   done
 
@@ -52,6 +58,13 @@ cd $1
 
 PROGRAM=$2
 
+case "$PROGRAM" in
+  "lb")        CPUS_COUNT=17 ;;
+  "sec")       CPUS_COUNT=48 && PROC_COUNT=17 ;;
+  "probe")     CPUS_COUNT=17 ;;
+  "tcpreplay") CPUS_COUNT=1 ;;
+esac
+
 #kill $1 if it is running
 pkill -TERM $PROGRAM &> /dev/null 
 
@@ -60,6 +73,8 @@ date > "$5.txt"
 
 #background process to do statistic
 stat_proc "$PROGRAM" "$4" "$5.stat" &
+
+sleep 2
 
 print_ts "$5.txt" "(start $PROGRAM $3)"
 
@@ -81,6 +96,6 @@ echo "finish $PROGRAM"
 date >> "$5.txt"
 
 #stop statistic
-kill -TERM $!
+kill -TERM $! 2> /dev/null
 
 exit 0

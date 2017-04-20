@@ -15,7 +15,7 @@ typedef struct _fsm_tran_index_struct{
 	uint64_t counter;     //index of the last verified message
 	size_t index;         //index of the transition of the current state of #fsm to be verified
 	fsm_t *fsm;           //fsm to be verified
-}_fsm_tran_index_t ;
+} __aligned _fsm_tran_index_t ;
 
 static inline _fsm_tran_index_t* _create_fsm_tran_index_t( rule_engine_t *_engine, size_t index, fsm_t *fsm, uint64_t counter){
 

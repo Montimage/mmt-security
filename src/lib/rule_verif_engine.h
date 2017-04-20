@@ -44,7 +44,7 @@ typedef struct rule_engine_struct{
 	 * Each element represents required data for one event of the rule
 	 */
 	uint64_t *events_hash;
-}rule_engine_t;
+} __aligned rule_engine_t;
 
 //max number of events in a rule
 //max number of instances of a rule at any moment

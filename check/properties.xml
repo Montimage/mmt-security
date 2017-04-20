@@ -218,23 +218,23 @@ static inline int em_check_ip_add( const void *ip_src, const void *ip_dst, const
 ]]></embedded_functions>
 
 <!-- Property 1: Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).-->
-<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1" property_id="1" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="3" property_id="1" type_property="ATTACK" 
     description="Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).">
-    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="100">
       <event value="COMPUTE" event_id="1" 
              description="SYN request"
-             boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port &gt; 22))"/>
+             boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;(ip.src != ip.dst)))"/>
       <event value="COMPUTE" event_id="2" 
              description="SYN ACK reply"
              boolean_expression="((tcp.flags == 18)&amp;&amp;((tcp.src_port == 22)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;(ip.src == ip.dst.1))))"/>
     </operator>
-    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="2">
       <event value="COMPUTE" event_id="3" 
-             description="SYN request"
+             description="2nd attempt"
              boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))))"/>
       <event value="COMPUTE" event_id="4" 
-             description="SYN ACK reply"
-             boolean_expression="((tcp.flags == 18)&amp;&amp;((tcp.src_port == 22)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;(ip.src == ip.dst.1))))"/>
+             description="3rd attempt"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))))"/>
     </operator>
 </property>
 
@@ -353,6 +353,7 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
 -->
 
 <!-- Property 8: C4_Analyse_03g : Le champ Options doit etre homogene dans tous les fragments IP.-->
+<!-- 
 <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="8" type_property="EVASION" 
     description="C4_Analyse_03g: The IP options field must be homogeneous in all IP fragments.">
     <event value="COMPUTE" event_id="1" 
@@ -361,6 +362,19 @@ Autres tentatives sur IP et/ou TCP : depend de la genericite des regles par rapp
     <event value="COMPUTE" event_id="2" 
            description="IP options"
            boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#em_check_ip_options(ip.options,ip.options.1) == 1))))"/>
+</property>
+-->
+
+<!-- Property 8: The field Options must be homogeneous in every IP fragments-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="8" type_property="EVASION" 
+    description="The IP options field must be homogeneous in all IP fragments.">
+    <event value="COMPUTE" event_id="1" 
+           description="IP segment"
+           boolean_expression="(ip.ip_frag_packets_count &gt; 0)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Other IP segment with different ip.options"
+           boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#em_check_ip_options(ip.options,ip.options.1) == 1))))"/>
+<!-- boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(1 == 1))))"/> -->
 </property>
 
 <!-- Property 9: C4_Analyse_03h : La taille minimum d un fragment IP est 28 bytes. Pour un IP fragment de offset 0 c est 40.-->

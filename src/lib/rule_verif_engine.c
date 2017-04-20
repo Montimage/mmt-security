@@ -275,7 +275,6 @@ enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message
 
 		//add the new_fsm to the list of fsm(s) having the same id
 		_engine->fsm_by_instance_id[ new_fsm_id  ] = insert_node_to_link_list( _engine->fsm_by_instance_id[ new_fsm_id ], new_fsm );
-		_engine->total_instances_count ++;
 
 		//TODO: refine this
 //		if( _engine->total_instances_count >= 400 ){
@@ -285,7 +284,7 @@ enum verdict_type _process_a_node( link_node_t *node, uint16_t event_id, message
 //		}
 
 		fsm = new_fsm;
-		fsm_set_user_data( fsm, _engine );
+//		fsm_set_user_data( fsm, _engine );
 	}
 	else{
 		if( val == FSM_STATE_CHANGED ){
@@ -473,6 +472,11 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 	return VERDICT_UNKNOWN;
 }
 
+/**
+ * Calculate hash of each event
+ * This is called only one time at initiation of #_engine
+ * @param _engine
+ */
 static inline void _calculate_hash_number( rule_engine_t *_engine ){
 	int i, j, k, index;
 	const rule_info_t *rule = _engine->rule_info;
@@ -538,8 +542,6 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 	_engine->fsm_by_instance_id[ 0 ] = insert_node_to_link_list(_engine->fsm_by_instance_id[ 0 ], _engine->fsm_bootstrap );
 
 	_engine->valid_execution_trace = mmt_array_init( _engine->events_count );
-
-	_engine->total_instances_count = 0;
 
 	_engine->events_hash = mmt_mem_alloc( sizeof( uint64_t) * _engine->events_count );
 	_calculate_hash_number( _engine );

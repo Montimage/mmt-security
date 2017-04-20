@@ -64,8 +64,7 @@ lock_free_spsc_ring_t* ring_init( uint32_t size );
  * 	try to push again by calling #ring_push
  */
 static inline int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
-	uint32_t h;
-	h = q->_head;
+	uint32_t h = q->_head;
 
 	//I always let 1 available elements between head -- tail
 	//it is reading by the consumer

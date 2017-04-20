@@ -24,7 +24,7 @@
 #define __thread_scope __thread
 
 //macroe
-#define __check_null( x, y ) if( unlikely( x == NULL )) return y; else
+#define __check_null( x, y ) while( unlikely( x == NULL )) return y
 
 //branch prediction
 #ifndef likely

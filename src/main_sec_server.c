@@ -230,11 +230,18 @@ static inline size_t receiving_reports( int sock ) {
 			dpi_data_type = _get_dpi_data_type( proto_id, att_id );
 
 			//special processing for these data types
-			if( dpi_data_type == MMT_DATA_POINTER )
+			switch( dpi_data_type ){
+			case MMT_STRING_DATA_POINTER:
+			case MMT_GENERIC_HEADER_LINE :
+			case MMT_HEADER_LINE :
+				set_element_data_message_t( msg, proto_id, att_id,  &buffer[index], STRING, data_length );
+				break;
+			case MMT_DATA_POINTER:
 				set_element_data_message_t( msg, proto_id, att_id,  &buffer[index], VOID, data_length );
-			else
+				break;
+			default:
 				dpi_message_set_dpi_data( &buffer[index], dpi_data_type, msg, proto_id, att_id );
-
+			}
 			index += data_length;
 
 			//http.method

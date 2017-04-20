@@ -307,10 +307,10 @@ void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 			// then, go back to the current one after processing the last rule
 			if( ring_push( handler->rings[ i ], msg ) == RING_SUCCESS )
 				BIT_CLEAR( mask, i );
-#ifdef DEBUG_MODE
-			else
-				ring_wait_for_poping( handler->rings[ i ] );
-#endif
+//#ifdef DEBUG_MODE
+//			else
+//				ring_wait_for_poping( handler->rings[ i ] );
+//#endif
 		}
 		//mmt_debug("ring full %"PRIu64, hash_index );
 	}

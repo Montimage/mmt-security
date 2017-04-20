@@ -76,9 +76,9 @@ size_t mmt_mem_free( void *x ){
 
 /**
  * Get size of the memory segment pointed by ptr.
- * Note that ptr is the pointer created by one of function: mmt_malloc, mmt_calloc
+ * Note that ptr is the pointer created by the function: mmt_mem_alloc, mmt_mem_dup
  * - Error:
- * 	+ Maybe crashed if ptr is not created by mmt_malloc or mmt_calloc
+ * 	+ Maybe crashed if ptr is not created by mmt_mem_alloc, mmt_mem_dup
  */
 static inline
 size_t mmt_mem_size( const void *x ){

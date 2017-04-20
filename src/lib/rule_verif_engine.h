@@ -31,10 +31,9 @@ typedef struct rule_engine_struct{
 	//nubmer of events
 	uint16_t events_count;
 
-	size_t max_instances_size;
-	size_t total_instances_count;
+	uint32_t max_instances_size;
 	//number of active instances
-	size_t instances_count;
+	uint32_t instances_count;
 
 	//depending on type of rule (verifying on a single packet or on multi-packets)
 	//the processing will be different

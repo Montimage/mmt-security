@@ -1,8 +1,4 @@
-## 1. Version 1.1.1
-
-- release date
-
-- features:
+## Version 1.1.1
 
 1. Use minimal perfect hashing to access quickly to each elements of a `message_t` when giving protocol and attribute
 
@@ -12,7 +8,9 @@
 
 4. Pre-implement some embedded functions
 
-- `is_exist` checks whether an attribute of a protocol, proto.att, exists in a `message_t`. 
-This function also hides the proto.att from the masking
+   - `is_exist` checks whether an attribute of a protocol, proto.att, exists in a `message_t`. This function also hides the proto.att from the masking
+   - `is_empty` check whether a proto.att is `null` or its first byte is `'\0'`
 
 5. Control versions of plugins, e.g., mmt-security loads only compatible plugins.
+
+6. Auto testing

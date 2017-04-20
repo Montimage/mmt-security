@@ -11,7 +11,7 @@ foutput = open(outfile, 'wb')
 foutput.write('<!-- MMT_Security Copyright (C) 2014  Montimage: All rules (last update in April 2017)-->\n')
 foutput.write('<beginning>\n')
 foutput.write('<embedded_functions><![CDATA[\n')
-foutput.write('//each function name should be prefixed by em_ \n#include <string.h> \n#include <stdio.h> \n#include <stdlib.h> \n#include <inttypes.h> \n#include "types_defs.h \n')
+foutput.write('//each function name should be prefixed by em_ \n#include <string.h> \n#include <stdio.h> \n#include <stdlib.h> \n#include <inttypes.h> \n#include "types_defs.h" \n')
 
 #Read all files then write embedded functions
 for infile in glob.glob('*.xml'):

@@ -6,37 +6,17 @@
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <inttypes.h> 
-#include "types_defs.h 
+#include "types_defs.h" 
 static inline int em_check_ip_options(const char *op2, const char *op1){
-  int handle = 1;
   printf("Enter em\n");
-  
-  int i2 = *((int*)op2);
-  int i1 = *((int*)op1);
-  int bit2 = (i2 >> 1) & 1;
-  int bit1 = (i1 >> 1) & 1;
-//  if(bit2 == 1 || bit1 == 1){
-      if(i2 != i1) handle = 1;
-//  }
-  return handle;
-}
+  return 1;
+ }
 /*
 static inline int em_check(const char *ip_op){
 printf ("Enter em\n");
 return 1;
 }
 */
-static inline int em_check_nfs_upload(const char * file_name, const char *p_payload){
-	printf("Enter the em\n");
-   //find the first occurrence of file_name in p_payload
-   return (strstr(p_payload, file_name) != NULL);   
-  }
-
-static inline int em_check_nfs(const char * file_name){
-	printf("nfs.file_name:%s\n");
-   return 1;   
-  }
-  
 static inline int em_check_URI(const char *uri_str){
   int handle = 0;
   if(uri_str == NULL){
@@ -174,17 +154,23 @@ static inline bool em_check_UA( const char *user_agent){
    //find the first occurrence of string "Nikto" in string
    return (strstr(user_agent, "Nikto") != NULL);     
 }
+static inline int em_check_nfs_upload(const char * file_name, const char *p_payload){
+   //printf("Enter the em\n");
+   //find the first occurrence of file_name in p_payload
+   return (strstr(p_payload, file_name) != NULL);   
+  }  
 ]]></embedded_functions>
-<!-- Property 8: The field Options must be homogeneous in every IP fragments-->
+<!-- Property 8: The field Options must be homogeneous in every IP fragments
+-->
+          <!-- boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#em_check_ip_options(ip.options, ip.options.1)==1))))"/>-->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="8" type_property="EVASION" 
     description="The IP options field must be homogeneous in all IP fragments.">
     <event value="COMPUTE" event_id="1" 
            description="IP segment"
-           boolean_expression="((ip.ip_frag_packets_count &gt; 0)&amp;&amp;(ip.dst != ip.src))"/>
+           boolean_expression="(ip.ip_frag_packets_count &gt; 0)"/>
     <event value="COMPUTE" event_id="2" 
            description="Other IP segment with different ip.options"
-           boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(1 == 1))))"/>
-           <!--boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#em_check_ip_options(ip.options,ip.options.1) == 1))))"/> -->
+           boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(1==1))))"/> 
 </property>
 <!-- Property 26: Probable IP protocol scan (4 different attempts in a row on different protocols).
 -->
@@ -209,17 +195,6 @@ static inline bool em_check_UA( const char *user_agent){
              boolean_expression="((ip.proto_id != ip.proto_id.3)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
     </operator>
 </property>
-<!-- Property 31: Simple multi-session property -->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="120" property_id="31" type_property="ATTACK" 
-    description="NFS synchronization and then upload">
-    <event value="COMPUTE" event_id="1" 
-           description="NFS synchronization"
-           <!-- boolean_expression="(#em_check_nfs(nfs.file_name) == 1)"/> -->
-           boolean_expression="(nfs.file_name != '')"/>
-    <event value="COMPUTE" event_id="2" 
-           description="Upload the same file"
-           boolean_expression="((ip.dst == ip.src.1)&amp;&amp;((http.packet_count != 0)&amp;&amp;(#em_check_nfs_upload(nfs.file_name.1, tcp.p_payload) == 1)))"/>
-</property>
 <!-- Property 7: TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb .-->
 <property value="BEFORE" delay_units="s" delay_min="0+" delay_max="1" property_id="7" type_property="ATTACK" 
     description="R4_Decod_1a : TCP RST is invalid: there is no corresponding TCP ACK before belonging to the same session containing correct seq_nb and ack_nb.">
@@ -230,12 +205,12 @@ static inline bool em_check_UA( const char *user_agent){
            description="Trigger: the last TCP ACK packets have different seg_nb and ack_nb"
            boolean_expression="((tcp.flags == 16)&amp;&amp;((tcp.ack_nb == tcp.ack_nb)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;(ip.src != ip.dst))))"/>
 </property>
-<!-- Property 12: C4_Analyse_03c|d|e : l URI d un paquet HTTP contient des caracteres non authorises.-->
-<!-- URN invalid character set:
+<!-- Property 12: C4_Analyse_03c|d|e : HTTP packet URI contains non authorized characters according to RFC2396 and RFC2234 or possibly directory traversal attack.-->
+<!-- URI invalid character set:
      octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
 -->
 <property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="12" type_property="EVASION" 
-    description="C4_Analyse_03c|d|e : HTTP packet URI contains non authorised characteres according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    description="HTTP packet URI contains non authorized characters according to RFC2396 and RFC2234 or possibly directory traversal attack.">
     <event value="COMPUTE" event_id="1" 
            description="HTTP URI invalid"
            boolean_expression="((http.method == http.method)&amp;&amp;(#em_check_URI(http.uri) == 1))"/>
@@ -254,7 +229,7 @@ static inline bool em_check_UA( const char *user_agent){
              boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst)))"/>
 </property>
 <!-- Property 10: HTTP using a port different from 80 and 8080.-->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1" type_property="EVASION" 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="10" type_property="EVASION" 
     description="HTTP using a port different from 80 and 8080.">
     <event value="COMPUTE" event_id="1" 
         description="HTTP packet using a port different from 80 and 8080"
@@ -284,17 +259,15 @@ static inline bool em_check_UA( const char *user_agent){
              description="IP fragment with same identification and an offset less than 9 bytes"
              boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset.1 - ip.frag_offset) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
 </property>
-<!-- Property 11: C4_Analyse_03h : La taille d un IP incorrect (tronque).-->
+<!-- Property 11: La taille d un IP incorrect (tronque).-->
 <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="11" type_property="EVASION" 
-    description="C4_Analyse_03h: IP packet size and eth payload size not coherent.">
+    description="IP packet size incorrect">
     <event value="COMPUTE" event_id="1" 
-           description="Paquet size"
-           boolean_expression="((meta.packet_len &lt; 34)&amp;&amp;(ip.tot_len &gt; 0))"/>
-       <!--boolean_expression="(meta.packet_len == ethernet.packet_count)"/-->
-       <!--boolean_expression="((ip.mf_flag == 0)&amp;&amp;(meta.packet_len != (eth.packet_count + 14)))"/-->
+           description="Packet size incorrect"
+           boolean_expression="((meta.packet_len &lt; 34)"/>
     <event value="COMPUTE" event_id="2" 
-           description="IP segment"
-           boolean_expression="(ip.src != ip.dst)"/>
+           description="Ethernet packet"
+           boolean_expression="(ethernet.proto == ethernet.proto)"/>
 </property>
 <!-- Property 22: IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).-->
 <property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="22" type_property="EVASION" 
@@ -509,34 +482,6 @@ static inline bool em_check_UA( const char *user_agent){
            description="An arp reply but with different MAC address"
            boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_sip.1))&amp;&amp;(arp.ar_sha != arp.ar_sha.1))"/>
 </property>
-<!-- Property 29, 30: HTTP version 0.9 detection-->
-
-<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="29" type_property="EVASION" 
-    description="HTTP response with no header. Possible evasions based on HTTP 0.9"
-    >
-   <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="250">
-   <event value="COMPUTE" event_id="1" 
-           description="Context: Here it is a HTTP GET packet"
-           boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))"/>
-   <event value="COMPUTE" event_id="2" 
-         description="Context: TCP ACK after HTTP GET"
-           boolean_expression="((#check_ip_add(ip.src, ip.dst, ip.src.1, ip.dst.1) == 1)&amp;&amp;((http.packet_count == http.packet_count.1)&amp;&amp;(tcp.packet_count != 0)))"/>
-   </operator>
-   <event value="COMPUTE" event_id="3" 
-           description="Trigger: HTTP response contains no header"
-         boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.2+1))&amp;&amp;(#check_http_response(http.response)==1)))))"/>
-</property>
-
-<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="30" type_property="EVASION" 
-    description="HTTP response with no header right after the GET. Possible evasions based on HTTP 0.9"
-    >
-   <event value="COMPUTE" event_id="1" 
-           description="Context: Here it is a HTTP GET packet"
-           boolean_expression="((http.method == http.method)&amp;&amp;((ip.src != ip.dst)&amp;&amp;((http.packet_count != 0)&amp;&amp;(tcp.packet_count != 0))))"/>
-   <event value="COMPUTE" event_id="2" 
-           description="Trigger: HTTP response (and also TCP ACK) contains no HTTP header"
-         boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;((tcp.packet_count == (tcp.packet_count.1+1))&amp;&amp;(#check_http_response(http.response)==1)))))"/>
-</property>
 <!-- Property 2: Attempted to connect via ssh but reseted immediately. Source address is spoofed, infected machine or attacker.-->
 <property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="2" type_property="ATTACK" 
     description="Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).">
@@ -551,6 +496,16 @@ static inline bool em_check_UA( const char *user_agent){
     <event value="COMPUTE" event_id="3" 
            description="RST reset"
            boolean_expression="((tcp.flags == 4)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
+</property>
+<!-- Property 30: Simple multi-session property -->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="20" property_id="30" type_property="ATTACK" 
+    description="NFS synchronization and then upload">
+    <event value="COMPUTE" event_id="1" 
+           description="NFS synchronization"
+           boolean_expression="(nfs.file_name != '')"/> 
+    <event value="COMPUTE" event_id="2" 
+           description="Upload the same file"
+           boolean_expression="((ip.dst == ip.src.1)&amp;&amp;((http.packet_count != 0)&amp;&amp;(#em_check_nfs_upload(nfs.file_name.1, tcp.p_payload) == 1)))"/>
 </property>
 <!-- Property 20: C4_Analyse_04i: ICMP redirect flood detection-->
 <!-- Depending on OS implementation, these host based routes can have the characteristic of being short lived.  
@@ -583,3 +538,4 @@ it is nice to have an automated method of redirect expiration.
            boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
    </operator>
 </property>
+</beginning>

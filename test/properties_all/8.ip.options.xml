@@ -1,25 +1,4 @@
 <beginning>
-<embedded_functions><![CDATA[
-//each function name should be prefixed by em_
-
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
-#include "types_defs.h"
-
-static inline int em_check_ip_options(const char *op2, const char *op1){
-  printf("Enter em\n");
-  return 1;
- }
-/*
-static inline int em_check(const char *ip_op){
-printf ("Enter em\n");
-return 1;
-}
-*/
-]]></embedded_functions>
 <!-- Property 8: The field Options must be homogeneous in every IP fragments
 -->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="8" type_property="EVASION" 
@@ -29,6 +8,6 @@ return 1;
            boolean_expression="(ip.ip_frag_packets_count &gt; 0)"/>
     <event value="COMPUTE" event_id="2" 
            description="Other IP segment with different ip.options"
-           boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#em_check_ip_options(ip.options, ip.options.1)==1))))"/>
+           boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.options != ip.options.1))))"/>
 </property>
 </beginning>

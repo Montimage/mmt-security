@@ -7,16 +7,6 @@
 #include <stdlib.h> 
 #include <inttypes.h> 
 #include "types_defs.h" 
-static inline int em_check_ip_options(const char *op2, const char *op1){
-  printf("Enter em\n");
-  return 1;
- }
-/*
-static inline int em_check(const char *ip_op){
-printf ("Enter em\n");
-return 1;
-}
-*/
 static inline int em_check_URI(const char *uri_str){
   int handle = 0;
   if(uri_str == NULL){
@@ -169,7 +159,7 @@ static inline int em_check_nfs_upload(const char * file_name, const char *p_payl
            boolean_expression="(ip.ip_frag_packets_count &gt; 0)"/>
     <event value="COMPUTE" event_id="2" 
            description="Other IP segment with different ip.options"
-           boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(#em_check_ip_options(ip.options, ip.options.1)==1))))"/>
+           boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.options != ip.options.1))))"/>
 </property>
 <!-- Property 26: Probable IP protocol scan (4 different attempts in a row on different protocols).
 -->

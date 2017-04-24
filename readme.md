@@ -107,6 +107,27 @@ This application can analyze
 ./mmt_sec_standalone -t ./tata.pcap
 ```
 
+## mmt_sec_server
+
+This application receives meta-data, calling `messages`, from mmt-probe and then analyse them.
+
+```bash
+./mmt_sec_server -h
+MMT-Security version 1.1.2 (14bade8 - Apr 24 2017 18:00:35)
+./mmt_sec_server [<option>]
+Option:
+   -p <number/string> : If p is a number, it indicates port number of internet domain socket otherwise it indicates name of unix domain socket. Default: 5000
+   -n <number> : Number of threads per process. Default = 1
+   -c <string> : Gives the range of logical cores to run on, e.g., "1,3-8,16"
+   -x <string> : Gives the range of rules id to be excluded from verification, e.g., "1,3-8,16"
+   -m <string> : Attributes special rules to special threads e.g., "(1:10-13)(2:50)(4:1007-1010)"
+   -f <string> : Output results to file, e.g., "/home/tata/:5" => output to folder /home/tata and each file contains reports during 5 seconds 
+   -r <string> : Output results to redis, e.g., "localhost:6379"
+   -v          : Verbose.
+   -l          : Prints the available rules then exit.
+   -h          : Prints this help.
+```
+
 # Auto testing
 
 After modified code, you should run `make check` to validate the modifications.

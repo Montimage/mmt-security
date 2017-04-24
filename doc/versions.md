@@ -1,3 +1,10 @@
+## Version 1.1.2
+
+1. Fix bug when we have more than one reference in boolean expression
+
+2. Fix bug when getting ip.options 
+
+
 ## Version 1.1.1
 
 1. Use minimal perfect hashing to access quickly to each elements of a `message_t` when giving protocol and attribute

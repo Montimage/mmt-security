@@ -320,9 +320,11 @@ int main(int argc, char** argv) {
 		register_extraction_attribute( mmt_dpi_handler, proto_atts[i]->proto_id, proto_atts[i]->att_id );
 
 		//tcp.p_payload
-		if( proto_atts[i]->proto_id == 354 && proto_atts[i]->att_id == 4098)
+		if( proto_atts[i]->proto_id == PROTO_TCP && proto_atts[i]->att_id == 4098)
 			//tcp.payload_len
-			register_extraction_attribute( mmt_dpi_handler, 354, 23 );
+			register_extraction_attribute( mmt_dpi_handler, PROTO_TCP, TCP_PAYLOAD_LEN );
+		else if( proto_atts[i]->proto_id == PROTO_IP && proto_atts[i]->att_id == IP_OPTS)
+			register_extraction_attribute( mmt_dpi_handler, PROTO_IP, IP_HEADER_LEN );
 	}
 
 

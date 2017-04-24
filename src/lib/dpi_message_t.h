@@ -44,20 +44,22 @@ typedef struct ftp_response_struct{
  * @return
  */
 static inline size_t dpi_get_payload_len(const ipacket_t * ipacket, uint32_t proto_id ){
-	int  j = 0;
+	int  i = 0;
 	uint16_t length = 0;
 	uint16_t offset = 0;
 
-	for (j = 1; j < ipacket->proto_hierarchy->len; j++){
-		offset +=ipacket->proto_headers_offset->proto_path[j];
+	for (i = 1; i < ipacket->proto_hierarchy->len; i++){
+		offset +=ipacket->proto_headers_offset->proto_path[i];
 
-		if ( ipacket->proto_hierarchy->proto_path[j] == proto_id ){
-			if ( (j+1) < ipacket->proto_hierarchy->len){
-				offset +=ipacket->proto_headers_offset->proto_path[j+1];
+		if ( ipacket->proto_hierarchy->proto_path[i] == proto_id ){
+			//get header offset of the proto after #proto_id
+			if ( (i+1) < ipacket->proto_hierarchy->len){
+				offset +=ipacket->proto_headers_offset->proto_path[i+1];
 				length = ipacket->p_hdr->caplen - offset;
 
 				return length;
 			}
+			return 0;
 		}
 	}
 
@@ -71,14 +73,14 @@ static inline size_t dpi_get_payload_len(const ipacket_t * ipacket, uint32_t pro
  * @return
  */
 static inline size_t dpi_get_data_len( const ipacket_t * ipacket, uint32_t proto_id ){
-	int  j = 0;
+	int  i = 0;
 
 	uint16_t length = 0;
 	uint16_t offset = 0;
 
-	for (j = 1; j < ipacket->proto_hierarchy->len; j++){
-		offset +=ipacket->proto_headers_offset->proto_path[j];
-		if ( ipacket->proto_hierarchy->proto_path[j] == proto_id ){
+	for (i = 1; i < ipacket->proto_hierarchy->len; i++){
+		offset +=ipacket->proto_headers_offset->proto_path[i];
+		if ( ipacket->proto_hierarchy->proto_path[i] == proto_id ){
 			length = ipacket->p_hdr->caplen - offset;
 
 			return length;
@@ -87,55 +89,11 @@ static inline size_t dpi_get_data_len( const ipacket_t * ipacket, uint32_t proto
 	return 0;
 }
 
-//TODO: check how to get option length
-static inline size_t _dpi_get_ip_option_len(const ipacket_t * ipacket ){
-	int  j = 0;
-	uint16_t offset = 0;
-	uint8_t length;
-	int index;
-	void *data;
-
-	for (j = 1; j < ipacket->proto_hierarchy->len; j++){
-		offset +=ipacket->proto_headers_offset->proto_path[j];
-		if (ipacket->proto_hierarchy->proto_path[j] == PROTO_IP ){
-			offset += ipacket->proto_headers_offset->proto_path[j+1];
-			index = offset + 21; //option len start at 21th byte of IP header
-
-			if( index <= 0 )
-				return 0;
-
-			length =  ((uint8_t* ) ipacket->data)[ index ];
-			if( length + index > ipacket->p_hdr->caplen ){
-				mmt_warn( "Error when getting ip.options or %"PRIu64"-th packet is mal-formatted", ipacket->packet_id );
-				return 0;
-			}
-
-			return length;
-		}
-	}
-	return 0;
-}
-
-
 static inline size_t dpi_get_ip_option_len(const ipacket_t * ipacket ){
-	int  j = 0;
-	int length = 0;
-	int offset = 0;
-	int offset_ip = 0;
-	for (j = 1; j < ipacket->proto_hierarchy->len; j++){
-		offset +=ipacket->proto_headers_offset->proto_path[j];
-		if (ipacket->proto_hierarchy->proto_path[j] == PROTO_IP ){
-			//if (j < ipacket->proto_hierarchy->len){
-				offset_ip = offset;
-				offset += ipacket->proto_headers_offset->proto_path[j+1];
-				length = ipacket->p_hdr->caplen - offset - offset_ip - 20;
-				mmt_assert( length >= 0, "Error when getting ip.options or %"PRIu64"-th packet is mal-formatted. Length = %d",
-						ipacket->packet_id, length );
-				return length;
-			//}
-		}
-	}
+	uint8_t *ip_header_len = (uint8_t *) get_attribute_extracted_data( ipacket,PROTO_IP,IP_HEADER_LEN );
 
+	if( likely( ip_header_len != NULL ))
+		return  (*ip_header_len - 20); //IPv4 has 20 bytes of fixed header
 	return 0;
 }
 
@@ -147,6 +105,9 @@ static inline int dpi_message_set_void_data( const ipacket_t *pkt, const void *d
 	const void *new_data = NULL;
 	size_t new_data_len  = 0;
 	int new_data_type    = VOID;
+
+	if( data == NULL )
+		return 0;
 
 	switch( att_id ){
 	case PROTO_PAYLOAD:

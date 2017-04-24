@@ -1,0 +1,1 @@
+10,0,"",1493029574,9,"detected","evasion","C4_Analyse_03h: The minimum size of an IP fragment is 28 bytes and for an IP fragment with offset 0 it is 40.", {"event_1":{"timestamp":1492527291.355955,"counter":2,"attributes":[{"ip.tot_len":28},{"ip.mf_flag":1},{"ip.frag_offset":0}]},"event_2":{"timestamp":1492527291.355955,"counter":2,"attributes":[]}}

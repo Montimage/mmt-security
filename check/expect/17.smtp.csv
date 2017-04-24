@@ -1,0 +1,1 @@
+10,0,"",1493029573,13,"detected","evasion","C4_Analyse_3b : Data in SYN packet.", {"event_1":{"timestamp":1485960028.940803,"counter":7,"attributes":[{"tcp.flags":2},{"tcp.payload_len":25}]},"event_2":{"timestamp":1485960028.940803,"counter":7,"attributes":[{"ip.src":"192.168.0.20"},{"ip.dst":"192.168.0.194"}]}}

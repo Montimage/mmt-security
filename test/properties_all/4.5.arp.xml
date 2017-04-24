@@ -16,14 +16,14 @@
     <operator value="THEN" delay_units="m" delay_min="0+" delay_max="5">
       <event value="COMPUTE" event_id="1" 
              description="An arp who was requested"
-             boolean_expression="(arp.ar_op == 1)"/>
+             boolean_expression="((arp.ar_op == 1) &amp;&amp; (ethernet.src != ethernet.dst))"/>
       <event value="COMPUTE" event_id="2" 
              description="An arp reply with MAC address"
-             boolean_expression="((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1))"/>
+             boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1)) &amp;&amp; (ethernet.packet_count &gt; 1))"/>
     </operator>
     <event value="COMPUTE" event_id="3" 
            description="An arp reply but with different MAC address"
-           boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1))&amp;&amp;(arp.ar_sha != arp.ar_sha.2))"/>
+           boolean_expression="((((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1))&amp;&amp;(arp.ar_sha != arp.ar_sha.2)) &amp;&amp; (ethernet.packet_count != 0))"/>
 </property>
 
 <!-- Property 5: Two ARP replies that should provide the same MAC address are different. This rule is simpler than Property 1 

@@ -49,7 +49,7 @@ struct mmt_single_sec_handler_struct{
 	size_t messages_count;
 
 	bool verbose;
-};
+}__aligned;
 
 
 /**
@@ -145,7 +145,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 
 	//the message does not concern to any rules handled by this #handler
 	//as it does not contain any proto.att required by the handler
-	if( (msg->hash & handler->hash) == 0 ){
+	if( unlikely((msg->hash & handler->hash) == 0 )){
 		free_message_t( msg );
 		return;
 	}

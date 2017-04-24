@@ -42,7 +42,6 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	struct _user_data *_u_data = (struct _user_data *)user_data;
 	FILE *fd          = _u_data->file;
 	uint32_t rule_id  = _u_data->uint32_val;
-	static bool __got_history;
 	size_t size;
 	variable_t *var = (variable_t *) data;
 
@@ -50,14 +49,11 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	size = expr_stringify_variable( &str, var );
 	if( size == 0 ) return;
 
-	if( index == 0 ) __got_history = NO;
 
-	if( var->ref_index != (uint16_t)UNKNOWN && __got_history == NO ){
+	if( var->ref_index != (uint16_t)UNKNOWN ){
 		fprintf(fd, "\n\t his_msg = fsm_get_history( fsm, %d );", var->ref_index );
 		//TODO: not need to check ?
 		fprintf(fd, "\n\t if( unlikely( his_msg == NULL )) return 0;");
-
-		__got_history = YES;
 	}
 
 	_gen_code_line( fd );

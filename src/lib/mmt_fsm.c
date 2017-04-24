@@ -39,7 +39,7 @@ struct fsm_struct{
 
    //this is for internal usage. It points to _rule_engine_t
    void *user_data;
-};
+} __aligned;
 
 
 /**

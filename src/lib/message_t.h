@@ -48,7 +48,7 @@ typedef struct message_struct{
 	uint8_t *_data;
 	uint32_t _data_index; //index of data
 	uint32_t _data_length;
-}message_t;
+} __aligned message_t;
 
 #define MSG_CONTINUE 0
 #define MSG_OVERFLOW 1

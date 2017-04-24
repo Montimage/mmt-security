@@ -22,7 +22,7 @@ GIT_VERSION := $(shell git log --format="%h" -n 1)
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lhiredis -lmmt_core
 
-CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -Wno-unused-variable -I/usr/include/libxml2/  -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib 
+CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -I/usr/include/libxml2/  -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib 
 CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib
 
 #for debuging
@@ -122,18 +122,18 @@ sample_rules: compile_rule
 	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so.c rules/unauthorised_ports.xml -c
 	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so.c      rules/arp_poisoning.xml -c
 	
-install: uninstall $(INSTALL_DIR) clean all lib sample_rules
+install: $(INSTALL_DIR) clean all lib sample_rules
 	
-	$(QUIET) $(CP) rules/unauthorised_ports.so $(INSTALL_DIR)/rules/
-	$(QUIET) $(CP) rules/arp_poisoning.so      $(INSTALL_DIR)/rules/
+	$(QUIET) $(MV) rules/unauthorised_ports.so $(INSTALL_DIR)/rules/
+	$(QUIET) $(MV) rules/arp_poisoning.so      $(INSTALL_DIR)/rules/
 	
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/include
 	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(INSTALL_DIR)/include/
 	
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/bin
-	$(QUIET) $(MV)  $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  $(INSTALL_DIR)/bin
-	$(QUIET) $(MV)  $(MAIN_STAND_ALONE) $(INSTALL_DIR)/bin/mmt_security
-	$(QUIET) $(MV)  $(MAIN_SEC_SERVER) $(INSTALL_DIR)/bin/
+	$(QUIET) $(CP)  $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  $(INSTALL_DIR)/bin
+	$(QUIET) $(CP)  $(MAIN_STAND_ALONE) $(INSTALL_DIR)/bin/mmt_security
+	$(QUIET) $(CP)  $(MAIN_SEC_SERVER) $(INSTALL_DIR)/bin/
 	
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/lib
 	$(QUIET) $(MV)  $(LIB_NAME).so $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION)
@@ -185,6 +185,8 @@ clean:
 ################################################################################
 #auto test 
 ################################################################################
+NAMES := $(sort $(patsubst check/pcap/%.pcap,%, $(wildcard check/pcap/*.pcap)))
+
 TEST_INDEX=1
 _prepare: compile_rule standalone
 	$(QUIET) $(RM) rules/*
@@ -206,6 +208,13 @@ _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 	$(QUIET) bash -c "diff <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) || (echo \"====================execution log:\" && cat /tmp/$*.log && exit 1)"
 	@echo '  => OK'
 	
-check: _prepare _check.http_mal _check.arp_spoof _check.http_1flow_p30
+check: _prepare $(patsubst %,_check.%,$(NAMES))
 	@echo "All test passed!"
+	
+_csv.%: _prepare
+	$(QUIET) $(RM) /tmp/mmt-security*.csv
+	$(QUIET) ./$(MAIN_STAND_ALONE) -v -t check/pcap/$*.pcap -f /tmp/ || exit 1
+	$(QUIET) find /tmp/mmt-security*.csv -exec mv {} check/expect/$*.csv \;
+	
+csv: $(patsubst %,_csv.%,$(NAMES))
 ################################################################################

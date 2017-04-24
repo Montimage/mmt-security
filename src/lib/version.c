@@ -7,9 +7,9 @@
 #include "version.h"
 #include <stdlib.h>
 
-#define VERSION_NUMBER "1.1.1"
+#define VERSION_NUMBER "1.1.2"
 
-#define REQUIRE_PLUGIN "1.1.1"
+#define REQUIRE_PLUGIN "1.1.2"
 
 
 

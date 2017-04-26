@@ -27,6 +27,8 @@
 #include "mmt_single_security.h"
 #include "mmt_smp_security.h"
 
+#include "../dpi/mmt_dpi.h"
+
 static const rule_info_t **rules = NULL;
 static size_t rules_count = 0;
 
@@ -384,52 +386,21 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 				u8_ptr = NULL;
 
-				switch( pro_ptr->proto_id ){
-				//ARP
-				case 30:
-					switch ( pro_ptr->att_id ){
-					case 7:   //AR_SIP
-					case 9:   //AR_TIP
+				switch( pro_ptr->dpi_type ){
+				case MMT_DATA_IP_NET: /**< ip network address constant value */
+				case MMT_DATA_IP_ADDR: /**< ip address constant value */
 						u8_ptr = (uint8_t *) me->data;
 						size   = sprintf(str_ptr, "\"%d.%d.%d.%d\"",
-								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
-					}
-
-					break;
-				//IP SRC = 12, DEST = 13
-				case 178:
-					switch ( pro_ptr->att_id ){
-					case 12:
-					case 13:
-						u8_ptr = (uint8_t *) me->data;
-						size   = sprintf(str_ptr, "\"%d.%d.%d.%d\"",
-								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
-					}
-
+											u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
 					break;
 
-				//IPV6 SRC=7 DST=8
-				case 182:
-					switch( pro_ptr->att_id ){
-					case 7:
-					case 8:
+				//IPV6 or MAC address
+				case MMT_DATA_IP6_ADDR:
+				case MMT_DATA_MAC_ADDR:
 						u8_ptr = (uint8_t *) me->data;
 						size   = sprintf(str_ptr, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
 								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
-					}
 					break;
-
-				//Ethernet
-				case 99:
-					switch( pro_ptr->att_id ){
-					case 7:
-					case 8:
-						u8_ptr = (uint8_t *) me->data;
-						size   = sprintf(str_ptr, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
-								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
-					}
-					break;
-
 				}// end of switch( pro_ptr->proto_id ){
 
 				//if the attribute is not neither IP nor MAC

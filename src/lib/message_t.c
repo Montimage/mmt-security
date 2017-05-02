@@ -27,7 +27,7 @@ message_t *create_message_t(){
 		size_t elements_length = mmt_sec_get_unique_protocol_attributes( &proto_atts );
 
 		size_t data_length =  mmt_sec_get_config( MMT_SEC__CONFIG__INPUT__MAX_MESSAGE_SIZE );
-		data_length  += elements_length * sizeof( mmt_memory_t );
+		data_length  += elements_length * SIZE_OF_MMT_MEMORY_T;
 		_message_size = sizeof( message_t )	//message
 						+ sizeof( message_element_t) * elements_length //elements
 						+ data_length //data
@@ -116,9 +116,10 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 	int index;
 
 	if( unlikely (msg->_data_index + data_length + SIZE_OF_MMT_MEMORY_T + 1 >= msg->_data_length )){
-		mmt_warn( "Report %"PRIu64" for %d.%d is too big (require %zu bytes, avail. %d bytes), must increase config.input.max_report_size",
+		mmt_warn( "Report %"PRIu64" for %d.%d is too big (req. %zu, avail. %d bytes), must increase \"%s\"",
 				msg->counter,
-				proto_id, att_id, data_length + SIZE_OF_MMT_MEMORY_T, msg->_data_length - msg->_data_index);
+				proto_id, att_id, data_length + SIZE_OF_MMT_MEMORY_T, msg->_data_length - msg->_data_index,
+				mmt_sec_get_config_name( MMT_SEC__CONFIG__INPUT__MAX_MESSAGE_SIZE ));
 		return MSG_OVERFLOW;
 	}
 	//do not need NULL

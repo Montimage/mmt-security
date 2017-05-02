@@ -24,7 +24,7 @@ static const char *name[] = {
 
 //global configuration
 static uint32_t config[] = {
-	[MMT_SEC__CONFIG__INPUT__MAX_MESSAGE_SIZE]       = 1500,
+	[MMT_SEC__CONFIG__INPUT__MAX_MESSAGE_SIZE]       = 3000,
 	[MMT_SEC__CONFIG__SECURITY__MAX_INSTANCES]       = 100000,
 	[MMT_SEC__CONFIG__SECURITY__SMP__RING_SIZE]      = 1000,
 	[MMT_SEC__CONFIG__OUTPUT__INORGE_DESCRIPTION]    = 20,
@@ -49,6 +49,10 @@ uint32_t mmt_sec_set_config( enum config_att att, uint32_t val ){
 		return val;
 	}
 	return 0;
+}
+
+const char* mmt_sec_get_config_name( enum config_att att ){
+	return name[att];
 }
 
 /**

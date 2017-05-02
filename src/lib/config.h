@@ -60,4 +60,6 @@ uint32_t mmt_sec_set_config( enum config_att att, uint32_t value );
 
 uint32_t mmt_sec_get_config( enum config_att att );
 
+const char* mmt_sec_get_config_name( enum config_att att );
+
 #endif /* MMT_SEC_CONFIG_H_ */

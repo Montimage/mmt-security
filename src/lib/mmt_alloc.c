@@ -213,7 +213,7 @@ static inline void _pools_free( void *elem ){
 #endif
 
 	//total pools is full => free memory
-	if( unlikely( mem_pools.bytes_count >= get_config()->mem_pool.max_bytes )){
+	if( unlikely( mem_pools.bytes_count >= mmt_sec_get_config( MMT_SEC__CONFIG__MEMPOOL__MAX_BYTES ) )){
 		free( mem );
 		return;
 	}
@@ -224,7 +224,7 @@ static inline void _pools_free( void *elem ){
 	//its ring does not exist or it is full
 	//happen only one time when the ring for elem_size does not exist
 	if( unlikely( ring == NULL )){
-		ring = _create_ring( get_config()->mem_pool.max_elements_per_pool );
+		ring = _create_ring( mmt_sec_get_config( MMT_SEC__CONFIG__MEMPOOL__MAX_ELEMENTS_PER_POOL ) );
 		//insert the ring into mem_pools
 		__set_map_uint32_t( &mem_pools.pools_map, mem->size, ring );
 	}

@@ -61,7 +61,7 @@ mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t **rules_arr
 	const rule_engine_t *engine;
 	const rule_info_t *rule;
 	const proto_attribute_t *p;
-	uint32_t max_instance_count = get_config()->security.max_instances;
+	uint32_t max_instance_count = mmt_sec_get_config( MMT_SEC__CONFIG__SECURITY__MAX_INSTANCES );
 	__check_null( rules_array, NULL );
 
 	mmt_single_sec_handler_t *handler = mmt_mem_alloc( sizeof( mmt_single_sec_handler_t ));

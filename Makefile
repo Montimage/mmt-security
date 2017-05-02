@@ -117,12 +117,12 @@ uninstall:
 	$(QUIET) $(RM) /etc/ld.so.conf.d/mmt-security.conf
 	
 sample_rules: compile_rule
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so rules/unauthorised_ports.xml
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so      rules/arp_poisoning.xml
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so.c rules/unauthorised_ports.xml -c
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so.c      rules/arp_poisoning.xml -c
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so rules/unauthorised_ports.xml > /dev/null
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so      rules/arp_poisoning.xml      > /dev/null
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so.c rules/unauthorised_ports.xml -c > /dev/null
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so.c      rules/arp_poisoning.xml -c      > /dev/null
 	
-install: $(INSTALL_DIR) clean all lib sample_rules
+install: all lib sample_rules uninstall $(INSTALL_DIR)
 	
 	$(QUIET) $(MV) rules/unauthorised_ports.so $(INSTALL_DIR)/rules/
 	$(QUIET) $(MV) rules/arp_poisoning.so      $(INSTALL_DIR)/rules/
@@ -146,7 +146,7 @@ install: $(INSTALL_DIR) clean all lib sample_rules
 	$(QUIET) chmod -x $(INSTALL_DIR)/lib/$(LIB_NAME).*
 	
 	@echo "/opt/mmt/security/lib" >> /etc/ld.so.conf.d/mmt-security.conf
-	ldconfig
+	@ldconfig
 	
 	@echo ""
 	@echo "Installed mmt-security in $(INSTALL_DIR)"
@@ -180,7 +180,8 @@ dist-clean: uninstall
 	@echo "Removed mmt-security from $(INSTALL_DIR)"
 	
 clean:
-	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) $(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)
+	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) \
+			$(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)
 	
 ################################################################################
 #auto test 

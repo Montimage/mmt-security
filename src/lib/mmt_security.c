@@ -255,9 +255,10 @@ size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
 
 
 
-static inline void _remove_special_character( char * tmp, size_t len ){
-	while( len != 0 ){
-		switch( *tmp ){
+static inline size_t _copy_plein_text( char *dst, int len, const char* src ){
+	size_t size = 0;
+	while( len != 0 && *src != '\0' ){
+		switch( *src ){
 		case '\b': //  Backspace (ascii code 08)
 		case '\f': //  Form feed (ascii code 0C)
 		case '\n': //  New line
@@ -265,21 +266,24 @@ static inline void _remove_special_character( char * tmp, size_t len ){
 		case '\t': //  Tab
 		case '\"': //  Double quote
 		case '\\': //  Backslash character
-		case '\0':
 		//case '\u': //  unicode
-			*tmp = '.';
+			*dst = '.';
 			break;
 		default:
 			//non printable
-			if( *tmp < 32 )
-				*tmp = '.';
+			if( *src < 32 )
+				*dst = '.';
+			else
+				*dst = *src;
 		}
 
-
-		tmp ++;
+		src ++;
+		dst ++;
 		len --;
+		size ++;
 	}
 
+	return size;
 }
 
 #define MAX_STR_SIZE 10000
@@ -287,7 +291,8 @@ static inline void _remove_special_character( char * tmp, size_t len ){
 static const char* _convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
 	static __thread_scope char buffer[ MAX_STR_SIZE + 1 ];
 	char *str_ptr, *c_ptr;
-	size_t size, i, j, total_len, index;
+	size_t size, i, j, index;
+	int total_len;
 	const message_t *msg;
 	const message_element_t *me;
 	bool is_first;
@@ -344,7 +349,9 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				continue;
 
 			total_len -= size;
-			if( unlikely( total_len <= 0 )) break;
+			if( unlikely( total_len <= 0 )){
+				break;
+			}
 
 			str_ptr += size;
 
@@ -405,8 +412,12 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 				//if the attribute is not neither IP nor MAC
 				if( u8_ptr == NULL ){
-					size = sprintf( str_ptr, "\"%s\"", (char *) me->data );
-					_remove_special_character(  str_ptr + 1, size - 2 );
+					//TODO: limit output length of one proto.att to 255 bytes
+					*str_ptr = '"';
+					str_ptr ++;
+					size = _copy_plein_text(  str_ptr, total_len - 20, (char *) me->data );
+					str_ptr[ size ] = '"';
+					size ++;
 				}
 				//
 
@@ -423,7 +434,12 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		}
 
 		total_len -= size;
-		if( unlikely( total_len <= 0 )) break;
+		if( unlikely( total_len <= 0 )){
+			mmt_warn("Buffer size is not enough to contain all attributes");
+			//close
+			str_ptr += snprintf( str_ptr, total_len, "]} }") ;
+			break;
+		}
 
 		str_ptr += size;
 		str_ptr += snprintf( str_ptr, total_len, "]}%s", //end attributes, end event_

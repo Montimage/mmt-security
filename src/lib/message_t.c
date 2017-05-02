@@ -26,7 +26,8 @@ message_t *create_message_t(){
 	if( unlikely( _memory == NULL )){
 		size_t elements_length = mmt_sec_get_unique_protocol_attributes( &proto_atts );
 
-		size_t data_length =  get_config()->input.max_message_size;
+		size_t data_length =  mmt_sec_get_config( MMT_SEC__CONFIG__INPUT__MAX_MESSAGE_SIZE );
+		data_length  += elements_length * sizeof( mmt_memory_t );
 		_message_size = sizeof( message_t )	//message
 						+ sizeof( message_element_t) * elements_length //elements
 						+ data_length //data

@@ -31,36 +31,11 @@ static inline int em_check_botnetcc(const char *ipsrc, const char *ipdst){
    	//printf("src->key: %ld, src->data:%s\n", (ipStr2DataItem(ip_src))->key, (ipStr2DataItem(ip_src))->data);
 	
 	
-	//store signatures in a hash table
-	FILE *f_in;
-	f_in = fopen("test/hoa/botcc_ip","r");
-	if (f_in == NULL)
-        exit(EXIT_FAILURE);
-        
-	char * line = (char *) malloc(sizeof(char)*16);
-    size_t len = 0;
-    ssize_t read;
-    
-	while ((read = getline(&line, &len, f_in)) != -1) {
-		//printf("Lines: %s", line);
-        struct DataItem* item = ipStr2DataItem(line);
-   		if (insert(item) == 0) printf("Insert failed\n");
-		}
-    free(line);
-    fclose(f_in);
-   
-   if((search(ipStr2DataItem(ip_src)->key) != NULL) || (search(ipStr2DataItem(ip_dst)->key) != NULL)) handle = 1;
+	if((search(ipStr2DataItem(ip_src)->key) != NULL) || (search(ipStr2DataItem(ip_dst)->key) != NULL)) handle = 1;
 	
    //free everything before quitting
    free(ip_src);
    free(ip_dst);
-   for (i=0; i<SIZE; i++){
-	   if (hashArray[i] != NULL) {
-		   free(hashArray[i]->data);
-		   free(hashArray[i]);
-		   hashArray[i] = NULL;
-	   	   }
-   	   }
    return handle;
 }
 ]]></embedded_functions>

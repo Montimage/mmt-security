@@ -129,3 +129,34 @@ struct DataItem* ipStr2DataItem(char *ipAdd ){
 	   //printf("Str to item: Key: %ld. Data: %s\n", item->key, item->data);
 	   return item;
 }
+
+void init_hashArray(){
+	//store signatures in a hash table
+		FILE *f_in;
+		f_in = fopen("test/hoa/botcc_ip","r");
+		if (f_in == NULL)
+	        exit(EXIT_FAILURE);
+
+		char * line = (char *) malloc(sizeof(char)*16);
+	    size_t len = 0;
+	    ssize_t read;
+
+		while ((read = getline(&line, &len, f_in)) != -1) {
+			//printf("Lines: %s", line);
+	        struct DataItem* item = ipStr2DataItem(line);
+	   		if (insert(item) == 0) printf("Insert failed\n");
+	   		//else printf("Insert ok\n");
+			}
+	    free(line);
+	    fclose(f_in);
+}
+void free_hashArray(){
+	int i = 0;
+	for (i=0; i<SIZE; i++){
+		   if (hashArray[i] != NULL) {
+			   free(hashArray[i]->data);
+			   free(hashArray[i]);
+			   hashArray[i] = NULL;
+		   	   }
+	   	   }
+}

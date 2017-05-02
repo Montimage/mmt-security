@@ -23,6 +23,7 @@
 
 #include "lib/dpi_message_t.h"
 #include "lib/mmt_smp_security.h"
+#include "lib/hash_table_botcc.h"
 
 #define MAX_RULE_MASK_SIZE 100000
 #define MAX_FILENAME_SIZE 500
@@ -56,6 +57,7 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v             : Verbose.\n");
 	fprintf(stderr, "\t-l             : Prints the available rules then exit.\n");
+	fprintf(stderr, "\t-b             : Build the hash tables of signatures at the beginning\n");
 	fprintf(stderr, "\t-h             : Prints this help.\n");
 	exit(1);
 }
@@ -71,7 +73,7 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 
 	*verbose = NO;
 	filename[0] = '\0';
-	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:x:lhv")) != EOF) {
+	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:x:lbhv")) != EOF) {
 		switch (opt) {
 		case 't':
 			optcount++;
@@ -110,6 +112,10 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			mmt_sec_print_rules_info();
 			mmt_sec_close();
 			exit( 0 );
+		case 'b':
+			optcount++;
+			init_hashArray();
+			break;
 		case 'v':
 			optcount++;
 			*verbose = YES;
@@ -362,6 +368,7 @@ int main(int argc, char** argv) {
 	}
 
 	termination();
+	free_hashArray();
 
 	return EXIT_SUCCESS;
 }

@@ -1,0 +1,39 @@
+<beginning>
+<embedded_functions><![CDATA[
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+#include "hiredis/hiredis.h"
+#include <sys/time.h>
+
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+
+
+static inline int em_check_nfs_upload(const char * file_name, const char *p_payload){
+   //printf("Enter the em\n");
+   //find the first occurrence of file_name in p_payload
+   return (strstr(p_payload, file_name) != NULL);   
+  }  
+]]></embedded_functions>
+
+<!-- Property 30: Simple multi-session property -->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="20" property_id="30" type_property="ATTACK" 
+    description="NFS synchronization and then upload">
+    <event value="COMPUTE" event_id="1" 
+           description="NFS synchronization"
+           boolean_expression="(nfs.file_name != '')"/> 
+    <event value="COMPUTE" event_id="2" 
+           description="Upload the same file"
+           boolean_expression="((ip.dst == ip.src.1)&amp;&amp;((http.packet_count != 0)&amp;&amp;(#em_check_nfs_upload(nfs.file_name.1, tcp.p_payload) == 1)))"/>
+</property>
+</beginning>

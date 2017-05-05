@@ -5,42 +5,42 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include "math.h"
-#define SIZE 15000
+#define SIZE_HASH_IP 15000
 
 struct DataItem {
 	char *data;
 	uint64_t key;
 };
 
-struct DataItem* hashArray[SIZE]; 
+struct DataItem* hashArrayIPAdd[SIZE_HASH_IP];
 
-int hashCode(uint64_t key) {
-   return key % SIZE;
+uint64_t hashCode(uint64_t key) {
+   return key % SIZE_HASH_IP;
 }
 
-struct DataItem *search(int key) {
+struct DataItem *search_hash_ip(uint64_t key) {
    //get the hash 
    uint64_t hashIndex = hashCode(key);
 	
    //move in array until an empty
    int while_loop=0;
-   while((hashArray[hashIndex] != NULL) && (while_loop < SIZE)) {
+   while((hashArrayIPAdd[hashIndex] != NULL) && (while_loop < SIZE_HASH_IP)) {
 	
-      if(hashArray[hashIndex]->key == key)
-         return hashArray[hashIndex]; 
+      if(hashArrayIPAdd[hashIndex]->key == key)
+         return hashArrayIPAdd[hashIndex];
 			
       //go to next cell
       ++hashIndex;
       ++while_loop;
 		
       //wrap around the table
-      hashIndex %= SIZE;
+      hashIndex %= SIZE_HASH_IP;
    }        
 	
    return NULL;        
 }
 
-int insert(struct DataItem* item) {
+int insert_hash_ip(struct DataItem* item) {
 
 	char *data = item->data;
 	uint64_t key = item->key;
@@ -50,23 +50,23 @@ int insert(struct DataItem* item) {
 
    //move in array until an empty
    int while_loop = 0;
-   while(hashArray[hashIndex] != NULL) {
+   while(hashArrayIPAdd[hashIndex] != NULL) {
       //go to next cell
       ++hashIndex;
 	  ++while_loop;
-	  if (while_loop > SIZE) {
+	  if (while_loop > SIZE_HASH_IP) {
 		  printf("Cannot insert because of full hash array\n");
 		  return 0;
 	  	  }
       //wrap around the table
-      hashIndex %= SIZE;
+      hashIndex %= SIZE_HASH_IP;
    }
 
-   hashArray[hashIndex] = item;
+   hashArrayIPAdd[hashIndex] = item;
    return 1;
 }
 
-int delete(struct DataItem* item) {
+int delete_hash_ip(struct DataItem* item) {
 	if (item == NULL) return -1;
 	uint64_t key = item->key;
 
@@ -74,12 +74,12 @@ int delete(struct DataItem* item) {
    int hashIndex = hashCode(key);
 
    //move in array until an empty
-   while(hashArray[hashIndex] != NULL) {
+   while(hashArrayIPAdd[hashIndex] != NULL) {
 	
-      if(hashArray[hashIndex]->key == key) {
-         hashArray[hashIndex] = NULL;
-         free(hashArray[hashIndex]->data);
-         free(hashArray[hashIndex]);
+      if(hashArrayIPAdd[hashIndex]->key == key) {
+         hashArrayIPAdd[hashIndex] = NULL;
+         free(hashArrayIPAdd[hashIndex]->data);
+         free(hashArrayIPAdd[hashIndex]);
          return 1;
       }
 		
@@ -87,26 +87,26 @@ int delete(struct DataItem* item) {
       ++hashIndex;
 		
       //wrap around the table
-      hashIndex %= SIZE;
+      hashIndex %= SIZE_HASH_IP;
    }      
 	
    return 0;
 }
 
-void display() {
+void display_hash_ip() {
    int i = 0;
 
-   for(i = 0; i<SIZE; i++) {
+   for(i = 0; i<SIZE_HASH_IP; i++) {
 
-      if(hashArray[i] != NULL)
-         printf(" (%ld,%s)",hashArray[i]->key,hashArray[i]->data);
+      if(hashArrayIPAdd[i] != NULL)
+         printf(" (%ld,%s)",hashArrayIPAdd[i]->key,hashArrayIPAdd[i]->data);
       else
          printf(" ~~ ");
    }
 
    printf("\n");
 }
-struct DataItem* ipStr2DataItem(char *ipAdd ){
+struct DataItem* ipStr2DataItem(const char *ipAdd ){
 	   char *token = NULL;
 	   char ipAddr[16];
 	   struct DataItem* item = (struct DataItem *) malloc(sizeof(struct DataItem));
@@ -130,10 +130,10 @@ struct DataItem* ipStr2DataItem(char *ipAdd ){
 	   return item;
 }
 
-void init_hashArray(){
+void init_hashArrayIPAdd(){
 	//store signatures in a hash table
 		FILE *f_in;
-		f_in = fopen("test/hoa/botcc_ip","r");
+		f_in = fopen("test/hoa/botcc_ip","r"); //TODO: This should be configurable
 		if (f_in == NULL)
 	        exit(EXIT_FAILURE);
 
@@ -144,19 +144,20 @@ void init_hashArray(){
 		while ((read = getline(&line, &len, f_in)) != -1) {
 			//printf("Lines: %s", line);
 	        struct DataItem* item = ipStr2DataItem(line);
-	   		if (insert(item) == 0) printf("Insert failed\n");
+	   		if (insert_hash_ip(item) == 0) printf("Insert failed\n");
 	   		//else printf("Insert ok\n");
 			}
 	    free(line);
 	    fclose(f_in);
 }
-void free_hashArray(){
+
+void free_hashArrayIPAdd(){
 	int i = 0;
-	for (i=0; i<SIZE; i++){
-		   if (hashArray[i] != NULL) {
-			   free(hashArray[i]->data);
-			   free(hashArray[i]);
-			   hashArray[i] = NULL;
+	for (i=0; i<SIZE_HASH_IP; i++){
+		   if (hashArrayIPAdd[i] != NULL) {
+			   free(hashArrayIPAdd[i]->data);
+			   free(hashArrayIPAdd[i]);
+			   hashArrayIPAdd[i] = NULL;
 		   	   }
 	   	   }
 }

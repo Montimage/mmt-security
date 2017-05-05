@@ -9,7 +9,7 @@
 #include <inttypes.h>
 #include "types_defs.h"
 #include <sys/time.h>
-#include "hash_table_botcc.h"
+#include "hash_table_ipadd.h"
 /**
 * Return:
 * - 0: ok
@@ -18,7 +18,7 @@
 */
 
 static inline int em_check_botnetcc(const char *ipsrc, const char *ipdst){
-	int i = 0, handle = 0;
+	int handle = 0;
 	
 	//extract ip_src, ip_dst
    	char *ip_src = (char *)malloc(sizeof(char)*16);
@@ -31,7 +31,7 @@ static inline int em_check_botnetcc(const char *ipsrc, const char *ipdst){
    	//printf("src->key: %ld, src->data:%s\n", (ipStr2DataItem(ip_src))->key, (ipStr2DataItem(ip_src))->data);
 	
 	
-	if((search(ipStr2DataItem(ip_src)->key) != NULL) || (search(ipStr2DataItem(ip_dst)->key) != NULL)) handle = 1;
+	if((search_hash_ip(ipStr2DataItem(ip_src)->key) != NULL) || (search_hash_ip(ipStr2DataItem(ip_dst)->key) != NULL)) handle = 1;
 	
    //free everything before quitting
    free(ip_src);
@@ -39,7 +39,7 @@ static inline int em_check_botnetcc(const char *ipsrc, const char *ipdst){
    return handle;
 }
 ]]></embedded_functions>
-<!-- Property 31: Botnet Command and Control detection based on blaclisted IP addresses-->
+<!-- Property 31: Botnet Command and Control detection based on blacklisted IP addresses. This rule replaces 300 Suricata rules and covers 12835 blacklisted IP addr-->
 <property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="31" type_property="ATTACK" 
     description="Botnet Command and Control detection"
     >
@@ -48,7 +48,7 @@ static inline int em_check_botnetcc(const char *ipsrc, const char *ipdst){
            boolean_expression="(#em_check_botnetcc(ip.src, ip.dst) == 1)"/>
     <event value="COMPUTE" event_id="2" 
            description="IP packet"
-           boolean_expression="(ip.src !=ip.dst)"/>
+           boolean_expression="(ip.src != ip.dst)"/>
 </property>
 </beginning>
 

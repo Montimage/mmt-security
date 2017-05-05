@@ -142,6 +142,7 @@ void init_hashArrayIPAdd(){
 	    ssize_t read;
 
 		while ((read = getline(&line, &len, f_in)) != -1) {
+			line[strlen(line)-1] = '\0';
 			//printf("Lines: %s", line);
 	        struct DataItem* item = ipStr2DataItem(line);
 	   		if (insert_hash_ip(item) == 0) printf("Insert failed\n");

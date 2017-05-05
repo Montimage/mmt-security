@@ -28,7 +28,8 @@
 
 #include "lib/dpi_message_t.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/hash_table_botcc.h"
+#include "lib/hash_table_ipadd.h"
+#include "lib/hash_table_str.h"
 
 #define MAX_RULE_MASK_SIZE 100000
 //maximum length of a report sent from mmt-probe
@@ -76,7 +77,7 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-r <string> : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v          : Verbose.\n");
 	fprintf(stderr, "\t-l          : Prints the available rules then exit.\n");
-	fprintf(stderr, "\t-b             : Build the hash tables of signatures at the beginning\n");
+	fprintf(stderr, "\t-b          : Build the hash tables of signatures at the beginning\n");
 	fprintf(stderr, "\t-h          : Prints this help.\n");
 	exit(1);
 }
@@ -137,7 +138,8 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 			exit( 0 );
 		case 'b':
 			optcount++;
-			init_hashArray();
+			init_hashArrayIPAdd();
+			init_hashArrayStr();
 			break;
 		case 'v':
 			optcount++;
@@ -547,7 +549,8 @@ int main( int argc, char** argv ) {
 	}
 
 	termination();
-	free_hashArray();
+	free_hashArrayIPAdd();
+	free_hashArrayStr();
 
 	return EXIT_SUCCESS;
 }

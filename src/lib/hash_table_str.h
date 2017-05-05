@@ -120,22 +120,19 @@ void display_hash_str() {
 
 struct StrDataItem* Str2DataItem(const char *str ){
 	   char *token = NULL;
-	   char stri[32];
 	   struct StrDataItem* item = (struct StrDataItem *) malloc(sizeof(struct StrDataItem));
 	   item->data = (char *) malloc(sizeof(char)*32);
 	   item->key = 0;
-	   memcpy(item->data, str, 31);
-	   item->data[31] = '\0';
-	   strcpy(stri,item->data);
-	   item->key = hashStr(stri);
-	   //printf("Str to item: Key: %lu. Data: %s\n", item->key, item->data);
+	   strcpy(item->data, str);
+	   item->key = hashStr(item->data);
+	   //printf("Str to item: Key: %lu. Data: %s. Len: %zu\n", item->key, item->data, strlen(item->data));
 	   return item;
 }
 
 void init_hashArrayStr(){
 	//store signatures in a hash table
 		FILE *f_in;
-		f_in = fopen("test/hoa/botcc_ip","r");
+		f_in = fopen("test/hoa/trojan_uri","r");
 		if (f_in == NULL)
 	        exit(EXIT_FAILURE);
 
@@ -144,8 +141,9 @@ void init_hashArrayStr(){
 	    ssize_t read;
 
 		while ((read = getline(&line, &len, f_in)) != -1) {
-			//printf("Lines: %s", line);
-	        struct StrDataItem* item = Str2DataItem(line);
+			line[strlen(line)-1] = '\0';
+			//printf("Lines: %s, Len: %zu\n", line, strlen(line));
+			struct StrDataItem* item = Str2DataItem(line);
 	   		if (insert_hash_str(item) == 0) printf("Insert failed\n");
 	   		//else printf("Insert ok\n");
 			}

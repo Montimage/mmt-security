@@ -12,6 +12,7 @@
 static inline int em_check_trojan_uri(const char * uri){
    	//printf("Enter the em\n");
    	int handle = 0;
+   	//printf("http.uri: %s\n", uri);
 	if(search_hash_str(Str2DataItem(uri)->key) != NULL) handle = 1;  
 	//if(search_hash_str(15458465885129824347U) != NULL) handle = 1;   //for testing when we have not had attack traffic yet
   	return handle;

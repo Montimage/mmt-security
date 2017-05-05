@@ -23,8 +23,8 @@
 
 #include "lib/dpi_message_t.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/hash_table_botcc.h"
-
+#include "lib/hash_table_ipadd.h"
+#include "lib/hash_table_str.h"
 #define MAX_RULE_MASK_SIZE 100000
 #define MAX_FILENAME_SIZE 500
 #define TRACE_FILE 1
@@ -114,7 +114,8 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			exit( 0 );
 		case 'b':
 			optcount++;
-			init_hashArray();
+			init_hashArrayIPAdd();
+			init_hashArrayStr();
 			break;
 		case 'v':
 			optcount++;
@@ -368,7 +369,8 @@ int main(int argc, char** argv) {
 	}
 
 	termination();
-	free_hashArray();
+	free_hashArrayIPAdd();
+	free_hashArrayStr();
 
 	return EXIT_SUCCESS;
 }

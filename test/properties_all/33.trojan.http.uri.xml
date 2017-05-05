@@ -19,7 +19,7 @@ static inline int em_check_trojan_uri(const char * uri){
   }
 ]]></embedded_functions>
 
-<!-- Property 33: TROJAN detection based on the hash table of 1703 blacklisted http_uri
+<!-- Property 33: TROJAN detection based on the hash table of 989 blacklisted http_uri
 (Ref: Suricata rules emerging-trojan.rules). 
 NOTE: MMT_Security must run with -b option  -->
 

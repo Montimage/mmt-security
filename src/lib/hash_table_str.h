@@ -123,7 +123,8 @@ struct StrDataItem* Str2DataItem(const char *str ){
 	   struct StrDataItem* item = (struct StrDataItem *) malloc(sizeof(struct StrDataItem));
 	   item->data = (char *) malloc(sizeof(char)*32);
 	   item->key = 0;
-	   strcpy(item->data, str);
+	   memcpy(item->data, str, 31);
+	   item->data[31] = '\0';
 	   item->key = hashStr(item->data);
 	   //printf("Str to item: Key: %lu. Data: %s. Len: %zu\n", item->key, item->data, strlen(item->data));
 	   return item;

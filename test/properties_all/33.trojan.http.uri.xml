@@ -14,12 +14,11 @@ static inline int em_check_trojan_uri(const char * uri){
    	int handle = 0;
    	//printf("http.uri: %s\n", uri);
 	if(search_hash_str(Str2DataItem(uri)->key) != NULL) handle = 1;  
-	//if(search_hash_str(15458465885129824347U) != NULL) handle = 1;   //for testing when we have not had attack traffic yet
-  	return handle;
+	return handle;
   }
 ]]></embedded_functions>
 
-<!-- Property 33: TROJAN detection based on the hash table of 989 blacklisted http_uri
+<!-- Property 33: TROJAN detection based on the hash table of 978 blacklisted http_uri (978 rules)
 (Ref: Suricata rules emerging-trojan.rules). 
 NOTE: MMT_Security must run with -b option  -->
 

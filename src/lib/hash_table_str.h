@@ -130,10 +130,10 @@ struct StrDataItem* Str2DataItem(const char *str ){
 	   return item;
 }
 
-void init_hashArrayStr(){
+void init_hashArrayStr(const char src_file[]){
 	//store signatures in a hash table
 		FILE *f_in;
-		f_in = fopen("test/hoa/trojan_uri","r");
+		f_in = fopen(src_file,"r");
 		if (f_in == NULL)
 	        exit(EXIT_FAILURE);
 

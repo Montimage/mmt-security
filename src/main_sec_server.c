@@ -139,7 +139,8 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 		case 'b':
 			optcount++;
 			init_hashArrayIPAdd();
-			init_hashArrayStr();
+			init_hashArrayStr("test/hoa/trojan_uri");
+			init_hashArrayStr("test/hoa/malicious_UserAgent");
 			break;
 		case 'v':
 			optcount++;

@@ -67,8 +67,8 @@ static inline int em_check_nfs_redis(const char *p_payload){
   return 0;
 }
 ]]></embedded_functions>
-
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="32" type_property="ATTACK" 
+<!-- Property 31: Simple multi-session property. Detection of NFS synchronization and then upload (based on two probes) -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="31" type_property="ATTACK" 
     description="Upload a file coming from NFS server (detection based on two probes)">
     <event value="COMPUTE" event_id="1" 
            description="Context: HTTP packet"

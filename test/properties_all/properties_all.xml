@@ -1,12 +1,17 @@
-<!-- MMT_Security Copyright (C) 2014  Montimage: All rules (last update in 2017-04-21 15:35:18.432777)-->
+<!-- MMT_Security Copyright (C) 2014  Montimage: All rules (last update in 2017-05-11 16:16:21.337202)-->
 <beginning>
 <embedded_functions><![CDATA[
-//each function name should be prefixed by em_ 
-#include <string.h> 
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <inttypes.h> 
-#include "types_defs.h" 
+//each function name should be prefixed by em_
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <inttypes.h>
+#include "types_defs.h"
+#include "hiredis/hiredis.h"
+#include <sys/time.h>
+#include "hash_table_str.h"
+#include <sqlite3.h> 
+#include "hash_table_ipadd.h"
 static inline int em_check_URI(const char *uri_str){
   int handle = 0;
   if(uri_str == NULL){
@@ -39,6 +44,135 @@ static inline int em_check_URI(const char *uri_str){
 //  fprintf(stderr, "executing check_URI with parameters:h=%d:nb=%u:a1=%o:a2=%o\n", 
 //                                           handle, *(char*)(BLOC3+6),*(char*)(BLOC3+9));
 //#endif
+  return handle;
+}
+static inline int em_check_nfs_redis(const char *p_payload){	
+  redisContext *c, *command;
+  redisReply *reply;
+  
+  const char *hostname = "127.0.0.1";
+  int port = 6379;
+  
+  struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+  c = redisConnectWithTimeout(hostname, port, timeout);
+  if (c == NULL || c->err) {
+        if (c) {
+            printf("Connection error: %s\n", c->errstr);
+            redisFree(c);
+        } else {
+            printf("Connection error: Impossible to allocate redis context\n");
+        }
+        exit(0);
+    }
+  
+    /* Let's check what we have inside the list */
+    reply = redisCommand(c,"LRANGE multisession.report 0 -1");
+    if (reply->type == REDIS_REPLY_ARRAY) {
+ 		int j=0;
+        for (j = 0; j < reply->elements; j++) {
+			char probe_report[256];
+            char *token;
+            strcpy(probe_report, reply->element[j]->str);
+            token = strtok(reply->element[j]->str, ",");
+            int i = 0;
+			while (token != NULL) {
+				if (i==1) {
+					//check the validity of the report
+					struct timeval now;
+					gettimeofday(&now, NULL);
+					double element_ts = atof(token);
+					if (now.tv_sec - element_ts > 300) {
+							redisCommand(c,"LREM multisession.report 1 %s", probe_report);//Delete the out-dated report
+							i++;
+							break;
+							}
+					}
+				if (i==2){
+					if (token[0] == ' '){
+					break;
+					}
+					if (strstr(p_payload, token) != NULL){
+					redisFree(c);
+					return 1;
+					}        
+					}
+				token = strtok(NULL, ",");
+				i++;
+				}
+        }
+    }
+  redisFree(c);
+  return 0;
+}
+static inline int em_check_trojan_uri(const char * uri){
+   	//printf("Enter the em\n");
+   	int handle = 0;
+   	//printf("http.uri: %s\n", uri);
+	if(search_hash_str(Str2DataItem(uri)->key) != NULL) handle = 1;  
+	return handle;
+  }
+static inline int em_check_nfs_upload(const char * file_name, const char *p_payload){
+   //printf("Enter the em\n");
+   //find the first occurrence of file_name in p_payload
+   return (strstr(p_payload, file_name) != NULL);   
+  }  
+static inline int em_check_malicious_UA_sqlite(const char * UA){
+   	int handle = 0;
+   	sqlite3 *db;
+    char *zErrMsg = 0;
+    int rc;
+    char *sql = malloc(sizeof(char) * (strlen(UA) + 64));
+    const char* data = "Callback function called";
+    /*
+    if (strlen(UA) > 255){
+    return 2;
+    }
+    */
+    int callback(void *data, int argc, char **argv, char **azColName){
+  	if (argc > 0) handle = 1;
+	return handle;
+	}
+    
+    rc = sqlite3_open("test/hoa/db_blacklisted_UA.sqlite", &db);
+    if( rc ){
+      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+      return 2;
+      }
+  	 /* Create SQL statement */
+ 	sprintf(sql, "SELECT * FROM blacklisted_UA WHERE UA = \"%s\"", UA);
+  // strcat(sql,"\" %s \"",UA); 
+   rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+   if( rc != SQLITE_OK ){
+      fprintf(stderr, "SQL error: %s\n", zErrMsg);
+      sqlite3_free(zErrMsg);
+   }
+   sqlite3_close(db);
+   free(sql);
+	return handle;
+  }
+static inline int em_check_sql_injection_ua(const char *str){
+   int handle = 0;
+   if (str==NULL) return 2;
+   
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+
+   char *s1, *s2, *s3, *s4, *s5, *s6, *s7, *s8, *s9;
+   s1 = strstr(str, "DROP");  //find the first occurrence of string "DROP" in string
+   s2 = strstr(str, "UNION"); //find the first occurrence of string "UNION" in string
+   s3 = strstr(str, "SELECT"); //find the first occurrence of string "SELECT" in string
+   s4 = strstr(str, "CHAR"); //find the first occurrence of string "CHAR" in string  
+   s5 = strstr(str, "DELETE"); //find the first occurrence of string "CHAR" in string
+   s6 = strstr(str, "INSERT"); //find the first occurrence of string "CHAR" in string
+   s7 = strchr(str, '\'');    //find the first occurrence of character "'" in string
+   s8 = strchr(str, '\"');    //find the first occurrence of character """ in string
+   s9 = strstr(str, "--");    //find the first occurrence of string "--" in string
+     
+   if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL) || (s7 !=NULL) || (s8 !=NULL) || (s9 !=NULL)) {
+      //printf ("SQL injection detected\n");
+      handle = 1;   
+   }
   return handle;
 }
 static inline int em_check_sql_injection(const char *str){
@@ -144,11 +278,32 @@ static inline bool em_check_UA( const char *user_agent){
    //find the first occurrence of string "Nikto" in string
    return (strstr(user_agent, "Nikto") != NULL);     
 }
-static inline int em_check_nfs_upload(const char * file_name, const char *p_payload){
-   //printf("Enter the em\n");
-   //find the first occurrence of file_name in p_payload
-   return (strstr(p_payload, file_name) != NULL);   
-  }  
+static inline int em_check_malicious_UA(const char * UA){
+   	int handle = 0;
+   	if(search_hash_str(Str2DataItem(UA)->key) != NULL) handle = 1;  
+	return handle;
+  }
+static inline int em_check_botnetcc(const char *ipsrc, const char *ipdst){
+	int handle = 0;
+	
+	//extract ip_src, ip_dst
+   	char *ip_src = (char *)malloc(sizeof(char)*16);
+   	char *ip_dst = (char *)malloc(sizeof(char)*16);
+    sprintf(ip_src,"%d.%d.%d.%d", (unsigned char)ipsrc[0], (unsigned char)ipsrc[1], (unsigned char)ipsrc[2], (unsigned char)ipsrc[3]);
+    ip_src[15]='\0';
+   	sprintf(ip_dst,"%d.%d.%d.%d", (unsigned char)ipdst[0], (unsigned char)ipdst[1], (unsigned char)ipdst[2], (unsigned char)ipdst[3]);
+   	ip_dst[15]='\0';
+   	//printf("IP src: %s. IP dst: %s\n", ip_src, ip_dst);
+   	//printf("src->key: %ld, src->data:%s\n", (ipStr2DataItem(ip_src))->key, (ipStr2DataItem(ip_src))->data);
+	
+	
+	if((search_hash_ip(ipStr2DataItem(ip_src)->key) != NULL) || (search_hash_ip(ipStr2DataItem(ip_dst)->key) != NULL)) handle = 1;
+	
+   //free everything before quitting
+   free(ip_src);
+   free(ip_dst);
+   return handle;
+}
 ]]></embedded_functions>
 <!-- Property 1: Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).-->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="3" property_id="1" type_property="ATTACK" 
@@ -197,26 +352,25 @@ static inline int em_check_nfs_upload(const char * file_name, const char *p_payl
 </property>
 <!-- Property 4: One ARP request receives two replies with different MAC addresses.
 -->
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="4" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="4" property_id="4" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
-    <operator value="THEN" delay_units="m" delay_min="0+" delay_max="5">
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="4">
       <event value="COMPUTE" event_id="1" 
              description="An arp who was requested"
-             boolean_expression="(arp.ar_op == 1)"/>
+             boolean_expression="((arp.ar_op == 1) &amp;&amp; (ethernet.src != ethernet.dst))"/>
       <event value="COMPUTE" event_id="2" 
              description="An arp reply with MAC address"
-             boolean_expression="((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1))"/>
+             boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1)) &amp;&amp; (ethernet.packet_count &gt; 1))"/>
     </operator>
     <event value="COMPUTE" event_id="3" 
            description="An arp reply but with different MAC address"
-           boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1))&amp;&amp;(arp.ar_sha != arp.ar_sha.2))"/>
+           boolean_expression="((((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1))&amp;&amp;(arp.ar_sha != arp.ar_sha.2)) &amp;&amp; (ethernet.packet_count != 0))"/>
 </property>
-
 <!-- Property 5: Two ARP replies that should provide the same MAC address are different. This rule is simpler than Property 1 
                  above and detects the same potential attacks without generating a message for each combination of request-reply.
 -->
 
-<property value="THEN" delay_units="m" delay_min="0+" delay_max="5" property_id="5" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="4" property_id="5" type_property="ATTACK" 
           description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
       <event value="COMPUTE" event_id="1" 
              description="An arp reply with MAC address"
@@ -247,7 +401,7 @@ static inline int em_check_nfs_upload(const char * file_name, const char *p_payl
 </property>
 <!-- Property 8: The field Options must be homogeneous in every IP fragments
 -->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="8" type_property="EVASION" 
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="100" property_id="8" type_property="EVASION" 
     description="The IP options field must be homogeneous in all IP fragments.">
     <event value="COMPUTE" event_id="1" 
            description="IP segment"
@@ -374,7 +528,7 @@ static inline int em_check_nfs_upload(const char * file_name, const char *p_payl
     description="SQL Injection detected"
     >
    <event value="COMPUTE" event_id="1" 
-           description="Context: Here it is a TCP regrouped from IP segments"
+           description="Context: Here it is a TCP packet (it can be regrouped from IP segments)"
            boolean_expression="(tcp.payload_len &gt; 0)"/>
     <event value="COMPUTE" event_id="2" 
            description="Trigger: SQL Injection in the payload"
@@ -524,17 +678,94 @@ it is nice to have an automated method of redirect expiration.
            description="Context: Here it is a HTTP GET packet"
            boolean_expression="(http.method == 'GET')"/>
    <event value="COMPUTE" event_id="2" 
-           description="There must be a HTTP response after that"
+           description="Trigger: There must be a HTTP response after that"
 		   boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;(http.response==http.response))))"/>
 </property>
-<!-- Property 30: Simple multi-session property -->
+<!-- Property 30: Simple multi-session property. Detection of NFS synchronization and then upload -->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="20" property_id="30" type_property="ATTACK" 
-    description="NFS synchronization and then upload">
+	description="NFS synchronization and then upload">
     <event value="COMPUTE" event_id="1" 
            description="NFS synchronization"
            boolean_expression="(nfs.file_name != '')"/> 
     <event value="COMPUTE" event_id="2" 
            description="Upload the same file"
-           boolean_expression="((ip.dst == ip.src.1)&amp;&amp;((http.packet_count != 0)&amp;&amp;(#em_check_nfs_upload(nfs.file_name.1, tcp.p_payload) == 1)))"/>
+           boolean_expression="((ip.dst == ip.src.1)&amp;&amp;((http.packet_count != 0)&amp;&amp;(#strstr(tcp.p_payload, nfs.file_name.1) != 0)))"/>
+</property>
+<!-- Property 31: Simple multi-session property. Detection of NFS synchronization and then upload (based on two probes) -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="31" type_property="ATTACK" 
+    description="Upload a file coming from NFS server (detection based on two probes)">
+    <event value="COMPUTE" event_id="1" 
+           description="Context: HTTP packet"
+           boolean_expression="((ip.src == ip.server_addr) &amp;&amp; ((http.packet_count != 0) &amp;&amp; (tcp.payload_len != 0)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: HTTP payload contains the file coming from NFS server"
+           boolean_expression="(#em_check_nfs_redis(tcp.p_payload) == 1)"/>
+</property>
+<!-- Property 32: Botnet Command and Control detection based on blacklisted IP addresses. 
+This rule replaces 299 Suricata rules and covers 12835 blacklisted IP addr. 
+NOTE: MMT_Security must run with -b option -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="32" type_property="ATTACK" 
+    description="Botnet Command and Control detection"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="IP source or IP dest is a bot"
+           boolean_expression="(#em_check_botnetcc(ip.src, ip.dst) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="IP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<!-- Property 33: TROJAN detection based on the hash table of 978 blacklisted http_uri (978 rules)
+(Ref: Suricata rules emerging-trojan.rules). 
+NOTE: MMT_Security must run with -b option  -->
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="33" type_property="ATTACK" 
+    description="Trojan detection">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI"
+           boolean_expression="(#em_check_trojan_uri(http.uri) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+<!-- Property 34: Detection of DoS attack based on HTTP User-Agent field.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="34" type_property="ATTACK" 
+    description="Detection of DoS attack based on HTTP User-Agent field">
+    <event value="COMPUTE" event_id="1" 
+           description="Too long HTTP User-Agent string. Possibly DoS attack."
+           boolean_expression="(#strlen(http.user_agent) > 256)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+<!-- Property 35: SQL Injection detection in HTTP User-Agent strings.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="35" type_property="ATTACK" 
+    description="SQL Injection detection in HTTP User-Agent strings">
+    <event value="COMPUTE" event_id="1" 
+           description="SQL syntax found in HTTP User-Agent string"
+           boolean_expression="(#em_check_sql_injection_ua(http.user_agent) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+<!-- Property 36: Detection of robot, crawler, spider, spam and bad bot based on blacklisted User-Agent strings (hash-table). 528 signatures from the source: http://www.user-agents.org/ -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="36" type_property="ATTACK" 
+    description="Detection of robot, crawler, spider, spam and bad bot based on blacklisted User-Agent strings (hash-table)">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP User-Agent string representing robot, crawler, spider, spam and bad bot"
+           boolean_expression="(#em_check_malicious_UA(http.user_agent) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+<!-- Property 37: Detection of robot, crawler, spider, spam and bad bot based on blacklisted User-Agent strings (hash-table). 528 signatures from the source: http://www.user-agents.org/ -->
+<!-- Attention: Compile this rule with -lsqlite3 option. E.g., ./compile_rule rules/rule.so test/properties_all/37.robot.user_agent.xml -lsqlite3  -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="37" type_property="ATTACK" 
+    description="Detection of robot, crawler, spider, spam and bad bot based on blacklisted User-Agent strings (hash-table)">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP User-Agent string representing robot, crawler, spider, spam and bad bot"
+           boolean_expression="(#em_check_malicious_UA_sqlite(http.user_agent) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
 </property>
 </beginning>

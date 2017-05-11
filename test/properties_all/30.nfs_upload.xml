@@ -1,5 +1,5 @@
 <beginning>
-<!-- Property 30: Simple multi-session property -->
+<!-- Property 30: Simple multi-session property. Detection of NFS synchronization and then upload -->
 <property value="THEN" delay_units="s" delay_min="0+" delay_max="20" property_id="30" type_property="ATTACK" 
 	description="NFS synchronization and then upload">
     <event value="COMPUTE" event_id="1" 

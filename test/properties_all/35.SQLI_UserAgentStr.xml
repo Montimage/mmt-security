@@ -1,20 +1,5 @@
 <beginning>
 <embedded_functions><![CDATA[
-//each function name should be prefixed by em_
-
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include "types_defs.h"
-#include <sys/time.h>
-
-/**
-* Return:
-* - 0: ok
-* - 1: invalid
-* - 2: NULL
-*/
 static inline int em_check_sql_injection_ua(const char *str){
    int handle = 0;
    if (str==NULL) return 2;
@@ -35,7 +20,6 @@ static inline int em_check_sql_injection_ua(const char *str){
    s9 = strstr(str, "--");    //find the first occurrence of string "--" in string
      
    if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL) || (s7 !=NULL) || (s8 !=NULL) || (s9 !=NULL)) {
-      //printf ("SQL injection detected\n");
       handle = 1;   
    }
   return handle;

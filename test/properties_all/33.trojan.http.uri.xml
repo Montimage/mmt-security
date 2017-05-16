@@ -1,18 +1,10 @@
 <beginning>
 <embedded_functions><![CDATA[
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include "types_defs.h"
-#include <sys/time.h>
 #include "hash_table_str.h"
 
 static inline int em_check_trojan_uri(const char * uri){
-   	//printf("Enter the em\n");
    	int handle = 0;
-   	//printf("http.uri: %s\n", uri);
 	if(search_hash_str(Str2DataItem(uri)->key) != NULL) handle = 1;  
 	return handle;
   }
@@ -20,7 +12,8 @@ static inline int em_check_trojan_uri(const char * uri){
 
 <!-- Property 33: TROJAN detection based on the hash table of 978 blacklisted http_uri (978 rules)
 (Ref: Suricata rules emerging-trojan.rules). 
-NOTE: MMT_Security must run with -b option  -->
+NOTE: MMT_Security must run with -b option  
+-->
 
 <property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="33" type_property="ATTACK" 
     description="Trojan detection">

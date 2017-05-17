@@ -115,17 +115,16 @@ $(INSTALL_DIR):
 uninstall:
 	$(QUIET) $(RM) $(INSTALL_DIR)
 	$(QUIET) $(RM) /etc/ld.so.conf.d/mmt-security.conf
+
+rules/%.so: compile_rule
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/$*.so rules/$*.xml
 	
-sample_rules: compile_rule
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so rules/unauthorised_ports.xml > /dev/null
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so      rules/arp_poisoning.xml      > /dev/null
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/unauthorised_ports.so.c rules/unauthorised_ports.xml -c > /dev/null
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/arp_poisoning.so.c      rules/arp_poisoning.xml -c      > /dev/null
+sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
+	
 	
 install: all lib sample_rules uninstall $(INSTALL_DIR)
 	
-	$(QUIET) $(MV) rules/unauthorised_ports.so $(INSTALL_DIR)/rules/
-	$(QUIET) $(MV) rules/arp_poisoning.so      $(INSTALL_DIR)/rules/
+	$(QUIET) $(MV) rules/*.so $(INSTALL_DIR)/rules/
 	
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)/include
 	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(INSTALL_DIR)/include/

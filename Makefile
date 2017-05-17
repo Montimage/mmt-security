@@ -19,6 +19,9 @@ INSTALL_DIR = /opt/mmt/security
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
 
+# if you update the version number here, 
+# ==> you must also update VERSION_NUMBER in src/lib/version.c 
+VERSION     := 1.1.2
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lhiredis -lmmt_core
 

@@ -551,20 +551,18 @@ const char *list_malicious_UA[] = {
 "Zearchit",
 "ZeBot_lseek.net (bot@ze.bz)",
 "Zippy v2.0 - Zippyfinder.com",
-"ZoomSpider - wrensoft.com"
-};
+"ZoomSpider - wrensoft.com"};
 	
-	int i = 0;
-	for (i=0; i<528; i++){
-		struct StrDataItem* item = Str2DataItem(list_malicious_UA[i]);
+	int j = 0;
+	for (j=0; j<528; j++){
+		struct StrDataItem* item = Str2DataItem(list_malicious_UA[j]);
 		if (insert_hash_str(item) == 0) printf("Insert failed\n");
 		} 
-   	
-}
+}//end on_load()
 
 //This fuction is called when exiting MMT-Security
 void on_unload(){
    free_hashArrayStr();
-}
+}//end on_unload()
 ]]></embedded_functions>
 </beginning>

@@ -31,12 +31,12 @@ static inline int em_check_botnetcc(const char *ipsrc, const char *ipdst){
  //This fuction is called when the rules in this files being loaded into MMT-Security
 void on_load(){		
 	init_hashArrayIPAdd();
-}
+}//end on_load()
 
 //This fuction is called when exiting MMT-Security
 void on_unload(){
-   free_hashArrayStr();
-}
+   free_hashArrayIPAdd();
+}//end on_unload()
 ]]></embedded_functions>
 </beginning>
 

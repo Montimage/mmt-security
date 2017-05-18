@@ -18,7 +18,7 @@ static inline int em_check_WannaCry(const char * str){
            description="SMB packet"
            boolean_expression="((smb.packet_count != 0)&amp;&amp;(ip.src != ip.dst))"/>
     <event value="COMPUTE" event_id="2" 
-           description="HTTP GET"
+           description="SMB client/server intend connecting WannaCry host"
            boolean_expression="((ip.src == ip.dst.1)&amp;&amp;(#em_check_WannaCry(http.host) == 1))"/> 
 </property>
 </beginning>

@@ -1001,8 +1001,7 @@ const char *list_trojan_uri[] = {
 ".php?file=",
 "/api/?act=in",
 ".php?V=",
-"/products.php?"
-};
+"/products.php?"};
 	
 	//init_hashArrayStr;
 	int i = 0;
@@ -1011,11 +1010,11 @@ const char *list_trojan_uri[] = {
 		if (insert_hash_str(item) == 0) printf("Insert failed\n");
 		} 
    	
-}
+}//end on_load()
 
 //This fuction is called when exiting MMT-Security
 void on_unload(){
    free_hashArrayStr();
-}
+}//end on_unload()
 ]]></embedded_functions>
 </beginning>

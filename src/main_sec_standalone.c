@@ -114,9 +114,7 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			exit( 0 );
 		case 'b':
 			optcount++;
-			init_hashArrayIPAdd();
-			init_hashArrayStr("test/hoa/trojan_uri");
-			init_hashArrayStr("test/hoa/malicious_UserAgent");
+			//Do nothing. Keep for future use.
 			break;
 		case 'v':
 			optcount++;

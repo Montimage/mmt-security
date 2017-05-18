@@ -1,0 +1,13 @@
+<beginning>
+<!-- Property 17: C4_Decod_01 : SMTP detection.-->
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="17" type_property="ATTACK" 
+    description="SMTP detected">
+   <event value="COMPUTE" event_id="1" 
+           description="SMTP packet"
+           boolean_expression="(smtp.packet_count &gt; 0)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="IP addresses"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

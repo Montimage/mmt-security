@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) 2014-->
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <inttypes.h>
+#include "types_defs.h"
+#include "hiredis/hiredis.h"
+#include <sys/time.h>
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int em_check_sql_injection(const char *str){
+   int handle = 0;
+   if (str==NULL) return 2;
+   
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+
+   char *s1, *s2, *s3, *s4, *s5, *s6;
+   s1 = strstr(str, "DROP");  //find the first occurrence of string "DROP" in string
+   s2 = strstr(str, "UNION"); //find the first occurrence of string "UNION" in string
+   s3 = strstr(str, "SELECT"); //find the first occurrence of string "SELECT" in string
+   s4 = strstr(str, "CHAR"); //find the first occurrence of string "CHAR" in string  
+   s5 = strstr(str, "DELETE"); //find the first occurrence of string "CHAR" in string
+   s6 = strstr(str, "INSERT"); //find the first occurrence of string "CHAR" in string
+     
+   if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL))  {
+      //printf ("SQL injection detected\n");
+      handle = 1;   
+   }
+  return handle;
+}
+]]></embedded_functions>
+<!-- Property: SQL Injection detection.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="19" type_property="ATTACK" 
+    description="SQL Injection detected"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a TCP packet (it can be regrouped from IP segments)"
+           boolean_expression="(tcp.payload_len &gt; 0)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: SQL Injection in the payload"
+           boolean_expression="(#em_check_sql_injection(tcp.p_payload) == 1)"/>
+</property>
+</beginning>
+
+

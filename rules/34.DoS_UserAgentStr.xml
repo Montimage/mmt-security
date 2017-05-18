@@ -1,0 +1,14 @@
+<beginning>
+<!-- Property 34: Detection of DoS attack based on HTTP User-Agent field.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="34" type_property="ATTACK" 
+    description="Detection of DoS attack based on HTTP User-Agent field">
+    <event value="COMPUTE" event_id="1" 
+           description="Too long HTTP User-Agent string. Possibly DoS attack."
+           boolean_expression="(#strlen(http.user_agent) > 256)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+</beginning>
+
+

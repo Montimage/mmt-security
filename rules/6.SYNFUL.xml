@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 6: 4_Analyse_03b : TCP SYN scan to detect SYNFUL compromise) (|ack - seq| == 0xC123D ou 791101). -->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="100" property_id="6" type_property="EVASION" 
+    description="SYN and ACK packets with a 0xC123D delta between TCP sequence numbers (scan done by SYNFUL attack).">
+    <event value="COMPUTE" event_id="1"
+           description="TCP SYN"
+           boolean_expression="(tcp.flags == 2)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="TCP ACK"
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((ip.src == ip.dst.1)&amp;&amp;(((tcp.ack_nb - tcp.seq_nb.1) == 791101)||((tcp.seq_nb.1 - tcp.ack_nb) == 791101)))))"/>
+</property>
+</beginning>

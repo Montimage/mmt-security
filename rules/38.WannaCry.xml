@@ -1,0 +1,24 @@
+<beginning>
+<embedded_functions><![CDATA[
+static inline int em_check_WannaCry(const char * str){
+   	int handle = 0;
+   	if(strstr(str, "iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com") != NULL) handle = 1;
+   	if(strstr(str, "ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com") != NULL) handle = 1;
+   	if(strstr(str, "ayylmaotjhsstasdfasdfasdfasdfasdfasdfasdf.com") != NULL) handle = 1;
+   	if(strstr(str, "iuqssfsodp9ifjaposdfjhgosurijfaewrwergwea.com") != NULL) handle = 1;
+   	if(strstr(str, "iuqerfsodp9ifjaposdfjhgosurijfaewrwergweb.com") != NULL) handle = 1;  
+	return handle;
+  }
+]]></embedded_functions>
+
+<!-- Property 38: Detection of WannaCry Ransomware-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="2" property_id="38" type_property="ATTACK" 
+    description="Detection of WannaCry Ransomware">
+    <event value="COMPUTE" event_id="1" 
+           description="SMB packet"
+           boolean_expression="((smb.packet_count != 0)&amp;&amp;(ip.src != ip.dst))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="SMB client/server intend connecting WannaCry host"
+           boolean_expression="((ip.src == ip.dst.1)&amp;&amp;(#em_check_WannaCry(http.host) == 1))"/> 
+</property>
+</beginning>

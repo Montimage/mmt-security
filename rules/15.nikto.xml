@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 15: Web scan with Nikto. User-Agent based detection-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="15" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an user agent in the HTTP header"
+           boolean_expression="((http.method != '') &amp;&amp; (http.user_agent != ''))"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(#strstr(http.user_agent, 'Nikto') != 0)"/>
+ </property>
+</beginning>

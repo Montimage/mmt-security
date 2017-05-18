@@ -17,5 +17,6 @@
 #include "mmt_array_t.h"
 #include "mmt_utils.h"
 #include "system_info.h"
-
+#include "mmt_hash64.h"
+#include "mmt_hash.h"
 #endif /* SRC_LIB_MMT_LIB_H_ */

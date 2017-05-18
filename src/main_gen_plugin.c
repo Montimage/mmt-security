@@ -31,7 +31,7 @@ int main( int argc, char** argv ){
 		fprintf( stderr, "\n - option        : ");
 		fprintf( stderr, "\n      + \"-c\"     : generate only code c" );
 		fprintf( stderr, "\n      + otherwise: generate code c, then compile to .so file.");
-		fprintf( stderr, "\n                   This option will be transfered to gcc.");
+		fprintf( stderr, "\n                   This option will be transfered to gcc, for example, \"-I /tmp/include -lmath\"");
 		fprintf( stderr, "\n");
 		return 1;
 	}

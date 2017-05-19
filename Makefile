@@ -176,9 +176,6 @@ deb: all lib sample_rules copy_files
 	$(QUIET) $(MKDIR) $(DEB_NAME)/etc/ld.so.conf.d/
 	@echo "/opt/mmt/security/lib" >> $(DEB_NAME)/etc/ld.so.conf.d/mmt-security.conf
 	
-	$(QUIET) $(MKDIR) $(DEB_NAME)$(INSTALL_DIR)
-	$(QUIET) $(CP) -r $(INSTALL_DIR)/* $(DEB_NAME)$(INSTALL_DIR)
-	
 	$(QUIET) dpkg-deb -b $(DEB_NAME)
 	$(QUIET) $(RM) $(DEB_NAME)
 	

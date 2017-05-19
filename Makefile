@@ -194,6 +194,12 @@ clean:
 ################################################################################
 NAMES := $(sort $(patsubst check/pcap/%.pcap,%, $(wildcard check/pcap/*.pcap)))
 
+ifdef VAL
+	VALGRIND = valgrind --leak-check=yes
+else
+	VALGRIND =
+endif
+
 TEST_INDEX=1
 _prepare: compile_rule standalone sample_rules
 	@echo "==============================="
@@ -204,12 +210,13 @@ check/pcap/%.pcap :
 	@echo "  => not found sample pcap file: $@"
 	@exit 1
 _print.%:
+	@echo
 	@echo "$(TEST_INDEX). Testing $*"
 	$(eval TEST_INDEX=$(shell echo $$(($(TEST_INDEX)+1))))
 #one test
 _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 	$(QUIET) $(RM) /tmp/mmt-security*.csv
-	$(QUIET) bash -c "./$(MAIN_STAND_ALONE) -t check/pcap/$*.pcap -f /tmp/ &> /tmp/$*.log"
+	$(QUIET) bash -c "$(VALGRIND) ./$(MAIN_STAND_ALONE) -t check/pcap/$*.pcap -f /tmp/"
 	$(QUIET) bash -c "diff <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) || (echo \"====================execution log:\" && cat /tmp/$*.log)"
 	@echo '  => OK'
 	

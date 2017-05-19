@@ -195,9 +195,7 @@ clean:
 NAMES := $(sort $(patsubst check/pcap/%.pcap,%, $(wildcard check/pcap/*.pcap)))
 
 TEST_INDEX=1
-_prepare: compile_rule standalone
-	$(QUIET) $(RM) rules/*
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/properties.so check/properties.xml
+_prepare: compile_rule standalone sample_rules
 	@echo "==============================="
 check/expect/%.csv :
 	@echo "  => not found expected result: $@"
@@ -212,7 +210,7 @@ _print.%:
 _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 	$(QUIET) $(RM) /tmp/mmt-security*.csv
 	$(QUIET) bash -c "./$(MAIN_STAND_ALONE) -t check/pcap/$*.pcap -f /tmp/ &> /tmp/$*.log"
-	$(QUIET) bash -c "diff <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) || (echo \"====================execution log:\" && cat /tmp/$*.log && exit 1)"
+	$(QUIET) bash -c "diff <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) || (echo \"====================execution log:\" && cat /tmp/$*.log)"
 	@echo '  => OK'
 	
 check: _prepare $(patsubst %,_check.%,$(NAMES))

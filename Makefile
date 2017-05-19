@@ -21,7 +21,7 @@ GIT_VERSION := $(shell git log --format="%h" -n 1)
 
 # if you update the version number here, 
 # ==> you must also update VERSION_NUMBER in src/lib/version.c 
-VERSION     := 1.1.2
+VERSION     := 1.1.3
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lhiredis -lmmt_core
 
@@ -71,7 +71,7 @@ LIB_NAME = libmmt_security
 
 all: standalone compile_rule rule_info sec_server
 
-%.o: %.c src/dpi/mmt_dpi.h
+%.o: %.c $(MMT_DPI_HEADER)
 	@echo "[COMPILE] $(notdir $@)"
 	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -c -o $@ $<
 	
@@ -79,23 +79,23 @@ test.%: $(MMT_DPI_HEADER) $(LIB_OBJS) test/%.o
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $@ $(CLDFLAGS)  $^ $(LIBS)
 
-compile_rule: src/dpi/mmt_dpi.h $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
+compile_rule: $(MMT_DPI_HEADER) $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
 	@echo "[COMPILE] $(MAIN_GEN_PLUGIN)"
 	$(QUIET) $(CC) -o $(MAIN_GEN_PLUGIN) $(CLDFLAGS) $^ $(LIBS)
 	
-sec_server: src/dpi/mmt_dpi.h $(LIB_OBJS) 
+sec_server: $(MMT_DPI_HEADER) $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CLDFLAGS) $^ $(LIBS) -ldl
 	
-standalone: src/dpi/mmt_dpi.h $(LIB_OBJS) 
+standalone: $(MMT_DPI_HEADER) $(LIB_OBJS) 
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
 
-rule_info: src/dpi/mmt_dpi.h $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
+rule_info: $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_PLUGIN_INFO) $(CLDFLAGS) $^ $(LIBS)
 
-gen_dpi src/dpi/mmt_dpi.h:
+gen_dpi:
 	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -lmmt_core -ldl
 	$(QUIET) echo "Generate list of protocols and their attributes"	
 	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
@@ -112,9 +112,6 @@ lib: $(LIB_NAME).a $(LIB_NAME).so
 	
 INSTALL_DIR=/opt/mmt/security
 
-$(INSTALL_DIR):
-	$(QUIET) $(MKDIR) $(INSTALL_DIR)/rules
-	
 uninstall:
 	$(QUIET) $(RM) $(INSTALL_DIR)
 	$(QUIET) $(RM) /etc/ld.so.conf.d/mmt-security.conf
@@ -124,28 +121,32 @@ rules/%.so: compile_rule
 	
 sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
 	
+copy_files:
+	$(QUIET) $(MKDIR) /tmp/mmt/rules
+	$(QUIET) $(MV) rules/*.so /tmp/mmt/rules/
 	
-install: all lib sample_rules uninstall $(INSTALL_DIR)
+	$(QUIET) $(MKDIR) /tmp/mmt/include
+	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h /tmp/mmt/include/
 	
-	$(QUIET) $(MV) rules/*.so $(INSTALL_DIR)/rules/
+	$(QUIET) $(MKDIR) /tmp/mmt/bin
+	$(QUIET) $(CP)  $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  /tmp/mmt/bin
+	$(QUIET) $(CP)  $(MAIN_STAND_ALONE) /tmp/mmt/bin/mmt_security
+	$(QUIET) $(CP)  $(MAIN_SEC_SERVER) /tmp/mmt/bin/
 	
-	$(QUIET) $(MKDIR) $(INSTALL_DIR)/include
-	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(INSTALL_DIR)/include/
+	$(QUIET) $(MKDIR) /tmp/mmt/lib
+	$(QUIET) $(MV)  $(LIB_NAME).so /tmp/mmt/lib/$(LIB_NAME).so.$(VERSION)
+	$(QUIET) $(MV)  $(LIB_NAME).a /tmp/mmt/lib/$(LIB_NAME).a.$(VERSION)
 	
-	$(QUIET) $(MKDIR) $(INSTALL_DIR)/bin
-	$(QUIET) $(CP)  $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  $(INSTALL_DIR)/bin
-	$(QUIET) $(CP)  $(MAIN_STAND_ALONE) $(INSTALL_DIR)/bin/mmt_security
-	$(QUIET) $(CP)  $(MAIN_SEC_SERVER) $(INSTALL_DIR)/bin/
+	$(QUIET) $(RM)  /tmp/mmt/lib/$(LIB_NAME).so /tmp/mmt/lib/$(LIB_NAME).a
 	
-	$(QUIET) $(MKDIR) $(INSTALL_DIR)/lib
-	$(QUIET) $(MV)  $(LIB_NAME).so $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION)
-	$(QUIET) $(MV)  $(LIB_NAME).a $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION)
+	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION) /tmp/mmt/lib/$(LIB_NAME)2.so 
+	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION)  /tmp/mmt/lib/$(LIB_NAME)2.a
+	$(QUIET) chmod -x /tmp/mmt/lib/$(LIB_NAME).*
 	
-	$(QUIET) $(RM)  $(INSTALL_DIR)/lib/$(LIB_NAME).so $(INSTALL_DIR)/lib/$(LIB_NAME).a
-	
-	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME)2.so 
-	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION) $(INSTALL_DIR)/lib/$(LIB_NAME)2.a
-	$(QUIET) chmod -x $(INSTALL_DIR)/lib/$(LIB_NAME).*
+install: all lib sample_rules uninstall copy_files
+	$(QUIET) $(MKDIR) $(INSTALL_DIR)
+	$(QUIET) $(MV) /tmp/mmt/* $(INSTALL_DIR)
+	$(QUIET) $(RM) /tmp/mmt
 	
 	@echo "/opt/mmt/security/lib" >> /etc/ld.so.conf.d/mmt-security.conf
 	@ldconfig
@@ -156,8 +157,11 @@ install: all lib sample_rules uninstall $(INSTALL_DIR)
 	
 DEB_NAME = mmt-security_$(VERSION)_$(GIT_VERSION)_`uname -s`_`uname -p`
 	
-deb: install
-	$(QUIET) $(MKDIR) $(DEB_NAME)/DEBIAN
+deb: all lib sample_rules copy_files
+	$(QUIET) $(MKDIR) $(DEB_NAME)/DEBIAN $(DEB_NAME)/$(INSTALL_DIR)
+	$(QUIET) $(MV) /tmp/mmt/* $(DEB_NAME)/$(INSTALL_DIR)
+	$(QUIET) $(RM) /tmp/mmt
+	
 	$(QUIET) echo "Package: mmt-security \
         \nVersion: $(VERSION) \
         \nSection: base \
@@ -182,7 +186,7 @@ dist-clean: uninstall
 	@echo "Removed mmt-security from $(INSTALL_DIR)"
 	
 clean:
-	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* $(MMT_DPI_HEADER) \
+	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* \
 			$(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)
 	
 ################################################################################

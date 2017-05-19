@@ -6,23 +6,22 @@
     description="Trojan detection">
     <event value="COMPUTE" event_id="1" 
            description="HTTP URI"
-           boolean_expression="(#em_check_trojan_uri(http.uri) == 1)"/>
+           boolean_expression="(#em_check_trojan_uri(http.uri) == true)"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP GET"
            boolean_expression="(http.method == 'GET')"/> 
 </property>
 <embedded_functions><![CDATA[
-#include "hash_table_str.h"
+static mmt_hash64_t *table = NULL;
 
 static inline int em_check_trojan_uri(const char * uri){
-   	int handle = 0;
-	if(search_hash_str(Str2DataItem(uri)->key) != NULL) handle = 1;  
-	return handle;
-  }
+   uint64_t key = mmt_hash64_string( uri );
+   return( mmt_hash64_search( table, key ) != NULL );
+}
 
- 
-//This fuction is called when the rules in this files being loaded into MMT-Security
-void on_load(){	
+/**
+ * List of URI trojans
+ */
 const char *list_trojan_uri[] = {
 "/download/Antivirus_.exe",
 "/install/ws.exe",
@@ -1001,20 +1000,33 @@ const char *list_trojan_uri[] = {
 ".php?file=",
 "/api/?act=in",
 ".php?V=",
-"/products.php?"};
+"/products.php?"
+};
+
+//This fuction is called when the rules in this files being loaded into MMT-Security
+void on_load(){	
+	int i;
+	//number of uri
+	int length = sizeof( list_trojan_uri ) / sizeof( list_trojan_uri[0] );
+	const char* uri;
+	uint64_t    key;
 	
-	//init_hashArrayStr;
-	int i = 0;
-	for (i=0; i<978; i++){
-		struct StrDataItem* item = Str2DataItem(list_trojan_uri[i]);
-		if (insert_hash_str(item) == 0) printf("Insert failed\n");
-		} 
-   	
+	//create a new hash table
+	table = mmt_hash64_create( length );
+	mmt_debug("Rule 33.trojan: Created a table for checking trojat having %d URI", length );
+	
+	//add items to the hash table
+	for( i=0; i<length; i++ ){
+      uri = list_trojan_uri[i];
+		key = mmt_hash64_string( uri );
+		if( !mmt_hash64_add( table, key, (void*) uri ) )
+		   break; 
+	} 
 }//end on_load()
 
 //This fuction is called when exiting MMT-Security
 void on_unload(){
-   free_hashArrayStr();
+   mmt_hash64_free( table );
 }//end on_unload()
 ]]></embedded_functions>
 </beginning>

@@ -6,24 +6,21 @@
     description="Detection of robot, crawler, spider, spam and bad bot based on blacklisted User-Agent strings (hash-table)">
     <event value="COMPUTE" event_id="1" 
            description="HTTP User-Agent string representing robot, crawler, spider, spam and bad bot"
-           boolean_expression="(#em_check_malicious_UA(http.user_agent) == 1)"/>
+           boolean_expression="(#em_check_malicious_UA(http.user_agent) == true)"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP GET"
            boolean_expression="(http.method == 'GET')"/> 
 </property>
 
 <embedded_functions><![CDATA[
-#include "hash_table_str.h"
+static mmt_hash64_t *table = NULL;
 
 static inline int em_check_malicious_UA(const char * UA){
-   	int handle = 0;
-   	if(search_hash_str(Str2DataItem(UA)->key) != NULL) handle = 1;  
-	return handle;
-  }
-  
- //This fuction is called when the rules in this files being loaded into MMT-Security
-void on_load(){	
-const char *list_malicious_UA[] = {
+   uint64_t key = mmt_hash64_string( UA );
+   return( mmt_hash64_search( table, key ) != NULL );
+}
+	
+static const char *list_malicious_UA[] = {
 "*/Nutch-0.9-dev",
 "192.comAgent",
 "4anything.com LinkChecker v2.0",
@@ -551,18 +548,33 @@ const char *list_malicious_UA[] = {
 "Zearchit",
 "ZeBot_lseek.net (bot@ze.bz)",
 "Zippy v2.0 - Zippyfinder.com",
-"ZoomSpider - wrensoft.com"};
+"ZoomSpider - wrensoft.com"
+};
 	
-	int j = 0;
-	for (j=0; j<528; j++){
-		struct StrDataItem* item = Str2DataItem(list_malicious_UA[j]);
-		if (insert_hash_str(item) == 0) printf("Insert failed\n");
-		} 
+ //This fuction is called when the rules in this files being loaded into MMT-Security
+void on_load(){
+	int i;
+   //number of uri
+   int length = sizeof( list_malicious_UA ) / sizeof( list_malicious_UA[0] );
+   const char* uri;
+   uint64_t    key;
+   
+   //create a new hash table
+   table = mmt_hash64_create( length );
+   mmt_debug("Rule 32.robot_user: reated a table for checking robot having %d user-agents", length );
+   
+   //add items to the hash table
+   for( i=0; i<length; i++ ){
+      uri = list_malicious_UA[i];
+      key = mmt_hash64_string( uri );
+      if( !mmt_hash64_add( table, key, (void*) uri ) )
+         break; 
+   }
 }//end on_load()
 
 //This fuction is called when exiting MMT-Security
 void on_unload(){
-   free_hashArrayStr();
+   mmt_hash64_free( table );
 }//end on_unload()
 ]]></embedded_functions>
 </beginning>

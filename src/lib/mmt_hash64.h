@@ -82,7 +82,7 @@ static inline void mmt_hash64_free( mmt_hash64_t *hash ){
  * @return
  */
 static inline bool mmt_hash64_add( mmt_hash64_t *hash, uint64_t key, void *data ){
-	uint64_t index   = mmt_hash64_number( key ) % hash->size;
+	uint64_t index   = key % hash->size;
 	uint64_t counter = 0;
 	//find an available slot
 	while( hash->items[ index ].data != NULL ){
@@ -110,7 +110,7 @@ static inline bool mmt_hash64_add( mmt_hash64_t *hash, uint64_t key, void *data 
  * @param key
  */
 static inline void *mmt_hash64_search( const mmt_hash64_t *hash, uint64_t key ){
-	uint64_t index   = mmt_hash64_number( key ) % hash->size;
+	uint64_t index   = key % hash->size;
 	uint64_t counter = 0;
 	//find an available slot
 	while( hash->items[ index ].data != NULL ){

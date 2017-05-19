@@ -23,8 +23,6 @@
 
 #include "lib/dpi_message_t.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/hash_table_ipadd.h"
-#include "lib/hash_table_str.h"
 #define MAX_RULE_MASK_SIZE 100000
 #define MAX_FILENAME_SIZE 500
 #define TRACE_FILE 1
@@ -57,7 +55,6 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v             : Verbose.\n");
 	fprintf(stderr, "\t-l             : Prints the available rules then exit.\n");
-	fprintf(stderr, "\t-b             : Build the hash tables of signatures at the beginning\n");
 	fprintf(stderr, "\t-h             : Prints this help.\n");
 	exit(1);
 }
@@ -368,8 +365,6 @@ int main(int argc, char** argv) {
 	}
 
 	termination();
-	free_hashArrayIPAdd();
-	free_hashArrayStr();
 
 	return EXIT_SUCCESS;
 }

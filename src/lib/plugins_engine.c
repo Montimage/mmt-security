@@ -136,13 +136,28 @@ size_t load_mmt_sec_rule( rule_info_t const *** plugins_arr, const char *plugin_
 	if( dl_libs_index < MAX_PLUGIN_COUNT )
 		dl_libs[ dl_libs_index ++ ] = lib;
 
+	//execute on_load function inside each .so file
+	void ( *on_load ) () = dlsym ( lib, "on_load" );
+	if( on_load != NULL )
+		on_load();
+	else
+		mmt_debug("Not found on_load on %s", plugin_path_name);
+
 	return size;
 }
 
 void unload_mmt_sec_rules() {
 	size_t i, ret = 0;
-	for( i=0; i<dl_libs_index; i++ )
+	for( i=0; i<dl_libs_index; i++ ){
+		//execute on_unload function inside each .so file
+		void ( *on_unload ) () = dlsym ( dl_libs[ i ], "on_unload" );
+		if( on_unload != NULL )
+			on_unload();
+		else
+			mmt_debug("Not found on_unload");
+
 		ret |= dlclose( dl_libs[ i ] );
+	}
 
 	if( ret != 0 )
 		mmt_warn("Cannot close properly mmt-security .so rules");

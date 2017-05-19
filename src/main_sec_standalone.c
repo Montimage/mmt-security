@@ -23,7 +23,6 @@
 
 #include "lib/dpi_message_t.h"
 #include "lib/mmt_smp_security.h"
-
 #define MAX_RULE_MASK_SIZE 100000
 #define MAX_FILENAME_SIZE 500
 #define TRACE_FILE 1
@@ -71,7 +70,7 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 
 	*verbose = NO;
 	filename[0] = '\0';
-	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:x:lhv")) != EOF) {
+	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:x:lbhv")) != EOF) {
 		switch (opt) {
 		case 't':
 			optcount++;
@@ -110,6 +109,10 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			mmt_sec_print_rules_info();
 			mmt_sec_close();
 			exit( 0 );
+		case 'b':
+			optcount++;
+			//Do nothing. Keep for future use.
+			break;
 		case 'v':
 			optcount++;
 			*verbose = YES;

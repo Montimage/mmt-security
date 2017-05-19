@@ -151,7 +151,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 	long cpus_count = get_number_of_online_processors() - 1;
 	const size_t ring_len = 10000;
 	char ring[10000], *ring_ptr;
-	uint32_t ring_size = get_config()->security.smp.ring_size;
+	uint32_t ring_size = mmt_sec_get_config( MMT_SEC__CONFIG__SECURITY__SMP__RING_SIZE );
 	uint32_t *rule_range, rule_id;
 	uint32_t thread_id;
 	size_t size;

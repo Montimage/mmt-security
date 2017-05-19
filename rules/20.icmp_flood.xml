@@ -1,0 +1,33 @@
+<beginning>
+<!-- Property 20: C4_Analyse_04i: ICMP redirect flood detection-->
+<!-- Depending on OS implementation, these host based routes can have the characteristic of being short lived.  
+Solaris implements aggressive aging where redirects will only last for a specified amount of time.  
+Each redirect is given a short lifetime value and will be automatically removed from the routing table when the timer expires.   
+This is to ensure that redirects do not remain the routing table indefinitely at the risk of further sub optimal routing.  
+In BSD networking code, redirects will be removed if they are being used by TCP and only after the fourth consecutive retransmission attempt.  
+Routed and Gated perform similar forms of redirect expiration.  
+Since ICMP redirects are dynamic and may not reflect the most current topology 
+it is nice to have an automated method of redirect expiration.
+-->
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="6" property_id="20" type_property="ATTACK" 
+    description="4 consecutive ICMP redirect packets. Possibly ICMP redirect flood."
+    >
+   <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+   <event value="COMPUTE" event_id="1" 
+           description="Context: ICMP redirect"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src)))"/>
+   <event value="COMPUTE" event_id="2" 
+           description="Trigger: 2nd consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+   </operator>
+   <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+   <event value="COMPUTE" event_id="3" 
+           description="Trigger: 3rd consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+   <event value="COMPUTE" event_id="4" 
+           description="Trigger: 4th consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+   </operator>
+</property>
+</beginning>

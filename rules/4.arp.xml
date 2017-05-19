@@ -1,0 +1,28 @@
+<beginning>
+<!-- These properties analyse ARP messages using the following packet fields:
+        ar_op  : ARP OPCODE field that identifies if it is a REQUEST (value 1) or a REPLY (value 2)
+        ar_sip : Sender IP address (IP address of the device sending the ARP message)
+        ar_tip : Target IP address (IP address of the target device)
+        ar_sha : Sender MAC address (MAC address of the sender device)
+
+     Note that these properties detect possible attacks. There are cases where they are not, such as when one needs to:
+        change a device and reuse the same IP address,
+        change the MAC address of a device.
+-->
+<!-- Property 4: One ARP request receives two replies with different MAC addresses.
+-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="4" property_id="4" type_property="ATTACK" 
+          description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="4">
+      <event value="COMPUTE" event_id="1" 
+             description="An arp who was requested"
+             boolean_expression="((arp.ar_op == 1) &amp;&amp; (ethernet.src != ethernet.dst))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="An arp reply with MAC address"
+             boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1)) &amp;&amp; (ethernet.packet_count &gt; 1))"/>
+    </operator>
+    <event value="COMPUTE" event_id="3" 
+           description="An arp reply but with different MAC address"
+           boolean_expression="((((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1))&amp;&amp;(arp.ar_sha != arp.ar_sha.2)) &amp;&amp; (ethernet.packet_count != 0))"/>
+</property>
+</beginning>

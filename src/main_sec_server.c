@@ -84,7 +84,7 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 	int opt, optcount = 0, x;
 	excluded_rules_mask[0] = '\0';
 	rule_mask[0]           = '\0';
-	while ((opt = getopt(argc, argv, "p:n:f:r:c:m:x:vlh")) != EOF) {
+	while ((opt = getopt(argc, argv, "p:n:f:r:c:m:x:vlbh")) != EOF) {
 		switch (opt) {
 		case 'p':
 			optcount++;
@@ -133,6 +133,10 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 			mmt_sec_print_rules_info();
 			mmt_sec_close();
 			exit( 0 );
+		case 'b':
+			optcount++;
+			//Keep for future use
+			break;
 		case 'v':
 			optcount++;
 			*verbose = YES;

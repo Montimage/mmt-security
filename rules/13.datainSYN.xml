@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 13: C4_Analyse_3b : Data in SYN packet.-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="13" type_property="EVASION" 
+    description="Data in SYN packet.">
+      <event value="COMPUTE" event_id="1" 
+             description="SYN request with data"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.payload_len &gt; 0))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP addresses"
+             boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

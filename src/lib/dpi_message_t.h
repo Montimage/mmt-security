@@ -176,7 +176,7 @@ int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *ms
 	int new_data_type   = VOID;
 
 	//does not exist data for this proto_id and att_id
-	if( data == NULL )
+	if( unlikely( data == NULL ))
 		return 1;
 
 	switch( dpi_data_type ){

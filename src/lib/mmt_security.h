@@ -13,6 +13,7 @@
 #include "mmt_array_t.h"
 #include "verdict_printer.h"
 #include "version.h"
+#include "config.h"
 
 typedef struct mmt_sec_handler_struct mmt_sec_handler_t;
 

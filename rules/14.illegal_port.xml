@@ -1,23 +1,16 @@
 <beginning>
 <embedded_functions><![CDATA[
+//each function name should be prefixed by em_
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
+static inline int em_check_port(int i){
+  
+  //printf("Port:%d\n", i);
+  //according to: 
+  //https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+  //and
+  //https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
 
-/**
- * Check whether a port is unauthorised
- * - return : 1 if the port is unauthorised
- *            0 if the port is authorised
- * according to: 
- *    https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
- * and
- *    https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
- */
-static inline int check_port(int i){
-  switch( i ) {
+  switch (i) {
     case 78:
     case 79:
     case 100:
@@ -85,25 +78,21 @@ static inline int check_port(int i){
   }
   return 0;
 }
+]]></embedded_functions>
 
-
-]]>
-</embedded_functions>
-
-<!-- Property 3: C4_Analyse_3: Unauthorised port number.-->
-<!--  according to: 
-           https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
-      and
-           https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
+<!-- Property 14: C4_Analyse_3f bis: Unauthorized port number.-->
+<!--              according to: 
+                       https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+                  and
+                       https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
 -->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="3" type_property="EVASION" 
-    description="C4_Analyse_3: Unauthorized port number.">
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="14" type_property="EVASION" 
+    description="C4_Analyse_3f bis: Unauthorized port number.">
       <event value="COMPUTE" event_id="1" 
              description="TCP packet with non-authorized port number."
-             boolean_expression="( #check_port(tcp.dest_port) == 1 )"/>
+             boolean_expression="((#em_check_port(tcp.dest_port) == 1)||(#em_check_port(tcp.src_port) == 1))"/>
       <event value="COMPUTE" event_id="2" 
-             description="Print out src and dst of IP"
+             description="Print source and destination of IP"
              boolean_expression="(ip.src != ip.dst)"/>
 </property>
-
 </beginning>

@@ -1,0 +1,43 @@
+<beginning>
+<!-- Property 32: Botnet Command and Control detection based on blacklisted IP addresses. 
+This rule replaces 299 Suricata rules and covers 12835 blacklisted IP addr. 
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="32" type_property="ATTACK" 
+    description="Botnet Command and Control detection"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="IP source or IP destination is a bot"
+           boolean_expression="(#em_check_botnetcc(ip.src, ip.dst) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="IP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<embedded_functions><![CDATA[
+#define _GNU_SOURCE
+#include "hash_table_ipadd.h"
+#include <arpa/inet.h>
+
+static inline int em_check_botnetcc(const char *ipsrc, const char *ipdst){
+	int handle = 0;
+	
+	char ip_src[16], ip_dst[16];
+	if (inet_ntop(AF_INET,ipsrc,ip_src,sizeof(ip_src)) == 0) printf("Failed to convert address to string\n");
+	if (inet_ntop(AF_INET,ipdst,ip_dst,sizeof(ip_dst)) == 0) printf("Failed to convert address to string\n");
+   
+   //Look up in hash tables
+	if((search_hash_ip(ipStr2DataItem(ip_src)->key) != NULL) || (search_hash_ip(ipStr2DataItem(ip_dst)->key) != NULL)) handle = 1;
+    return handle;
+}
+ //This fuction is called when the rules in this files being loaded into MMT-Security
+void on_load(){		
+	init_hashArrayIPAdd();
+}//end on_load()
+
+//This fuction is called when exiting MMT-Security
+void on_unload(){
+   free_hashArrayIPAdd();
+}//end on_unload()
+]]></embedded_functions>
+</beginning>
+
+

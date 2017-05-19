@@ -412,7 +412,7 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 	return ret;
 }
 
-#define MAX_STRING_SIZE 100000
+#define MAX_STRING_SIZE 500000
 //TODO: this limit 100K rules
 #define MAX_RULE_COUNT 100000
 /**

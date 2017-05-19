@@ -31,7 +31,7 @@ int main( int argc, char** argv ){
 		fprintf( stderr, "\n - option        : ");
 		fprintf( stderr, "\n      + \"-c\"     : generate only code c" );
 		fprintf( stderr, "\n      + otherwise: generate code c, then compile to .so file.");
-		fprintf( stderr, "\n                   This option will be transfered to gcc.");
+		fprintf( stderr, "\n                   This option will be transfered to gcc, for example, \"-I /tmp/include -lmath\"");
 		fprintf( stderr, "\n");
 		return 1;
 	}
@@ -66,10 +66,10 @@ int main( int argc, char** argv ){
 	}else{
 		//compile code file
 		if( argc == 3 )
-			ret = compile_gen_code(output_file, c_file,"./src/lib -I/opt/mmt/security/include" );
+			ret = compile_gen_code(output_file, c_file,"./src/lib -I ./src/dpi -I/opt/mmt/security/include" );
 		else{
 			gcc_param[0] = '\0';
-			snprintf( gcc_param, MAX_STRING_LEN - 1, "./src/lib -I/opt/mmt/security/include %s", argv[3] );
+			snprintf( gcc_param, MAX_STRING_LEN - 1, "./src/lib -I ./src/dpi -I/opt/mmt/security/include %s", argv[3] );
 			ret = compile_gen_code(output_file, c_file, gcc_param );
 		}
 

@@ -12873,7 +12873,7 @@ static const char* list_ips[] = {
 "99.241.29.86"
 };
 
-//This fuction is called when the rules in this files being loaded into MMT-Security
+//This fuction is called when the rules in this file being loaded into MMT-Security
 void on_load(){
    int i;
    //number of uri

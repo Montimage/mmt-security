@@ -551,7 +551,7 @@ static const char *list_malicious_UA[] = {
 "ZoomSpider - wrensoft.com"
 };
 	
- //This fuction is called when the rules in this files being loaded into MMT-Security
+ //This fuction is called when the rules in this file being loaded into MMT-Security
 void on_load(){
 	int i;
    //number of uri
@@ -561,7 +561,7 @@ void on_load(){
    
    //create a new hash table
    table = mmt_hash64_create( length );
-   mmt_debug("Rule 32.robot_user: reated a table for checking robot having %d user-agents", length );
+   mmt_debug("Rule 36.robot_user: Created a table for checking robot having %d user-agents", length );
    
    //add items to the hash table
    for( i=0; i<length; i++ ){

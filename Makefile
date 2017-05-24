@@ -176,9 +176,6 @@ deb: all lib sample_rules copy_files
 	$(QUIET) $(MKDIR) $(DEB_NAME)/etc/ld.so.conf.d/
 	@echo "/opt/mmt/security/lib" >> $(DEB_NAME)/etc/ld.so.conf.d/mmt-security.conf
 	
-	$(QUIET) $(MKDIR) $(DEB_NAME)$(INSTALL_DIR)
-	$(QUIET) $(CP) -r $(INSTALL_DIR)/* $(DEB_NAME)$(INSTALL_DIR)
-	
 	$(QUIET) dpkg-deb -b $(DEB_NAME)
 	$(QUIET) $(RM) $(DEB_NAME)
 	
@@ -194,10 +191,14 @@ clean:
 ################################################################################
 NAMES := $(sort $(patsubst check/pcap/%.pcap,%, $(wildcard check/pcap/*.pcap)))
 
+ifdef VAL
+	VALGRIND = valgrind --leak-check=yes
+else
+	VALGRIND =
+endif
+
 TEST_INDEX=1
-_prepare: compile_rule standalone
-	$(QUIET) $(RM) rules/*
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/properties.so check/properties.xml
+_prepare: compile_rule standalone sample_rules
 	@echo "==============================="
 check/expect/%.csv :
 	@echo "  => not found expected result: $@"
@@ -206,13 +207,14 @@ check/pcap/%.pcap :
 	@echo "  => not found sample pcap file: $@"
 	@exit 1
 _print.%:
+	@echo
 	@echo "$(TEST_INDEX). Testing $*"
 	$(eval TEST_INDEX=$(shell echo $$(($(TEST_INDEX)+1))))
 #one test
 _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 	$(QUIET) $(RM) /tmp/mmt-security*.csv
-	$(QUIET) bash -c "./$(MAIN_STAND_ALONE) -t check/pcap/$*.pcap -f /tmp/ &> /tmp/$*.log"
-	$(QUIET) bash -c "diff <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) || (echo \"====================execution log:\" && cat /tmp/$*.log && exit 1)"
+	$(QUIET) bash -c "$(VALGRIND) ./$(MAIN_STAND_ALONE) -t check/pcap/$*.pcap -f /tmp/"
+	$(QUIET) bash -c "diff <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) || (echo \"====================execution log:\" && cat /tmp/$*.log)"
 	@echo '  => OK'
 	
 check: _prepare $(patsubst %,_check.%,$(NAMES))

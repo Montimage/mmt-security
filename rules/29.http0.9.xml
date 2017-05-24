@@ -7,6 +7,6 @@
            boolean_expression="(http.method == 'GET')"/>
    <event value="COMPUTE" event_id="2" 
            description="Trigger: There must be a HTTP response after that"
-		   boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;(http.response==http.response))))"/>
+		   boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;(http.response==http.response)))"/>
 </property>
 </beginning>

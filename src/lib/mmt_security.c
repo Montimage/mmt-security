@@ -304,14 +304,17 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 	__check_null( trace, NULL );
 
-	buffer[0] = '\0';
+	buffer[0] = '{';
+	buffer[1] = '\0';
 
 	//number of elements in traces <= number of real events + timeout event
+#ifdef DEBUG_MODE
 	mmt_assert( trace->elements_count <= rule->events_count + 1,
 			"Impossible: elements_count > events_count (%zu > %d + 1)", trace->elements_count, rule->events_count);
+#endif
 
 	total_len = MAX_STR_SIZE;
-	str_ptr   = buffer;
+	str_ptr   = buffer+1;
 
 	for( index=0; index<trace->elements_count; index ++ ){
 		msg = trace->data[ index ];
@@ -320,7 +323,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		mmt_sec_decode_timeval( msg->timestamp, &time );
 
 		size = snprintf( str_ptr, total_len, "%c\"event_%zu\":{\"timestamp\":%"PRIu64".%06lu,\"counter\":%"PRIu64",\"attributes\":[",
-						total_len == MAX_STR_SIZE ? '{': ',',
+						total_len == MAX_STR_SIZE ? ' ': ',',
 						index,
 						time.tv_sec, //timestamp: second
 						time.tv_usec, //timestamp: microsecond
@@ -437,14 +440,18 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		if( unlikely( total_len <= 0 )){
 			mmt_warn("Buffer size is not enough to contain all attributes");
 			//close
-			str_ptr += snprintf( str_ptr, total_len, "]} }") ;
+			str_ptr += snprintf( str_ptr, total_len, "]}") ;
 			break;
 		}
 
 		str_ptr += size;
-		str_ptr += snprintf( str_ptr, total_len, "]}%s", //end attributes, end event_
-				(index == trace->elements_count - 1)? "}": ""  );
+		//end attributes, end event_
+		*(str_ptr ++) = ']';
+		*(str_ptr ++) = '}';
 	}
+
+	*(str_ptr++) = '}'; //end of all
+	*(str_ptr++) = '\0';
 
 	return buffer;
 }

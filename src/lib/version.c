@@ -9,7 +9,7 @@
 
 //if you update the version number here,
 // ==> you must also update VERSION in ../../Makefile
-#define VERSION_NUMBER "1.1.2"
+#define VERSION_NUMBER "1.1.4"
 
 
 #define REQUIRE_PLUGIN "1.1.2"

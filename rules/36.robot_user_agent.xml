@@ -13,11 +13,10 @@
 </property>
 
 <embedded_functions><![CDATA[
-static mmt_hash64_t *table = NULL;
+static mmt_hash_t *table = NULL;
 
 static inline int em_check_malicious_UA(const char * UA){
-   uint64_t key = mmt_hash64_string( UA );
-   return( mmt_hash64_search( table, key ) != NULL );
+   return( mmt_hash_search( table, UA, strlen( UA )) != NULL );
 }
 	
 static const char *list_malicious_UA[] = {
@@ -557,24 +556,21 @@ void on_load(){
    //number of uri
    int length = sizeof( list_malicious_UA ) / sizeof( list_malicious_UA[0] );
    const char* uri;
-   uint64_t    key;
    
    //create a new hash table
-   table = mmt_hash64_create( length );
+   table = mmt_hash_create( length );
    mmt_debug("Rule 36.robot_user: Created a table for checking robot having %d user-agents", length );
    
    //add items to the hash table
    for( i=0; i<length; i++ ){
       uri = list_malicious_UA[i];
-      key = mmt_hash64_string( uri );
-      if( !mmt_hash64_add( table, key, (void*) uri ) )
-         break; 
+      mmt_hash_add( table, uri, strlen(uri), (void*) uri, false );
    }
 }//end on_load()
 
 //This fuction is called when exiting MMT-Security
 void on_unload(){
-   mmt_hash64_free( table );
+   mmt_hash_free( table );
 }//end on_unload()
 ]]></embedded_functions>
 </beginning>

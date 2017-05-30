@@ -15,21 +15,18 @@ This rule replaces 299 Suricata rules and covers 12835 blacklisted IP addr.
 <embedded_functions><![CDATA[
 #include <arpa/inet.h>
 //hash table
-static mmt_hash64_t *table = NULL;
+static mmt_hash_t *table = NULL;
 
 static inline int em_check_botnetcc( const char *ip_src, const char *ip_dst ){
 	//struct in_addr addr;
-	uint32_t ip = *(uint32_t *) ip_dst;
-	
+	//uint32_t ip = *(uint32_t *) ip_dst;
 	//addr.s_addr = ip;
 	//mmt_debug("Checking IP %"PRIu32" - %s", ip, inet_ntoa( addr ) );
 	
-	if( mmt_hash64_search( table, ip ) != NULL )
+	if( mmt_hash_search( table, ip_dst, 4 ) != NULL )
 	  return true;
 	
-	ip = *(uint32_t *) ip_src;
-	
-	if( mmt_hash64_search( table, ip ) != NULL )
+	if( mmt_hash_search( table, ip_src, 4 ) != NULL )
      return true;
      
    return false;
@@ -12879,11 +12876,11 @@ void on_load(){
    //number of uri
    int length = sizeof( list_ips ) / sizeof( list_ips[0] );
    const char* ip;
-   uint64_t    key;
+   uint32_t    key;
    struct in_addr addr;
    
    //create a new hash table
-   table = mmt_hash64_create( length );
+   table = mmt_hash_create( length );
    mmt_debug("Rule 32.botcc: Created a table for checking bootnet having %d IPs", length );
    
    //add items to the hash table
@@ -12897,14 +12894,13 @@ void on_load(){
       
       key = addr.s_addr;
       
-      if( !mmt_hash64_add( table, key, (void*) ip ) )
-         break; 
+      mmt_hash_add( table, &key, 4, (void*) ip, false ); 
    }
 }//end on_load()
 
 //This fuction is called when exiting MMT-Security
 void on_unload(){
-   mmt_hash64_free( table );
+   mmt_hash_free( table );
 }//end on_unload()
 ]]></embedded_functions>
 </beginning>

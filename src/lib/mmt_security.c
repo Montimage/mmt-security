@@ -322,8 +322,12 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 		mmt_sec_decode_timeval( msg->timestamp, &time );
 
-		size = snprintf( str_ptr, total_len, "%c\"event_%zu\":{\"timestamp\":%"PRIu64".%06lu,\"counter\":%"PRIu64",\"attributes\":[",
-						total_len == MAX_STR_SIZE ? ' ': ',',
+		//seperator of each event
+		if( total_len != MAX_STR_SIZE )
+			*(str_ptr ++) = ',';
+
+		//event 's detail
+		size = snprintf( str_ptr, total_len, "\"event_%zu\":{\"timestamp\":%"PRIu64".%06lu,\"counter\":%"PRIu64",\"attributes\":[",
 						index,
 						time.tv_sec, //timestamp: second
 						time.tv_usec, //timestamp: microsecond
@@ -506,7 +510,7 @@ void mmt_sec_print_verdict(
 		break;
 	}
 
-	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"\",%ld,%"PRIu32",\"%s\",\"%s\",\"%s\", %s",
+	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"\",%ld,%"PRIu32",\"%s\",\"%s\",\"%s\",%s",
 			time( NULL ),
 			rule->id,
 			verdict_type_string[verdict],

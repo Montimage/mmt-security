@@ -103,7 +103,20 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 message_element_t *get_element_message_t( const message_t *msg, uint32_t proto_id, uint32_t att_id );
 
 
-const void *get_element_data_message_t( const message_t *msg, uint16_t index );
+//const void *get_element_data_message_t( const message_t *msg, uint16_t index );
+
+static inline const void *get_element_data_message_t( const message_t *msg, uint16_t index ){
+
+#ifdef DEBUG_MODE
+	if( unlikely( index >= msg->elements_count )){
+		mmt_error("Access to outside message's elements");
+		return NULL;
+	}
+#endif
+
+	return msg->elements[ index ].data;
+}
+
 
 
 #endif /* SRC_LIB_MESSAGE_T_H_ */

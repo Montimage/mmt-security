@@ -97,6 +97,7 @@ message_element_t * get_element_message_t( const message_t *msg, uint32_t proto_
 	return &msg->elements[ index ];
 }
 
+/*
 const void *get_element_data_message_t( const message_t *msg, uint16_t index ){
 
 #ifdef DEBUG_MODE
@@ -108,6 +109,7 @@ const void *get_element_data_message_t( const message_t *msg, uint16_t index ){
 
 	return msg->elements[ index ].data;
 }
+*/
 
 
 int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_id, const void *data, enum data_type data_type, size_t data_length ){
@@ -126,6 +128,13 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 	else if( unlikely( data_length == 0 || data == NULL )){
 		return MSG_CONTINUE;
 	}
+	//special filter for:
+	//- proto_id = TCP
+	//- att_id = FLAGS, FIN, SYN, RST, PSH, ACK, URG, ECE, CWR
+	//=> if its data is zero => obmit => consider as NULL
+	else if( data_type == NUMERIC && (*(double*) data)  == 0 && proto_id == 354 && (6 <= att_id && att_id <= 14 ))
+		return MSG_CONTINUE;
+
 
 	index = mmt_sec_hash_proto_attribute( proto_id, att_id );
 

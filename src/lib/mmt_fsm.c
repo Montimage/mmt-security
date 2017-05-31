@@ -12,37 +12,6 @@
 #include "rule_verif_engine.h"
 
 /**
- * Detailed definition of FSM
- */
-struct fsm_struct{
-	uint64_t time_min, time_max;
-//	uint64_t counter_min, counter_max;
-
-	//id of the FSM
-	uint16_t id;
-
-	/** ID of event to be verified */
-	uint16_t current_event_id;
-
-   /**  Pointer to the current fsm_state_struct */
-   const fsm_state_t *current_state;
-
-   const fsm_state_t *init_state;
-
-   const fsm_state_t *error_state;
-
-   const fsm_state_t *incl_state;
-
-   const fsm_state_t *success_state;
-
-   mmt_array_t *execution_trace;
-
-   //this is for internal usage. It points to _rule_engine_t
-   void *user_data;
-} __aligned;
-
-
-/**
  * Public API
  */
 fsm_t *fsm_init(const fsm_state_t *initial_state, const fsm_state_t *error_state, const fsm_state_t *final, const fsm_state_t *incl_state, size_t events_count, size_t message_size ) {
@@ -360,23 +329,6 @@ enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *mes
 		return FSM_ERR_ARG;
 }
 
-/**
- * Public API
- */
-const fsm_state_t *fsm_get_current_state( const fsm_t *fsm) {
-	__check_null( fsm, NULL );
-
-	return fsm->current_state;
-}
-
-
-/**
- * Public API
- */
-bool fsm_is_stopped( const fsm_t *fsm) {
-	__check_null( fsm, YES );
-	return (fsm->current_state->transitions_count == 0);
-}
 
 /**
  * Public API
@@ -388,70 +340,3 @@ void fsm_free( fsm_t *fsm ){
 	mmt_mem_force_free( fsm );
 }
 
-
-/**
- * Public API
- */
-const mmt_array_t* fsm_get_execution_trace( const fsm_t *fsm ){
-#ifdef DEBUG_MODE
-	__check_null( fsm, NULL );
-#endif
-	return( fsm->execution_trace );
-}
-
-
-/**
- * Public API
- */
-const message_t *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
-#ifdef DEBUG_MODE
-	__check_null( fsm, NULL );
-#endif
-	if( unlikely( event_id >= fsm->execution_trace->elements_count )){
-		mmt_halt("Access outside of array");
-	}
-
-	return fsm->execution_trace->data[ event_id ];
-}
-
-/**
- * Public API
- */
-uint16_t fsm_get_id( const fsm_t *fsm ){
-#ifdef DEBUG_MODE
-	__check_null( fsm, -1 );
-#endif
-	return fsm->id;
-}
-
-/**
- * Public API
- */
-void fsm_set_id( fsm_t *fsm, uint16_t id ){
-#ifdef DEBUG_MODE
-	__check_null( fsm,  );
-#endif
-	fsm->id = id;
-}
-
-
-
-/**
- * Public API
- */
-void * fsm_get_user_data( const fsm_t *fsm ){
-#ifdef DEBUG_MODE
-	__check_null( fsm, NULL );
-#endif
-	return fsm->user_data;
-}
-
-/**
- * Public API
- */
-void fsm_set_user_data( fsm_t *fsm, void *data){
-#ifdef DEBUG_MODE
-	__check_null( fsm,  );
-#endif
-	fsm->user_data = data;
-}

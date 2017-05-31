@@ -187,6 +187,9 @@ static inline void _reset_engine_for_fsm( rule_engine_t *_engine, fsm_t *fsm ){
 
 	//put it to be available for the other
 	_engine->fsm_by_instance_id[ fsm_id ] = NULL;
+
+	//fsm_id become avaiable for other
+	_engine->avail_fsm_id = fsm_id;
 }
 /**
  * Remove only one instance from
@@ -233,17 +236,24 @@ static inline void _reset_engine_for_instance( rule_engine_t *_engine, fsm_t *fs
 	//TODO: refine
 //	_engine->total_instances_count -= count_nodes_from_link_list( _engine->fsm_by_instance_id[ fsm_id ] );
 	_engine->fsm_by_instance_id[ fsm_id ] = remove_node_from_link_list(  _engine->fsm_by_instance_id[ fsm_id ], fsm );
+	if( _engine->fsm_by_instance_id[ fsm_id ] == NULL )
+		_engine->avail_fsm_id = fsm_id;
+
 	fsm_free( fsm );
 }
 
 static inline uint16_t _find_an_available_id( rule_engine_t *_engine ){
-	size_t i;
-	for( i=1; i<_engine->max_instances_size; i++ )
+	size_t i = _engine->avail_fsm_id;
+	for( ; i<_engine->max_instances_size; i++ )
 		if( _engine->fsm_by_instance_id[ i ] == NULL ){
+			//remember this id being available
+			_engine->avail_fsm_id = i;
 			return i;
 		}
+
 	//not enough
-	mmt_halt( "Not enough memory slots for fsm instances when verifying rule %d (%s:%d)", _engine->rule_info->id, __FILE__, __LINE__ );
+	mmt_halt( "Not enough memory slots for fsm instances when verifying rule %d. Need to increase %s",
+			_engine->rule_info->id, mmt_sec_get_config_name(MMT_SEC__CONFIG__SECURITY__MAX_INSTANCES));
 	return 0;
 }
 
@@ -525,6 +535,7 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 	mmt_assert( _engine->events_count <= 64, "Cannot hold more than 64 events in a property" );
 	_engine->max_instances_size = max_instances_count;
 	_engine->instances_count    = 1; //fsm_bootstrap
+	_engine->avail_fsm_id       = 0;
 	//linked-list of fsm instances indexed by their expected event_id
 	_engine->fsm_by_expecting_event_id = mmt_mem_alloc( _engine->events_count * sizeof( void *) );
 	for( i=0; i<_engine->events_count; i++ )

@@ -30,7 +30,7 @@
 #define __aligned __attribute__ ((aligned(64)))
 #endif
 
-//macroe
+//macro
 #define __check_null( x, y ) while( unlikely( x == NULL )) return y
 
 //branch prediction

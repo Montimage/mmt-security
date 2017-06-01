@@ -35,7 +35,7 @@ message_t *create_message_t(){
 		msg = mmt_mem_alloc( _message_size );
 		//elements
 		msg->elements_count = elements_length;
-		msg->elements        = (message_element_t *) (&msg[1]); //store elements at the same date segment with msg
+		msg->elements       = (message_element_t *) (&msg[1]); //store elements at the same date segment with msg
 		//for each element
 		for( i=0; i<msg->elements_count; i++ ){
 			msg->elements[i].data     = NULL;

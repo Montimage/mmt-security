@@ -47,6 +47,9 @@ typedef struct rule_engine_struct{
 	 */
 	uint64_t *events_hash;
 
+	//timestamp and counter of the last message being verified timeout
+	uint64_t last_msg_timestamp_timeout;
+	uint64_t last_msg_counter_timeout;
 } __aligned rule_engine_t;
 
 //max number of events in a rule

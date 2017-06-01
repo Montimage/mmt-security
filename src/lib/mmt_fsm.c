@@ -77,7 +77,6 @@ static inline enum fsm_handle_event_value _fire_a_tran( fsm_t *fsm, uint16_t tra
 
 
 static inline enum fsm_handle_event_value _update_fsm( fsm_t *fsm, const fsm_state_t *new_state, const fsm_transition_t *tran, message_t *message ){
-	void *ptr = NULL;
 	uint64_t val;
 	int i;
 	const fsm_state_t *previous_state;
@@ -109,14 +108,14 @@ static inline enum fsm_handle_event_value _update_fsm( fsm_t *fsm, const fsm_sta
 	fsm->current_state = new_state;
 
 	/* If the target state is a final one, notify user that the machine has stopped */
-	if( fsm->current_state->transitions_count == 0 ){
-		if (fsm->current_state == fsm->error_state){
+	if( new_state->transitions_count == 0 ){
+		if (new_state == fsm->error_state){
 			//mmt_debug("FSM_ERROR_STATE_REACHED" );
 			return FSM_ERROR_STATE_REACHED;
-		}else if (fsm->current_state == fsm->incl_state){
+		}else if (new_state == fsm->incl_state){
 			//mmt_debug("FSM_INCONCLUSIVE_STATE_REACHED" );
 			return FSM_INCONCLUSIVE_STATE_REACHED;
-		}else if ( fsm->current_state == fsm->success_state ){
+		}else if ( new_state == fsm->success_state ){
 			//mmt_debug("FSM_FINAL_STATE_REACHED" );
 			return FSM_FINAL_STATE_REACHED;
 		}else
@@ -125,10 +124,10 @@ static inline enum fsm_handle_event_value _update_fsm( fsm_t *fsm, const fsm_sta
 
 	// We reach a state that has delay = 0
 	// => we need to continue verifying the next outgoing transitions against the current message
-	if( unlikely( fsm->current_state->is_temporary )){
+	if( unlikely( new_state->is_temporary )){
 		//for each outgoing transition of the target
 		//fire the timeout transition (at index 0) only if other transitions cannot be fired
-		for( i=fsm->current_state->transitions_count - 1; i>= 0; i-- ){
+		for( i=new_state->transitions_count - 1; i>= 0; i-- ){
 			ret = _fire_a_tran( (fsm_t *) fsm, (uint16_t)i, message );
 
 			if( ret != FSM_NO_STATE_CHANGE )
@@ -174,7 +173,6 @@ static inline enum fsm_handle_event_value _update_fsm( fsm_t *fsm, const fsm_sta
  */
 enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message, fsm_t **new_fsm ) {
 	const fsm_transition_t *tran;
-	fsm_t *_new_fsm;
 	const fsm_state_t *state;
 	//uint64_t timer, counter;
 
@@ -214,7 +212,7 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 	tran = &fsm->current_state->transitions[ transition_index ];// _get_transition(fsm, state, event);
 
-	//if we intend to check TIMEOUT but transition is not timeout => stop checking
+	//if we intend to check TIMEOUT but transition is not a timeout one => stop checking
 	if( unlikely( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ))
 		return FSM_NO_STATE_CHANGE;
 
@@ -233,9 +231,8 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	//Create a new instance, then update its data
 	if ( tran->action == FSM_ACTION_CREATE_INSTANCE && tran->target_state->transitions_count > 0 ){
 		//mmt_debug( " new FSM");
-		_new_fsm = _fsm_clone( fsm );
-		*new_fsm = (fsm_t *)_new_fsm;
-		return _update_fsm( _new_fsm, tran->target_state, tran, message );
+		*new_fsm = _fsm_clone( fsm );
+		return _update_fsm( *new_fsm, tran->target_state, tran, message );
 	}
 
 	//add event to execution trace

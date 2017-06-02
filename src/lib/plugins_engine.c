@@ -38,7 +38,7 @@ static int load_filter( const struct dirent *entry ){
 
 size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	size_t size, i, j, index;
-	char path[ 256 ];
+	char path[ 1001 ];
 	struct dirent **entries, *entry;
 	int plugins_path=0;
 	mmt_map_t *plugins_set = NULL;
@@ -65,7 +65,7 @@ size_t load_mmt_sec_rules( const rule_info_t ***ret_array ){
 	index = 0;
 	for( i = 0 ; i < n ; ++i ) {
 		entry = entries[i];
-		(void)snprintf( path, 256, "%s/%s",
+		(void)snprintf( path, 1000, "%s/%s",
 						plugins_path==0 ? MMT_SEC_PLUGINS_REPOSITORY : MMT_SEC_PLUGINS_REPOSITORY_OPT,
 						entry->d_name );
 

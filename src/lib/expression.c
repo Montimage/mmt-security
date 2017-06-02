@@ -190,7 +190,7 @@ void expr_free_an_expression( expression_t *expr, bool free_data){
  * 	+ str_size if the string contains only space
  * 	+ index where the character is not a space
  */
-inline size_t _jump_space( const char *string, size_t str_size ){
+static inline size_t _jump_space( const char *string, size_t str_size ){
 	size_t i=0;
 	if( (string == NULL) || (str_size == 0) )
 			return 0;
@@ -692,11 +692,11 @@ size_t expr_stringify_variable( char **string, const variable_t *var){
 	return size;
 }
 
-inline bool _is_comparison_operator( int op ){
+static inline bool _is_comparison_operator( int op ){
 	return op == NEQ || op == EQ || op == GT || op == GTE || op == LT || op == LTE;
 }
 
-inline bool _is_string_variable( const operation_t *opt ){
+static inline bool _is_string_variable( const operation_t *opt ){
 	link_node_t *ptr;
 	expression_t *expr;
 	ptr = opt->params_list;
@@ -709,7 +709,7 @@ inline bool _is_string_variable( const operation_t *opt ){
 	return YES;
 }
 
-inline bool _is_string_param( const operation_t *opt ){
+static inline bool _is_string_param( const operation_t *opt ){
 	link_node_t *ptr;
 	expression_t *expr;
 	ptr = opt->params_list;

@@ -13,9 +13,9 @@
 
 
 #define INIT_ID_VALUE 0
-static __aligned mmt_memory_t *_memory = NULL;
+static mmt_memory_t *_memory = NULL;
 
-message_t *create_message_t(){
+static void _create_local_message_t(){
 	int i;
 	const proto_attribute_t **proto_atts;
 	message_t *msg;
@@ -23,36 +23,40 @@ message_t *create_message_t(){
 
 	//create a reserved memory segment and initialize it
 	//this is done only one time
-	if( unlikely( _memory == NULL )){
-		size_t elements_length = mmt_sec_get_unique_protocol_attributes( &proto_atts );
+	size_t elements_length = mmt_sec_get_unique_protocol_attributes( &proto_atts );
 
-		size_t data_length =  mmt_sec_get_config( MMT_SEC__CONFIG__INPUT__MAX_MESSAGE_SIZE );
-		data_length  += elements_length * SIZE_OF_MMT_MEMORY_T;
-		_message_size = sizeof( message_t )	//message
-						+ sizeof( message_element_t) * elements_length //elements
-						+ data_length //data
-					;
-		msg = mmt_mem_alloc( _message_size );
-		//elements
-		msg->elements_count = elements_length;
-		msg->elements       = (message_element_t *) (&msg[1]); //store elements at the same date segment with msg
-		//for each element
-		for( i=0; i<msg->elements_count; i++ ){
-			msg->elements[i].data     = NULL;
-			msg->elements[i].proto_id = INIT_ID_VALUE;
-			msg->elements[i].att_id   = INIT_ID_VALUE;
-		}
-
-		msg->hash         = 0;
-		msg->_data_index  = 0;
-		msg->_data        = &((uint8_t *) msg)[ sizeof( message_t ) + sizeof( message_element_t) * elements_length ];
-		msg->_data_length = data_length;
-
-		_memory = mmt_mem_revert( msg );
+	size_t data_length =  mmt_sec_get_config( MMT_SEC__CONFIG__INPUT__MAX_MESSAGE_SIZE );
+	data_length  += elements_length * SIZE_OF_MMT_MEMORY_T;
+	_message_size = sizeof( message_t )	//message
+								+ sizeof( message_element_t) * elements_length //elements
+								+ data_length //data
+								;
+	msg = mmt_mem_alloc( _message_size );
+	//elements
+	msg->elements_count = elements_length;
+	msg->elements       = (message_element_t *) (&msg[1]); //store elements at the same date segment with msg
+	//for each element
+	for( i=0; i<msg->elements_count; i++ ){
+		msg->elements[i].data     = NULL;
+		msg->elements[i].proto_id = INIT_ID_VALUE;
+		msg->elements[i].att_id   = INIT_ID_VALUE;
 	}
 
+	msg->hash         = 0;
+	msg->_data_index  = 0;
+	msg->_data        = &((uint8_t *) msg)[ sizeof( message_t ) + sizeof( message_element_t) * elements_length ];
+	msg->_data_length = data_length;
 
+	_memory = mmt_mem_revert( msg );
+}
+
+message_t *create_message_t(){
 	//clone the reserved memory
+	message_t *msg;
+	if( unlikely( _memory == NULL ))
+		_create_local_message_t();
+
+	//the message being created is a copy of _memory
 	msg = mmt_mem_force_dup( _memory->data, _memory->size );
 	//update data pointers
 	msg->elements = (message_element_t *)( msg + 1 );
@@ -132,7 +136,7 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 	//- proto_id = TCP
 	//- att_id = FLAGS, FIN, SYN, RST, PSH, ACK, URG, ECE, CWR
 	//=> if its data is zero => obmit => consider as NULL
-	else if( data_type == NUMERIC && (*(double*) data)  == 0 && proto_id == 354 && (6 <= att_id && att_id <= 14 ))
+	else if( proto_id == 354 && data_type == NUMERIC && (*(double*) data)  == 0 && (6 <= att_id && att_id <= 14 ))
 		return MSG_CONTINUE;
 
 
@@ -167,6 +171,8 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 }
 
 __attribute__((destructor)) void _destructor_message_t () {
-	if( _memory )
+	if( _memory ){
 		mmt_mem_free( _memory->data );
+		_memory = NULL;
+	}
 }

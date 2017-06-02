@@ -25,6 +25,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 #include "lib/dpi_message_t.h"
 #include "lib/mmt_smp_security.h"

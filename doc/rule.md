@@ -196,11 +196,11 @@ Found 1 rule.
    - please refer to the usage of function `is_exist` in section 2.3 to get an example.
    - use explicitly the following tcp flags to filter out unwanted verification: tcp.fin, tcp.syn, tcp.rst, tcp.psh, tcp.ack, tcp.urg, tcp.ece, tcp.cwr.
   		
-  		For example, the 2 following boolean expressions haves the same meaning:
+  	  For example, the 2 following boolean expressions haves the same meaning:
   		
   		`(tcp.flags == 4)` and `((tcp.flags == 4) && (tcp.rst == 1))`
   		
-  		They both return `true` when only RST flag of a TCP packet is on, but the latter is better as MMT verifies it only when `tcp.flags` and `tcp.rst` are not zero.
+  	  They both return `true` when only RST flag of a TCP packet is on, but the latter is better as MMT verifies it only when `tcp.flags` and `tcp.rst` are not zero.
 
  - reduce `delay_max` of a rule to a suitable value. 
 
@@ -209,6 +209,7 @@ Found 1 rule.
  	At 10Gbps, MMT-Security can verify 12400 simple rules or 600 complex rules.
  
  - optimize implementation of embedded functions.
+
 	 - The embedded functions are called each time their boolean expressions are verified. Consequently, rather than initialize something, for example, connection to database, inside these functions, one can do that task, only once, inside function `on_load` then store the connection into a static local variable that will be used inside the embedded function.
 	
 	 - alway use embedded function with `static inline` keyword. For more information, please refer to document of gcc: [An Inline Function is As Fast As a Macro](https://gcc.gnu.org/onlinedocs/gcc/Inline.html)

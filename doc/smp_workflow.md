@@ -53,25 +53,25 @@ typedef void (*mmt_sec_callback)(
 		void *user_data                  //#user-data being given in mmt_sec_register_rules
 );
 mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores_id, 
-                         const char *rules_mask, bool verbose, mmt_sec_callback callback, void *args )
+                         const char *rules_mask, bool verbose, mmt_sec_callback callback, void *args );
 ```
 
 - **Description**: Register some rules to validate.
   
-  After calling this function, depending on number of threads given in `threads_count` parameter, MMT-Security can create several threads and starts them. The processing of the threads is represented by the loop `forever` block in Figure above. This block always check the MMT-Security buffer to get out a message to verify. Each time it found a rule being validated, it will call the function given by `callback` parameter. It is stoped when user calls `mmt_sec_unregister` function.
+  After calling this function, depending on number of threads given in `threads_count` parameter, MMT-Security can create several threads and starts them. The processing of the threads is represented by the loop `forever` block in Figure above. This block always check the MMT-Security buffer to get out a message to verify. Each time it found a rule being validated, it will call the function given by `callback` parameter. It is stoped by calling `mmt_sec_unregister` function.
 
 - **Input**:
-	+ `threads_count`: number of threads
-   + `core_mask`    : a string indicating logical cores to be used,
+    + `threads_count`: number of threads
+    + `core_mask`    : a string indicating logical cores to be used,
    						  e.g., "1-4,11-12,19" => we use cores 1,2,3,4,11,12,19. Core number starts from 1.
-   + `rule_mask`    : a string indicating special rules being attributed to special threads
+    + `rule_mask`    : a string indicating special rules being attributed to special threads
    						e.g., "(1:10-13)(2:50)(4:1007-1010)".
     						The other rules will be attributed equally to the rest of threads.
-   + `callback`     : a function to be called when a rules is validated
-   + `user_data`    : data will be passed to the `callback`
+    + `callback`     : a function to be called when a rules is validated
+    + `user_data`    : data will be passed to the `callback`
 - **Return**:
-   + `NULL` if there are error, e.g., insufficient memory, parameters are incorrect
-   + a handler pointer, otherwise
+    + `NULL` if there are error, e.g., insufficient memory, parameters are incorrect
+    + a handler pointer, otherwise
 - **Note**:
 	The function callback can be called from different threads. (Thus if it accesses	to a global variable or a static one, the access to these variables must be synchronous)
 

@@ -9,6 +9,7 @@
 #define SRC_LIB_PRE_EMBEDDED_FUNCTIONS_H_
 
 #include "mmt_lib.h"
+#include "mmt_security.h"
 
 /**
  * The function checks if a proto.att exists or not.

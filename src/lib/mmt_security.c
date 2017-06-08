@@ -541,8 +541,7 @@ void mmt_sec_print_rules_info(){
 		printf("\n%zu - Rule id: %d", (i+1), rules[i]->id );
 		printf("\n\t- type            : %s",  rules[i]->type_string );
 		printf("\n\t- description     : %s",  rules[i]->description );
-		printf("\n\t- if_satisfied    : %s",  rules[i]->if_satisfied );
-		printf("\n\t- if_not_satisfied: %s",  rules[i]->if_not_satisfied );
+		printf("\n\t- if_satisfied    : %p",  rules[i]->if_satisfied );
 		//for each event
 		for(j=0; j<rules[i]->events_count; j++ ){
 			printf("\n\t- event %-2zu        ", j+1 );

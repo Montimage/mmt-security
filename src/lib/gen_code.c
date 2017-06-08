@@ -583,6 +583,7 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 					);
 	fprintf( fd, "\nconst rule_version_info_t * mmt_sec_get_rule_version_info(){ return &version;};" );
 
+	//fprintf( fd, "\ntypedef struct fun_struct{const char* name, mmt_rule_satisfied_callback *func; }fun_t;");
 
 	fprintf(fd, "\n\n //======================================GENERAL======================================");
 	_gen_comment( fd, "Information of %zu rules\n  * PUBLIC API", count );
@@ -598,7 +599,7 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 				_string( rules[i]->description, 'N', "UL", 'L', '"', rules[i]->description, '"') );
 
 		fprintf( fd, "\n\t\t\t .if_satisfied     = %c%s%c,",
-				_string( rules[i]->if_satisfied, 'N', "UL", 'L', '"', rules[i]->if_satisfied, '"') );
+				_string( rules[i]->if_satisfied, 'N', "UL", 'L', '&', rules[i]->if_satisfied, ' ') );
 		fprintf( fd, "\n\t\t\t .if_not_satisfied = %c%s%c,",
 				_string( rules[i]->if_not_satisfied, 'N', "UL", 'L', '"', rules[i]->if_not_satisfied, '"') );
 

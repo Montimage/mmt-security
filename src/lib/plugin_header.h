@@ -72,6 +72,18 @@ typedef struct rule_version_info_struct{
 	const char *dpi;
 }rule_version_info_t;
 
+struct rule_info_struct;
+/**
+ * A function to be called when a rule is validated
+ */
+typedef void (*mmt_rule_satisfied_callback)(
+		const struct rule_info_struct *rule,		//rule being validated
+		int verdict,		             //DETECTED, NOT_RESPECTED
+		uint64_t timestamp,  			 //moment (by time) the rule is validated
+		uint64_t counter,					 //moment (by order of packet) the rule is validated
+		const mmt_array_t * const trace//historic of messages that validates the rule
+);
+
 /**
  * Information of a rule in generated lib
  */
@@ -87,7 +99,7 @@ typedef struct rule_info_struct{
 	 */
 	const char *description;
 	/** a command to be executed when a rule is satisfied */
-	const char *if_satisfied;
+	mmt_rule_satisfied_callback if_satisfied;
 	/** a command to be executed when a rule is not satisfied */
 	const char *if_not_satisfied;
 

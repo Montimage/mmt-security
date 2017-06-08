@@ -1,9 +1,9 @@
 
-This document explains how we can find quickly a set of rules to verify when we know a `message_t`.
+This document explains how we can check quickly a rule that can be verified when we know a message `msg`.
 We know that a rule contains a set of events. Each event contains a set of proto.att.
-A rule is verified when we have a `message_t` that contains at least one event.
+A rule is verified when we have a message that contains at least one event.
 
-## Problem statement
+# Problem statement
 
 Let examine the following rule:
 
@@ -28,9 +28,22 @@ This rule is verified against a message `msg` if the message contains:
 - or `set_2` = (`tcp.flags`, `ip.src`)
 - or `set_3` = `set_1` v `set_2`
 
-Thus, given a message `msg` having a set of proto.atts. We need to find the fastest way to get a set of rules
-that will be verified against `msg`.
+Thus, given a message `msg` having a set of any proto.atts. We need to find the fastest way to check if the message containing one of the 3 sets above.
 
-## Solution
+# Solution
 
 Using bit hash to check the present of each proto.att in message
+
+- Each proto.att is represented by a unique id starting from 0. 
+
+   For example, the ids of the proto.att above are as the following:
+    
+    |   0     |    1     |       2         |     3       |
+    | -------:| --------:| ---------------:| -----------:|
+    |`ip.src` | `ip.dst` | `tcp.dest_port` | `tcp.flags` |
+    
+- A `unint_64 hash` number is used to present a set of proto.att by turning on the corresponding bit of each proto.att. 
+
+   For example, to represent the present of `tcp.flags` and `tcp.dest_port` we have `hash = 12` (2^2 + 2^3)
+
+  

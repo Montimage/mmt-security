@@ -10,11 +10,11 @@ that are too complicated to define using only classical operators on fields in t
 One can either use existing embedded functions or implement a new function. 
 In both cases, they can be used in the Boolean expressions by using the syntax:
 
-   `#<name_of_function>(<list of parameters>)`
+  `#<name_of_function>(<list of parameters>)`
 
-For instance:
+For example:
 
-   `(#em_is_search_engine( http.user_agent ) == true)`
+  `(#em_is_search_engine( http.user_agent ) == true)`
    
 where `http` is the protocol name and `user_agent` is the attribute name (i.e., packet meta-data).
 
@@ -24,11 +24,11 @@ where `http` is the protocol name and `user_agent` is the attribute name (i.e., 
 
 1. `true` will be replaced by the number 1. For example 
 
-   `#em_check( tcp.src_port ) == true`
+  `#em_check( tcp.src_port ) == true`
 
 2. `false` will be replaced by the number 0. For example 
 
-   `#em_check( tcp.src_port ) == false`
+  `#em_check( tcp.src_port ) == false`
 
 
 ## 2.2 Implement a new embedded function
@@ -244,7 +244,7 @@ Found 1 rule.
   		
   	  For example, the 2 following boolean expressions have the same meaning:
   		
-  		`(tcp.flags == 4)` and `((tcp.flags == 4) && (tcp.rst == 1))`
+    `(tcp.flags == 4)` and `((tcp.flags == 4) && (tcp.rst == 1))`
   		
   	  They both return `true` when only RST flag of a TCP packet is on, but the latter is better as MMT verifies its rule only when `tcp.flags` and `tcp.rst` are not zero. Usually less than about 1% packets having `tcp.rst != 0`, consequently the rule using the second expression will be verified against only 1% packets.
 

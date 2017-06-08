@@ -36,14 +36,24 @@ Using bit hash to check the present of each proto.att in message
 
 - Each proto.att is represented by a unique id starting from 0. 
 
-   For example, the ids of the proto.att above are as the following:
+  For example, the ids of the proto.att above are as the following:
     
-    |   0     |    1     |       2         |     3       |
-    | -------:| --------:| ---------------:| -----------:|
-    |`ip.src` | `ip.dst` | `tcp.dest_port` | `tcp.flags` |
+  |   0     |    1     |       2         |     3       |
+  | -------:| --------:| ---------------:| -----------:|
+  |`ip.src` | `ip.dst` | `tcp.dest_port` | `tcp.flags` |
+    
+  This assignment is done when calling `mmt_sec_init` function.
     
 - A `unint_64 hash` number is used to present a set of proto.att by turning on the corresponding bit of each proto.att. 
 
    For example, to represent the present of `tcp.flags` and `tcp.dest_port` we have `hash = 12` (2^2 + 2^3)
+   
+   Each message `msg` has a hash number, `msg->hash`, representing its set of proto.atts.
+   
+   Each rule `r` has an array of hash numbers, `r->events_hash`, represent its requirement set of proto.atts.
+   
+   The message `m` can be used to verify the event 1 if `(msg->hash & r->events_hash[1]) == r->events_hash[1]`
+   
 
+**Limit**: as we use `uint64_t` to represent hash of a message ==> a message contains maximally 64 elements of proto.atts.
   

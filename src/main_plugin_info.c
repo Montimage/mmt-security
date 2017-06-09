@@ -46,10 +46,9 @@ int main( int argc, char** argv ){
 					rules_arr[i]->proto_atts[j].proto_id, rules_arr[i]->proto_atts[j].att_id);
 
 		printf("\n\t- description     : %s",  rules_arr[i]->description );
-		printf("\n\t- if_satisfied    : %s",  rules_arr[i]->if_satisfied );
-		printf("\n\t- if_not_satisfied: %s",  rules_arr[i]->if_not_satisfied );
-		printf("\n\t- create_instance : %p",  rules_arr[i]->create_instance );
-		printf("\n\t- hash_message    : %p",  rules_arr[i]->hash_message );
+		printf("\n\t- if_satisfied    : %p",  rules_arr[i]->if_satisfied );
+		//printf("\n\t- create_instance : %pF",  rules_arr[i]->create_instance );
+		//printf("\n\t- hash_message    : %pF",  rules_arr[i]->hash_message );
 		tm = *localtime(& rules_arr[i]->version->created_date );
 		printf("\n\t- version         : %s (%s - %d-%d-%d %d:%d:%d), dpi version %s",  rules_arr[i]->version->number,
 				rules_arr[i]->version->hash,

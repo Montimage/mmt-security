@@ -49,7 +49,7 @@ void init_redis ( const char *hostname, int port ) {
 	}
 }
 
-inline void send_message_to_redis (const char * message) {
+void send_message_to_redis (const char * message) {
 	//printf("---> report to redis: %s\n%s\n",REDIS_CHANNEL_NAME, message);
 	// Publish to redis if it is enabled
 	if ( likely( thredis != NULL)) {

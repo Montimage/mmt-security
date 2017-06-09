@@ -25,12 +25,16 @@
 
 //Force alignment to cache line.
 #ifdef LEVEL1_DCACHE_LINESIZE
-#define __aligned __attribute__ ((aligned(LEVEL1_DCACHE_LINESIZE)))
+	#if LEVEL1_DCACHE_LINESIZE == 0
+	#define __aligned
+	#else
+	#define __aligned __attribute__ ((aligned(LEVEL1_DCACHE_LINESIZE)))
+	#endif
 #else
-#define __aligned __attribute__ ((aligned(64)))
+	#define __aligned __attribute__ ((aligned(64)))
 #endif
 
-//macroe
+//macro
 #define __check_null( x, y ) while( unlikely( x == NULL )) return y
 
 //branch prediction

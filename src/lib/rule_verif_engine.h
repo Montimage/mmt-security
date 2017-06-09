@@ -29,11 +29,13 @@ typedef struct rule_engine_struct{
 	mmt_array_t *valid_execution_trace;
 
 	//nubmer of events
-	uint16_t events_count;
+	uint32_t events_count;
 
 	uint32_t max_instances_size;
 	//number of active instances
 	uint32_t instances_count;
+	//availabe id to allocate to a new fsm
+	uint32_t avail_fsm_id;
 
 	//depending on type of rule (verifying on a single packet or on multi-packets)
 	//the processing will be different
@@ -44,6 +46,10 @@ typedef struct rule_engine_struct{
 	 * Each element represents required data for one event of the rule
 	 */
 	uint64_t *events_hash;
+
+	//timestamp and counter of the last message being verified timeout
+	uint64_t last_msg_timestamp_timeout;
+	uint64_t last_msg_counter_timeout;
 } __aligned rule_engine_t;
 
 //max number of events in a rule

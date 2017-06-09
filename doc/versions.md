@@ -1,3 +1,23 @@
+## Version 1.1.5
+
+1. implement `if_satisfied` function allowing user to perform some task when a rule is satisfied  
+2. add document for developpers.
+
+## Version 1.1.4
+
+1. fix bug when printing alerts in JSON
+2. inline some fn of fsm, filter out tcp flags=0, faster 30% verif bigFlows
+3. compatible with gcc-7
+
+## Version 1.1.3
+
+1. add API to set/get thresholds
+2. fix bug and more performance of converting data to JSON
+3. support `on_load` and `on_unload` function implementation in embedded function tag
+4. update Makefile: no need sudo to do "make deb"
+5. high performance of mmt_hash_t
+6. add default rule set to ./rules
+
 ## Version 1.1.2
 
 1. Fix bug when we have more than one reference in boolean expression

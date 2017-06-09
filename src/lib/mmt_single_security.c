@@ -166,11 +166,20 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 		if( verdict != VERDICT_UNKNOWN ){
 			handler->alerts_count[i] ++;
 
-			if( handler->callback != NULL ){
-				//get execution trace
-				execution_trace = rule_engine_get_valide_trace( handler->engines[i] );
+			//get execution trace
+			execution_trace = rule_engine_get_valide_trace( handler->engines[i] );
 
-				//call user-callback function
+			//callback fucntion of rule
+			if( handler->rules_array[i]->if_satisfied != NULL )
+				handler->rules_array[i]->if_satisfied(
+						handler->rules_array[i],
+						verdict,
+						msg->timestamp,
+						msg->counter,
+						execution_trace );
+
+			//call user-callback function
+			if( handler->callback != NULL ){
 				handler->callback(
 					handler->rules_array[i],
 					verdict,

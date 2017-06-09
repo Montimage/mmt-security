@@ -1,3 +1,8 @@
+## Version 1.1.5
+
+1. implement `if_satisfied` function allowing user to perform some task when a rule is satisfied  
+2. add document for developpers.
+
 ## Version 1.1.4
 
 1. fix bug when printing alerts in JSON

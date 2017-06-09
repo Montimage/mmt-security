@@ -106,7 +106,7 @@ static inline bool function em_check( double port ){
    
 Reactive functions allow user perform some action when a rule is satisfied.
 The functions will be called each time their rules are satisfied. 
-When a security and attack are satisfied, they will give `not_respected` and `detected` verdicts respectively.
+When a security and attack rules are satisfied, they will give `not_respected` and `detected` verdicts respectively.
 
 To implement and use a reactive function, one need:
 

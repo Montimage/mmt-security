@@ -155,7 +155,7 @@ install: all lib sample_rules uninstall copy_files
 	@echo "Installed mmt-security in $(INSTALL_DIR)"
 	
 	
-DEB_NAME = mmt-security_$(VERSION)_$(GIT_VERSION)_`uname -s`_`uname -p`
+DEB_NAME = mmt-security_$(VERSION)_$(GIT_VERSION)_`uname -s`_`uname -m`
 	
 deb: all lib sample_rules copy_files
 	$(QUIET) $(MKDIR) $(DEB_NAME)/DEBIAN $(DEB_NAME)/$(INSTALL_DIR)

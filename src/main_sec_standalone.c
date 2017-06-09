@@ -222,7 +222,7 @@ static inline void termination(){
 	}
 
 	fprintf(stderr, "%12zu messages received\n", total_received_reports );
-	fprintf(stderr, "%12"PRIu64" alerts generated\n", alerts_count );
+	fprintf(stderr, "%12zu alerts generated\n", alerts_count );
 
 	if( _print_output != NULL )
 		verdict_printer_free();

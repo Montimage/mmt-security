@@ -917,11 +917,15 @@ int compile_gen_code( const char *lib_file, const char *code_file, const char *i
 	sprintf( cmd_str, "/usr/bin/gcc %s -fPIC -shared  %s -o %s -I %s",
 			//add debug flag if need
 #ifdef DEBUG_MODE
-			"-g -O0 -DDEBUG_MODE",
+			"-g -O0 -DDEBUG_MODE"
 #else
-			"-O3",
+	#ifdef __arm__
+				"-O0"
+	#else
+				"-O3"
+	#endif
 #endif
-			code_file, lib_file, incl_dir );
+			, code_file, lib_file, incl_dir );
 
 	mmt_debug("Compile rules: %s", cmd_str );
 	return system ( cmd_str );

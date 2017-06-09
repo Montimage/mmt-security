@@ -109,7 +109,7 @@ size_t mmt_single_sec_unregister( mmt_single_sec_handler_t *handler ){
 			continue;
 
 		if( handler->verbose ) //&& handler->rules_count > 1 )
-			printf(" - rule %"PRIu32" generated %"PRIu64" verdicts\n", handler->rules_array[i]->id, handler->alerts_count[ i ] );
+			printf(" - rule %"PRIu32" generated %zu verdicts\n", handler->rules_array[i]->id, handler->alerts_count[ i ] );
 
 		alerts_count += handler->alerts_count[ i ];
 	}

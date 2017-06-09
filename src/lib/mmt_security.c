@@ -327,7 +327,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			*(str_ptr ++) = ',';
 
 		//event 's detail
-		size = snprintf( str_ptr, total_len, "\"event_%zu\":{\"timestamp\":%"PRIu64".%06lu,\"counter\":%"PRIu64",\"attributes\":[",
+		size = snprintf( str_ptr, total_len, "\"event_%zu\":{\"timestamp\":%ld.%06ld,\"counter\":%"PRIu64",\"attributes\":[",
 						index,
 						time.tv_sec, //timestamp: second
 						time.tv_usec, //timestamp: microsecond

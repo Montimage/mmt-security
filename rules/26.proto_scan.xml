@@ -8,7 +8,7 @@
     <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
       <event value="COMPUTE" event_id="1" 
           description="IP packet header with the eight-bit IP protocol field set (1)"
-             boolean_expression="((ip.proto_id != 0)&amp;&amp;(ip.src != ip.dst))"/>
+             boolean_expression="(ip.proto_id != 0)"/>
       <event value="COMPUTE" event_id="2" 
              description="IP packet header with another eight-bit IP protocol field set (2)"
              boolean_expression="((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
@@ -19,7 +19,7 @@
              boolean_expression="((ip.proto_id != ip.proto_id.2)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
       <event value="COMPUTE" event_id="4" 
              description="IP packet header with another eight-bit IP protocol field set (4)"
-             boolean_expression="((ip.proto_id != ip.proto_id.3)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
+             boolean_expression="((ip.proto_id != ip.proto_id.3)&amp;&amp;((ip.proto_id != ip.proto_id.2)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
     </operator>
 </property>
 </beginning>

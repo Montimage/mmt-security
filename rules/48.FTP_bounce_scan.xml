@@ -1,0 +1,23 @@
+<beginning>
+<!-- Property 48: Probable FTP bounce scan.
+-->
+	<property value="THEN" delay_units="s" delay_min="0+" delay_max="5" property_id="48" type_property="ATTACK" 
+    description="Probable FTP bounce scan (4 different requests in a row for different ports).">
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+      <event value="COMPUTE" event_id="1" 
+             description="FTP request PORT(1)"
+             boolean_expression="(#strstr(ftp.packet_request, 'PORT') != 0)"/>
+      <event value="COMPUTE" event_id="2" 
+             description="FTP request PORT(2)"
+             boolean_expression="((#strstr(ftp.packet_request, 'PORT') != 0)&amp;&amp;((ftp.packet_request_parameter != ftp.packet_request_parameter.1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))))"/>
+    </operator>
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+      <event value="COMPUTE" event_id="3" 
+             description="FTP request PORT(3)"
+             boolean_expression="((#strstr(ftp.packet_request, 'PORT') != 0)&amp;&amp;((ftp.packet_request_parameter != ftp.packet_request_parameter.1)&amp;&amp;((ftp.packet_request_parameter != ftp.packet_request_parameter.2)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))))"/>
+      <event value="COMPUTE" event_id="4"
+             description="FTP request PORT(4)"
+             boolean_expression="((#strstr(ftp.packet_request, 'PORT') != 0)&amp;&amp;((ftp.packet_request_parameter != ftp.packet_request_parameter.1)&amp;&amp;((ftp.packet_request_parameter != ftp.packet_request_parameter.2)&amp;&amp;((ftp.packet_request_parameter != ftp.packet_request_parameter.3)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))))"/>
+    </operator>
+</property>
+</beginning>

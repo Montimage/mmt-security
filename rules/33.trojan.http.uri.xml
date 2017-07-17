@@ -9,7 +9,7 @@
            boolean_expression="(#em_check_trojan_uri(http.uri) == true)"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP GET"
-           boolean_expression="(http.method == 'GET')"/> 
+           boolean_expression="((http.method == 'GET')&amp;&amp;(ip.src != ip.dst))"/> 
 </property>
 <embedded_functions><![CDATA[
 static mmt_hash_t *table = NULL;

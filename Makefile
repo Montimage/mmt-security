@@ -26,7 +26,7 @@ VERSION     := 1.1.5
 LIBS     = -ldl -lpthread -lxml2 -lhiredis -lmmt_core
 
 CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -I/usr/include/libxml2/  -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib 
-CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib
+CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -L/usr/local/lib
 
 #for debuging
 ifdef DEBUG
@@ -67,7 +67,7 @@ MAIN_STAND_ALONE = mmt_sec_standalone
 
 MAIN_SEC_SERVER = mmt_sec_server
 
-LIB_NAME = libmmt_security
+LIB_NAME = libmmt_security2
 
 all: standalone compile_rule rule_info sec_server
 
@@ -110,8 +110,6 @@ $(LIB_NAME).so: $(LIB_OBJS)
 	
 lib: $(LIB_NAME).a $(LIB_NAME).so
 	
-INSTALL_DIR=/opt/mmt/security
-
 uninstall:
 	$(QUIET) $(RM) $(INSTALL_DIR)
 	$(QUIET) $(RM) /etc/ld.so.conf.d/mmt-security.conf
@@ -121,32 +119,35 @@ rules/%.so: compile_rule
 	
 sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
 	
+TMP_DIR=/tmp/mmt
 copy_files:
-	$(QUIET) $(MKDIR) /tmp/mmt/rules
-	$(QUIET) $(MV) rules/*.so /tmp/mmt/rules/
+	$(QUIET) $(RM) ${TMP_DIR} &> /dev/null
+	$(QUIET) $(MKDIR) ${TMP_DIR}/rules
+	$(QUIET) $(CP) rules/*.so ${TMP_DIR}/rules/
 	
-	$(QUIET) $(MKDIR) /tmp/mmt/include
-	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h /tmp/mmt/include/
+	$(QUIET) $(MKDIR) ${TMP_DIR}/include
+	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h ${TMP_DIR}/include/
 	
-	$(QUIET) $(MKDIR) /tmp/mmt/bin
-	$(QUIET) $(CP)  $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  /tmp/mmt/bin
-	$(QUIET) $(CP)  $(MAIN_STAND_ALONE) /tmp/mmt/bin/mmt_security
-	$(QUIET) $(CP)  $(MAIN_SEC_SERVER) /tmp/mmt/bin/
+	$(QUIET) $(MKDIR) ${TMP_DIR}/bin
+	$(QUIET) $(CP)  $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  ${TMP_DIR}/bin
+	$(QUIET) $(CP)  $(MAIN_STAND_ALONE) ${TMP_DIR}/bin/mmt_security
+	$(QUIET) $(CP)  $(MAIN_SEC_SERVER) ${TMP_DIR}/bin/
 	
-	$(QUIET) $(MKDIR) /tmp/mmt/lib
-	$(QUIET) $(MV)  $(LIB_NAME).so /tmp/mmt/lib/$(LIB_NAME).so.$(VERSION)
-	$(QUIET) $(MV)  $(LIB_NAME).a /tmp/mmt/lib/$(LIB_NAME).a.$(VERSION)
+	$(QUIET) $(MKDIR) ${TMP_DIR}/lib
+	$(QUIET) $(MV)  $(LIB_NAME).so ${TMP_DIR}/lib/$(LIB_NAME).so.$(VERSION)
+	$(QUIET) $(MV)  $(LIB_NAME).a ${TMP_DIR}/lib/$(LIB_NAME).a.$(VERSION)
 	
-	$(QUIET) $(RM)  /tmp/mmt/lib/$(LIB_NAME).so /tmp/mmt/lib/$(LIB_NAME).a
+	$(QUIET) $(RM)  ${TMP_DIR}/lib/$(LIB_NAME).so ${TMP_DIR}/lib/$(LIB_NAME).a
 	
-	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).so.$(VERSION) /tmp/mmt/lib/$(LIB_NAME)2.so 
-	$(QUIET) $(LN)  $(INSTALL_DIR)/lib/$(LIB_NAME).a.$(VERSION)  /tmp/mmt/lib/$(LIB_NAME)2.a
-	$(QUIET) chmod -x /tmp/mmt/lib/$(LIB_NAME).*
+	$(QUIET) $(CP) /usr/local/lib/libhiredis.so.0.13 ${TMP_DIR}/lib/
+	
+	$(QUIET) cd ${TMP_DIR}/lib/ && $(LN)  $(LIB_NAME).so.$(VERSION) $(LIB_NAME).so
+	$(QUIET) cd ${TMP_DIR}/lib/ && $(LN)  $(LIB_NAME).a.$(VERSION)  $(LIB_NAME).a
 	
 install: all lib sample_rules uninstall copy_files
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)
-	$(QUIET) $(MV) /tmp/mmt/* $(INSTALL_DIR)
-	$(QUIET) $(RM) /tmp/mmt
+	$(QUIET) $(MV) ${TMP_DIR}/* $(INSTALL_DIR)
+	$(QUIET) $(RM) ${TMP_DIR}
 	
 	@echo "/opt/mmt/security/lib" >> /etc/ld.so.conf.d/mmt-security.conf
 	@ldconfig
@@ -155,12 +156,12 @@ install: all lib sample_rules uninstall copy_files
 	@echo "Installed mmt-security in $(INSTALL_DIR)"
 	
 	
-DEB_NAME = mmt-security_$(VERSION)_$(GIT_VERSION)_`uname -s`_`uname -m`
-	
+DEB_NAME = mmt-security_$(VERSION)_$(GIT_VERSION)_$(shell uname -s)_$(shell uname -m)
+TMP="/tmp"
 deb: all lib sample_rules copy_files
 	$(QUIET) $(MKDIR) $(DEB_NAME)/DEBIAN $(DEB_NAME)/$(INSTALL_DIR)
-	$(QUIET) $(MV) /tmp/mmt/* $(DEB_NAME)/$(INSTALL_DIR)
-	$(QUIET) $(RM) /tmp/mmt
+	$(QUIET) $(MV) ${TMP_DIR}/* $(DEB_NAME)/$(INSTALL_DIR)
+	$(QUIET) $(RM) ${TMP_DIR}
 	
 	$(QUIET) echo "Package: mmt-security \
         \nVersion: $(VERSION) \
@@ -179,6 +180,51 @@ deb: all lib sample_rules copy_files
 	$(QUIET) dpkg-deb -b $(DEB_NAME)
 	$(QUIET) $(RM) $(DEB_NAME)
 	
+	
+#create rpm file for RHEL
+rpm: all lib sample_rules copy_files
+	
+#create rpm structure
+	$(QUIET) $(MKDIR) ./rpmbuild/{RPMS,BUILD}
+	
+	$(QUIET) echo -e\
+      "Summary:  MMT-Security:  An intrusion detection system\
+      \nName: mmt-security\
+      \nVersion: $(VERSION)\
+      \nRelease: $(GIT_VERSION)\
+      \nLicense: proprietary\
+      \nGroup: Development/Libraries\
+      \nURL: http://montimage.com/\
+      \n\
+      \nRequires:  mmt-dpi >= 1.6.9\
+      \nBuildRoot: %{_topdir}/BUILD/%{name}-%{version}-%{release}\
+      \n\
+      \n%description\
+      \nMMT-Security is a library using MMT-DPI to detect abnormalities in network.\
+      \nBuild date: `date +"%Y-%m-%d %H:%M:%S"`\
+      \n\
+      \n%prep\
+      \nrm -rf %{buildroot}\
+      \nmkdir -p %{buildroot}/$(INSTALL_DIR)\
+      \ncp -rL ${TMP_DIR}/* %{buildroot}/$(INSTALL_DIR)\
+      \nmkdir -p %{buildroot}/etc/ld.so.conf.d/\
+      \necho "/opt/mmt/security/lib" >> %{buildroot}/etc/ld.so.conf.d/mmt-security.conf\
+      \n\
+      \n%clean\
+      \nrm -rf %{buildroot}\
+      \n\
+      \n%files\
+      \n%defattr(-,root,root,-)\
+      \n$(INSTALL_DIR)/*\
+      \n/etc/ld.so.conf.d/mmt-security.conf\
+      \n%post\
+      \nldconfig\
+   " > ./mmt-security.spec
+	
+	$(QUIET) rpmbuild --quiet --rmspec --define "_topdir $(shell pwd)/rpmbuild" --define "_rpmfilename ../../$(DEB_NAME).rpm" -bb ./mmt-security.spec
+	$(QUIET) $(RM) ${TMP_DIR} rpmbuild
+	@echo "[PACKAGE] $(DEB_NAME).rpm"
+		
 dist-clean: uninstall
 	@echo "Removed mmt-security from $(INSTALL_DIR)"
 	

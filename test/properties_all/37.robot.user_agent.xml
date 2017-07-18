@@ -44,7 +44,7 @@ static inline int em_check_malicious_UA_sqlite(const char * UA){
            boolean_expression="(#em_check_malicious_UA_sqlite(http.user_agent) == 1)"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP GET"
-           boolean_expression="(http.method == 'GET')"/> 
+           boolean_expression="((http.method == 'GET') &amp;&amp; (ip.src != ip.dst))"/> 
 </property>
 </beginning>
 

@@ -1,0 +1,84 @@
+<beginning>
+<!-- Property 50: Detection of outside-IP addresses. 
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="50" type_property="ATTACK" 
+    description="Detection of outside-IP addresses"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="IP source or IP destination coming from outside"
+           boolean_expression="(#em_check_outsideIP(ip.src, ip.dst) == true)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="IP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<embedded_functions><![CDATA[
+#include <arpa/inet.h>
+//hash table
+static mmt_hash_t *table = NULL;
+
+static inline int em_check_outsideIP( const char *ip_src, const char *ip_dst ){
+	//struct in_addr addr;
+	//uint32_t ip = *(uint32_t *) ip_dst;
+	//addr.s_addr = ip;
+	//mmt_debug("Checking IP %"PRIu32" - %s", ip, inet_ntoa( addr ) );
+	
+	//Legal addresses with netmask 192.168.0.255/24
+	
+	//A range of legal addresses 192.168.1.10->192.168.1.100
+	
+	if( (mmt_hash_search( table, ip_dst, 4 ) != NULL) && (mmt_hash_search( table, ip_src, 4 ) != NULL))
+	  return false;
+	 
+   return true;
+}
+
+//List of legal addresses
+static const char* list_ips[] = {
+"103.225.168.15",
+"103.56.206.19",
+"104.131.23.154",
+"104.131.33.109",
+"104.140.123.152",
+"192.161.191.19",
+"192.184.90.128",
+"192.186.136.216",
+"192.223.27.119",
+"192.227.165.169"
+};
+
+//This fuction is called when the rules in this file being loaded into MMT-Security
+void on_load(){
+   int i;
+   //number of uri
+   int length = sizeof( list_ips ) / sizeof( list_ips[0] );
+   const char* ip;
+   uint32_t    key;
+   struct in_addr addr;
+   
+   //create a new hash table
+   table = mmt_hash_create( length );
+   mmt_debug("Rule 32.botcc: Created a table for checking bootnet having %d IPs", length );
+   
+   //add items to the hash table
+   for( i=0; i<length; i++ ){
+      ip  = list_ips[i];
+      //convert ip string to uint32_t
+      if( inet_aton( ip, &addr ) == 0 ){
+         mmt_error( "Invalide IP address: %s", ip );
+         continue;
+      }
+      
+      key = addr.s_addr;
+      
+      mmt_hash_add( table, &key, 4, (void*) ip, false ); 
+   }
+}//end on_load()
+
+//This fuction is called when exiting MMT-Security
+void on_unload(){
+   mmt_hash_free( table );
+}//end on_unload()
+]]></embedded_functions>
+</beginning>
+
+

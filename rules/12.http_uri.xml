@@ -59,6 +59,6 @@ static inline int em_check_URI(const char *x){
            boolean_expression="((http.method == http.method)&amp;&amp;(#em_check_URI(http.uri) == 1))"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP packet"
-           boolean_expression="(1)"/>
+           boolean_expression="(ip.src != ip.dst)"/>
 </property>
 </beginning>

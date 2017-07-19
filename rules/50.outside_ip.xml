@@ -9,31 +9,16 @@
            boolean_expression="(#em_check_outsideIP(ip.src, ip.dst) == true)"/>
     <event value="COMPUTE" event_id="2" 
            description="IP packet"
-           boolean_expression="(ip.src != ip.dst)"/>
+           boolean_expression="(1)"/>
 </property>
 <embedded_functions><![CDATA[
 #include <arpa/inet.h>
 //hash table
 static mmt_hash_t *table = NULL;
 
-static inline int em_check_outsideIP( const char *ip_src, const char *ip_dst ){
-	//struct in_addr addr;
-	//uint32_t ip = *(uint32_t *) ip_dst;
-	//addr.s_addr = ip;
-	//mmt_debug("Checking IP %"PRIu32" - %s", ip, inet_ntoa( addr ) );
-	
-	//Legal addresses with netmask 192.168.0.255/24
-	
-	//A range of legal addresses 192.168.1.10->192.168.1.100
-	
-	if( (mmt_hash_search( table, ip_dst, 4 ) != NULL) && (mmt_hash_search( table, ip_src, 4 ) != NULL))
-	  return false;
-	 
-   return true;
-}
-
 //List of legal addresses
 static const char* list_ips[] = {
+//"10.0.2.15",
 "103.225.168.15",
 "103.56.206.19",
 "104.131.23.154",
@@ -46,6 +31,72 @@ static const char* list_ips[] = {
 "192.227.165.169"
 };
 
+//A range of legal addresses 192.168.1.10->192.168.1.100
+//const char* ip_start = "192.168.1.10";
+//const char* ip_stop = "192.168.1.100";
+const char* ip_start = "10.0.2.20";
+const char* ip_stop = "10.0.2.100";
+		
+//Legal addresses with netmask 192.168.0.255/24
+	const char* ip_legal = "192.168.0.255";
+	const char* netmask = "255.255.255.0";
+	
+static inline int em_check_outsideIP( const char *ip_src, const char *ip_dst ){
+	struct in_addr addr_src, addr_dst, addr_mask, addr_legal;
+	uint32_t ipsrc = *(uint32_t *) ip_src;
+	addr_src.s_addr = ipsrc;
+	uint32_t ipdst = *(uint32_t *) ip_dst;
+	addr_dst.s_addr = ipdst;
+	//mmt_debug("Checking IP src %"PRIu32" - %s\n", ipsrc, inet_ntoa( addr_src ) );
+	//mmt_debug("Checking IP dst %"PRIu32" - %s\n", ipdst, inet_ntoa( addr_dst ) );
+	
+	if( inet_aton( ip_legal, &addr_legal ) == 0 ){
+         mmt_error( "Invalid IP address1: %s", ip_legal );
+         }
+    if( inet_aton( netmask, &addr_mask ) == 0 ){
+         mmt_error( "Invalid IP address4: %s", netmask);
+         }
+         
+    //This function is for converting a string of IP add to an integer
+	uint32_t convertIP2Integer(const char * ip){
+	char *token = NULL;
+	uint32_t ip_i=0;
+	char ipAddr[16];
+	strcpy(ipAddr,ip);
+	//printf("IP add: %s\n", ipAddr);
+	token = strtok(ipAddr, ".");
+	int i = 0;
+	while ((token != NULL) && (i<4)) {
+    	       //printf("Token:%s\n", token);
+        	   	if(i==0) ip_i += 16777216U*atoi(token);
+           		if(i==1) ip_i += 65536U*atoi(token);
+           		if(i==2) ip_i += 256U*atoi(token);
+           		if(i==3) ip_i += 1U*atoi(token);
+           		i += 1;
+           		token = strtok(NULL, ".");
+           		}
+	return ip_i;
+	}
+   
+   //fix ip_start_i and ip_stop_i
+    uint32_t ip_start_i = convertIP2Integer(ip_start);
+    uint32_t ip_stop_i = convertIP2Integer(ip_stop);  
+    //printf("IP start: %"PRIu32". IP stop: %"PRIu32". IP to test: %"PRIu32", %"PRIu32" \n", ip_start_i, ip_stop_i, convertIP2Integer(inet_ntoa( addr_src )), convertIP2Integer(inet_ntoa( addr_dst )));
+   
+	if ((!((addr_legal.s_addr & addr_mask.s_addr) ^ (ipsrc & addr_mask.s_addr))) || (mmt_hash_search( table, ip_src, 4 ) != NULL) || ((convertIP2Integer(inet_ntoa( addr_src )) > ip_start_i) && (convertIP2Integer(inet_ntoa( addr_src )) < ip_stop_i)))
+		{
+		//mmt_debug("IP src OK: %s. Test IP dst: %s\n", inet_ntoa( addr_src ), inet_ntoa( addr_dst ));
+		if((!((addr_legal.s_addr & addr_mask.s_addr) ^ (ipdst & addr_mask.s_addr))) || (mmt_hash_search( table, ip_dst, 4 ) != NULL) || ((convertIP2Integer(inet_ntoa( addr_dst )) > ip_start_i) && (convertIP2Integer(inet_ntoa( addr_dst )) < ip_stop_i)))
+			{
+			//mmt_debug("IP dst OK: %s\n", inet_ntoa( addr_dst ));
+	  		return false;
+	  		}
+	 	}
+	
+   return true;
+}
+
+
 //This fuction is called when the rules in this file being loaded into MMT-Security
 void on_load(){
    int i;
@@ -53,24 +104,24 @@ void on_load(){
    int length = sizeof( list_ips ) / sizeof( list_ips[0] );
    const char* ip;
    uint32_t    key;
-   struct in_addr addr;
+   struct in_addr addr, addr_start, addr_stop;
    
    //create a new hash table
    table = mmt_hash_create( length );
-   mmt_debug("Rule 32.botcc: Created a table for checking bootnet having %d IPs", length );
    
    //add items to the hash table
    for( i=0; i<length; i++ ){
       ip  = list_ips[i];
       //convert ip string to uint32_t
       if( inet_aton( ip, &addr ) == 0 ){
-         mmt_error( "Invalide IP address: %s", ip );
+         mmt_error( "Invalid IP address: %s", ip );
          continue;
       }
       
       key = addr.s_addr;
       
       mmt_hash_add( table, &key, 4, (void*) ip, false ); 
+    
    }
 }//end on_load()
 

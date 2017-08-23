@@ -790,7 +790,7 @@ class Rule:
 		scrollbar.grid(row=0, column=1, sticky='nsw', rowspan=5)
 
 		Tkinter.Label(expression_window, text='Attribute:').grid(row=3, column=2, padx=2, pady=2, sticky='w')
-		attr_menu = Tkinter.OptionMenu(expression_window, expression.attribute, '')
+		attr_menu = ttk.Combobox(expression_window, textvariable=expression.attribute)
 		attr_menu.config(width=8)
 		attr_menu.grid(row=3, column=3, padx=2, pady=2, sticky='w')
 
@@ -829,7 +829,7 @@ class Rule:
 		Tkinter.Label(expression_window, text='Value Type:').grid(row=3, column=8, padx=2, pady=2)
 		value_type = Tkinter.StringVar()
 		attr_value_type = Tkinter.OptionMenu(expression_window, value_type, *VALUE_TYPES, command=lambda _: self.init_value_type(value_type.get(), attr_value_text, search_pointer_button))
-		attr_value_type.config(width=4)
+		attr_value_type.config(width=10)
 		attr_value_type.grid(row=3, column=9, padx=2, pady=2, sticky='w')
 
 		Tkinter.Label(expression_window, text='        ').grid(row=3, column=10, padx=2, pady=2)
@@ -883,7 +883,7 @@ class Rule:
 
 		protocol_list_box = Tkinter.Listbox(pointer_window, yscrollcommand=scrollbar.set, selectmode='single', height=10)
 		protocol_list_box.grid(row=0, column=0, rowspan=5)
-		protocol_list_box.bind('<<ListboxSelect>>', lambda _: self.choose_protocol_1(protocol_list_box, 
+		protocol_list_box.bind('<<ListboxSelect>>', lambda _: self.choose_protocol(protocol_list_box, 
 																					protocol_entry,
 																					attr_menu,
 																					attr))
@@ -1005,18 +1005,8 @@ class Rule:
 		for i in result:
 			list_box.insert('end', i)
 
+
 	def choose_protocol(self, list_box, protocol_entry, attr_menu, attr_var):
-		chosen_protocol = list_box.get(list_box.curselection())
-		protocol_entry.delete('0', 'end')
-		protocol_entry.insert('end', chosen_protocol)
-
-		menu = attr_menu['menu']
-		menu.delete(0, 'end')
-
-		for attr in self.protos[chosen_protocol]:
-			menu.add_command(label=attr, command=lambda v=attr: attr_var.set(v))
-
-	def choose_protocol_1(self, list_box, protocol_entry, attr_menu, attr_var):
 		chosen_protocol = list_box.get(list_box.curselection())
 		protocol_entry.delete('0', 'end')
 		protocol_entry.insert('end', chosen_protocol)

@@ -400,7 +400,6 @@ const char *list_trojan_uri[] = {
 "/?action=&uid=&bit=&version=",
 ".asp?resid=&photoid=",
 "click?sid=&cid=",
-"/css/bootstrap.min.css",
 "/download/ftp/grabftp.bin",
 "/check?iid=kernel=",
 "/adm/contador.php",

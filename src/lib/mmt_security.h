@@ -42,20 +42,26 @@ int mmt_sec_init( const char *excluded_rules_id );
 
 /**
  * This function closes globally mmt-security
- * It must be called from main thread
+ * It must be called from the thread that called #mmt_sec_init
  */
 void mmt_sec_close( );
 
 
 /**
- *
- * @param thread_count
- * @param cores_mask
- * @param rule_mask
- * @param verbose
- * @param callback
- * @param user_data
- * @return
+ * This function create a new group consisting of several threads to process a set of rules.
+ * - Input
+ * 	+ threads_count: number of threads
+ * 	+ core_mask    : a string indicating logical cores to be used,
+ * 						  e.g., "1-8,11-12,19" => we use cores 1,2,..,8,11,12,19
+ *    + rule_mask    : a string indicating special rules being attributed to special threads
+ *    						e.g., "(1:10-13)(2:50)(4:1007-1010)"
+ *    						The other rules will be attributed equally to the rest of threads.
+ * 	+ callback     : a function to be called when a rules is validated
+ * 	+ user_data    : data will be passed to the #callback
+ * - Return a handler pointer
+ * - Note:
+ * 	The function callback can be called from different threads. (Thus if it accesses
+ * 	to a global variable or a static one, the access to these variables must be synchronous)
  */
 mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores_id, const char *rules_mask,
 		bool verbose, mmt_sec_callback callback, void *user_data );
@@ -72,6 +78,12 @@ void mmt_sec_process( mmt_sec_handler_t *handler, message_t *msg );
  * @return number of alerts being generated
  */
 size_t mmt_sec_unregister( mmt_sec_handler_t* );
+
+/**
+ * Add new rules to a security handler.
+ */
+size_t mmt_sec_reload( mmt_sec_handler_t *handler, size_t threads_count, const uint32_t *cores_id, const char *rules_mask );
+size_t mmt_sec_unregister_rules( mmt_sec_handler_t *handler, const char *rules_ranges );
 
 
 /**
@@ -125,6 +137,11 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 
 const char* mmt_convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule );
 
+
+#ifdef DYNAMIC_RULE
+size_t mmt_security_remove_rules( mmt_sec_handler_t *handler, size_t rules_count, const uint32_t* rules_id_set );
+size_t mmt_security_add_rules( mmt_sec_handler_t *handler, const char *rules_mask, bool update_if_existing );
+#endif
 
 /**
  * Print information of the rules existing.

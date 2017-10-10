@@ -15,7 +15,7 @@
 #define INIT_ID_VALUE 0
 static mmt_memory_t *_memory = NULL;
 
-static void _create_local_message_t(){
+static inline void _create_local_message_t(){
 	int i;
 	const proto_attribute_t **proto_atts;
 	message_t *msg;
@@ -35,6 +35,7 @@ static void _create_local_message_t(){
 	//elements
 	msg->elements_count = elements_length;
 	msg->elements       = (message_element_t *) (&msg[1]); //store elements at the same date segment with msg
+
 	//for each element
 	for( i=0; i<msg->elements_count; i++ ){
 		msg->elements[i].data     = NULL;
@@ -61,7 +62,7 @@ message_t *create_message_t(){
 	//update data pointers
 	msg->elements = (message_element_t *)( msg + 1 );
 	msg->_data    = &((uint8_t *) msg)[ sizeof( message_t ) + sizeof( message_element_t) * msg->elements_count ];
-
+	msg->hash     = 0;
 	return msg;
 }
 
@@ -121,6 +122,7 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 	message_element_t *el;
 	int index;
 
+	//check if enough room to stock data
 	if( unlikely (msg->_data_index + data_length + SIZE_OF_MMT_MEMORY_T + 1 >= msg->_data_length )){
 		mmt_warn( "Report %"PRIu64" for %d.%d is too big (req. %zu, avail. %d bytes), must increase \"%s\"",
 				msg->counter,
@@ -170,8 +172,10 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 	return MSG_CONTINUE;
 }
 
-__attribute__((destructor)) void _destructor_message_t () {
-	if( _memory ){
+
+
+__attribute__((destructor)) void reset_message_t () {
+	if( _memory != NULL ){
 		mmt_mem_free( _memory->data );
 		_memory = NULL;
 	}

@@ -79,6 +79,10 @@ test.%: $(MMT_DPI_HEADER) $(LIB_OBJS) test/%.o
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $@ $(CLDFLAGS)  $^ $(LIBS)
 
+perf.%: $(MMT_DPI_HEADER) $(LIB_OBJS) test/perf/%.o
+	@echo "[COMPILE] $@"
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $@ $(CLDFLAGS)  $^ $(LIBS)
+
 compile_rule: $(MMT_DPI_HEADER) $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
 	@echo "[COMPILE] $(MAIN_GEN_PLUGIN)"
 	$(QUIET) $(CC) -o $(MAIN_GEN_PLUGIN) $(CLDFLAGS) $^ $(LIBS)

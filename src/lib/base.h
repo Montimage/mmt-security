@@ -56,4 +56,8 @@
 //check bit i-th
 #define BIT_CHECK(number,i) ((number) &  (1ULL<<(i)))
 
+/**
+ * Allow adding/removing rules in runtime
+ */
+#define DYNAMIC_RULE
 #endif /* SRC_LIB_BASE_H_ */

@@ -34,6 +34,9 @@ static size_t rules_count = 0;
 
 static const proto_attribute_t **proto_atts = NULL;
 static size_t proto_atts_count = 0;
+//a hash table contains a the array #proto_atts
+//this hash table is used to quickly find an elements of the array #proto_atts
+//static mmt_hash_t *proto_atts_hash_table = NULL;
 
 static bool is_init = NO;
 
@@ -88,6 +91,21 @@ static inline void _iterate_proto_atts( void *key, void *data, void *user_data, 
 }
 
 
+//static inline void _init_proto_atts_hash_table(){
+//	proto_atts_hash_table = mmt_hash_create();
+//	int i;
+//	const proto_attribute_t *me;
+//	uint64_t key;
+//	for( i=0; i<proto_atts_count; i++ ){
+//		me  = proto_atts[ i ];
+//
+//		key = simple_hash_64(me->proto_id, me->att_id);
+//
+//		//i+1 as we want to avoid 0 => NULL
+//		mmt_hash_add(proto_atts_hash_table, &key, 8, (void *) (uint64_t) (i+1), NO);
+//	}
+//}
+
 static inline void _get_unique_proto_attts( ){
 	const rule_info_t *rule;
 	size_t i, j;
@@ -120,6 +138,8 @@ static inline void _get_unique_proto_attts( ){
 	mmt_map_iterate( map, _iterate_proto_atts, NULL );
 
 	mmt_map_free( map, NO );
+
+//	_init_proto_atts_hash_table();
 }
 
 static inline void _update_rule_hash_proto_att( ){
@@ -172,11 +192,12 @@ void mmt_sec_close(){
 	mmt_mem_free( proto_atts );
 	proto_atts = NULL;
 	proto_atts_count = 0;
+
+//	mmt_hash_free( proto_atts_hash_table );
 }
 
 /**
  *
- * @param dpi_handler
  * @param threads_count: if 0, security will use the lcore of caller
  * @param cores_id
  * @param rules_mask
@@ -223,6 +244,22 @@ mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores
 }
 
 void mmt_sec_process( mmt_sec_handler_t *handler, message_t *msg ){
+
+///TODO: remove this block
+	mmt_single_sec_handler_t *sing_handler;
+	uint32_t arr[1] = { 100 };
+	if( handler->threads_count == 0 ){
+		switch( msg->counter  % 1000){
+		case 10:
+			printf("removed %zu rules\n", mmt_security_remove_rules(handler, 1, arr ));
+			break;
+		case 599:
+			printf("added %zu rules\n", mmt_security_add_rules(handler, NULL, YES));
+			break;
+		}
+	}
+//END
+
 	handler->process( handler->sec_handler, msg );
 }
 
@@ -590,3 +627,47 @@ uint16_t mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id ){
 	mmt_halt( "Attribute %d.%d has not been registered in MMT-Security", proto_id, att_id );
 	return 0;
 }
+//
+//// it's not necessary to use hash if #proto_atts_count < 50
+//// This is worse than the function above for the current rules set.
+//// Tested on 10 Oct 2017.
+//uint16_t _mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id ){
+//	uint64_t i;
+//	uint64_t key = simple_hash_64(proto_id, att_id );
+//
+//	i = (uint64_t) mmt_hash_search(proto_atts_hash_table, &key, 8 );
+//
+//	//i=0 ==> not found
+//	if( likely( i>0 ))
+//		return (i-1);
+//
+//	mmt_halt( "Attribute %d.%d has not been registered in MMT-Security", proto_id, att_id );
+//	return 0;
+//}
+
+
+
+#ifdef DYNAMIC_RULE
+size_t mmt_security_remove_rules( mmt_sec_handler_t *handler, size_t rules_count, const uint32_t* rules_id_set ){
+	if( handler->threads_count == 0 ){
+		return mmt_single_sec_remove_rules(handler->sec_handler, rules_count, rules_id_set);
+	}
+
+	return 0;
+}
+
+size_t mmt_security_add_rules( mmt_sec_handler_t *handler, const char *rules_mask, bool update_if_existing ){
+	const rule_info_t **new_rules_arr;
+	size_t new_rules_count = load_mmt_sec_rules( & new_rules_arr );
+	size_t add_rules_count = 0;
+
+	if( handler->threads_count == 0 ){
+		add_rules_count = mmt_single_sec_add_rules(handler->sec_handler, new_rules_count, new_rules_arr, update_if_existing);
+	}
+
+	mmt_mem_free( rules );
+	rules = new_rules_arr;
+
+	return add_rules_count;
+}
+#endif

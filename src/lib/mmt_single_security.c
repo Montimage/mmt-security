@@ -55,7 +55,7 @@ struct mmt_single_sec_handler_struct{
 /**
  * Public API
  */
-mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t **rules_array, size_t rules_count, bool verbose,
+mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t *const*rules_array, size_t rules_count, bool verbose,
 		mmt_sec_callback callback, void *user_data){
 	int i, j, index;
 	const rule_engine_t *engine;
@@ -197,7 +197,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 }
 
 
-#ifdef DYNAMIC_RULE
+#ifdef ADD_OR_RM_RULES_RUNTIME
 static inline void _swap_rule( mmt_single_sec_handler_t *handler, int i, int j ){
 	const rule_info_t *rule;
 	rule_engine_t *engine;
@@ -250,7 +250,7 @@ size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler, size_t ru
 		j = index_of( rule->id, rules_id_set, rules_count );
 
 		//NOT FOUND
-		if( j == 0 )
+		if( j == rules_count )
 			continue;
 
 		//move the rule to be remove to the end
@@ -276,7 +276,8 @@ size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler, size_t ru
 }
 
 //PUBLIC_API
-size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_rules_count, const rule_info_t ** new_rules_arr, bool update_if_existing ){
+size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_rules_count,
+		const rule_info_t *const* new_rules_arr, bool update_if_existing ){
 	bool *checked_rules = mmt_mem_alloc( sizeof( bool ) * new_rules_count );
 	size_t i, j, k;
 	size_t add_rules_count = 0, replace_rules_count = 0;

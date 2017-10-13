@@ -36,6 +36,7 @@
 
 //macro
 #define __check_null( x, y ) while( unlikely( x == NULL )) return y
+#define __check_bool( x, y ) while( unlikely( x )) return y
 
 //branch prediction
 #ifndef likely
@@ -59,5 +60,22 @@
 /**
  * Allow adding/removing rules in runtime
  */
-#define DYNAMIC_RULE
+#define ADD_OR_RM_RULES_RUNTIME
+
+
+/**
+ * Use lock when we need add/remove rules in runtime
+ */
+#ifdef ADD_OR_RM_RULES_RUNTIME
+	#define BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( spin_lock ) if( pthread_spin_lock( spin_lock ) == 0 ){
+	#define UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( spinlock ) pthread_spin_unlock( spinlock );
+	#define END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME }
+#else
+	#define BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( x )
+	#define UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( x )
+	#define END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
+#endif
+
+
+
 #endif /* SRC_LIB_BASE_H_ */

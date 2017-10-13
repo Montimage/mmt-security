@@ -14,7 +14,7 @@
 #include <dlfcn.h>
 
 int main( int argc, char** argv ){
-	const rule_info_t **rules_arr;
+	const rule_info_t *const*rules_arr;
 	size_t i, j, n;
 	struct tm tm;
 
@@ -56,8 +56,5 @@ int main( int argc, char** argv ){
 				rules_arr[i]->version->dpi );
 	}
 	printf("\n");
-
-	//need to free the array
-	mmt_mem_free( rules_arr );
 	return 0;
 }

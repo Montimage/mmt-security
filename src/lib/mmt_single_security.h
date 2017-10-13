@@ -34,7 +34,7 @@ typedef struct mmt_single_sec_handler_struct mmt_single_sec_handler_t;
  * 	+ user_data  : data will be passed to the #callback
  */
 mmt_single_sec_handler_t *mmt_single_sec_register(
-		const rule_info_t **rules_arr,
+		rule_info_t const*const*rules_arr,
 		size_t rules_count,
 		bool verbose,
 		mmt_sec_callback callback,
@@ -55,7 +55,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *messa
  */
 size_t mmt_single_sec_get_processed_messages( const mmt_single_sec_handler_t *handler );
 
-#ifdef DYNAMIC_RULE
+#ifdef ADD_OR_RM_RULES_RUNTIME
 /**
  * Disable a set of rules that will be no more verified
  *
@@ -71,7 +71,7 @@ size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler, size_t ru
  * @param update_if_existing if a rule to be added has been handled, replace the existing one by the new one
  * @return number of rules being added
  */
-size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t rules_count, const rule_info_t ** rules_arr, bool update_if_existing );
+size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t rules_count, const rule_info_t *const* rules_arr, bool update_if_existing );
 #endif
 
 #endif /* SRC_LIB_MMT_SINGLE_SECURITY_H_ */

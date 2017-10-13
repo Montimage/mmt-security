@@ -138,8 +138,25 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 const char* mmt_convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule );
 
 
-#ifdef DYNAMIC_RULE
+#ifdef ADD_OR_RM_RULES_RUNTIME
+
+/**
+ * Remove a set of rules from processing
+ * @param handler
+ * @param rules_count
+ * @param rules_id_set
+ * @return number of rules being removed
+ */
 size_t mmt_security_remove_rules( mmt_sec_handler_t *handler, size_t rules_count, const uint32_t* rules_id_set );
+
+
+/**
+ * Add a set of rules to process
+ * @param handler
+ * @param rules_mask
+ * @param update_if_existing
+ * @return
+ */
 size_t mmt_security_add_rules( mmt_sec_handler_t *handler, const char *rules_mask, bool update_if_existing );
 #endif
 

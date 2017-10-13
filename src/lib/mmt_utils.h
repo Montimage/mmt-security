@@ -147,8 +147,8 @@ size_t index_of( uint32_t val, const uint32_t *array, size_t array_size){
 	size_t i;
 	for( i=0; i<array_size; i++ )
 		if( array[i] == val )
-			return i+1;
-	return 0;
+			break;
+	return i;
 }
 
 /**
@@ -185,7 +185,7 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 		}
 
 		num = atoi( cur );
-		if( index_of( num, array, size ) == 0 )
+		if( index_of( num, array, size ) == size )
 			array[ size++ ] = num;
 
 		while( isdigit( *cur ) ) cur ++;

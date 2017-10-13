@@ -29,6 +29,21 @@
 
 #include "../dpi/mmt_dpi.h"
 
+#ifdef ADD_OR_RM_RULES_RUNTIME
+#include <pthread.h>
+
+enum {
+	RULE_TO_BE_REMOVED,
+	RULE_TO_BE_ADDED,
+	RULE_TO_BE_RETAINED
+};
+
+/**
+ * This spinlock is used when we need to add/remove rules at runtime
+ */
+static pthread_spinlock_t spin_lock;
+#endif
+
 static const rule_info_t **rules = NULL;
 static size_t rules_count = 0;
 
@@ -165,9 +180,23 @@ static inline void _update_rule_hash_proto_att( ){
  * @return
  */
 int mmt_sec_init( const char* excluded_rules_id ){
+#ifdef ADD_OR_RM_RULES_RUNTIME
+	pthread_spin_init( &spin_lock, PTHREAD_PROCESS_PRIVATE );
+#endif
+	size_t i;
+
+	//TODO: to remove
+	mmt_halt("under construction...");
+
+	rule_info_t const* const* rules_arr;
 	is_init = YES;
 	//get all available rules
-	rules_count = load_mmt_sec_rules( &rules );
+	rules_count = load_mmt_sec_rules( &rules_arr );
+	for( i=0; i<rules_count; i++ )
+		rules[i] = rules_arr[i];
+
+	//clone rules_arr to rules
+	rules = mmt_mem_alloc( sizeof( void* ) * rules_count );
 
 	//Rules to be disabled
 	_filter_rules( excluded_rules_id );
@@ -246,6 +275,7 @@ mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores
 void mmt_sec_process( mmt_sec_handler_t *handler, message_t *msg ){
 
 ///TODO: remove this block
+#ifdef ADD_OR_RM_RULES_RUNTIME
 	mmt_single_sec_handler_t *sing_handler;
 	uint32_t arr[1] = { 100 };
 	if( handler->threads_count == 0 ){
@@ -258,6 +288,7 @@ void mmt_sec_process( mmt_sec_handler_t *handler, message_t *msg ){
 			break;
 		}
 	}
+#endif
 //END
 
 	handler->process( handler->sec_handler, msg );
@@ -286,8 +317,14 @@ size_t mmt_sec_unregister( mmt_sec_handler_t* ret ){
 
 
 size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array ){
+	size_t ret = 0;
+	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	*rules_array = rules;
-	return rules_count;
+	ret          = rules_count;
+	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
+	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
+
+	return ret;
 }
 
 
@@ -613,16 +650,27 @@ void mmt_sec_print_rules_info(){
 
 
 size_t mmt_sec_get_unique_protocol_attributes( const proto_attribute_t ***proto_atts_array ){
+	size_t ret = 0;
+	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	*proto_atts_array = proto_atts;
-	return proto_atts_count;
+	ret               = proto_atts_count;
+	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
+	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
+
+	return ret;
+
 }
 
 
 uint16_t mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id ){
+	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	int i;
 	for( i=0; i<proto_atts_count; i++ )
-		if( proto_atts[ i ]->att_id  == att_id && proto_atts[ i ]->proto_id  == proto_id )
+		if( proto_atts[ i ]->att_id  == att_id && proto_atts[ i ]->proto_id  == proto_id ){
+			UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 			return i;
+		}
+	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
 
 	mmt_halt( "Attribute %d.%d has not been registered in MMT-Security", proto_id, att_id );
 	return 0;
@@ -647,26 +695,107 @@ uint16_t mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id ){
 
 
 
-#ifdef DYNAMIC_RULE
-size_t mmt_security_remove_rules( mmt_sec_handler_t *handler, size_t rules_count, const uint32_t* rules_id_set ){
-	if( handler->threads_count == 0 ){
-		return mmt_single_sec_remove_rules(handler->sec_handler, rules_count, rules_id_set);
-	}
+#ifdef ADD_OR_RM_RULES_RUNTIME
 
+//PUBLIC API
+size_t mmt_security_remove_rules( mmt_sec_handler_t *handler, size_t rules_to_rm_count, const uint32_t* rules_id_to_rm_set ){
+	size_t i, j;
+	uint32_t rule_id;
+
+	//remove some rules from #rules
+	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
+		//for each rule tobe removed
+		for( i=0; i<rules_to_rm_count; i++ ){
+			if( rules_count == 0 )
+				break;
+			rule_id = rules_id_to_rm_set[ i ];
+
+			//find a rule in #rules having the same id
+			for( j=rules_count-1; j>=0; j-- )
+				if( rule_id == rules[ j ]->id ){
+					//ignore the last rule: rules_array[rules_count--]
+					rules_count --;
+					//move the last rule to the j-th position
+					rules[j] = rules[ rules_count ];
+					break;
+				}
+		}
+	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
+	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
+
+	if( handler->threads_count == 0 ){
+		return mmt_single_sec_remove_rules(handler->sec_handler, rules_to_rm_count, rules_id_to_rm_set);
+	}
 	return 0;
 }
 
+//PUBLIC API
 size_t mmt_security_add_rules( mmt_sec_handler_t *handler, const char *rules_mask, bool update_if_existing ){
-	const rule_info_t **new_rules_arr;
+	//check parameters
+	__check_null( handler, 0 );
+	__check_null( rules_mask, 0 );
+
+	uint32_t *rules_mask_range;
+	rule_info_t const*const*new_rules_arr, *rule, **tmp_rules_arr;
+	//rules are not verified
+	size_t rules_mask_count = expand_number_range( rules_mask, &rules_mask_range );
+
+	//if no need to update the current rules
+	__check_bool( rules_mask_count == 0 && update_if_existing == NO, 0 );
+
+	//load current rules set that are existing in its specific folder
 	size_t new_rules_count = load_mmt_sec_rules( & new_rules_arr );
+	__check_bool( new_rules_count == 0, 0 );
+
 	size_t add_rules_count = 0;
+	bool *mark_rules_to_add = mmt_mem_alloc( sizeof( bool ) * new_rules_count );
+
+	size_t i, j, k;
+
+	//get set of rules to be added: a rule will be added if
+	//1. - it exists in #new_rules_arr
+	//2. - it exists in #rules_mask
+	//3. - it does not exist in #rules
+	for( i=0; i<new_rules_count; i++ ){
+		mark_rules_to_add[ i ] = NO;
+		rule = new_rules_arr[ i ];
+		//2. if exists in #rules_mask ?
+		j = index_of( rule->id, rules_mask_range, rules_mask_count );
+		if( j == rules_mask_count ) //not found
+			continue;
+		//3. if does not exist in #rules?
+		for( j=0; j<rules_count; j++ )
+			if( rule->id == rules[j]->id )
+				goto END_OF_LOOP;
+
+		//
+		mark_rules_to_add[ i ] = YES;
+		add_rules_count ++;
+
+		END_OF_LOOP:
+		continue;
+	}
+
+	//if no rule to be added and not update the current ones
+	__check_bool( add_rules_count == 0 && update_if_existing == NO, 0 );
+
+	//
+	if( add_rules_count > 0 ){
+		tmp_rules_arr = mmt_mem_alloc( sizeof( void *) * (rules_count + add_rules_count) );
+
+		BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
+
+		//mmt_mem_free( rules );
+		//rules       = new_rules_arr;
+		rules_count = new_rules_count;
+
+		UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
+		END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
+	}
 
 	if( handler->threads_count == 0 ){
 		add_rules_count = mmt_single_sec_add_rules(handler->sec_handler, new_rules_count, new_rules_arr, update_if_existing);
 	}
-
-	mmt_mem_free( rules );
-	rules = new_rules_arr;
 
 	return add_rules_count;
 }

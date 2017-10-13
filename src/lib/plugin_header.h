@@ -148,7 +148,7 @@ typedef struct rule_info_struct{
 }rule_info_t;
 
 /**
- * Get information of rules in generated library
+ * Get information of rules in a generated plugin
  * - Output
  * 	+ rules_arr
  * - Return

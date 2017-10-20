@@ -10,7 +10,6 @@
 
 #include "mmt_lib.h"
 #include "plugin_header.h"
-#include "mmt_array_t.h"
 #include "verdict_printer.h"
 #include "version.h"
 #include "config.h"
@@ -80,17 +79,10 @@ void mmt_sec_process( mmt_sec_handler_t *handler, message_t *msg );
 size_t mmt_sec_unregister( mmt_sec_handler_t* );
 
 /**
- * Add new rules to a security handler.
- */
-size_t mmt_sec_reload( mmt_sec_handler_t *handler, size_t threads_count, const uint32_t *cores_id, const char *rules_mask );
-size_t mmt_sec_unregister_rules( mmt_sec_handler_t *handler, const char *rules_ranges );
-
-
-/**
  * init mmt-security engine:
  * - load plugins (encoded rules)
  */
-size_t mmt_sec_get_rules_info( const rule_info_t ***rules_array );
+size_t mmt_sec_get_rules_info( rule_info_t const*const**rules_array );
 
 
 /**
@@ -138,30 +130,30 @@ void mmt_sec_print_verdict( const rule_info_t *rule,		//id of rule
 const char* mmt_convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule );
 
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
-
-/**
- * Remove a set of rules from processing
- * @param handler
- * @param rules_count
- * @param rules_id_set
- * @return number of rules being removed
- */
-size_t mmt_security_remove_rules( mmt_sec_handler_t *handler, size_t rules_count, const uint32_t* rules_id_set );
-
-
-/**
- * Add a set of rules to process
- * @param handler
- * @param rules_mask
- * @param update_if_existing
- * @return
- */
-size_t mmt_security_add_rules( mmt_sec_handler_t *handler, const char *rules_mask, bool update_if_existing );
-#endif
-
 /**
  * Print information of the rules existing.
  */
 void mmt_sec_print_rules_info();
+
+
+#ifdef ADD_OR_RM_RULES_RUNTIME
+
+/**
+ * Remove a set of rules from processing
+ * @param rules_count
+ * @param rules_id_set
+ * @return number of rules being removed
+ */
+size_t mmt_security_remove_rules( size_t rules_count, const uint32_t* rules_id_set );
+
+
+/**
+ * Add a set of rules to process
+ * @param rules_mask : a string indicating special rules being attributed to special threads
+ *    		e.g., "(1:10-13)(2:50)(4:1007-1010)"
+ * @return number of rules being added
+ */
+size_t mmt_security_add_rules( const char *rules_mask );
+#endif
+
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

@@ -61,17 +61,15 @@ size_t mmt_single_sec_get_processed_messages( const mmt_single_sec_handler_t *ha
  *
  * @return number of rules being disabled
  */
-size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler, size_t rules_count, const uint32_t* rules_id_set );
+size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler );
 
 /**
  * Add a set of rules to verify
  * @param handler
- * @param rules_count
- * @param rules_arr the new rules set to be applied
- * @param update_if_existing if a rule to be added has been handled, replace the existing one by the new one
  * @return number of rules being added
  */
-size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t rules_count, const rule_info_t *const* rules_arr, bool update_if_existing );
+size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_rules_count,
+		const uint32_t *new_rules_id_arr );
 #endif
 
 #endif /* SRC_LIB_MMT_SINGLE_SECURITY_H_ */

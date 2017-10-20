@@ -155,7 +155,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 	uint32_t *rule_range, rule_id;
 	uint32_t thread_id;
 	size_t size;
-	const rule_info_t **rules_array;
+	rule_info_t const*const*rules_array;
 
 	size_t rules_count = mmt_sec_get_rules_info( &rules_array );
 
@@ -179,7 +179,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		handler->mmt_single_sec_handlers[ i ] = NULL;
 	}
 
-	rule_ptr = rules_array;
+	rule_ptr = mmt_mem_dup( rules_array, rules_count * sizeof( void*));
 	if( rule_mask != NULL ){
 		for( i=0; i<handler->threads_count; i++ ){
 			rules_count_per_thread = get_special_rules_for_thread( i+1, rule_mask, &rule_range );
@@ -261,6 +261,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		mmt_assert( ret == 0, "Cannot create thread %d", (i+1) );
 	}
 
+	mmt_mem_free( rule_ptr );
 	return handler;
 }
 
@@ -316,3 +317,32 @@ void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 	}
 }
 
+
+#ifdef ADD_OR_RM_RULES_RUNTIME
+
+void mmt_smp_sec_add_rules( mmt_smp_sec_handler_t *handler, const char*rules_mask ){
+	size_t i, add_rules_count;
+	uint32_t *new_rules_arr;
+
+	for( i=0; i<handler->threads_count; i++ ){
+		//get all rules if for this thread
+		add_rules_count = get_special_rules_for_thread( i+1, rules_mask, &new_rules_arr);
+		if( add_rules_count == 0 ){
+			mmt_mem_free( new_rules_arr );
+			continue;
+		}
+
+		mmt_single_sec_add_rules(handler->mmt_single_sec_handlers[ i ], add_rules_count, new_rules_arr);
+
+		//#get_special_rules_for_thread create a new memory => we need to free it
+		mmt_mem_free( new_rules_arr );
+	}
+}
+void mmt_smp_sec_remove_rules( mmt_smp_sec_handler_t *handler ){
+	int i;
+	for( i=0; i<handler->threads_count; i++ ){
+		mmt_single_sec_remove_rules( handler->mmt_single_sec_handlers[i] );
+	}
+}
+
+#endif

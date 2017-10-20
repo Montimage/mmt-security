@@ -45,13 +45,12 @@ static inline bool em_check( double port ){
 ]]></embedded_functions>
 ```
 
-In side this tag, one can implement the 2 following functions:
+In side this tag, one can also implement 2 other functions as the followings:
 
 1. `void on_load(){ ... }` being called when the rules inside the xml file being loaded into MMT-Security
 
 2. `void on_unload(){ ... }` being called when exiting MMT-Security
 
-MMT-Security engine will call these functions only if they exist.
 
 ## 2.3 Pre-installed embedded functions
 
@@ -65,7 +64,7 @@ In boolean expressions of rules, one can use one or many embedded functions
 	
 	`((ip.src != ip.dst) && (#em_check_URI(http.uri) == 1))`
 	
-	This event is verified only if `ip.src` and `ip.dst` and `http.uri` are not null, hence only HTTP packets are verified (it does not verify any IP packets).
+	This event is verified only if `ip.src` and `ip.dst` and `http.uri` are not null, hence only HTTP packets are verified (it does not verify every IP packets).
 	
 	However, if one use the following expression, that is totally having the same meaning with the previous one:
 	
@@ -190,7 +189,7 @@ MMT-Security provides a compiler to do the such of task. Its source code is in [
        
 Please note that, the compiled rules must be put in the directory `./rules` or `/opt/mmt/security/rules/`
 
-## 4.2 Obtain information on the compiled rules 
+## 4.2 Obtain information inside compiled rules 
 
 To get some basic information about a compiled rule (such as, ID, description) MMT provides a tool:
 [`src/main_plugin_info.c`](../src/main_plugin_info.c)
@@ -250,7 +249,7 @@ Found 1 rule.
 
  - reduce `delay_max` of a rule to a suitable value. 
 
- 	When having a higher value of `delay_max` MMT-Security creates more rule instances to correlate different events of different packets. When `delay_max` is zero, the rule is call simple rule, MMT-Security verifies the rule and gives verdict immediately without creating any rule instances. A simple rule is verified much faster than a complex one that are the rules having non-zero `delay_max`.
+ 	When having a higher value of `delay_max` MMT-Security creates more rule instances to correlate different events of different packets. When `delay_max` is zero, the rule is call simple rule, MMT-Security verifies the rule and gives verdict immediately without creating any rule instances. A simple rule is verified much faster than a complex one that has non-zero `delay_max`.
  	
  	At 10Gbps, MMT-Security can verify 12400 simple rules or 600 complex rules.
  

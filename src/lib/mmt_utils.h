@@ -243,9 +243,9 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
  * ==> user must free it using mmt_mem_free after using
  *
  * @param thread_id
- * @param rule_mask
+ * @param rule_mask "(0:1-4,5,9-10)(2:100-300)"
  * @param rule_range
- * @return
+ * @return number of rules
  */
 static inline const size_t get_special_rules_for_thread( uint32_t thread_id, const char *rule_mask, uint32_t **rule_range ){
 	uint32_t id = 0;
@@ -301,6 +301,90 @@ static inline const size_t get_special_rules_for_thread( uint32_t thread_id, con
 		}
 	}
 	return range_count;
+}
+
+
+
+/**
+ * Get a list of rules id existing in a rule mask
+ * Note: this function create a new memory segment to contain #rules_set
+ * ==> user must free it using mmt_mem_free after using
+ *
+ * @param rule_mask "(0:1-4,5,9-10)(2:100-300)"
+ * @param rules_set
+ * @return number of rules
+ */
+static inline const size_t get_rules_id_list_in_mask( const char *rule_mask, uint32_t **rules_set ){
+	size_t size = 0, rules_count = 0, i, j;
+	const char *c = rule_mask, *ptr;
+	char *string;
+	//TODO this can handle maximally only 100K rules in rules-mask
+	uint32_t array[ 100000 ];
+
+	size_t range_count;
+	uint32_t *rule_range;
+
+	while( *c != '\0'){
+		mmt_assert( *c == '(', "Rule mask is not correct: %s", c );
+		//jump over (
+		c ++;
+		//thread id
+		mmt_assert( isdigit( *c ), "Rule mask is not correct: %s", c );
+
+		//jump over thread id
+		while( isdigit( *c ) ) c ++;
+		//jump over separator between thread_id and rule_range
+		mmt_assert( *c == ':', "Rule mask is not correct: %s", c );
+		c++;
+		//rule range
+		ptr  = c;
+		size = 0;
+		while( *c != ')'){
+			switch( *c ){
+			case ',':
+			case '-':
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				break;
+			default:
+				mmt_halt("Rule mask is not correct: %s", c );
+			}
+			size ++;
+			c++;
+		}
+
+		//jump over )
+		c ++;
+
+		string = mmt_mem_dup( ptr, size );
+		range_count = expand_number_range( string, &rule_range );
+		//add to array if does not exist
+		for( i=0; i<range_count; i++ ){
+			for( j=0; j<rules_count; j++ )
+				if( array[j] == rule_range[i] )
+					break;
+			//does not exist
+			if( j == rules_count ){
+				array[ rules_count ] = rule_range[ i ];
+				rules_count ++;
+			}
+		}
+
+		mmt_mem_free( rule_range );
+		mmt_mem_free( string );
+	}
+
+	*rules_set = mmt_mem_dup( array, size * sizeof( uint32_t) );
+
+	return rules_count;
 }
 
 #endif /* SRC_LIB_MMT_UTILS_H_ */

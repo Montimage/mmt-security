@@ -80,8 +80,7 @@ void protocols_iterator(uint32_t proto_id, void * args) {
 
 	//dummy protocol
 	while( *proto_count < proto_id ){
-		printf("//dummy");
-		printf("%c\n{.id = %i, .name = NULL, .attributes = NULL, .attributes_count = 0}",
+		printf("%c\n{.id = %i, .name = NULL, .attributes = NULL, .attributes_count = 0}/*dummy*/",
 				(*proto_count == 0? ' ': ','), *proto_count );
 		(*proto_count) ++;
 	}
@@ -147,8 +146,10 @@ int main(int argc, char** argv) {
 	printf( "\n static inline uint32_t get_protocol_id_by_name( const char *name ){");
 	printf( "\n	size_t i;");
 	printf( "\n	for( i=0; i<DPI_PROTO_SIZE; i++ )");
-	printf( "\n	if( strcmp( name, DPI_PROTO[i].name) == 0 )");
-	printf( "\n	return DPI_PROTO[i].id;");
+	printf( "\n	if( DPI_PROTO[i].name == NULL )");
+	printf( "\n	  continue;");
+	printf( "\n	else if( strcmp( name, DPI_PROTO[i].name) == 0 )");
+	printf( "\n	  return DPI_PROTO[i].id;");
 	printf( "\n	return -1;");
 	printf( "\n}");
 

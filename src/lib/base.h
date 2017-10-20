@@ -16,6 +16,16 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+
+
+/**
+ * Allow adding/removing rules at runtime
+ * Remove this definition to prevent adding/removing rules at runtime
+ */
+#define ADD_OR_RM_RULES_RUNTIME
+
+
+
 #define UNKNOWN -1
 #define NO false
 #define YES true
@@ -36,6 +46,7 @@
 
 //macro
 #define __check_null( x, y ) while( unlikely( x == NULL )) return y
+#define __check_zero( x, y ) while( unlikely( x == 0 )) return y
 #define __check_bool( x, y ) while( unlikely( x )) return y
 
 //branch prediction
@@ -56,11 +67,6 @@
 #define BIT_FLIP(number,i)  ((number) ^= (1ULL<<(i)))
 //check bit i-th
 #define BIT_CHECK(number,i) ((number) &  (1ULL<<(i)))
-
-/**
- * Allow adding/removing rules in runtime
- */
-#define ADD_OR_RM_RULES_RUNTIME
 
 
 /**

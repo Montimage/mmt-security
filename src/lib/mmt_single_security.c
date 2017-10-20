@@ -24,7 +24,7 @@
 #include "../dpi/types_defs.h"
 #include "../dpi/mmt_dpi.h"
 #include "mmt_single_security.h"
-
+#include "mmt_security.h"
 
 struct mmt_single_sec_handler_struct{
 	size_t rules_count;
@@ -240,18 +240,28 @@ static inline void _free_rule( mmt_single_sec_handler_t *handler, size_t i ){
 }
 
 //PUBLIC_API
-size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler, size_t rules_count, const uint32_t* rules_id_set ){
+
+size_t _mmt_sec_get_rules_info_without_lock( rule_info_t const*const**rules_array );
+size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler){
 	size_t i, j;
 	size_t removed_rules_count = 0;
 	const rule_info_t *rule;
+	size_t rules_count;
+	rule_info_t const*const* rules;
+
+	rules_count = _mmt_sec_get_rules_info_without_lock( &rules );
 
 	for( i=0; i<handler->rules_count; i++ ){
 		rule = handler->rules_array[i];
-		j = index_of( rule->id, rules_id_set, rules_count );
+		for( j=0; j<rules_count; j++ )
+			if( rule->id == rules[j]->id )
+				goto FOUND_A_RULE_TO_REMOVE;
 
-		//NOT FOUND
+		//NOT FOUND => retain #rule
 		if( j == rules_count )
 			continue;
+
+		FOUND_A_RULE_TO_REMOVE:
 
 		//move the rule to be remove to the end
 		_swap_rule( handler, i, handler->rules_count - 1 );
@@ -276,116 +286,111 @@ size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler, size_t ru
 }
 
 //PUBLIC_API
-size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_rules_count,
-		const rule_info_t *const* new_rules_arr, bool update_if_existing ){
-	bool *checked_rules = mmt_mem_alloc( sizeof( bool ) * new_rules_count );
+size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_rules_id_arr_size,
+		const uint32_t *new_rules_id_arr ){
+
+	//check parameter
+	__check_null( handler, 0 );
+	__check_zero( new_rules_id_arr_size, 0 );
+
 	size_t i, j, k;
-	size_t add_rules_count = 0, replace_rules_count = 0;
 	size_t max_instances_count = mmt_sec_get_config( MMT_SEC__CONFIG__SECURITY__MAX_INSTANCES );
 
-	const rule_info_t **old_rules_array;
+	const rule_info_t **old_rules_array, *rule;
 	rule_engine_t **old_engines;
 	size_t *old_alerts_count;
 	uint64_t *old_rules_hash;
 
-	//no new rules being checked
-	for( i=0; i<new_rules_count; i++ )
-		checked_rules[ i ] = NO;
+	//global rules set
+	rule_info_t const*const*global_rules_set;
+	size_t global_total_rules_count = _mmt_sec_get_rules_info_without_lock( &global_rules_set );
 
-	//when replace
-	if( update_if_existing ){
-		for( i=0; i<handler->rules_count; i++ )
-			for( j=0; j<new_rules_count; j++ ){
-				if( handler->rules_array[i]->id == new_rules_arr[j]->id ){
-					//update rule info
-					handler->rules_array[i] = new_rules_arr[j];
+	//set of rules to be added: maximally all of rules will be added
+	const rule_info_t **rules_set_to_be_add;
+	size_t add_rules_count = 0;
+	rules_set_to_be_add =  mmt_mem_alloc( sizeof( new_rules_id_arr_size )  * sizeof( void * ));
 
-					//free old engine
-					rule_engine_free( handler->engines[i] );
-					//update new engine
-					handler->engines[i] = rule_engine_init( handler->rules_array[i], max_instances_count);
+	//filtre out the id in #new_rules_id_arr that is not id of any rule
+	//a rule is added if
+	// (1) it exist in #global_rules_set
+	// (2) its id exists in #new_rules_id_arr
+	// (3) it is not in handler->rules_array
 
-					//update hash number of this rule
-					handler->rules_hash[i]   = 0;
-					for( k=0; k<handler->engines[i]->events_count; k++ )
-						handler->rules_hash[i] |= handler->engines[i]->events_hash[ k ];
+	for( i=0; i<global_total_rules_count; i++ ){
+		//(1)
+		rule = global_rules_set[ i ];
+		//(2)
+		if( index_of( rule->id, new_rules_id_arr, new_rules_id_arr_size) == new_rules_id_arr_size )
+			continue;
+		//(3)
+		for( j=0; j<handler->rules_count; j++ )
+			if( rule->id == handler->rules_array[j]->id )
+				break;
+		//==> exist in handler->rules_array
+		if( j < handler->rules_count )
+			continue;
 
-					//mark the new j-th rule being processed
-					checked_rules[ j ] = YES;
-
-					replace_rules_count ++;
-
-					//goto the next rule
-					break;
-				}
-			}
+		rules_set_to_be_add[ add_rules_count ] = rule;
+		add_rules_count ++;
 	}
 
-	add_rules_count = new_rules_count - replace_rules_count;
-	//There are still other new rules to be add
-	if( add_rules_count > 0 ){
-		//old_rules_array
-		old_rules_array  = handler->rules_array;
-		old_engines      = handler->engines;
-		old_alerts_count = handler->alerts_count;
-		old_rules_hash   = handler->rules_hash;
-
-		//extends the current arrays by create a new one
-		handler->rules_array  = mmt_mem_alloc( sizeof( void *)    * ( handler->rules_count + add_rules_count ));
-		handler->engines      = mmt_mem_alloc( sizeof( void *)    * ( handler->rules_count + add_rules_count ));
-		handler->alerts_count = mmt_mem_alloc( sizeof( size_t )   * ( handler->rules_count + add_rules_count ));
-		handler->rules_hash   = mmt_mem_alloc( sizeof( uint64_t ) * ( handler->rules_count + add_rules_count ));
-
-		//retake the old values
-		for( i=0; i<handler->rules_count; i++ ){
-			handler->rules_array[ i ]  = old_rules_array[ i ];
-			handler->engines[ i ]      = old_engines[ i ];
-			handler->alerts_count[ i ] = old_alerts_count[ i ];
-			handler->rules_hash[ i ]   = old_rules_hash[ i ];
-		}
-
-		//free the old memories
-		mmt_mem_free( old_rules_array  );
-		mmt_mem_free( old_engines      );
-		mmt_mem_free( old_alerts_count );
-		mmt_mem_free( old_rules_hash   );
-
-		//add the new rules
-		j = 0;
-		for( i=handler->rules_count; i< (handler->rules_count + add_rules_count); i++ ){
-
-			//find the fist rule that is not processed
-			while( checked_rules[ j ] == YES  && j < new_rules_count )
-				j ++;
-
-			//all rules being processed
-			mmt_assert( j < new_rules_count, "Impossible %zu %zu", i, j);
-
-			//mark the new j-th rule being processed
-			checked_rules[ j ] = YES;
-
-			//init variables for this rule
-			handler->rules_array[ i ]  = new_rules_arr[ j ];
-			handler->engines[ i ]      = rule_engine_init( handler->rules_array[ i ], max_instances_count );
-			handler->alerts_count[ i ] = 0;
-			handler->rules_hash[ i ]   = 0;
-			//hash number for this rule
-			for( k=0; k<handler->engines[i]->events_count; k++ )
-				handler->rules_hash[i] |= handler->engines[i]->events_hash[ k ];
-		}
-
-		//new rules size
-		handler->rules_count += add_rules_count;
+	//nothing to be added?
+	if( add_rules_count == 0 ){
+		mmt_mem_free( rules_set_to_be_add );
+		return 0;
 	}
 
-	//free temporary memory
-	mmt_mem_free( checked_rules );
+	//old_rules_array
+	old_rules_array  = handler->rules_array;
+	old_engines      = handler->engines;
+	old_alerts_count = handler->alerts_count;
+	old_rules_hash   = handler->rules_hash;
+
+	//extends the current arrays by create a new one
+	handler->rules_array  = mmt_mem_alloc( sizeof( void *)    * ( handler->rules_count + add_rules_count ));
+	handler->engines      = mmt_mem_alloc( sizeof( void *)    * ( handler->rules_count + add_rules_count ));
+	handler->alerts_count = mmt_mem_alloc( sizeof( size_t )   * ( handler->rules_count + add_rules_count ));
+	handler->rules_hash   = mmt_mem_alloc( sizeof( uint64_t ) * ( handler->rules_count + add_rules_count ));
+
+	//retake the old values
+	for( i=0; i<handler->rules_count; i++ ){
+		handler->rules_array[ i ]  = old_rules_array[ i ];
+		handler->engines[ i ]      = old_engines[ i ];
+		handler->alerts_count[ i ] = old_alerts_count[ i ];
+		handler->rules_hash[ i ]   = old_rules_hash[ i ];
+	}
+
+	//free the old memories
+	mmt_mem_free( old_rules_array  );
+	mmt_mem_free( old_engines      );
+	mmt_mem_free( old_alerts_count );
+	mmt_mem_free( old_rules_hash   );
+
+	//add the new rules
+	j = 0;
+	for( i=handler->rules_count; i< (handler->rules_count + add_rules_count); i++ ){
+
+		//init variables for this rule
+		handler->rules_array[ i ]  = rules_set_to_be_add[ j ];
+		handler->engines[ i ]      = rule_engine_init( handler->rules_array[ i ], max_instances_count );
+		handler->alerts_count[ i ] = 0;
+		handler->rules_hash[ i ]   = 0;
+		//hash number for this rule
+		for( k=0; k<handler->engines[i]->events_count; k++ )
+			handler->rules_hash[i] |= handler->engines[i]->events_hash[ k ];
+
+		j++;
+	}
+
+	//new rules size
+	handler->rules_count += add_rules_count;
 
 	//update global hash if need
 	handler->hash = 0;
 	for( i=0; i<handler->rules_count; i++ )
 		handler->hash |= handler->rules_hash[i];
 
+	mmt_mem_free( rules_set_to_be_add );
 	return add_rules_count;
 }
 #endif

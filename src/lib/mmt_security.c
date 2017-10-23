@@ -773,7 +773,7 @@ size_t mmt_security_add_rules( const char *rules_mask ){
 	//if no need to update the current rules
 	__check_zero( rules_mask_count, 0 );
 
-	//load current rules set that are existing in its specific folder
+	//load current rules set that are existing in its rules folder (either /opt/mmt/security/rules or ./rules)
 	size_t new_rules_count = load_mmt_sec_rules( & new_rules_arr );
 	__check_zero( new_rules_count, 0 );
 
@@ -795,14 +795,14 @@ size_t mmt_security_add_rules( const char *rules_mask ){
 		//3. if does not exist in #rules?
 		for( j=0; j<rules_count; j++ )
 			if( rule->id == rules[j]->id )
-				goto END_OF_LOOP;
+				break;
+		//=> exist
+		if( j < rules_count )
+			continue;
 
 		//#rule
 		rules_to_be_added[ add_rules_count ] = rule;
 		add_rules_count ++;
-
-		END_OF_LOOP:
-		continue;
 	}
 
 	//if no rule to be added and not update the current ones

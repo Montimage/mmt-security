@@ -145,7 +145,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		mmt_sec_callback callback, void *user_data){
 	int i, j, k, rules_count_per_thread;
 
-	const rule_info_t **rule_ptr, *tmp;
+	const rule_info_t **rule_ptr, *tmp, **all_rules;
 	int ret;
 	struct _thread_arg *thread_arg;
 	long cpus_count = get_number_of_online_processors() - 1;
@@ -179,7 +179,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		handler->mmt_single_sec_handlers[ i ] = NULL;
 	}
 
-	rule_ptr = mmt_mem_dup( rules_array, rules_count * sizeof( void*));
+	all_rules = rule_ptr = mmt_mem_dup( rules_array, rules_count * sizeof( void*));
 	if( rule_mask != NULL ){
 		for( i=0; i<handler->threads_count; i++ ){
 			rules_count_per_thread = get_special_rules_for_thread( i+1, rule_mask, &rule_range );
@@ -261,7 +261,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		mmt_assert( ret == 0, "Cannot create thread %d", (i+1) );
 	}
 
-	mmt_mem_free( rule_ptr );
+	mmt_mem_force_free( all_rules );
 	return handler;
 }
 
@@ -271,7 +271,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 	int ret;
 	lock_free_spsc_ring_t *ring;
-	size_t total, i;
+	size_t total_retain = 0, i;
 	//TODO: this limit 64 threads of mmt_smp_sec
 	uint64_t mask;
 
@@ -285,15 +285,34 @@ void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 //		return;
 //	}
 
-//	mmt_debug("%"PRIu64" verify rule", msg->counter );
+	//all threads does not receive receive message: turn on the first #threads_count bits
+	mask =  (1LL << handler->threads_count) - 1;
+
+	if( likely( msg != NULL )){
+		//	mmt_debug("%"PRIu64" verify rule", msg->counter );
+		for( i=0; i<handler->threads_count; i++ ){
+			//the message does not concern to any rules handled by this thread
+			//==> do not need to push the message into the queue of this thread
+			if( (msg->hash & handler->mmt_single_sec_handlers[i]->hash) == 0 )
+				BIT_CLEAR( mask, i );
+			else
+				total_retain ++;
+		}
+
+		//no thread requires this message ?
+		if( unlikely( total_retain == 0 )){
+			free_message_t( msg );
+			return;
+		}
+	}else
+		total_retain = handler->threads_count;
 
 	//retain message for each thread
 	//-1 since msg was cloned from message -> it has ref_count = 1
 	//=> we need to increase ref_count only ( handler->threads_count - 1)
-	msg = mmt_mem_retains( msg,  handler->threads_count - 1 );
+	msg = mmt_mem_retains( msg,  total_retain - 1 );
 
-	//all threads does not receive receive message: turn on the first #threads_count bits
-	mask =  (1LL << handler->threads_count) - 1;
+
 
 	//still have one threads is not received msg
 	while( mask != 0 ){

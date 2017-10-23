@@ -12,17 +12,19 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-//for uint64_t PRIu64
-#include <inttypes.h>
+#include <inttypes.h> //for uint64_t PRIu64
 #include <stdbool.h>
 
-
+/**
+ * Output reports to redis bus
+ */
+//#define MODULE_REDIS_OUTPUT
 
 /**
  * Allow adding/removing rules at runtime
  * Remove this definition to prevent adding/removing rules at runtime
  */
-#define ADD_OR_RM_RULES_RUNTIME
+#define MODULE_ADD_OR_RM_RULES_RUNTIME
 
 
 
@@ -32,6 +34,8 @@
 
 //thread local storage
 #define __thread_scope __thread
+//a dummy identification to indicate a function being thread safe
+#define __thread_safe
 
 //Force alignment to cache line.
 #ifdef LEVEL1_DCACHE_LINESIZE
@@ -44,11 +48,6 @@
 	#define __aligned __attribute__ ((aligned(64)))
 #endif
 
-//macro
-#define __check_null( x, y ) while( unlikely( x == NULL )) return y
-#define __check_zero( x, y ) while( unlikely( x == 0 )) return y
-#define __check_bool( x, y ) while( unlikely( x )) return y
-
 //branch prediction
 #ifndef likely
 	#define likely(x)   __builtin_expect(!!(x),1)
@@ -56,6 +55,11 @@
 #ifndef unlikely
 	#define unlikely(x) __builtin_expect(!!(x),0)
 #endif
+
+//macro
+#define __check_null( x, y ) while( unlikely( x == NULL )) return y
+#define __check_zero( x, y ) while( unlikely( x == 0 )) return y
+#define __check_bool( x, y ) while( unlikely( x )) return y
 
 
 /* a=target variable, i=bit number to act upon 0-n  (n == sizeof(a))*/
@@ -72,7 +76,7 @@
 /**
  * Use lock when we need add/remove rules in runtime
  */
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	#define BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( spin_lock ) if( pthread_spin_lock( spin_lock ) == 0 ){
 	#define UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( spinlock ) pthread_spin_unlock( spinlock );
 	#define END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME }

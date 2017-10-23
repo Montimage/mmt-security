@@ -6,11 +6,13 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include "mmt_lib.h"
+
+#ifdef MODULE_REDIS_OUTPUT
 #include <time.h>
 #include <hiredis/hiredis.h>
 #include <hiredis/async.h>
 #include "thredis.h"
-#include "mmt_lib.h"
 
 #define REDIS_CHANNEL_NAME "security.report"
 
@@ -72,3 +74,12 @@ void send_message_to_redis (const char * message) {
 		}
 	}
 }
+
+#else
+
+void init_redis ( const char *hostname, int port ) {
+	mmt_warn("Module output to redis is not available");
+}
+
+void send_message_to_redis (const char * message){}
+#endif

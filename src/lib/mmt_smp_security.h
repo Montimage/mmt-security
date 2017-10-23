@@ -50,7 +50,7 @@ size_t mmt_smp_sec_unregister( mmt_smp_sec_handler_t *handler, bool stop_immedia
 void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *message );
 
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 
 void mmt_smp_sec_add_rules( mmt_smp_sec_handler_t *handler, const char*rules_mask );
 void mmt_smp_sec_remove_rules( mmt_smp_sec_handler_t *handler );

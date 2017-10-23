@@ -216,8 +216,8 @@ size_t load_mmt_sec_rule( rule_info_t const*const ** plugins_arr, const char *pl
 	void ( *on_load ) () = dlsym ( lib, "on_load" );
 	if( on_load != NULL )
 		on_load();
-	else
-		mmt_debug("Not found on_load on %s", plugin_path_name);
+	//else
+	//	mmt_debug("Not found on_load on %s", plugin_path_name);
 
 	return size;
 }
@@ -232,8 +232,8 @@ static inline int _close_plugin( plugin_t *plugin ){
 	void ( *on_unload ) () = dlsym ( plugin->dl_lib, "on_unload" );
 	if( on_unload != NULL )
 		on_unload();
-	else
-		mmt_debug("Not found on_unload");
+	//else
+	//	mmt_debug("Not found on_unload");
 
 	ret = dlclose( plugin->dl_lib );
 	if( ret != 0 )

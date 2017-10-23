@@ -318,7 +318,7 @@ void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 }
 
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 
 void mmt_smp_sec_add_rules( mmt_smp_sec_handler_t *handler, const char*rules_mask ){
 	size_t i, add_rules_count;

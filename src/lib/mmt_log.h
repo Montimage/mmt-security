@@ -32,7 +32,7 @@ void mmt_sec_log( log_level_t level, const char *format, ... )
 
 
 #ifdef DEBUG_MODE
-	#define mmt_debug(...)   do{ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( DEBUG, __VA_ARGS__ ); fflush( stdout ); } while(0)
+	#define mmt_debug(...)   do{ printf(" %s:%d ", __FILE__, __LINE__); mmt_sec_log( DEBUG, __VA_ARGS__ ); fflush( stdout ); } while(0)
 	#define mmt_halt( ... )  do{ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( HALT, __VA_ARGS__ ); }while( 0 )
 	#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( HALT, __VA_ARGS__ ); break; }
 #else

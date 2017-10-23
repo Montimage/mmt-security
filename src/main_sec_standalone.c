@@ -49,8 +49,8 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-t <trace file>: Gives the trace file to analyse.\n");
 	fprintf(stderr, "\t-i <interface> : Gives the interface name for live traffic analysis.\n");
 	fprintf(stderr, "\t-c <string>    : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
-	fprintf(stderr, "\t-x <string>    : Gives the range of rules id to be excluded, e.g., \"99,107-1010\".");
-	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads using format (lcore:range) e.g., \"(1:1-8,10-13)(2:50)(4:1007-1010)\".");
+	fprintf(stderr, "\t-x <string>    : Gives the range of rules id to be excluded, e.g., \"99,107-1010\".\n");
+	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads using format (lcore:range) e.g., \"(1:1-8,10-13)(2:50)(4:1007-1010)\".\n");
 	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
 	fprintf(stderr, "\t-v             : Verbose.\n");
@@ -192,9 +192,79 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 	return 0;
 }
 
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+/**
+ * This has to be called before any stdin input function.
+ * When I used std::cin before using this function, it never returned true again.
+ * @return true if user press some keys ended by Enter
+ */
+static inline bool is_user_press_keys(){
+    struct timeval tv;
+    fd_set fds;
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds); //add stdin to fsd, STDIN_FILENO is 0
+    select(STDIN_FILENO+1, &fds, NULL, NULL, &tv);
+    return ( FD_ISSET(STDIN_FILENO, &fds) != 0 );
+}
+
+void add_or_remove_rules_if_need(){
+	const int len = 1000;
+
+	char buffer[ 1000 ], *c;
+	size_t count;
+	uint32_t *rules_id_to_rm_set;
+	//if user does not press any keys
+	if( is_user_press_keys() == false )
+		return;
+
+	//get user's string
+	if( !fgets( buffer, len, stdin) )
+		return;
+
+	//as fgets add EOF or EOL at the end of buffer => we need to remove these special characters
+	c = buffer;
+	while( *c != '\0' ){
+		if( *c == EOF || *c == '\n' ){
+			*c = '\0';
+			break;
+		}
+		c++;
+	}
+
+
+	if( buffer[0] == '\0' )
+		return;
+
+	//add xxxx
+	if( buffer[0] == 'a' && buffer[1] == 'd' && buffer[2] == 'd'  && buffer[3] == ' ' ){
+		mmt_info( "Add %zu rule(s)", mmt_security_add_rules( &buffer[4] ));
+		return;
+	}else //rm xxx
+		if( buffer[0] == 'r' && buffer[1] == 'm'  && buffer[2] == ' ' ){
+			count = expand_number_range( &buffer[3], &rules_id_to_rm_set );
+			if( count > 0 )
+				mmt_info( "Removed %zu rule(s)", mmt_security_remove_rules( count, rules_id_to_rm_set));
+			//free memory allocated by expand_number_range
+			mmt_mem_free( rules_id_to_rm_set );
+			return;
+	}
+
+	mmt_warn("Unknown command \"%s\"", buffer );
+}
+#else
+#define add_or_remove_rules_if_need()
+#endif
+
+
 void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, const u_char *data ){
 	mmt_handler_t *mmt = (mmt_handler_t*)user;
 	struct pkthdr header;
+
+	//allow user to add/rm rules
+	add_or_remove_rules_if_need();
+
 	header.ts     = p_pkthdr->ts;
 	header.caplen = p_pkthdr->caplen;
 	header.len    = p_pkthdr->len;
@@ -334,13 +404,23 @@ int main(int argc, char** argv) {
 	//Register a packet handler, it will be called for every processed packet
 	register_packet_handler(mmt_dpi_handler, 1, packet_handler, sec_handler );
 
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+	mmt_info("During runtime, user can add or remove some rules using the following commands:\n%s\n%s",
+		" to add new rules: add rule_mask, for example: add (0:1-3)(2:4-6)",
+		" to remove existing rules: rm rule_range, for example: rm  1-3");
+#endif
+
 	if (type == TRACE_FILE) {
 		mmt_info("Analyzing pcap file %s", filename );
 		pcap = pcap_open_offline(filename, errbuf); // open offline trace
 		if (!pcap) { /* pcap error ? */
 			mmt_halt("pcap_open failed for the following reason: %s\n", errbuf);
 		}
+
 		while ((data = pcap_next(pcap, &p_pkthdr)) ) {
+			//allow user to add/rm rules
+			add_or_remove_rules_if_need();
+
 			header.ts     = p_pkthdr.ts;
 			header.caplen = p_pkthdr.caplen;
 			header.len    = p_pkthdr.len;

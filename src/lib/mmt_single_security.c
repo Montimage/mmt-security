@@ -197,7 +197,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 }
 
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 static inline void _swap_rule( mmt_single_sec_handler_t *handler, int i, int j ){
 	const rule_info_t *rule;
 	rule_engine_t *engine;

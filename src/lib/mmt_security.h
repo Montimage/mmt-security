@@ -136,7 +136,7 @@ const char* mmt_convert_execution_trace_to_json_string( const mmt_array_t *trace
 void mmt_sec_print_rules_info();
 
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 
 /**
  * Remove a set of rules from processing
@@ -144,6 +144,7 @@ void mmt_sec_print_rules_info();
  * @param rules_id_set
  * @return number of rules being removed
  */
+__thread_safe
 size_t mmt_security_remove_rules( size_t rules_count, const uint32_t* rules_id_set );
 
 
@@ -153,6 +154,7 @@ size_t mmt_security_remove_rules( size_t rules_count, const uint32_t* rules_id_s
  *    		e.g., "(1:10-13)(2:50)(4:1007-1010)"
  * @return number of rules being added
  */
+__thread_safe
 size_t mmt_security_add_rules( const char *rules_mask );
 #endif
 

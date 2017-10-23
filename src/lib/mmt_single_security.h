@@ -55,7 +55,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *messa
  */
 size_t mmt_single_sec_get_processed_messages( const mmt_single_sec_handler_t *handler );
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 /**
  * Disable a set of rules that will be no more verified
  *

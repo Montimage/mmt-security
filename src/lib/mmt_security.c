@@ -29,7 +29,7 @@
 
 #include "../dpi/mmt_dpi.h"
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 #include <pthread.h>
 #include <stdatomic.h>
 
@@ -67,13 +67,13 @@ struct mmt_sec_handler_struct{
 
 	int threads_count;
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	volatile int rule_processing_status;
 #endif
 };
 
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 //TODO: limit to 100 mmt-security handlers
 #define MAX_HANDLERS_COUNT 100
 static mmt_sec_handler_t *mmt_sec_handlers[ MAX_HANDLERS_COUNT ];
@@ -192,7 +192,7 @@ static inline void _update_rule_hash_proto_att( ){
  * @return
  */
 int mmt_sec_init( const char* excluded_rules_id ){
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	pthread_spin_init( &spin_lock, PTHREAD_PROCESS_PRIVATE );
 #endif
 	size_t i;
@@ -283,37 +283,19 @@ mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores
 	}
 
 	//save global list of mmt-sec-handlers
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	mmt_assert( mmt_sec_handlers_count < MAX_HANDLERS_COUNT, "Support maximally %d mmt_security_handler_t", MAX_HANDLERS_COUNT );
 	mmt_sec_handlers[ mmt_sec_handlers_count ] = ret;
 	mmt_sec_handlers_count ++;
 	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
+#endif
 
 	return ret;
 }
 
 void mmt_sec_process( mmt_sec_handler_t *handler, message_t *msg ){
-
-//Check if there exists some rules to be added or removed
-#ifdef ADD_OR_RM_RULES_RUNTIME
-	//TODO: remove this block
-	mmt_single_sec_handler_t *sing_handler;
-	uint32_t arr[1] = { 100 };
-	if( handler->threads_count == 0 ){
-		switch( msg->counter  % 1000){
-		case 10:
-			printf("removed %zu rules\n", mmt_security_remove_rules(1, arr ));
-			break;
-		case 599:
-			printf("added %zu rules\n", mmt_security_add_rules("(0:100)"));
-			break;
-		}
-	}
-	//END of being removed
-#endif
-//END
-
 	handler->process( handler->sec_handler, msg );
 }
 
@@ -733,10 +715,10 @@ uint16_t mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id ){
 
 
 
-#ifdef ADD_OR_RM_RULES_RUNTIME
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 
 //PUBLIC API
-size_t mmt_security_remove_rules( size_t rules_to_rm_count, const uint32_t* rules_id_to_rm_set ){
+__thread_safe size_t mmt_security_remove_rules( size_t rules_to_rm_count, const uint32_t* rules_id_to_rm_set ){
 	size_t i, j;
 	uint32_t rule_id;
 	size_t number_of_rules_will_be_removed = 0;
@@ -773,7 +755,6 @@ size_t mmt_security_remove_rules( size_t rules_to_rm_count, const uint32_t* rule
 	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
 
-	mmt_info( "Removed %zu rule(s)", number_of_rules_will_be_removed );
 	return number_of_rules_will_be_removed;
 }
 
@@ -856,7 +837,6 @@ size_t mmt_security_add_rules( const char *rules_mask ){
 
 	mmt_mem_free( rules_mask_range );
 
-	mmt_info( "Added %zu rule(s)", add_rules_count );
 	return add_rules_count;
 }
 #endif

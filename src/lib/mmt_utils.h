@@ -142,6 +142,14 @@ static inline size_t str_split(const char* string, char a_delim, char ***array){
 	return count;
 }
 
+/**
+ * Check if a value is existing in an array
+ * @param val
+ * @param array
+ * @param array_size
+ * @return index of element, from 0 to (array_size-1), if the element is existing
+ *  otherwise, return array_size;
+ */
 static inline
 size_t index_of( uint32_t val, const uint32_t *array, size_t array_size){
 	size_t i;
@@ -213,7 +221,7 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 			}
 
 			for(  ; i<=num; i++ )
-				if( index_of( i, array, size ) == 0 )
+				if( index_of( i, array, size ) == size )
 					array[ size ++ ] = i;
 
 			//after the second number must be ',' or '\n'
@@ -325,16 +333,25 @@ static inline const size_t get_rules_id_list_in_mask( const char *rule_mask, uin
 	uint32_t *rule_range;
 
 	while( *c != '\0'){
-		mmt_assert( *c == '(', "Rule mask is not correct: %s", c );
+		if( *c != '(' ){
+			mmt_warn("Rule mask is not correct. Expected ), not \"%s\"", c );
+			return 0;
+		}
 		//jump over (
 		c ++;
 		//thread id
-		mmt_assert( isdigit( *c ), "Rule mask is not correct: %s", c );
+		if( !isdigit( *c )){
+			mmt_warn("Rule mask is not correct. Expected a digit, not \"%s\"", c );
+			return 0;
+		}
 
 		//jump over thread id
 		while( isdigit( *c ) ) c ++;
 		//jump over separator between thread_id and rule_range
-		mmt_assert( *c == ':', "Rule mask is not correct: %s", c );
+		if( *c != ':'){
+			mmt_warn("Rule mask is not correct. Expected :, not \"%s\"", c );
+			return 0;
+		}
 		c++;
 		//rule range
 		ptr  = c;

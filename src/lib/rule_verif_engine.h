@@ -14,7 +14,6 @@
 #include "mmt_lib.h"
 #include "plugin_header.h"
 #include "mmt_fsm.h"
-#include "mmt_single_security.h"
 
 typedef struct rule_engine_struct{
 	const rule_info_t *rule_info;
@@ -50,7 +49,7 @@ typedef struct rule_engine_struct{
 	//timestamp and counter of the last message being verified timeout
 	uint64_t last_msg_timestamp_timeout;
 	uint64_t last_msg_counter_timeout;
-} __aligned rule_engine_t;
+} rule_engine_t __aligned;
 
 //max number of events in a rule
 //max number of instances of a rule at any moment

@@ -341,7 +341,11 @@ void mmt_smp_sec_add_rules( mmt_smp_sec_handler_t *handler, const char*rules_mas
 void mmt_smp_sec_remove_rules( mmt_smp_sec_handler_t *handler ){
 	int i;
 	for( i=0; i<handler->threads_count; i++ ){
+		if( handler->verbose )
+			mmt_info("Removing rules from thread %d", (i+1) );
 		mmt_single_sec_remove_rules( handler->mmt_single_sec_handlers[i] );
+		if( handler->verbose && handler->mmt_single_sec_handlers[i]->rules_count == 0 )
+			printf( " - all rules are removed from a thread %d\n", (i+1) );
 	}
 }
 

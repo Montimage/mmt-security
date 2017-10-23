@@ -15,7 +15,7 @@
 
 #include "mmt_fsm.h"
 #include "plugins_engine.h"
-#include "rule_verif_engine.h"
+
 #include "expression.h"
 #include "rule.h"
 #include "version.h"
@@ -25,31 +25,6 @@
 #include "../dpi/mmt_dpi.h"
 #include "mmt_single_security.h"
 #include "mmt_security.h"
-
-struct mmt_single_sec_handler_struct{
-	size_t rules_count;
-	const rule_info_t ** rules_array;
-	//this is called each time we reach final/error state
-	mmt_sec_callback callback;
-	//a parameter will give to the #callback
-	void *user_data_for_callback;
-	rule_engine_t **engines;
-
-	//number of generated alerts
-	size_t *alerts_count;
-
-	//an array of #rules_count elements having type of uint64_t
-	//each element represents required data of one rule
-	uint64_t *rules_hash;
-
-	//a hash number is combination of #rules_hash
-	uint64_t hash;
-
-	//number of messages processed
-	size_t messages_count;
-
-	bool verbose;
-}__aligned;
 
 
 /**
@@ -93,6 +68,10 @@ mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t *const*rule
 	}
 
 	handler->messages_count = 0;
+
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+	pthread_spin_init( &handler->spin_lock_to_add_or_rm_rules, PTHREAD_PROCESS_PRIVATE );
+#endif
 
 	return handler;
 }
@@ -154,6 +133,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 
 	handler->messages_count ++;
 
+	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
 	//for each rule
 	for( i=0; i<handler->rules_count; i++){
 		//msg does not contain any proto.att for i-th rule
@@ -193,6 +173,8 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 		}
 	}
 
+	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
+	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
 	free_message_t( msg );
 }
 
@@ -235,13 +217,17 @@ static inline void _swap_rule( mmt_single_sec_handler_t *handler, int i, int j )
  * @param i
  */
 static inline void _free_rule( mmt_single_sec_handler_t *handler, size_t i ){
+	if( handler->verbose )
+		printf(" - rule %"PRIu32" generated %zu verdicts\n", handler->rules_array[i]->id, handler->alerts_count[ i ] );
 	rule_engine_free( handler->engines[i] );
 	handler->engines[i] = NULL;
 }
 
-//PUBLIC_API
 
+//this function is implemented inside mmt_security.c to get the set of current rules to be verified
 size_t _mmt_sec_get_rules_info_without_lock( rule_info_t const*const**rules_array );
+
+//PUBLIC_API
 size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler){
 	size_t i, j;
 	size_t removed_rules_count = 0;
@@ -251,17 +237,25 @@ size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler){
 
 	rules_count = _mmt_sec_get_rules_info_without_lock( &rules );
 
-	for( i=0; i<handler->rules_count; i++ ){
+	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( & handler->spin_lock_to_add_or_rm_rules )
+
+	//A rule is to removed if
+	// (1) it exists in #handler->rules_array
+	// and (2) it does not exist in #rules
+	i = 0;
+	while( i<handler->rules_count && handler->rules_count != 0 ){
 		rule = handler->rules_array[i];
+
+		//check if this #rule is existing in #rules
 		for( j=0; j<rules_count; j++ )
 			if( rule->id == rules[j]->id )
-				goto FOUND_A_RULE_TO_REMOVE;
+				break;
 
-		//NOT FOUND => retain #rule
-		if( j == rules_count )
+		//FOUND a rule => retain #rule
+		if( j < rules_count ){
+			i ++; //jump to the next rule
 			continue;
-
-		FOUND_A_RULE_TO_REMOVE:
+		}
 
 		//move the rule to be remove to the end
 		_swap_rule( handler, i, handler->rules_count - 1 );
@@ -281,6 +275,9 @@ size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler){
 		for( i=0; i<handler->rules_count; i++ )
 			handler->hash |= handler->rules_hash[i];
 	}
+
+	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
+	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
 
 	return removed_rules_count;
 }

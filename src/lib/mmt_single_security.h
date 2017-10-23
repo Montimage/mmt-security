@@ -20,10 +20,36 @@
 #include "plugin_header.h"
 #include "mmt_array_t.h"
 #include "verdict_printer.h"
+#include "rule_verif_engine.h"
 #include "mmt_security.h"
 
+typedef struct mmt_single_sec_handler_struct{
+	size_t rules_count;
+	const rule_info_t ** rules_array;
+	//this is called each time we reach final/error state
+	mmt_sec_callback callback;
+	//a parameter will give to the #callback
+	void *user_data_for_callback;
+	rule_engine_t **engines;
 
-typedef struct mmt_single_sec_handler_struct mmt_single_sec_handler_t;
+	//number of generated alerts
+	size_t *alerts_count;
+
+	//an array of #rules_count elements having type of uint64_t
+	//each element represents required data of one rule
+	uint64_t *rules_hash;
+
+	//a hash number is combination of #rules_hash
+	uint64_t hash;
+
+	//number of messages processed
+	size_t messages_count;
+
+	bool verbose;
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+	pthread_spinlock_t spin_lock_to_add_or_rm_rules;
+#endif
+}mmt_single_sec_handler_t __aligned;
 
 /**
  * Register some rules to validate

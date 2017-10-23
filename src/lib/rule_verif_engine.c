@@ -6,7 +6,8 @@
  */
 #include "rule_verif_engine.h"
 #include "prefetch.h"
-
+#include "mmt_fsm.h"
+#include "mmt_security.h"
 /**
  * In the next event,
  * the #fsm will fire the #index-th transition of its current state
@@ -121,7 +122,9 @@ void _store_valid_execution_trace( rule_engine_t *_engine, fsm_t *fsm ){
 	const mmt_array_t *array = fsm_get_execution_trace( fsm );
 
 #ifdef DEBUG_MODE
-	mmt_assert( array->elements_count == _engine->events_count, "Impossible" );
+	mmt_assert( array->elements_count == _engine->events_count,
+			"Error when processing rule %d: trace_size != event_count( %zu != %"PRIu32")",
+			_engine->rule_info->id, array->elements_count, _engine->events_count );
 #endif
 
 	for( i=0; i<_engine->events_count; i++ ){

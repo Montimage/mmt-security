@@ -47,7 +47,7 @@
 static bool verbose                     = NO;
 static mmt_sec_handler_t *sec_handler   = NULL;
 static size_t proto_atts_count          = 0;
-const proto_attribute_t **proto_atts    = NULL;
+const proto_attribute_t *const *proto_atts    = NULL;
 //id of socket
 static int socket_server                = 0;
 

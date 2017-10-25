@@ -22,19 +22,37 @@ GIT_VERSION := $(shell git log --format="%h" -n 1)
 # if you update the version number here, 
 # ==> you must also update VERSION_NUMBER in src/lib/version.c 
 VERSION     := 1.1.5
+
 #set of library
-LIBS     = -ldl -lpthread -lxml2 -lhiredis -lmmt_core
+LIBS     = -ldl -lpthread -lxml2 -lmmt_core
 
 CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -I/usr/include/libxml2/  -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib 
 CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -L/usr/local/lib
 
 #for debuging
 ifdef DEBUG
-	CFLAGS   += -g -DDEBUG_MODE -O0 -fstack-protector-all -Wmaybe-uninitialized -Wuninitialized
-	CLDFLAGS += -g -DDEBUG_MODE -O0 -fstack-protector-all
+CFLAGS   += -g -DDEBUG_MODE -O0 -fstack-protector-all -Wmaybe-uninitialized -Wuninitialized
+CLDFLAGS += -g -DDEBUG_MODE -O0 -fstack-protector-all
+$(warning => This compile is reserved only for debugging)
 else
-	CFLAGS   += -O3
-	CLDFLAGS += -O3
+CFLAGS   += -O3
+CLDFLAGS += -O3
+endif
+
+ifdef VALGRIND
+CFLAGS += -DVALGRIND_MODE
+$(warning => This compile is reserved only for testing by valgrind)
+endif
+
+ifdef REDIS
+CFLAGS += -DMODULE_REDIS_OUTPUT
+LIBS   += -lhiredis
+$(info => Enable: Output to redis)	
+endif
+
+ifdef UPDATE_RULES
+CFLAGS += -DMODULE_ADD_OR_RM_RULES_RUNTIME
+$(info => Enable: update rules at runtime)
 endif
 
 #folders containing source files

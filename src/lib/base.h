@@ -15,6 +15,10 @@
 #include <inttypes.h> //for uint64_t PRIu64
 #include <stdbool.h>
 
+
+/////////////////////////////////////////////////////////////////////
+//////// these modules can be enabled from Makefile /////////////////
+/////////////////////////////////////////////////////////////////////
 /**
  * Output reports to redis bus
  */
@@ -25,7 +29,7 @@
  * Remove this definition to prevent adding/removing rules at runtime
  */
 #define MODULE_ADD_OR_RM_RULES_RUNTIME
-
+/////////////////////////////////////////////////////////////////////
 
 
 #define UNKNOWN -1

@@ -55,6 +55,7 @@ enum config_att{
 	MMT_SEC__CONFIG__MEMPOOL__MAX_ELEMENTS_PER_POOL,
 };
 
+bool mmt_sec_load_default_config();
 
 uint32_t mmt_sec_set_config( enum config_att att, uint32_t value );
 

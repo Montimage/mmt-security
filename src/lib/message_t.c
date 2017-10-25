@@ -17,7 +17,7 @@ static mmt_memory_t *_memory = NULL;
 
 static inline void _create_local_message_t(){
 	int i;
-	const proto_attribute_t **proto_atts;
+	const proto_attribute_t *const *proto_atts;
 	message_t *msg;
 	size_t _message_size;
 

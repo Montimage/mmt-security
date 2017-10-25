@@ -188,7 +188,7 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 	while( *cur != '\0' ){
 		//first number
 		if( !isdigit( *cur ) ){
-			mmt_halt( "Mask: Expected a digit at %s", cur );
+			mmt_error( "Mask: Expected a digit at %s", cur );
 			return 0;
 		}
 
@@ -203,7 +203,7 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 
 		//separator
 		if( *cur != ',' &&  *cur != '-' ){
-			mmt_halt( "Mask: Expected a separator, either ' or , at %s", cur );
+			mmt_error( "Mask: Expected a separator, either ' or , at %s", cur );
 			return 0;
 		}
 
@@ -216,7 +216,7 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 			i=array[ size-1 ] + 1;
 
 			if( i > num ){
-				mmt_halt( "Mask: Range is incorrect %zu-%d", i-1, num );
+				mmt_error( "Mask: Range is incorrect %zu-%d", i-1, num );
 				return 0;
 			}
 
@@ -230,13 +230,13 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 		}
 
 		if( *cur != ',' ){
-			mmt_halt( "Mask: Expected a separator , at %s", cur );
+			mmt_error( "Mask: Expected a separator , at %s", cur );
 			return 0;
 		}
 		cur++;
 
 		if( *cur == '\0' ){
-			mmt_halt( "Mask: Unexpected a separator , at the end" );
+			mmt_error( "Mask: Unexpected a separator , at the end" );
 			return 0;
 		}
 	}
@@ -334,14 +334,14 @@ static inline const size_t get_rules_id_list_in_mask( const char *rule_mask, uin
 
 	while( *c != '\0'){
 		if( *c != '(' ){
-			mmt_warn("Rule mask is not correct. Expected ), not \"%s\"", c );
+			mmt_error("Rule mask is not correct. Expected (, not \"%s\"", c );
 			return 0;
 		}
 		//jump over (
 		c ++;
 		//thread id
 		if( !isdigit( *c )){
-			mmt_warn("Rule mask is not correct. Expected a digit, not \"%s\"", c );
+			mmt_error("Rule mask is not correct. Expected a digit, not \"%s\"", c );
 			return 0;
 		}
 
@@ -349,7 +349,7 @@ static inline const size_t get_rules_id_list_in_mask( const char *rule_mask, uin
 		while( isdigit( *c ) ) c ++;
 		//jump over separator between thread_id and rule_range
 		if( *c != ':'){
-			mmt_warn("Rule mask is not correct. Expected :, not \"%s\"", c );
+			mmt_error("Rule mask is not correct. Expected :, not \"%s\"", c );
 			return 0;
 		}
 		c++;
@@ -372,7 +372,8 @@ static inline const size_t get_rules_id_list_in_mask( const char *rule_mask, uin
 			case '9':
 				break;
 			default:
-				mmt_halt("Rule mask is not correct: %s", c );
+				mmt_error("Rule mask is not correct. Unexpected: %s", c );
+				return 0;
 			}
 			size ++;
 			c++;

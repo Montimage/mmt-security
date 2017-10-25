@@ -14,6 +14,7 @@
 #include <stdatomic.h>
 #include "mmt_lib.h"
 #include "lock_free_spsc_ring.h"
+#include "valgrind.h"
 
 void ring_free( lock_free_spsc_ring_t *q ){
 	if( q == NULL ) return;
@@ -27,11 +28,19 @@ void ring_free( lock_free_spsc_ring_t *q ){
 
 lock_free_spsc_ring_t* ring_init( uint32_t size ){
 	lock_free_spsc_ring_t *q = mmt_mem_alloc( sizeof( lock_free_spsc_ring_t ));
+
 	q->_data = mmt_mem_alloc( sizeof( void *) * size );
 	q->_size = size;
+
 	q->_head = q->_tail = 0;
 	q->_cached_head = q->_cached_tail = 0;
 
+	VALGRIND_MODE( DRD_IGNORE_VAR( q )  );
+	VALGRIND_MODE( DRD_IGNORE_VAR( q->_size )  );
+	VALGRIND_MODE( DRD_IGNORE_VAR( q->_head )  );
+	VALGRIND_MODE( DRD_IGNORE_VAR( q->_tail )  );
+	VALGRIND_MODE( DRD_IGNORE_VAR( q->_cached_head )  );
+	VALGRIND_MODE( DRD_IGNORE_VAR( q->_cached_tail )  );
 //	sem_init( &q->sem_wait_pushing, 0, 0 );
 
 	return q;

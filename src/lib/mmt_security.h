@@ -88,7 +88,7 @@ size_t mmt_sec_get_rules_info( rule_info_t const*const**rules_array );
 /**
  * Get list of unique protocols and their attributes needed by the given #handler
  */
-size_t mmt_sec_get_unique_protocol_attributes( const proto_attribute_t ***proto_atts_array );
+size_t mmt_sec_get_unique_protocol_attributes( proto_attribute_t const *const **proto_atts_array );
 
 /**
  * Return an unique number representing the pair proto_id and att_id

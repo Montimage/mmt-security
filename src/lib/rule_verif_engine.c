@@ -507,6 +507,10 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 	return VERDICT_UNKNOWN;
 }
 
+//this is defined in mmt_security.c
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+uint16_t _mmt_sec_hash_proto_attribute_without_lock( uint32_t proto_id, uint32_t att_id );
+#endif
 /**
  * Calculate hash of each event
  * This is called only one time at initiation of #_engine
@@ -536,7 +540,12 @@ static inline void _calculate_hash_number( rule_engine_t *_engine ){
 				}
 
 			if( !is_in_excluded_list ){
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+				index = _mmt_sec_hash_proto_attribute_without_lock( p->proto_id, p->att_id );
+#else
 				index = mmt_sec_hash_proto_attribute( p->proto_id, p->att_id );
+#endif
+
 				BIT_SET( _engine->events_hash[i], index );
 			}
 		}

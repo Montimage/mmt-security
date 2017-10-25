@@ -35,7 +35,7 @@ static size_t total_received_reports = 0;
 static mmt_sec_callback _print_output = NULL;
 
 static size_t proto_atts_count        = 0;
-const proto_attribute_t **proto_atts  = NULL;
+proto_attribute_t const *const*proto_atts  = NULL;
 
 static pcap_t *pcap;
 
@@ -177,6 +177,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  * message to mmt-security.
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
+	uint32_t rm_rules_arr[] = {1,2,7};
 
 	mmt_sec_handler_t *handler = (mmt_sec_handler_t *)args;
 	message_t *msg = _get_packet_info( ipacket );
@@ -187,12 +188,26 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	mmt_sec_process( handler, msg );
 
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+	if( total_received_reports == 5000 )
+		mmt_security_remove_rules(3, rm_rules_arr );
+	if( total_received_reports == 10000 )
+		mmt_security_add_rules("(1:2,7)");
+#endif
+
 	total_received_reports ++;
 
 	return 0;
 }
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+
+static inline void _print_add_rm_rules_instruction(){
+	mmt_info("During runtime, user can add or remove some rules using the following commands:\n%s\n%s",
+		" - to add new rules: add rule_mask, for example: add (0:1-3)(2:4-6)",
+		" - to remove existing rules: rm rule_range, for example: rm  1-3");
+}
+
 /**
  * This has to be called before any stdin input function.
  * When I used std::cin before using this function, it never returned true again.
@@ -239,22 +254,27 @@ void add_or_remove_rules_if_need(){
 
 	//add xxxx
 	if( buffer[0] == 'a' && buffer[1] == 'd' && buffer[2] == 'd'  && buffer[3] == ' ' ){
-		mmt_info( "Add %zu rule(s)", mmt_security_add_rules( &buffer[4] ));
+		mmt_info( "Added totally %zu rule(s)", mmt_security_add_rules( &buffer[4] ));
 		return;
 	}else //rm xxx
 		if( buffer[0] == 'r' && buffer[1] == 'm'  && buffer[2] == ' ' ){
 			count = expand_number_range( &buffer[3], &rules_id_to_rm_set );
-			if( count > 0 )
-				mmt_info( "Removed %zu rule(s)", mmt_security_remove_rules( count, rules_id_to_rm_set));
+			if( count > 0 ){
+				count = mmt_security_remove_rules( count, rules_id_to_rm_set);
+			}
+			mmt_info( "Removed totally %zu rule(s)", count);
+
 			//free memory allocated by expand_number_range
 			mmt_mem_free( rules_id_to_rm_set );
 			return;
 	}
 
 	mmt_warn("Unknown command \"%s\"", buffer );
+	_print_add_rm_rules_instruction();
 }
 #else
 #define add_or_remove_rules_if_need()
+#define _print_add_rm_rules_instruction()
 #endif
 
 
@@ -404,11 +424,7 @@ int main(int argc, char** argv) {
 	//Register a packet handler, it will be called for every processed packet
 	register_packet_handler(mmt_dpi_handler, 1, packet_handler, sec_handler );
 
-#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
-	mmt_info("During runtime, user can add or remove some rules using the following commands:\n%s\n%s",
-		" to add new rules: add rule_mask, for example: add (0:1-3)(2:4-6)",
-		" to remove existing rules: rm rule_range, for example: rm  1-3");
-#endif
+	_print_add_rm_rules_instruction();
 
 	if (type == TRACE_FILE) {
 		mmt_info("Analyzing pcap file %s", filename );

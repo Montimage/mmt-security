@@ -20,6 +20,7 @@
 #include "mmt_alloc.h"
 #include "mmt_log.h"
 #include "config.h"
+#include "valgrind.h"
 
 typedef struct mmt_memory_struct{
 	uint32_t  ref_count;

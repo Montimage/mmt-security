@@ -323,8 +323,8 @@ void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 				continue;
 
 			//insert msg to a ring
-			// if we cannot insert (e.g., ring is full), we omit the current ring and continue for next rules
-			// then, go back to the current one after processing the last rule
+			// if we cannot insert to the current ring (e.g., ring is full), we omit it and continue for next ring
+			// then, go back to the current one after processing the last ring
 			if( ring_push( handler->rings[ i ], msg ) == RING_SUCCESS )
 				BIT_CLEAR( mask, i );
 //#ifdef DEBUG_MODE
@@ -340,18 +340,24 @@ void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 
 void mmt_smp_sec_add_rules( mmt_smp_sec_handler_t *handler, const char*rules_mask ){
-	size_t i, add_rules_count;
+	int i;
+	size_t add_rules_count;
 	uint32_t *new_rules_arr;
-
+	size_t ret;
 	for( i=0; i<handler->threads_count; i++ ){
+		new_rules_arr = NULL;
 		//get all rules if for this thread
 		add_rules_count = get_special_rules_for_thread( i+1, rules_mask, &new_rules_arr);
 		if( add_rules_count == 0 ){
+			if( handler->verbose )
+				mmt_info("- Added %zu rule(s) to thread %d", add_rules_count, (i+1));
 			mmt_mem_free( new_rules_arr );
 			continue;
 		}
 
-		mmt_single_sec_add_rules(handler->mmt_single_sec_handlers[ i ], add_rules_count, new_rules_arr);
+		ret = mmt_single_sec_add_rules(handler->mmt_single_sec_handlers[ i ], add_rules_count, new_rules_arr);
+		if( handler->verbose )
+			mmt_info("- Added %zu rule(s) to thread %d", ret, (i+1));
 
 		//#get_special_rules_for_thread create a new memory => we need to free it
 		mmt_mem_free( new_rules_arr );
@@ -359,12 +365,16 @@ void mmt_smp_sec_add_rules( mmt_smp_sec_handler_t *handler, const char*rules_mas
 }
 void mmt_smp_sec_remove_rules( mmt_smp_sec_handler_t *handler ){
 	int i;
+	size_t rm_rules_count, old_rules_count;
 	for( i=0; i<handler->threads_count; i++ ){
-		if( handler->verbose )
-			mmt_info("Removing rules from thread %d", (i+1) );
-		mmt_single_sec_remove_rules( handler->mmt_single_sec_handlers[i] );
-		if( handler->verbose && handler->mmt_single_sec_handlers[i]->rules_count == 0 )
-			printf( " - all rules are removed from a thread %d\n", (i+1) );
+		old_rules_count = handler->mmt_single_sec_handlers[i]->rules_count;
+
+		if( handler->verbose)
+			mmt_info( "- Removing rules from thread %d", (i+1) );
+		rm_rules_count = mmt_single_sec_remove_rules( handler->mmt_single_sec_handlers[i] );
+
+		if( handler->verbose)
+			printf( " => %zu/%zu rule(s) being removed\n", rm_rules_count, old_rules_count);
 	}
 }
 

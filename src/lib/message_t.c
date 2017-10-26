@@ -15,7 +15,7 @@
 #define INIT_ID_VALUE 0
 static mmt_memory_t *_memory = NULL;
 
-static inline void _create_local_message_t(){
+static inline message_t* _create_local_message_t(){
 	int i;
 	const proto_attribute_t *const *proto_atts;
 	message_t *msg;
@@ -48,22 +48,36 @@ static inline void _create_local_message_t(){
 	msg->_data        = &((uint8_t *) msg)[ sizeof( message_t ) + sizeof( message_element_t) * elements_length ];
 	msg->_data_length = data_length;
 
-	_memory = mmt_mem_revert( msg );
+	return msg;
 }
 
 message_t *create_message_t(){
 	//clone the reserved memory
 	message_t *msg;
+
+	/**
+	 * When allowing to add/rm rules at runtime => number of proto/atts will be change
+	 * => size of message will be dynamic
+	 */
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+	return _create_local_message_t();
+#else
+	/**
+	 * Using a memory segment to stock a template of message will increase the performance
+	 * as we need to initialize messages only once
+	 */
 	if( unlikely( _memory == NULL ))
-		_create_local_message_t();
+		_memory = mmt_mem_revert( _create_local_message_t() );
 
 	//the message being created is a copy of _memory
 	msg = mmt_mem_force_dup( _memory->data, _memory->size );
+
 	//update data pointers
 	msg->elements = (message_element_t *)( msg + 1 );
 	msg->_data    = &((uint8_t *) msg)[ sizeof( message_t ) + sizeof( message_element_t) * msg->elements_count ];
 	msg->hash     = 0;
 	return msg;
+#endif
 }
 
 
@@ -94,7 +108,7 @@ message_element_t * get_element_message_t( const message_t *msg, uint32_t proto_
 
 #ifdef DEBUG_MODE
 	if( unlikely( index >= msg->elements_count )){
-		mmt_error("Access to outside message's elements");
+		mmt_error("Access to outside message's elements (%d > %d)", index, msg->elements_count);
 		return NULL;
 	}
 #endif
@@ -146,7 +160,7 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 
 #ifdef DEBUG_MODE
 	if( unlikely( index >= msg->elements_count )){
-		mmt_error("Access to outside message's elements");
+		mmt_error("Access to outside message's elements (%d > %d)", index, msg->elements_count);
 		return MSG_CONTINUE;
 	}
 #endif
@@ -172,8 +186,9 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 	return MSG_CONTINUE;
 }
 
-
-
+/**
+ * This function is automatically called when finishing mmt-sec
+ */
 __attribute__((destructor)) void reset_message_t () {
 	if( _memory != NULL ){
 		mmt_mem_free( _memory->data );

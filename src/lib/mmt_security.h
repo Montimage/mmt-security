@@ -145,7 +145,7 @@ void mmt_sec_print_rules_info();
  * @return number of rules being removed
  */
 __thread_safe
-size_t mmt_security_remove_rules( size_t rules_count, const uint32_t* rules_id_set );
+size_t mmt_sec_remove_rules( size_t rules_count, const uint32_t* rules_id_set );
 
 
 /**
@@ -155,7 +155,7 @@ size_t mmt_security_remove_rules( size_t rules_count, const uint32_t* rules_id_s
  * @return number of rules being added
  */
 __thread_safe
-size_t mmt_security_add_rules( const char *rules_mask );
+size_t mmt_sec_add_rules( const char *rules_mask );
 #endif
 
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

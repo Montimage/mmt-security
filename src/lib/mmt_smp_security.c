@@ -158,6 +158,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 	rule_info_t const*const*rules_array;
 
 	size_t rules_count = mmt_sec_get_rules_info( &rules_array );
+	mmt_assert(rules_count > 0, "No rule to verify");
 
 	//number of threads <= number of rules
 	if( rules_count < threads_count ){

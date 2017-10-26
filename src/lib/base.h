@@ -28,7 +28,10 @@
  * Allow adding/removing rules at runtime
  * Remove this definition to prevent adding/removing rules at runtime
  */
+//TODO: rm ifndef
+#ifndef MODULE_ADD_OR_RM_RULES_RUNTIME
 #define MODULE_ADD_OR_RM_RULES_RUNTIME
+#endif
 /////////////////////////////////////////////////////////////////////
 
 

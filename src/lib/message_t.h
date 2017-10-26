@@ -109,7 +109,7 @@ static inline const void *get_element_data_message_t( const message_t *msg, uint
 
 #ifdef DEBUG_MODE
 	if( unlikely( index >= msg->elements_count )){
-		mmt_error("Access to outside message's elements");
+		mmt_error("Access to outside message's elements (%d > %d)", index, msg->elements_count);
 		return NULL;
 	}
 #endif

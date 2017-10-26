@@ -190,9 +190,9 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	if( total_received_reports == 5000 )
-		mmt_security_remove_rules(3, rm_rules_arr );
+		mmt_sec_remove_rules(3, rm_rules_arr );
 	if( total_received_reports == 10000 )
-		mmt_security_add_rules("(1:2,7)");
+		mmt_sec_add_rules("(1:2,7)");
 #endif
 
 	total_received_reports ++;
@@ -254,13 +254,13 @@ void add_or_remove_rules_if_need(){
 
 	//add xxxx
 	if( buffer[0] == 'a' && buffer[1] == 'd' && buffer[2] == 'd'  && buffer[3] == ' ' ){
-		mmt_info( "Added totally %zu rule(s)", mmt_security_add_rules( &buffer[4] ));
+		mmt_info( "Added totally %zu rule(s)", mmt_sec_add_rules( &buffer[4] ));
 		return;
 	}else //rm xxx
 		if( buffer[0] == 'r' && buffer[1] == 'm'  && buffer[2] == ' ' ){
 			count = expand_number_range( &buffer[3], &rules_id_to_rm_set );
 			if( count > 0 ){
-				count = mmt_security_remove_rules( count, rules_id_to_rm_set);
+				count = mmt_sec_remove_rules( count, rules_id_to_rm_set);
 			}
 			mmt_info( "Removed totally %zu rule(s)", count);
 

@@ -405,4 +405,52 @@ static inline const size_t get_rules_id_list_in_mask( const char *rule_mask, uin
 	return rules_count;
 }
 
+/**
+ * Native sorting an array in ascending order
+ * @param number_of_elements
+ * @param array
+ */
+static inline
+void asc_sort_array_uint64_t( int number_of_elements, uint64_t *array ){
+	uint64_t tmp;
+	int i, j;
+	for( i=0; i<number_of_elements; i++ )
+		for( j=i+1; j<number_of_elements; j++ )
+			if( array[i] > array[j] ){
+				//swap 2 elements
+				tmp = array[i];
+				array[i] = array[j];
+				array[j] = tmp;
+			}
+}
+
+/**
+ * Binary Search
+ * @param number_of_elements is number of elements inside #array
+ * @param array is an array that must be sorted in ascending order
+ * @param key
+ * @return index of element having the same value with #key if found,
+ * 		  otherwise, #number_of_elements
+ *
+ */
+static inline
+size_t binary_search_uint64_t(size_t number_of_elements, const uint64_t *array, uint64_t key) {
+	size_t low = 0, high = number_of_elements-1, mid;
+	while(low <= high) {
+		mid = (low + high)/2;
+
+		// low path
+		__builtin_prefetch (&array[(mid + 1 + high)/2], 0, 1);
+		// high path
+		__builtin_prefetch (&array[(low + mid - 1)/2], 0, 1);
+
+		if(array[mid] < key)
+			low = mid + 1;
+		else if(array[mid] == key)
+			return mid;
+		else// if(array[mid] > key)
+			high = mid-1;
+	}
+	return number_of_elements;
+}
 #endif /* SRC_LIB_MMT_UTILS_H_ */

@@ -29,14 +29,12 @@
 
 #include "../dpi/mmt_dpi.h"
 
+#define MAX_RULES_COUNT      100000
+#define MAX_PROTO_ATTS_COUNT  10000
+
+
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 #include <pthread.h>
-
-enum {
-	RULE_TO_BE_PROCESSED_NORMALLY,
-	RULE_TO_BE_REMOVED,
-	RULE_TO_BE_ADDED
-};
 
 /**
  * This spinlock is used when we need to add/remove rules at runtime
@@ -44,18 +42,13 @@ enum {
 static pthread_spinlock_t spin_lock;
 #endif
 
-static const rule_info_t **rules = NULL;
-static size_t rules_count = 0;
+static const rule_info_t *rules[MAX_RULES_COUNT]; //total rules set
+static size_t rules_count = 0;			         //total number of rules
 
-static const proto_attribute_t **proto_atts = NULL;
-static size_t proto_atts_count = 0;
-//a hash table contains a the array #proto_atts
-//this hash table is used to quickly find an elements of the array #proto_atts
-//static mmt_hash_t *proto_atts_hash_table = NULL;
+static const proto_attribute_t *proto_atts[MAX_PROTO_ATTS_COUNT]; //total proto_atts set
+static size_t proto_atts_count = 0;                 //total number of proto_atts
 
-static uint64_t *proto_atts_hash_array;
-
-
+//marking whether the function mmt_sec_init is called
 static bool is_init = NO;
 
 //string size of an alert in JSON format
@@ -82,6 +75,24 @@ static mmt_sec_handler_t *mmt_sec_handlers[ MAX_HANDLERS_COUNT ];
 static int mmt_sec_handlers_count = 0;
 #endif
 
+
+/**
+ * Native minimal perfect hash function
+ *
+ * it's not necessary to use hash if #proto_atts_count < 50
+ * This is worse than the function above for the current rules set.
+ * Tested on 10 Oct 2017.
+ */
+uint16_t _mmt_sec_hash_proto_attribute_without_lock( uint32_t proto_id, uint32_t att_id ){
+	int i;
+	for( i=0; i<proto_atts_count; i++ )
+		if( proto_atts[ i ]->att_id  == att_id && proto_atts[ i ]->proto_id  == proto_id ){
+			return i;
+		}
+
+	mmt_halt( "Attribute %d.%d has not been registered in MMT-Security", proto_id, att_id );
+	return 0;
+}
 
 void _filter_rules( const char *rule_mask ){
 	uint32_t *rule_range, rule_id;
@@ -115,32 +126,16 @@ void _filter_rules( const char *rule_mask ){
 
 static inline void _iterate_proto_atts( void *key, void *data, void *user_data, size_t index, size_t total ){
 	proto_atts[ index ] = data;
-	//free the key being created on line 88 of function _get_unique_proto_attts
+	//free the key being created on line 185 in function _get_unique_proto_attts
 	mmt_mem_free( key );
 }
-
-
-//static inline void _init_proto_atts_hash_table(){
-//	proto_atts_hash_table = mmt_hash_create();
-//	int i;
-//	const proto_attribute_t *me;
-//	uint64_t key;
-//	for( i=0; i<proto_atts_count; i++ ){
-//		me  = proto_atts[ i ];
-//
-//		key = simple_hash_64(me->proto_id, me->att_id);
-//
-//		//i+1 as we want to avoid 0 => NULL
-//		mmt_hash_add(proto_atts_hash_table, &key, 8, (void *) (uint64_t) (i+1), NO);
-//	}
-//}
 
 static inline void _get_unique_proto_attts( ){
 	const rule_info_t *rule;
 	size_t i, j;
 
-	mmt_map_t *map = mmt_map_init( (void *) strcmp );
-	char *proto_att_key;
+	mmt_map_t *map = mmt_map_init( compare_uint64_t );
+	uint64_t *proto_att_key;
 	const proto_attribute_t *me, *old;
 
 	//for each rule
@@ -148,8 +143,8 @@ static inline void _get_unique_proto_attts( ){
 		rule = rules[i];
 		for( j=0; j<rule->proto_atts_count; j++ ){
 			me = &rule->proto_atts[j];
-			proto_att_key  = mmt_mem_alloc( 12 );
-			snprintf( proto_att_key, 10, "%4d.%4d",  me->proto_id, me->att_id );
+			proto_att_key = mmt_mem_alloc( sizeof( uint64_t) );
+			*proto_att_key = simple_hash_64( me->proto_id, me->att_id );
 
 			if( (old = mmt_map_set_data( map, proto_att_key, (void *)me, NO )) != NULL ){
 				//already exist
@@ -163,33 +158,35 @@ static inline void _get_unique_proto_attts( ){
 	if( proto_atts_count > 64 )
 		mmt_halt( "A single mmt_security cannot handler more than 64 different proto.att. You might need to use mmt_smp_sec to divide work load." );
 
-	proto_atts = mmt_mem_alloc( proto_atts_count * sizeof( void* ));
 	mmt_map_iterate( map, _iterate_proto_atts, NULL );
 
 	mmt_map_free( map, NO );
-
-//	_init_proto_atts_hash_table();
 }
 
-static inline void _update_rule_hash_proto_att( ){
+/**
+ * Attribute an unique number for each pair proto/att inside the current rules set
+ */
+static inline void _update_rules_hash( ){
 	int index, i, j;
 	const rule_info_t *rule;
 	const proto_attribute_t *p;
-
+	uint16_t hash;
 	//for each index
 	for( index=0; index< proto_atts_count; index++ ){
 		p = proto_atts[ index ];
+		hash = _mmt_sec_hash_proto_attribute_without_lock( p->proto_id, p->att_id);
 		//for each rule
 		for( i=0; i< rules_count; i++ ){
 			rule = rules[ i ];
-			rule->hash_message( p->proto, p->att, index );
+			rule->hash_message( p->proto, p->att, hash );
 		}
-		mmt_debug("%2d <- hash(%s, %s)", index, p->proto, p->att );
+		mmt_debug("%2d <- hash(%3d, %3d) (%s, %s)", hash, p->proto_id, p->att_id, p->proto, p->att );
 	}
 }
 
 
 /**
+ * PUBLIC API
  * This function inits security rules
  * @return
  */
@@ -211,7 +208,6 @@ int mmt_sec_init( const char* excluded_rules_id ){
 	rules_count = load_mmt_sec_rules( &rules_arr );
 
 	//clone rules_arr to rules
-	rules = mmt_mem_alloc( sizeof( void* ) * rules_count );
 	for( i=0; i<rules_count; i++ )
 		rules[i] = rules_arr[i];
 
@@ -224,22 +220,16 @@ int mmt_sec_init( const char* excluded_rules_id ){
 	}
 
 	_get_unique_proto_attts();
-	_update_rule_hash_proto_att();
+	_update_rules_hash();
 
 	return 0;
 }
 
 
 void mmt_sec_close(){
-	mmt_mem_free( rules );
-	rules = NULL;
 	rules_count = 0;
 
-	mmt_mem_free( proto_atts );
-	proto_atts = NULL;
 	proto_atts_count = 0;
-
-//	mmt_hash_free( proto_atts_hash_table );
 }
 
 /**
@@ -324,12 +314,22 @@ size_t mmt_sec_unregister( mmt_sec_handler_t* ret ){
 	return alerts_count;
 }
 
+/**
+ * Local usage
+ * @param rules_array
+ * @return
+ */
+size_t _mmt_sec_get_rules_info_without_lock( rule_info_t const*const**rules_array ){
+	size_t ret = 0;
+	*rules_array = rules;
+	ret          = rules_count;
+	return ret;
+}
 
 size_t mmt_sec_get_rules_info( rule_info_t const*const**rules_array ){
 	size_t ret = 0;
 	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
-	*rules_array = rules;
-	ret          = rules_count;
+	ret = _mmt_sec_get_rules_info_without_lock( rules_array );
 	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
 
@@ -671,85 +671,41 @@ size_t mmt_sec_get_unique_protocol_attributes( proto_attribute_t const *const **
 
 }
 
-
+/**
+ * PUBLIC API
+ * @param proto_id
+ * @param att_id
+ * @return
+ */
 uint16_t mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id ){
-	int i;
+	uint16_t ret = 0;
 	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
-	for( i=0; i<proto_atts_count; i++ )
-		if( proto_atts[ i ]->att_id  == att_id && proto_atts[ i ]->proto_id  == proto_id ){
-			UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
-			return i;
-		}
+	ret = _mmt_sec_hash_proto_attribute_without_lock(proto_id, att_id );
 	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
 
-	mmt_halt( "Attribute %d.%d has not been registered in MMT-Security", proto_id, att_id );
-	return 0;
+	return ret;
 }
-//
-//// it's not necessary to use hash if #proto_atts_count < 50
-//// This is worse than the function above for the current rules set.
-//// Tested on 10 Oct 2017.
-//uint16_t _mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id ){
-//	uint64_t i;
-//	uint64_t key = simple_hash_64(proto_id, att_id );
-//
-//	i = (uint64_t) mmt_hash_search(proto_atts_hash_table, &key, 8 );
-//
-//	//i=0 ==> not found
-//	if( likely( i>0 ))
-//		return (i-1);
-//
-//	mmt_halt( "Attribute %d.%d has not been registered in MMT-Security", proto_id, att_id );
-//	return 0;
-//}
 
 static inline void _print_proto_atts_hash(){
 	size_t i;
 	printf("=> got %zu proto_atts\n", proto_atts_count );
 	for( i=0; i<proto_atts_count; i++ )
-		printf("%2zu  %3d => %s.%s\n", i, mmt_sec_hash_proto_attribute( proto_atts[i]->proto_id, proto_atts[i]->att_id),
+		printf("%3d <= hash(%s, %s)\n", mmt_sec_hash_proto_attribute( proto_atts[i]->proto_id, proto_atts[i]->att_id),
 				proto_atts[i]->proto, proto_atts[i]->att );
 	fflush( stdout );
 }
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 
-/**
- * Local usage
- * @param rules_array
- * @return
- */
-size_t _mmt_sec_get_rules_info_without_lock( rule_info_t const*const**rules_array ){
-	size_t ret = 0;
-	*rules_array = rules;
-	ret          = rules_count;
-	return ret;
-}
-
-/**
- * Local usage
- * @param proto_id
- * @param att_id
- * @return
- */
-uint16_t _mmt_sec_hash_proto_attribute_without_lock( uint32_t proto_id, uint32_t att_id ){
-	int i;
-	for( i=0; i<proto_atts_count; i++ )
-		if( proto_atts[ i ]->att_id  == att_id && proto_atts[ i ]->proto_id  == proto_id ){
-			return i;
-		}
-	mmt_halt( "Attribute %d.%d has not been registered in MMT-Security", proto_id, att_id );
-	return 0;
-}
 
 //PUBLIC API
-__thread_safe size_t mmt_security_remove_rules( size_t rules_to_rm_count, const uint32_t* rules_id_to_rm_set ){
+__thread_safe size_t mmt_sec_remove_rules( size_t rules_to_rm_count, const uint32_t* rules_id_to_rm_set ){
 	size_t i, j;
 	uint32_t rule_id;
 	size_t number_of_rules_will_be_removed = 0;
 
-	_print_proto_atts_hash();
+	EXEC_ONLY_IN_DEBUG_MODE( _print_proto_atts_hash() );
 
 	//remove some rules from #rules
 	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
@@ -783,19 +739,22 @@ __thread_safe size_t mmt_security_remove_rules( size_t rules_to_rm_count, const 
 	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
 
-	_print_proto_atts_hash();
+	EXEC_ONLY_IN_DEBUG_MODE( _print_proto_atts_hash() );
 
 	return number_of_rules_will_be_removed;
 }
 
 //PUBLIC API
-size_t mmt_security_add_rules( const char *rules_mask ){
+size_t mmt_sec_add_rules( const char *rules_mask ){
 	//check parameters
 	__check_null( rules_mask, 0 );
 
 	uint32_t *rules_mask_range;
 	rule_info_t const*const*new_rules_arr;
 	const rule_info_t *rule, **tmp_rules;
+	const proto_attribute_t **tmp_proto_atts;
+	size_t total_add_proto_atts_count;
+	uint16_t hash_number;
 
 	//rules are not verified
 	size_t rules_mask_count = get_rules_id_list_in_mask( rules_mask, &rules_mask_range );
@@ -811,6 +770,7 @@ size_t mmt_security_add_rules( const char *rules_mask ){
 	const rule_info_t **rules_to_be_added = mmt_mem_alloc( sizeof( void *) * ( new_rules_count ) );
 	size_t add_rules_count = 0;
 	size_t i, j, k;
+	total_add_proto_atts_count = 0;
 
 	//get set of rules to be added: a rule will be added if
 	//1. - it exists in #new_rules_arr (=> it must present in /opt/mmt/security/rules or ./rules)
@@ -832,27 +792,53 @@ size_t mmt_security_add_rules( const char *rules_mask ){
 
 		//#rule
 		rules_to_be_added[ add_rules_count ] = rule;
+		total_add_proto_atts_count          += rule->proto_atts_count;
 		add_rules_count ++;
 	}
 
 	//if no rule to be added and not update the current ones
 	__check_zero( add_rules_count, 0 );
 
-	//
-	tmp_rules = mmt_mem_alloc( sizeof( void *) * (rules_count + add_rules_count) );
+	mmt_assert( rules_count + add_rules_count <= MAX_RULES_COUNT, "Support maximally %d rules", MAX_RULES_COUNT );
+	mmt_assert( proto_atts_count + total_add_proto_atts_count <= MAX_PROTO_ATTS_COUNT,
+			"Support maximally %d protocol attributes", MAX_PROTO_ATTS_COUNT );
 
 	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
-	//old rules
-	for( i=0; i<rules_count; i++ )
-		tmp_rules[i] = rules[i];
-	//new rules
-	for( i=0; i<add_rules_count; i++ )
-		tmp_rules[ i+rules_count ] = rules_to_be_added[ i ];
+
+	//for each new rule
+	for( i=0; i<add_rules_count; i++ ){
+		rule = rules_to_be_added[ i ];
+
+		//update new rule
+		rules[ rules_count ] = rule;
+		rules_count ++;
+
+		//update its set of unique proto/att pair
+		//for each proto_att in this rule
+		for( j=0; j<rule->proto_atts_count; j++ ){
+
+			//check if proto_att is existing in proto_atts
+			for( k=0; k<proto_atts_count; k++ )
+				//==> existing
+				if( proto_atts[k]->proto_id == rule->proto_atts[j].proto_id
+						&& proto_atts[k]->att_id == rule->proto_atts[j].att_id)
+					break;
+
+			//does not exist
+			if( k == proto_atts_count ){
+				proto_atts[ proto_atts_count ] = &rule->proto_atts[ j ];
+				proto_atts_count ++;
+			}
+
+			//update hash number inside each rule
+			hash_number = _mmt_sec_hash_proto_attribute_without_lock(rule->proto_atts[j].proto_id, rule->proto_atts[j].att_id);
+			rule->hash_message( rule->proto_atts[j].proto, rule->proto_atts[j].att, hash_number );
+		}
+
+
+	}
 
 	mmt_mem_free( rules_to_be_added );
-	mmt_mem_free( rules );
-	rules        = tmp_rules;
-	rules_count += add_rules_count;
 
 	//apply the new rules to all existing handlers
 	for( i=0; i<mmt_sec_handlers_count; i++ ){
@@ -867,7 +853,8 @@ size_t mmt_security_add_rules( const char *rules_mask ){
 
 	mmt_mem_free( rules_mask_range );
 
-	_print_proto_atts_hash();
+	EXEC_ONLY_IN_DEBUG_MODE( _print_proto_atts_hash() );
+
 	return add_rules_count;
 }
 #endif

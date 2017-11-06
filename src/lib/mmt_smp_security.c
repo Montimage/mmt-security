@@ -358,7 +358,7 @@ void mmt_smp_sec_add_rules( mmt_smp_sec_handler_t *handler, const char*rules_mas
 
 		ret = mmt_single_sec_add_rules(handler->mmt_single_sec_handlers[ i ], add_rules_count, new_rules_arr);
 		if( handler->verbose )
-			mmt_info("- Added %zu rule(s) to thread %d", ret, (i+1));
+			mmt_info("- Added %zu/%zu rule(s) to thread %d", ret, add_rules_count, (i+1));
 
 		//#get_special_rules_for_thread create a new memory => we need to free it
 		mmt_mem_free( new_rules_arr );

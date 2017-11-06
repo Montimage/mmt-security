@@ -29,9 +29,17 @@
 
 #include "../dpi/mmt_dpi.h"
 
+//maximal number of rules we support
+// this value can be freely changed.
+// it is used to reserve a static memory segment
+#ifndef MAX_RULES_COUNT
 #define MAX_RULES_COUNT      100000
-#define MAX_PROTO_ATTS_COUNT  10000
+#endif
 
+//maximal number of protocol attributes we support
+#ifndef MAX_PROTO_ATTS_COUNT
+#define MAX_PROTO_ATTS_COUNT  64 //currently limited by BIT operation on an uint64_t
+#endif
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 #include <pthread.h>
@@ -77,10 +85,9 @@ static int mmt_sec_handlers_count = 0;
 
 
 /**
- * Native minimal perfect hash function
+ * Naif minimal perfect hash function
  *
  * it's not necessary to use hash if #proto_atts_count < 50
- * This is worse than the function above for the current rules set.
  * Tested on 10 Oct 2017.
  */
 uint16_t _mmt_sec_hash_proto_attribute_without_lock( uint32_t proto_id, uint32_t att_id ){
@@ -154,9 +161,9 @@ static inline void _get_unique_proto_attts( ){
 	}
 
 	proto_atts_count = mmt_map_count( map );
-	//TODO: limit to 64 proto.att ???
-	if( proto_atts_count > 64 )
-		mmt_halt( "A single mmt_security cannot handler more than 64 different proto.att. You might need to use mmt_smp_sec to divide work load." );
+	//check limit
+	if( proto_atts_count > MAX_PROTO_ATTS_COUNT )
+		mmt_halt( "A single mmt_security cannot handler more than %d different proto.att. You might need to use mmt_smp_sec to divide work load.", MAX_PROTO_ATTS_COUNT );
 
 	mmt_map_iterate( map, _iterate_proto_atts, NULL );
 
@@ -180,7 +187,7 @@ static inline void _update_rules_hash( ){
 			rule = rules[ i ];
 			rule->hash_message( p->proto, p->att, hash );
 		}
-		mmt_debug("%2d <- hash(%3d, %3d) (%s, %s)", hash, p->proto_id, p->att_id, p->proto, p->att );
+		mmt_debug("%2d <- hash(%3d, %4d) (%s, %s)", hash, p->proto_id, p->att_id, p->proto, p->att );
 	}
 }
 
@@ -700,12 +707,14 @@ static inline void _print_proto_atts_hash(){
 
 
 //PUBLIC API
+//Note: When removing a rule, its proto_att will not be removed from proto_atts list.
+// 	=> This will help to keep the order/index of the rested proto_att.
 __thread_safe size_t mmt_sec_remove_rules( size_t rules_to_rm_count, const uint32_t* rules_id_to_rm_set ){
 	size_t i, j;
 	uint32_t rule_id;
 	size_t number_of_rules_will_be_removed = 0;
 
-	EXEC_ONLY_IN_DEBUG_MODE( _print_proto_atts_hash() );
+	mmt_debug("Need to remove %zu rule(s)", rules_to_rm_count );
 
 	//remove some rules from #rules
 	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
@@ -753,8 +762,9 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 	rule_info_t const*const*new_rules_arr;
 	const rule_info_t *rule, **tmp_rules;
 	const proto_attribute_t **tmp_proto_atts;
-	size_t total_add_proto_atts_count;
 	uint16_t hash_number;
+
+	mmt_debug("Need to add rules: %s", rules_mask );
 
 	//rules are not verified
 	size_t rules_mask_count = get_rules_id_list_in_mask( rules_mask, &rules_mask_range );
@@ -770,7 +780,6 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 	const rule_info_t **rules_to_be_added = mmt_mem_alloc( sizeof( void *) * ( new_rules_count ) );
 	size_t add_rules_count = 0;
 	size_t i, j, k;
-	total_add_proto_atts_count = 0;
 
 	//get set of rules to be added: a rule will be added if
 	//1. - it exists in #new_rules_arr (=> it must present in /opt/mmt/security/rules or ./rules)
@@ -792,7 +801,6 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 
 		//#rule
 		rules_to_be_added[ add_rules_count ] = rule;
-		total_add_proto_atts_count          += rule->proto_atts_count;
 		add_rules_count ++;
 	}
 
@@ -800,8 +808,6 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 	__check_zero( add_rules_count, 0 );
 
 	mmt_assert( rules_count + add_rules_count <= MAX_RULES_COUNT, "Support maximally %d rules", MAX_RULES_COUNT );
-	mmt_assert( proto_atts_count + total_add_proto_atts_count <= MAX_PROTO_ATTS_COUNT,
-			"Support maximally %d protocol attributes", MAX_PROTO_ATTS_COUNT );
 
 	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 
@@ -830,12 +836,13 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 				proto_atts_count ++;
 			}
 
+			mmt_assert( proto_atts_count <= MAX_PROTO_ATTS_COUNT,
+						"Support maximally %d protocol attributes", MAX_PROTO_ATTS_COUNT );
+
 			//update hash number inside each rule
 			hash_number = _mmt_sec_hash_proto_attribute_without_lock(rule->proto_atts[j].proto_id, rule->proto_atts[j].att_id);
 			rule->hash_message( rule->proto_atts[j].proto, rule->proto_atts[j].att, hash_number );
 		}
-
-
 	}
 
 	mmt_mem_free( rules_to_be_added );

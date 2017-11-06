@@ -177,7 +177,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
  * message to mmt-security.
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
-	uint32_t rm_rules_arr[] = {1,2,7};
+	uint32_t rm_rules_arr[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
 
 	mmt_sec_handler_t *handler = (mmt_sec_handler_t *)args;
 	message_t *msg = _get_packet_info( ipacket );
@@ -190,9 +190,9 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	if( total_received_reports == 5000 )
-		mmt_sec_remove_rules(3, rm_rules_arr );
+		mmt_sec_remove_rules(20, rm_rules_arr );
 	if( total_received_reports == 10000 )
-		mmt_sec_add_rules("(1:2,7)");
+		mmt_sec_add_rules("(1:1-20)");
 #endif
 
 	total_received_reports ++;

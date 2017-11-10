@@ -4,6 +4,9 @@ The new rules in XML format must be compiled (e.g., using `compile_rule`) to obt
 The compiled .so files must be then moved to rules folder (either `/opt/mmt/security/rules` or `./rules`).
 Subsequently, mmt-security works only on these .so files.
 
+
+The functions used in the following procedures should be called from the main thread (that is the one it calls `mmt_sec_init`).
+
 ### 1.1 Register the new rules to mmt-security
 To inform mmt-security to take into account the new rules, call the following function
 

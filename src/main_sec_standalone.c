@@ -39,8 +39,11 @@ proto_attribute_t const *const*proto_atts  = NULL;
 
 static pcap_t *pcap;
 
-
+//handler of MMT-SEC
 static mmt_sec_handler_t *sec_handler  = NULL;
+
+//handler of MMT-DPI
+static mmt_handler_t *mmt_dpi_handler = NULL;
 
 void usage(const char * prg_name) {
 	fprintf(stderr, "MMT-Security version %s using DPI version %s\n", mmt_sec_get_version_info(), mmt_version() );
@@ -172,32 +175,49 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 
 
 /**
- * This function is called by mmt-dpi for each incoming packet containing registered proto/att.
- * It gets interested information from the #ipkacet to a message then sends the
- * message to mmt-security.
+ * Register an attribute of a protocol to MMT-DPI. They are given by their IDs
+ * @param proto_id
+ * @param att_id
+ * @param verbose
+ * @return true if it is registered successfully
+ * 		   false if it has been registered or it can not be registered
  */
-int packet_handler( const ipacket_t *ipacket, void *args ) {
-	uint32_t rm_rules_arr[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
-
-	mmt_sec_handler_t *handler = (mmt_sec_handler_t *)args;
-	message_t *msg = _get_packet_info( ipacket );
-
-	//if there is no interested information
-	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
-	if( unlikely( msg == NULL )) return 1;
-
-	mmt_sec_process( handler, msg );
-
-#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
-	if( total_received_reports == 5000 )
-		mmt_sec_remove_rules(20, rm_rules_arr );
-	if( total_received_reports == 10000 )
-		mmt_sec_add_rules("(1:1-20)");
+static inline bool _register_proto_att_to_mmt_dpi( uint32_t proto_id, uint32_t att_id, bool verbose ){
+	//is it registered?
+	if( is_registered_attribute( mmt_dpi_handler, proto_id, att_id ))
+		return 0;
+	if( register_extraction_attribute( mmt_dpi_handler, proto_id, att_id ) ){
+#ifdef DEBUG_MODE
+		if( verbose )
+			mmt_debug( "Registered attribute to extract: %"PRIu32".%"PRIu32, proto_id, att_id );
 #endif
-
-	total_received_reports ++;
-
+		return 1;
+	}
 	return 0;
+}
+
+/**
+ * update of list of unique att_protos and register them to MMT-DPI
+ * @return number of att_protos being registered
+ */
+static inline size_t _update_and_register_protocols_attributes_to_extract( bool verbose ){
+	int i;
+	size_t ret = 0;
+	proto_atts_count = mmt_sec_get_unique_protocol_attributes( & proto_atts );
+
+	for( i=0; i<proto_atts_count; i++ ){
+
+		ret += _register_proto_att_to_mmt_dpi( proto_atts[i]->proto_id, proto_atts[i]->att_id, verbose  );
+
+		//tcp.p_payload => need payload_len
+		if( proto_atts[i]->proto_id == PROTO_TCP && proto_atts[i]->att_id == PROTO_PAYLOAD ){
+			//tcp.payload_len
+			ret += _register_proto_att_to_mmt_dpi( PROTO_TCP, TCP_PAYLOAD_LEN, verbose );
+		}else if( proto_atts[i]->proto_id == PROTO_IP && proto_atts[i]->att_id == IP_OPTS){
+			ret += _register_proto_att_to_mmt_dpi( PROTO_IP, IP_HEADER_LEN, verbose );
+		}
+	}
+	return ret;
 }
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
@@ -206,6 +226,63 @@ static inline void _print_add_rm_rules_instruction(){
 	mmt_info("During runtime, user can add or remove some rules using the following commands:\n%s\n%s",
 		" - to add new rules: add rule_mask, for example: add (0:1-3)(2:4-6)",
 		" - to remove existing rules: rm rule_range, for example: rm  1-3");
+}
+
+/**
+ * Add rules to process and update DPI to extract the corresponding protos/atts
+ * @param rules_mask
+ * @return number of rules being added
+ */
+static inline size_t _add_rules( const char* rules_mask ){
+	size_t ret = mmt_sec_add_rules(rules_mask);
+	//no new rules being added
+	if( ret == 0 )
+		return ret;
+
+	//register the new proto_atts if need
+	size_t count = _update_and_register_protocols_attributes_to_extract( false );
+	mmt_debug( "Registered %zu new proto_atts", count );
+
+	return ret;
+}
+
+
+static inline size_t _remove_rules( size_t rules_count, const uint32_t *rules_ids_array ){
+	proto_attribute_t const*const* old_proto_atts;
+	proto_attribute_t const*const* new_proto_atts;
+	size_t old_proto_atts_count, new_proto_atts_count;
+	size_t i, j;
+
+	old_proto_atts_count = mmt_sec_get_unique_protocol_attributes( & old_proto_atts );
+
+	size_t ret = mmt_sec_remove_rules( rules_count, rules_ids_array );
+	//no rules being removed ???
+	if( ret == 0 )
+		return ret;
+
+	new_proto_atts_count = mmt_sec_get_unique_protocol_attributes( & new_proto_atts );
+
+	//set of proto_atts does not change after removing some rules => donot need to unregister any proto_att
+	if( old_proto_atts_count == new_proto_atts_count )
+		return ret;
+
+	//unregister the att_protos of rules being removed
+	//for each old protol_att
+	for( i=0; i<old_proto_atts_count; i++ ){
+		for( j=0; j<new_proto_atts_count; j++ )
+			if( old_proto_atts[i]->proto_id == new_proto_atts[i]->proto_id &&
+				 old_proto_atts[i]->att_id == new_proto_atts[i]->att_id )
+				break; //this proto_att is still needed
+		//
+		if( j <= new_proto_atts_count )
+			continue;
+		//unregister this old proto_att
+		unregister_extraction_attribute(mmt_dpi_handler, old_proto_atts[i]->proto_id, old_proto_atts[i]->att_id );
+		mmt_debug("Unregistered from mmt-dpi: %"PRIu32".%"PRIu32" (%s,%s)",
+				old_proto_atts[i]->proto_id, old_proto_atts[i]->att_id,
+				old_proto_atts[i]->proto, old_proto_atts[i]->att );
+	}
+	return ret;
 }
 
 /**
@@ -254,13 +331,13 @@ void add_or_remove_rules_if_need(){
 
 	//add xxxx
 	if( buffer[0] == 'a' && buffer[1] == 'd' && buffer[2] == 'd'  && buffer[3] == ' ' ){
-		mmt_info( "Added totally %zu rule(s)", mmt_sec_add_rules( &buffer[4] ));
+		mmt_info( "Added totally %zu rule(s)", _add_rules( &buffer[4] ));
 		return;
 	}else //rm xxx
 		if( buffer[0] == 'r' && buffer[1] == 'm'  && buffer[2] == ' ' ){
 			count = expand_number_range( &buffer[3], &rules_id_to_rm_set );
 			if( count > 0 ){
-				count = mmt_sec_remove_rules( count, rules_id_to_rm_set);
+				count = _remove_rules( count, rules_id_to_rm_set);
 			}
 			mmt_info( "Removed totally %zu rule(s)", count);
 
@@ -277,6 +354,37 @@ void add_or_remove_rules_if_need(){
 #define _print_add_rm_rules_instruction()
 #endif
 
+
+
+/**
+ * This function is called by mmt-dpi for each incoming packet containing registered proto/att.
+ * It gets interested information from the #ipkacet to a message then sends the
+ * message to mmt-security.
+ */
+int packet_handler( const ipacket_t *ipacket, void *args ) {
+	uint32_t rm_rules_arr[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+
+	mmt_sec_handler_t *handler = (mmt_sec_handler_t *)args;
+	message_t *msg = _get_packet_info( ipacket );
+
+	//if there is no interested information
+	//TODO: to check if we still need to send timestamp/counter to mmt-sec?
+	if( unlikely( msg == NULL )) return 1;
+
+	mmt_sec_process( handler, msg );
+
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+	if( total_received_reports == 5000 )
+		mmt_sec_remove_rules(20, rm_rules_arr );
+	if( total_received_reports == 10000 ){
+		_add_rules("(1:1-20)");
+	}
+#endif
+
+	total_received_reports ++;
+
+	return 0;
+}
 
 void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, const u_char *data ){
 	mmt_handler_t *mmt = (mmt_handler_t*)user;
@@ -355,7 +463,6 @@ void register_signals(){
 }
 
 int main(int argc, char** argv) {
-	mmt_handler_t *mmt_dpi_handler;
 	char mmt_errbuf[1024];
 
 	const unsigned char *data;
@@ -403,22 +510,7 @@ int main(int argc, char** argv) {
 	}
 
 
-	proto_atts_count = mmt_sec_get_unique_protocol_attributes( & proto_atts );
-
-	for( i=0; i<proto_atts_count; i++ ){
-		mmt_debug( "Registered attribute to extract: %s.%s (%d.%d)",
-				proto_atts[i]->proto, proto_atts[i]->att,
-				proto_atts[i]->proto_id, proto_atts[i]->att_id );
-
-		register_extraction_attribute( mmt_dpi_handler, proto_atts[i]->proto_id, proto_atts[i]->att_id );
-
-		//tcp.p_payload
-		if( proto_atts[i]->proto_id == PROTO_TCP && proto_atts[i]->att_id == 4098)
-			//tcp.payload_len
-			register_extraction_attribute( mmt_dpi_handler, PROTO_TCP, TCP_PAYLOAD_LEN );
-		else if( proto_atts[i]->proto_id == PROTO_IP && proto_atts[i]->att_id == IP_OPTS)
-			register_extraction_attribute( mmt_dpi_handler, PROTO_IP, IP_HEADER_LEN );
-	}
+	_update_and_register_protocols_attributes_to_extract( true );
 
 
 	//Register a packet handler, it will be called for every processed packet

@@ -66,3 +66,6 @@ mmt_debug("Removed %zu rules", count);
 
 After removing rules, some protocols/attributes may not be needed. One can unregister them from MMT-DPI to increase DPI performance.
 
+## 3. Example
+
+See [../src/main_sec_standalone.c](../src/main_sec_standalone.c)

@@ -3,11 +3,11 @@ Rules mask is a string. It is used to distribute rules on each thread.
 ## Syntax
 It respects the following BNF syntax:
 
-`
+```
 rules_mask :== (number:range)+
 range      := number | number-range | number,range
 number     := (1-9)+
-`
+```
 
 ### Example
 

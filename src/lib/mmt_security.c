@@ -764,15 +764,15 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 	const proto_attribute_t **tmp_proto_atts;
 	uint16_t hash_number;
 
-	mmt_debug("Need to add rules: %s", rules_mask );
-
 	//rules are not verified
 	size_t rules_mask_count = get_rules_id_list_in_mask( rules_mask, &rules_mask_range );
+
+	mmt_debug("Need to add %s (%zu rules)", rules_mask, rules_mask_count );
 
 	//if no need to update the current rules
 	__check_zero( rules_mask_count, 0 );
 
-	//load current rules set that are existing in its rules folder (either /opt/mmt/security/rules or ./rules)
+	//load the current rules set that are existing in its rules folder (either /opt/mmt/security/rules or ./rules)
 	size_t new_rules_count = load_mmt_sec_rules( & new_rules_arr );
 	__check_zero( new_rules_count, 0 );
 
@@ -784,7 +784,7 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 	//get set of rules to be added: a rule will be added if
 	//1. - it exists in #new_rules_arr (=> it must present in /opt/mmt/security/rules or ./rules)
 	//2. - it exists in #rules_mask
-	//3. - it does not exist in #rules
+	//3. - it does not exist in #rules (the running rules set)
 	for( i=0; i<new_rules_count; i++ ){
 		rule = new_rules_arr[ i ];
 		//2. if exists in #rules_mask ?
@@ -795,7 +795,7 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 		for( j=0; j<rules_count; j++ )
 			if( rule->id == rules[j]->id )
 				break;
-		//=> exist
+		//=> exists
 		if( j < rules_count )
 			continue;
 
@@ -804,7 +804,7 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 		add_rules_count ++;
 	}
 
-	//if no rule to be added and not update the current ones
+	//if no rule to be added?
 	__check_zero( add_rules_count, 0 );
 
 	mmt_assert( rules_count + add_rules_count <= MAX_RULES_COUNT, "Support maximally %d rules", MAX_RULES_COUNT );

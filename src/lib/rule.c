@@ -178,7 +178,7 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 			else if( str_equal( xml_attr_value, "mms"))
 				delay_time_unit = MICRO_SECOND;
 			else{
-				mmt_assert(0, "Error 13d: Unexpected time_units: %s", xml_attr_value );
+				mmt_halt("Error 13d: Unexpected time_units: %s", xml_attr_value );
 			}
 			has_delay = YES;
 		}
@@ -298,7 +298,7 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 			else if( operator.trigger == NULL )
 				operator.trigger = _parse_a_rule_node( xml_node );
 			else
-				mmt_assert(0, "Error 13f: Unexpected more than 2 children in property tag");
+				mmt_halt("Error 13f: Unexpected more than 2 children in property tag");
 		}
 
 		xml_node = xml_node->next;
@@ -370,7 +370,7 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 			else if( str_equal( xml_attr_value, "TEST" ) )
 				rule.type = RULE_TYPE_TEST;
 			else
-				mmt_assert( 0, "Error 13c: Unexpected type_property: %s", xml_attr_value );
+				mmt_halt( "Error 13c: Unexpected type_property: %s", xml_attr_value );
 		}else if( str_equal( xml_attr_name, "description" ) )
 			rule.description = mmt_mem_dup( xml_attr_value, strlen( (const char*) xml_attr_value ));
 		else if( str_equal( xml_attr_name, "if_satisfied" ) )
@@ -396,7 +396,7 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 			else if( rule.trigger == NULL )
 				rule.trigger = _parse_a_rule_node( xml_node );
 			else{
-				mmt_assert(0, "Error 13f: Unexpected more than 2 children in property tag");
+				mmt_halt("Error 13f: Unexpected more than 2 children in property tag");
 			}
 		}
 

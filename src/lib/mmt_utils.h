@@ -210,10 +210,11 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 		//second number
 		if( *cur == '-' ){
 			cur ++;
+			//get another end of range
 			num = atoi( cur );
-			while( isdigit( *cur ) ) cur ++;
+			while( isdigit( *cur ) ) cur ++; //jump over the end of range
 
-			i=array[ size-1 ] + 1;
+			i=array[ size-1 ] + 1; //second number in the range
 
 			if( i > num ){
 				mmt_error( "Mask: Range is incorrect %zu-%d", i-1, num );
@@ -389,6 +390,7 @@ static inline const size_t get_rules_id_list_in_mask( const char *rule_mask, uin
 			for( j=0; j<rules_count; j++ )
 				if( array[j] == rule_range[i] )
 					break;
+
 			//does not exist
 			if( j == rules_count ){
 				array[ rules_count ] = rule_range[ i ];
@@ -400,7 +402,7 @@ static inline const size_t get_rules_id_list_in_mask( const char *rule_mask, uin
 		mmt_mem_free( string );
 	}
 
-	*rules_set = mmt_mem_dup( array, size * sizeof( uint32_t) );
+	*rules_set = mmt_mem_dup( array, rules_count * sizeof( uint32_t) );
 
 	return rules_count;
 }

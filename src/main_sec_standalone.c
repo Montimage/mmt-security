@@ -290,7 +290,7 @@ static inline size_t _remove_rules( size_t rules_count, const uint32_t *rules_id
  * When I used std::cin before using this function, it never returned true again.
  * @return true if user press some keys ended by Enter
  */
-static inline bool is_user_press_keys(){
+static inline bool _is_user_press_keys(){
     struct timeval tv;
     fd_set fds;
     tv.tv_sec = 0;
@@ -301,14 +301,14 @@ static inline bool is_user_press_keys(){
     return ( FD_ISSET(STDIN_FILENO, &fds) != 0 );
 }
 
-void add_or_remove_rules_if_need(){
+void _add_or_remove_rules_if_need(){
 	const int len = 1000;
 
 	char buffer[ 1000 ], *c;
 	size_t count;
 	uint32_t *rules_id_to_rm_set;
 	//if user does not press any keys
-	if( is_user_press_keys() == false )
+	if( _is_user_press_keys() == false )
 		return;
 
 	//get user's string
@@ -391,7 +391,7 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 	struct pkthdr header;
 
 	//allow user to add/rm rules
-	add_or_remove_rules_if_need();
+	_add_or_remove_rules_if_need();
 
 	header.ts     = p_pkthdr->ts;
 	header.caplen = p_pkthdr->caplen;
@@ -399,6 +399,7 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 	if (!packet_process( mmt, &header, data )) {
 		fprintf(stderr, "Packet data extraction failure.\n");
 	}
+	printf("."); fflush( stdout );
 }
 
 
@@ -477,7 +478,7 @@ int main(int argc, char** argv) {
 	struct pkthdr header;
 	char rule_mask[ MAX_RULE_MASK_SIZE ], excludes_rules_mask[ MAX_RULE_MASK_SIZE ];
 	size_t i, j, size;
-	uint16_t *rules_id_filter;
+	uint16_t *rules_id_filter = NULL;
 
 	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count,
 			&core_mask, excludes_rules_mask, rule_mask, &verbose );
@@ -527,7 +528,7 @@ int main(int argc, char** argv) {
 
 		while ((data = pcap_next(pcap, &p_pkthdr)) ) {
 			//allow user to add/rm rules
-			add_or_remove_rules_if_need();
+			_add_or_remove_rules_if_need();
 
 			header.ts     = p_pkthdr.ts;
 			header.caplen = p_pkthdr.caplen;

@@ -224,7 +224,7 @@ static inline size_t _update_and_register_protocols_attributes_to_extract( bool 
 
 static inline void _print_add_rm_rules_instruction(){
 	mmt_info("During runtime, user can add or remove some rules using the following commands:\n%s\n%s",
-		" - to add new rules: add rule_mask, for example: add (0:1-3)(2:4-6)",
+		" - to add new rules: add rule_mask, for example: add (1:1-3)(2:4-6)",
 		" - to remove existing rules: rm rule_range, for example: rm  1-3");
 }
 

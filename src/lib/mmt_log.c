@@ -66,7 +66,7 @@ void mmt_sec_log( log_level_t level, const char *format, ... ){
 
 	va_end(arg);
 
-	if( level == HALT ){
+	if( unlikely( level == HALT )){
 
 		mmt_print_execution_trace();
 

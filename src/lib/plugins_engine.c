@@ -188,6 +188,7 @@ size_t load_mmt_sec_rule( rule_info_t const*const ** plugins_arr, const char *pl
 	plugin->original_rules_count = index;
 
 	plugin->rules   = malloc( sizeof( void*) *  plugin->original_rules_count );
+	mmt_assert( plugin->rules != NULL, "Not enough memory");
 
 	//add distinct rules from #original_rules to #rules
 	for( i=0; i<plugin->original_rules_count; i++ ){

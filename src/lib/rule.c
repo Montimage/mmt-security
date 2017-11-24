@@ -253,7 +253,7 @@ static inline int _get_value( const xmlChar *xml_attr_value ){
 	else if( str_equal( xml_attr_value, "COMPUTE" ) )
 		return RULE_VALUE_COMPUTE;
 	else
-		mmt_assert( 0, "Error 13d: Unexpected attribute value=\"%s\"", xml_attr_value );
+		mmt_halt( "Error 13d: Unexpected attribute value=\"%s\"", xml_attr_value );
 	return UNKNOWN;
 }
 

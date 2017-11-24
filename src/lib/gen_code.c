@@ -342,7 +342,7 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 		_gen_transition_before(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, index, NULL, rule, FSM_ACTION_DO_NOTHING);
 		break;
 	default:
-		mmt_assert(0, "Does not support value=%d of operator tag.", opt->value );
+		mmt_halt( "Does not support value=%d of operator tag.", opt->value );
 	}
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -406,7 +406,7 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 		_gen_transition_before(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
 		break;
 	default:
-		mmt_assert(0, "Does not support value=%d of property tag.", rule->value );
+		mmt_halt( "Does not support value=%d of property tag.", rule->value );
 	}
 
 	_gen_comment( fd, "States of FSM for rule %"PRIu32"", rule_id );

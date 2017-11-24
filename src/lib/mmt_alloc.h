@@ -194,6 +194,8 @@ static inline int mmt_mem_cmp( const void *x, const void *y){
 }
 
 static inline void mmt_mem_reset( mmt_memory_t *mem, size_t size ){
+	__check_null( mem, );
+
 	//mem->data points to the memory segment after sizeof( mmt_memory_t )
 	mem->data      = mem + 1;
 	//safe string

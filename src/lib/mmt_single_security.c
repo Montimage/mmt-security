@@ -243,7 +243,7 @@ size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler){
 	// (1) it exists in #handler->rules_array
 	// and (2) it does not exist in #rules
 	i = 0;
-	while( i<handler->rules_count && handler->rules_count != 0 ){
+	while( i<handler->rules_count ){
 		rule = handler->rules_array[i];
 
 		//check if this #rule is existing in #rules

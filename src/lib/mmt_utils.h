@@ -114,6 +114,8 @@ static inline size_t str_split(const char* string, char a_delim, char ***array){
 	delim[0] = a_delim;
 	delim[1] = 0;
 
+	mmt_assert( a_str != NULL, "Not enough memory");
+
 	/* Count how many elements will be extracted. */
 	while( *tmp ){
 		if (a_delim == *tmp){

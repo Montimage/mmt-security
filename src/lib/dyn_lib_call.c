@@ -50,7 +50,7 @@ int funct_get_return_type_and_size(int *size, char *lib_name, char *funct_name){
 
 
 void *funct_execute( const char *lib_name, const char *fn_name, size_t param_size, const void **param_ptr,  size_t data_size){
-	void *lib_pointer = NULL;
+	void *lib_pointer;
 	void *(*embedded_function)();
 	void * ihandle = NULL;
 	void * result_data = NULL;

@@ -61,7 +61,7 @@ void attributes_iterator(attribute_metadata_t * attribute, uint32_t proto_id,
 		void * args) {
 	int *attr_count = (int *) args;
 
-	printf("%c\n\t { .gid = %5d, .id = %4i, .data_type = %-23s, .name = \"%s\"}",
+	printf("%c\n\t { .gid = %5"PRIu32", .id = %4"PRIu32", .data_type = %-23s, .name = \"%s\"}",
 			(*attr_count == 0 ? ' ': ','),
 			++total_proto_att,
 			attribute->id,
@@ -74,7 +74,7 @@ void protocols_iterator(uint32_t proto_id, void * args) {
 	int *proto_count = (int *) args, attr_count = 0;
 
 	if( *proto_count > proto_id ){
-		fprintf( stderr, "ERROR: duplicated protocol id %d\n", proto_id );
+		fprintf( stderr, "ERROR: duplicated protocol id %"PRIu32"\n", proto_id );
 		return;
 	}
 
@@ -85,7 +85,7 @@ void protocols_iterator(uint32_t proto_id, void * args) {
 		(*proto_count) ++;
 	}
 
-	printf("%c\n {.id = %i, .name = \"%s\", .attributes = (struct dpi_attribute[]){",
+	printf("%c\n {.id = %"PRIu32", .name = \"%s\", .attributes = (struct dpi_attribute[]){",
 			 (*proto_count == 0? ' ': ','),
 			proto_id, ( get_protocol_name_by_id(proto_id) ));
 
@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
 
 
 	printf( "\n #define DPI_PROTO_SIZE %d", proto_count );
-	printf( "\n #define DPI_PROTO_ATT_SIZE %d\n", total_proto_att );
+	printf( "\n #define DPI_PROTO_ATT_SIZE %"PRIu32"\n", total_proto_att );
 
 	printf("\n #ifndef MMT_CORE_H\n #define MMT_CORE_H");
 

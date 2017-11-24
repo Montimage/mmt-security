@@ -207,7 +207,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 				size = 0;
 				for( j=0; j<rules_count_per_thread; j++ ){
 					if( size >= ring_len + 1 ) break;
-					size += sprintf(ring + size, "%d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
+					size += sprintf(ring + size, "%"PRIu32"%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
 				}
 				ring[size] = '\0';
 
@@ -239,7 +239,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 			size = 0;
 			for( j=0; j<rules_count_per_thread; j++ ){
 				if( size >= ring_len - 10 ) break;
-				size += sprintf(ring + size, "%d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
+				size += sprintf(ring + size, "%"PRIu32"%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
 			}
 			ring[size] = '\0';
 

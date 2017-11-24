@@ -30,7 +30,7 @@ void init_redis ( const char *hostname, int port ) {
 	redisContext *redis = NULL;
 
 	// Connect to redis if not yet done
-	if (redis == NULL){
+	if (thredis == NULL){
 		redis = redisConnectWithTimeout(hostname, port, timeout);
 		if (redis == NULL || redis->err) {
 			if (redis) {
@@ -41,12 +41,10 @@ void init_redis ( const char *hostname, int port ) {
 			}
 			exit(0);
 		}
-		if (thredis == NULL){
-			thredis = thredis_new(redis);
-			if(thredis == NULL) {
-				mmt_error("Thredis wrapper thredis_new failed\n");
-				exit(0);
-			}
+		thredis = thredis_new(redis);
+		if(thredis == NULL) {
+			mmt_error("Thredis wrapper thredis_new failed\n");
+			exit(0);
 		}
 	}
 }

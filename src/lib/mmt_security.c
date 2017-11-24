@@ -638,7 +638,7 @@ void mmt_sec_print_rules_info(){
 			proto_atts = &(rules[i]->proto_atts_events[ j+1 ]);
 			for( k=0; k<proto_atts->elements_count; k++ ){
 				proto = proto_atts->data[k];
-				printf("%c %s.%s (%d.%d)", k==0?':':',', proto->proto, proto->att,
+				printf("%c %s.%s (%"PRIu32".%"PRIu32")", k==0?':':',', proto->proto, proto->att,
 						proto->proto_id, proto->att_id );
 
 				//add to unique set

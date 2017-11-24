@@ -305,7 +305,7 @@ size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_r
 	//set of rules to be added: maximally all of rules will be added
 	const rule_info_t **rules_set_to_be_add;
 	size_t add_rules_count = 0;
-	rules_set_to_be_add =  mmt_mem_alloc( sizeof( new_rules_id_arr_size )  * sizeof( void * ));
+	rules_set_to_be_add =  mmt_mem_alloc( new_rules_id_arr_size  * sizeof( void * ));
 
 	//filtre out the id in #new_rules_id_arr that is not id of any rule
 	//a rule is added if

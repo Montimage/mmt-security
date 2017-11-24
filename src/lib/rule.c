@@ -71,8 +71,8 @@ void free_a_rule( rule_t *rule, bool free_data){
 static inline void _update_delay_to_micro_second( rule_delay_t *delay, int delay_time_unit ){
 	switch( delay_time_unit ){
 	case YEAR:
-		delay->time_max *= 360;
-		delay->time_min *= 360;
+		delay->time_max *= 12;
+		delay->time_min *= 12;
 	case MONTH:
 		delay->time_max *= 30;
 		delay->time_min *= 30;
@@ -464,7 +464,7 @@ size_t read_rules_from_file( const char * file_name,  rule_t ***properties_arr, 
 					for( i=0; i<rules_count; i++ )
 						mmt_assert( array[i]->id != rule_ptr->id, "Error 13h: Duplicate rule id %d", rule_ptr->id );
 					array[ rules_count ] = rule_ptr;
-					if( rules_count == MAX_RULE_COUNT )
+					if( rules_count >= MAX_RULE_COUNT -1 )
 						mmt_warn( "Too much rules" );
 					else
 						rules_count ++;

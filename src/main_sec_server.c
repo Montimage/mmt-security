@@ -194,10 +194,6 @@ static inline size_t receiving_reports( int sock ) {
 			mmt_warn("Overflow: length_of_report = %d", length_of_report );
 			length_of_report = REPORT_SIZE;
 		}
-		else if( unlikely( length_of_report < 0 )){
-			mmt_info( "Impossible len = %d", length_of_report );
-			continue;
-		}
 
 		n = recv( sock, buffer, length_of_report-4, MSG_WAITALL );
 
@@ -353,7 +349,7 @@ int main( int argc, char** argv ) {
 	struct sockaddr_un un_server_addr, un_cli_addr;
 
 	char un_domain_name[ MAX_FILENAME_SIZE + 1 ];
-	bool is_unix_socket = NO;
+	bool is_unix_socket;
 
 	socklen_t socklen;
 	size_t size, cores_count = 0, alerts_count = 0;

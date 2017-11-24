@@ -20,7 +20,6 @@ void send_message_to_redis(const char*);
 void init_file();
 void send_message_to_file(const char*);
 void close_file();
-void reset_file();
 
 enum output_mode{
 	OUTPUT_NONE  = 0,

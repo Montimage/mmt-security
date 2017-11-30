@@ -124,6 +124,8 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 	int verdict;
 	const mmt_array_t *execution_trace;
 
+	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
+
 	//the message does not concern to any rules handled by this #handler
 	//as it does not contain any proto.att required by the handler
 	if( unlikely((msg->hash & handler->hash) == 0 )){
@@ -133,7 +135,6 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 
 	handler->messages_count ++;
 
-	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
 	//for each rule
 	for( i=0; i<handler->rules_count; i++){
 		//msg does not contain any proto.att for i-th rule

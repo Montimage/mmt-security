@@ -26,12 +26,12 @@ VERSION     := 1.2.0
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lmmt_core
 
-CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -I/usr/include/libxml2/  -I/opt/mmt/dpi/include  
+CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wmaybe-uninitialized -Wuninitialized -I/usr/include/libxml2/  -I/opt/mmt/dpi/include  
 CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -L/usr/local/lib -L/opt/mmt/dpi/lib
 
 #for debuging
 ifdef DEBUG
-CFLAGS   += -g -DDEBUG_MODE -O0 -fstack-protector-all -Wmaybe-uninitialized -Wuninitialized
+CFLAGS   += -g -DDEBUG_MODE -O0 -fstack-protector-all
 else
 CFLAGS   += -O3
 endif
@@ -46,8 +46,15 @@ LIBS   += -lhiredis
 $(info => Enable: Output to redis)	
 endif
 
-ifdef UPDATE_RULES 
-CFLAGS += -DMODULE_ADD_OR_RM_RULES_RUNTIME
+#Enable update_rules if 
+# - this parameter is ignored
+# - or this parameter is different 0 
+ifndef UPDATE_RULES 
+	CFLAGS += -DMODULE_ADD_OR_RM_RULES_RUNTIME
+else
+  ifneq "$(UPDATE_RULES)" "0"
+  		CFLAGS += -DMODULE_ADD_OR_RM_RULES_RUNTIME
+  endif
 endif
 
 #folders containing source files

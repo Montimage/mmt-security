@@ -348,12 +348,6 @@ void _add_or_remove_rules_if_need(){
 	mmt_warn("Unknown command \"%s\"", buffer );
 	_print_add_rm_rules_instruction();
 }
-#else
-#define _add_or_remove_rules_if_need()
-#define _print_add_rm_rules_instruction()
-#endif
-
-
 /* Returns an integer in the range [1, n].
  *
  * Uses rand(), and so is affected-by/affects the same seed.
@@ -379,6 +373,12 @@ static inline int _rand_int(unsigned int n) {
 static inline bool _rand_bool(){
 	return (_rand_int( 10 ) > 5);
 }
+#else
+#define _add_or_remove_rules_if_need()
+#define _print_add_rm_rules_instruction()
+#endif
+
+
 
 /**
  * This function is called by mmt-dpi for each incoming packet containing registered proto/att.
@@ -399,13 +399,14 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 	mmt_sec_process( handler, msg );
 
+//TODO: remve this block
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	if( total_received_reports % 1000 == 0 ){
 		//need to add/rm or not?
-		if( _rand_bool() > 2 ){
+		if( _rand_bool() ){
 			printf("\n%zu\n", total_received_reports );
 			//add or rm rules?
-			if( _rand_bool() > 2 || false){
+			if( _rand_bool() ){
 				//rm random rules ID
 				int nb_rules_to_rm = _rand_int( 5 );
 				for( i=0; i<nb_rules_to_rm; i++ )

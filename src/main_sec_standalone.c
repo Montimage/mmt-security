@@ -471,10 +471,13 @@ static inline void termination(){
 	fprintf(stderr, "%12zu messages received\n", total_received_reports );
 	fprintf(stderr, "%12zu alerts generated\n", alerts_count );
 
+	pcap_close( pcap );
+
 	if( _print_output != NULL )
 		verdict_printer_free();
 
-	mmt_sec_close();
+	mmt_sec_close();   // close mmt_security
+	close_extraction();// close mmt_dpi
 }
 
 void signal_handler_seg(int signal_type) {

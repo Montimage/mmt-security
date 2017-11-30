@@ -772,7 +772,10 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 
 	//load the current rules set that are existing in its rules folder (either /opt/mmt/security/rules or ./rules)
 	size_t new_rules_count = load_mmt_sec_rules( & new_rules_arr );
-	__check_zero( new_rules_count, 0 );
+	if( unlikely( new_rules_count == 0 )){
+		mmt_mem_free( rules_mask_range );
+		return 0;
+	}
 
 	//maximally: all rules will be added
 	const rule_info_t **rules_to_be_added = mmt_mem_alloc( sizeof( void *) * ( new_rules_count ) );
@@ -803,7 +806,11 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 	}
 
 	//if no rule to be added?
-	__check_zero( add_rules_count, 0 );
+	if( unlikely( add_rules_count == 0 )){
+		mmt_mem_free( rules_to_be_added );
+		mmt_mem_free( rules_mask_range );
+		return 0;
+	}
 
 	mmt_assert( rules_count + add_rules_count <= MAX_RULES_COUNT, "Support maximally %d rules", MAX_RULES_COUNT );
 
@@ -843,8 +850,6 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 		}
 	}
 
-	mmt_mem_free( rules_to_be_added );
-
 	//apply the new rules to all existing handlers
 	for( i=0; i<mmt_sec_handlers_count; i++ ){
 		if( mmt_sec_handlers[ i ]->threads_count == 0 )
@@ -856,6 +861,7 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock )
 	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
 
+	mmt_mem_free( rules_to_be_added );
 	mmt_mem_free( rules_mask_range );
 
 	EXEC_ONLY_IN_DEBUG_MODE( _print_proto_atts_hash() );

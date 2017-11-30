@@ -80,7 +80,7 @@ void usage(const char * prg_name) {
 	exit(1);
 }
 
-size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, char *unix_domain, size_t *threads_count,
+size_t parse_options(int argc, char ** argv, uint16_t *port_no, char *unix_domain, size_t *threads_count,
 		size_t *cores_count, uint32_t **core_mask, char *excluded_rules_mask, char *rule_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
 	excluded_rules_mask[0] = '\0';
@@ -336,10 +336,9 @@ void register_signals(){
 
 
 int main( int argc, char** argv ) {
-	uint32_t port_number = 5000; //port on that the program listens
+	uint16_t port_number = 5000; //port on that the program listens
 	size_t threads_count = 1;    //number of threads for each process
 
-	uint16_t *rules_id_filter;
 	int client_socket, pid, i;
 
 	char str_buffer[256];
@@ -361,7 +360,7 @@ int main( int argc, char** argv ) {
 
 	parent_pid = getpid();
 
-	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count,
+	parse_options(argc, argv, &port_number, un_domain_name, &threads_count,
 			&cores_count, &core_mask, excluded_rules_mask, rule_mask, &verbose );
 
 	is_unix_socket = (port_number == 0);

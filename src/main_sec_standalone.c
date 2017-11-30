@@ -22,7 +22,7 @@
 #include <errno.h>
 
 #include "lib/dpi_message_t.h"
-#include "lib/mmt_smp_security.h"
+#include "lib/mmt_security.h"
 #define MAX_RULE_MASK_SIZE 100000
 #define MAX_FILENAME_SIZE 500
 #define TRACE_FILE 1
@@ -221,7 +221,6 @@ static inline size_t _update_and_register_protocols_attributes_to_extract( bool 
 }
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
-
 static inline void _print_add_rm_rules_instruction(){
 	mmt_info("During runtime, user can add or remove some rules using the following commands:\n%s\n%s",
 		" - to add new rules: add rule_mask, for example: add (1:1-3)(2:4-6)",

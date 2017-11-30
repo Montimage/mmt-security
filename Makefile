@@ -21,7 +21,7 @@ GIT_VERSION := $(shell git log --format="%h" -n 1)
 
 # if you update the version number here, 
 # ==> you must also update VERSION_NUMBER in src/lib/version.c 
-VERSION     := 1.1.5
+VERSION     := 1.2.0
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lmmt_core
@@ -33,7 +33,6 @@ CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -L/usr/local/lib
 ifdef DEBUG
 CFLAGS   += -g -DDEBUG_MODE -O0 -fstack-protector-all -Wmaybe-uninitialized -Wuninitialized
 CLDFLAGS += -g -DDEBUG_MODE -O0 -fstack-protector-all
-$(warning => This compile is reserved only for debugging)
 else
 CFLAGS   += -O3
 CLDFLAGS += -O3
@@ -41,7 +40,6 @@ endif
 
 ifdef VALGRIND
 CFLAGS += -DVALGRIND_MODE
-$(warning => This compile is reserved only for testing by valgrind)
 endif
 
 ifdef REDIS
@@ -50,9 +48,8 @@ LIBS   += -lhiredis
 $(info => Enable: Output to redis)	
 endif
 
-ifdef UPDATE_RULES
+ifdef UPDATE_RULES 
 CFLAGS += -DMODULE_ADD_OR_RM_RULES_RUNTIME
-$(info => Enable: update rules at runtime)
 endif
 
 #folders containing source files

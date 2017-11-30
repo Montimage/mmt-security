@@ -704,8 +704,6 @@ static inline void _print_proto_atts_hash(){
 }
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
-
-
 //PUBLIC API
 //Note: When removing a rule, its proto_att will not be removed from proto_atts list.
 // 	=> This will help to keep the order/index of the rested proto_att.
@@ -864,4 +862,13 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 
 	return add_rules_count;
 }
+
+#pragma message("Enable module: Add/Remove rules at runtime")
+#else
+#pragma message("Disable module: Add/Remove rules at runtime")
+#endif
+
+
+#ifdef VALGRIND_MODE
+	#warning "This compile option is reserved only for testing by Valgrind"
 #endif

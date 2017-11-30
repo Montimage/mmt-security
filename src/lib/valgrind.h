@@ -3,10 +3,9 @@
  */
 
 #ifdef VALGRIND_MODE
-#include <valgrind/drd.h>
-//redefine this macro
-#undef VALGRIND_MODE
-#define VALGRIND_MODE(x) x
+	#include <valgrind/drd.h>
+	//redefine this macro
+	#define EXEC_ONLY_IN_VALGRIND_MODE(x) x
 #else
-#define VALGRIND_MODE(x)
+	#define EXEC_ONLY_IN_VALGRIND_MODE(x)
 #endif

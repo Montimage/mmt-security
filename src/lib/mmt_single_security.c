@@ -291,7 +291,6 @@ size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_r
 	__check_zero( new_rules_id_arr_size, 0 );
 
 	size_t i, j, k;
-	size_t max_instances_count = mmt_sec_get_config( MMT_SEC__CONFIG__SECURITY__MAX_INSTANCES );
 
 	const rule_info_t **old_rules_array, *rule;
 	rule_engine_t **old_engines;
@@ -343,6 +342,7 @@ size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_r
 	old_alerts_count = handler->alerts_count;
 	old_rules_hash   = handler->rules_hash;
 
+	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
 	//extends the current arrays by create a new one
 	handler->rules_array  = mmt_mem_alloc( sizeof( void *)    * ( handler->rules_count + add_rules_count ));
 	handler->engines      = mmt_mem_alloc( sizeof( void *)    * ( handler->rules_count + add_rules_count ));
@@ -363,6 +363,7 @@ size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_r
 	mmt_mem_free( old_alerts_count );
 	mmt_mem_free( old_rules_hash   );
 
+	size_t max_instances_count = mmt_sec_get_config( MMT_SEC__CONFIG__SECURITY__MAX_INSTANCES );
 	//add the new rules
 	j = 0;
 	for( i=handler->rules_count; i< (handler->rules_count + add_rules_count); i++ ){
@@ -376,17 +377,19 @@ size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_r
 		for( k=0; k<handler->engines[i]->events_count; k++ )
 			handler->rules_hash[i] |= handler->engines[i]->events_hash[ k ];
 
+		//update global hash
+		handler->hash |= handler->rules_hash[i];
+
 		j++;
 	}
 
 	//new rules size
 	handler->rules_count += add_rules_count;
 
-	//update global hash if need
-	handler->hash = 0;
-	for( i=0; i<handler->rules_count; i++ )
-		handler->hash |= handler->rules_hash[i];
+	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
+	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME
 
+	//free memory
 	mmt_mem_free( rules_set_to_be_add );
 	return add_rules_count;
 }

@@ -31,6 +31,7 @@ PORT=2222
 rsync -e "ssh -i /Users/nhnghia/.ssh/id_rsa -p $PORT" -rca ./* .git $USER@$IP:$TARGET
 
 DEBUG="DEBUG=1 VALGRIND=1 UPDATE_RULES=1"
+#DEBUG="DEBUG=1 VALGRIND=1"
 
 
 #RUN="make install $DEBUG"

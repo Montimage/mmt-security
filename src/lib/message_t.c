@@ -32,8 +32,10 @@ static inline message_t* _create_local_message_t(){
 								+ data_length //data
 								;
 	msg = mmt_mem_alloc( _message_size );
+	EXEC_ONLY_IN_VALGRIND_MODE( ANNOTATE_HAPPENS_BEFORE( mmt_mem_revert( msg ) ) );
 	//elements
 	msg->elements_count = elements_length;
+
 	msg->elements       = (message_element_t *) (&msg[1]); //store elements at the same date segment with msg
 
 	//for each element
@@ -71,6 +73,7 @@ message_t *create_message_t(){
 
 	//the message being created is a copy of _memory
 	msg = mmt_mem_force_dup( _memory->data, _memory->size );
+	EXEC_ONLY_IN_VALGRIND_MODE( ANNOTATE_HAPPENS_BEFORE( & msg ) );
 
 	//update data pointers
 	msg->elements = (message_element_t *)( msg + 1 );

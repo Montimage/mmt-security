@@ -27,7 +27,7 @@ Suppose on your machine, you have:
 sudo apt-get install libxml2-dev libpcap-dev libconfuse-dev
 ```
 
-- *hiredis*
+- Optional: *hiredis*
 
 ```bash
 git clone https://github.com/redis/hiredis.git
@@ -53,6 +53,11 @@ git clone https://bitbucket.org/montimage/mmt-security
 make
 ```
 
+- *Enable some modules* uses `make [MODULE_NAME = 1]+`. Currently `MODULE_NAME` is one of the followings:
+
+  - `REDIS`: this module allows to output to redis. Consequently `hiredis` library must be installed. 
+  - `UPDATE_RULES`: this module allows to add or remove rules at runtime.
+
 - *compile mmt-security to get .deb file in order to re-distribute its binary*
 
 ```
@@ -68,6 +73,14 @@ make deb
 ```
 make install
 ```
+
+- *debug MMT-Security*
+
+```
+make DEBUG=1
+```
+
+If you want to check MMT-Security using Valgrind DRD or Helgrind, you should do `make DEBUG=1 VALGRIND=1`. The option `VALGRIND=1` adds some instruction allowing Valgrind bypass atomic operations that usually causes false positive errors in Valgrind.
 
 # Execution
 

@@ -40,11 +40,17 @@ typedef struct lock_free_spsc_ring_struct
 
 }lock_free_spsc_ring_t;
 
-//#undef atomic_load_explicit
-//#undef atomic_store_explicit
-//
-//#define atomic_load_explicit( x, y ) __sync_fetch_and_add( x, 0 )
-//#define atomic_store_explicit( x, y, z) __sync_lock_test_and_set( x, y)
+#ifdef atomic_load_explicit
+#undef atomic_load_explicit
+#endif
+
+#ifdef atomic_store_explicit
+#undef atomic_store_explicit
+#endif
+
+#define atomic_load_explicit( x, y )    __sync_fetch_and_add( x, 0 )
+#define atomic_store_explicit( x, y, z) __sync_lock_test_and_set( x, y)
+//#define atomic_store_explicit( x, y, z) __sync_synchronize( *x = y )
 /**
  * Create a circular buffer. This is thread-safe only in when there is one
  * producer and one consumer that are 2 different threads.
@@ -83,9 +89,9 @@ static inline int  ring_push( lock_free_spsc_ring_t *q, void* val  ){
 			return RING_FULL;
 	}
 	//not full
-	VALGRIND_MODE(ANNOTATE_IGNORE_WRITES_BEGIN());
 	q->_data[ h ] = val;
-	VALGRIND_MODE(ANNOTATE_IGNORE_WRITES_END());
+	//EXEC_ONLY_IN_VALGRIND_MODE(ANNOTATE_HAPPENS_BEFORE( & (q->_data[h] )));
+	EXEC_ONLY_IN_VALGRIND_MODE(ANNOTATE_HAPPENS_BEFORE( &(q->_data) ));
 
 	atomic_store_explicit( &q->_head, (h +1) % q->_size, memory_order_release );
 
@@ -193,10 +199,10 @@ static inline size_t ring_pop_burst( lock_free_spsc_ring_t *q, int length, void 
 	if( unlikely( size > length ))
 		size = length;
 
-	VALGRIND_MODE(ANNOTATE_IGNORE_READS_BEGIN());
+	//EXEC_ONLY_IN_VALGRIND_MODE( ANNOTATE_HAPPENS_AFTER( & (q->_data[t] )));
+	EXEC_ONLY_IN_VALGRIND_MODE( ANNOTATE_HAPPENS_AFTER( &(q->_data) ));
 	//copy result
 	memcpy( array, &(q->_data[t]), size * sizeof( void *) );
-	VALGRIND_MODE(ANNOTATE_IGNORE_READS_END());
 
 	//seek tail of ring to the new position
 	atomic_store_explicit( &q->_tail, (t + size) % q->_size, memory_order_release );

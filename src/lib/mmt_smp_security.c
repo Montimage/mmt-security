@@ -305,13 +305,14 @@ void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 			free_message_t( msg );
 			return;
 		}
-	}else
-		total_retain = handler->threads_count;
 
-	//retain message for each thread
-	//-1 since msg was cloned from message -> it has ref_count = 1
-	//=> we need to increase ref_count only ( handler->threads_count - 1)
-	msg = mmt_mem_retains( msg,  total_retain - 1 );
+		//retain message for each thread
+		//-1 since msg was cloned from message -> it has ref_count = 1
+		//=> we need to increase ref_count only ( handler->threads_count - 1)
+		msg = mmt_mem_retains( msg,  total_retain - 1 );
+	}
+
+
 
 
 

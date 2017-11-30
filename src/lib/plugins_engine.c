@@ -114,7 +114,12 @@ size_t load_mmt_sec_rules( rule_info_t const*const**ret_array ){
 	return rules_count;
 }
 
-
+/**
+ * Check if a plugin was loaded
+ * @param lib_path
+ * @return - index of plugin in #plugins set if it was loaded
+ *         - total number of existing plugins, otherwise
+ */
 static inline int _find_plugin( const char *lib_path ){
 	int i;
 	for( i=0; i<plugins_count; i++ )

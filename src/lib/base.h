@@ -15,25 +15,10 @@
 #include <inttypes.h> //for uint64_t PRIu64
 #include <stdbool.h>
 
-
-/////////////////////////////////////////////////////////////////////
-//////// these modules can be enabled from Makefile /////////////////
-/////////////////////////////////////////////////////////////////////
-/**
- * Output reports to redis bus
- */
-//#define MODULE_REDIS_OUTPUT
-
-/**
- * Allow adding/removing rules at runtime
- * Remove this definition to prevent adding/removing rules at runtime
- */
-//TODO: rm ifndef
+//TODO: this is used to test
 #ifndef MODULE_ADD_OR_RM_RULES_RUNTIME
-#define MODULE_ADD_OR_RM_RULES_RUNTIME
+//#define MODULE_ADD_OR_RM_RULES_RUNTIME
 #endif
-/////////////////////////////////////////////////////////////////////
-
 
 #define UNKNOWN -1
 #define NO false
@@ -64,6 +49,9 @@
 #endif
 
 //macro
+/**
+ * Return y if x is NULL
+ */
 #define __check_null( x, y ) while( unlikely( x == NULL )) return y
 #define __check_zero( x, y ) while( unlikely( x == 0 )) return y
 #define __check_bool( x, y ) while( unlikely( x )) return y
@@ -81,13 +69,18 @@
 
 
 /**
+ * Allow adding/removing rules at runtime
+ * Remove this definition to prevent adding/removing rules at runtime
+ *
  * Use lock when we need add/remove rules in runtime
  */
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+	//#pragma message("Enable: add/remove rules at runtime")
 	#define BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( spin_lock ) if( pthread_spin_lock( spin_lock ) == 0 ){
 	#define UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( spinlock ) pthread_spin_unlock( spinlock );
 	#define END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME }
 #else
+	//#warning "Disable: add/remove rules at runtime"
 	#define BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( x )
 	#define UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( x )
 	#define END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME

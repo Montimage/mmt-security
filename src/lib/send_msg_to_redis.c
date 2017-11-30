@@ -73,7 +73,9 @@ void send_message_to_redis (const char * message) {
 	}
 }
 
+#pragma message("Enable module: Output to redis")
 #else
+#pragma message("Disable module: Output to redis")
 
 void init_redis ( const char *hostname, int port ) {
 	mmt_warn("Module output to redis is not available");

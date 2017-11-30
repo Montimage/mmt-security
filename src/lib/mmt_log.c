@@ -9,6 +9,11 @@
 #include <stdlib.h>
 #include "mmt_log.h"
 
+
+#ifdef DEBUG_MODE
+	#warning "This compile option is reserved only for debugging"
+#endif
+
 /* Obtain a backtrace and print it to stdou. */
 void mmt_print_execution_trace (void) {
   void *array[10];

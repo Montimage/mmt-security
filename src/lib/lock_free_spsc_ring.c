@@ -35,12 +35,12 @@ lock_free_spsc_ring_t* ring_init( uint32_t size ){
 	q->_head = q->_tail = 0;
 	q->_cached_head = q->_cached_tail = 0;
 
-	VALGRIND_MODE( DRD_IGNORE_VAR( q )  );
-	VALGRIND_MODE( DRD_IGNORE_VAR( q->_size )  );
-	VALGRIND_MODE( DRD_IGNORE_VAR( q->_head )  );
-	VALGRIND_MODE( DRD_IGNORE_VAR( q->_tail )  );
-	VALGRIND_MODE( DRD_IGNORE_VAR( q->_cached_head )  );
-	VALGRIND_MODE( DRD_IGNORE_VAR( q->_cached_tail )  );
+	EXEC_ONLY_IN_VALGRIND_MODE( DRD_IGNORE_VAR( q )  );
+	EXEC_ONLY_IN_VALGRIND_MODE( DRD_IGNORE_VAR( q->_size )  );
+	EXEC_ONLY_IN_VALGRIND_MODE( DRD_IGNORE_VAR( q->_head )  );
+	EXEC_ONLY_IN_VALGRIND_MODE( DRD_IGNORE_VAR( q->_tail )  );
+	EXEC_ONLY_IN_VALGRIND_MODE( DRD_IGNORE_VAR( q->_cached_head )  );
+	EXEC_ONLY_IN_VALGRIND_MODE( DRD_IGNORE_VAR( q->_cached_tail )  );
 //	sem_init( &q->sem_wait_pushing, 0, 0 );
 
 	return q;

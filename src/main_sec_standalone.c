@@ -350,11 +350,36 @@ void _add_or_remove_rules_if_need(){
 	_print_add_rm_rules_instruction();
 }
 #else
-#define add_or_remove_rules_if_need()
+#define _add_or_remove_rules_if_need()
 #define _print_add_rm_rules_instruction()
 #endif
 
 
+/* Returns an integer in the range [1, n].
+ *
+ * Uses rand(), and so is affected-by/affects the same seed.
+ */
+static inline int _rand_int(unsigned int n) {
+  if ((n - 1) == RAND_MAX) {
+    return rand();
+  } else {
+    // Chop off all of the values that would cause skew...
+    long end = RAND_MAX / n; // truncate skew
+    end *= n;
+
+    // ... and ignore results from rand() that fall above that limit.
+    // (Worst case the loop condition should succeed 50% of the time,
+    // so we can expect to bail out of this loop pretty quickly.)
+    int r;
+    while ((r = rand()) >= end);
+
+    return r % n + 1;
+  }
+}
+
+static inline bool _rand_bool(){
+	return (_rand_int( 10 ) > 5);
+}
 
 /**
  * This function is called by mmt-dpi for each incoming packet containing registered proto/att.
@@ -362,7 +387,9 @@ void _add_or_remove_rules_if_need(){
  * message to mmt-security.
  */
 int packet_handler( const ipacket_t *ipacket, void *args ) {
-	uint32_t rm_rules_arr[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+	uint32_t rm_rules_arr[50];
+	char string[500], *ch = string;
+	int i;
 
 	mmt_sec_handler_t *handler = (mmt_sec_handler_t *)args;
 	message_t *msg = _get_packet_info( ipacket );
@@ -374,10 +401,31 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 	mmt_sec_process( handler, msg );
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
-	if( total_received_reports == 5000 )
-		mmt_sec_remove_rules(20, rm_rules_arr );
-	if( total_received_reports == 10000 ){
-		_add_rules("(1:1-20)");
+	if( total_received_reports % 1000 == 0 ){
+		//need to add/rm or not?
+		if( _rand_bool() > 2 ){
+			printf("\n%zu\n", total_received_reports );
+			//add or rm rules?
+			if( _rand_bool() > 2 || false){
+				//rm random rules ID
+				int nb_rules_to_rm = _rand_int( 5 );
+				for( i=0; i<nb_rules_to_rm; i++ )
+					rm_rules_arr[i] = _rand_int( 50 );
+				mmt_sec_remove_rules( nb_rules_to_rm, rm_rules_arr );
+			}else{
+				//add
+				int nb_rules_to_add = _rand_int( 5 );
+				string[0] = '('; string[1] = '1'; string[2] = ':';
+				ch = & string[3];
+				for( i=0; i<nb_rules_to_add; i++ )
+					ch += sprintf(ch, "%d,", _rand_int( 50 ) );
+				*ch = '\0';
+				*(ch - 1) = ')';
+
+				_add_rules( string );
+
+			}
+		}
 	}
 #endif
 

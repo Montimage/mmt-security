@@ -216,15 +216,18 @@ static inline size_t receiving_reports( int sock ) {
 
 		for(counter = 0; counter < elements_count; counter ++){
 			//protocol ID
-			proto_id = *(uint32_t *) &buffer[index];
+			//proto_id = *(uint32_t *) &buffer[index];
+			memcpy( &proto_id, &buffer[index], 4 );
 			index += 4;
 
 			//attribute ID
-			att_id = *(uint32_t*) &buffer[index];
+			//att_id = *(uint32_t*) &buffer[index];
+			memcpy( &att_id, &buffer[index], 4 );
 			index += 4;
 
 			//data length
-			data_length = *(uint16_t *) &buffer[index];
+			//data_length = *(uint16_t *) &buffer[index];
+			memcpy( &data_length, &buffer[index], 2 );
 			index += 2;
 
 			//data

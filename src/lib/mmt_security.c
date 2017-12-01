@@ -576,34 +576,13 @@ void mmt_sec_print_verdict(
 	const char *description = "";
 	const char *string = _convert_execution_trace_to_json_string( trace, rule );
 //	static uint32_t alert_index = 0;
-	//TODO this limit mmt-sec on max 100 K rules
-	static uint8_t  prop_index[100000] = {0}, *p;
-
-//	__sync_add_and_fetch( &alert_index, 1 );
-
-
-	//each rule is processed by only one thread
-	//=> this is thread-safe
-	p = prop_index + rule->id - 1;
-	(*p) ++;
-
-	switch (*p){
-	case 1:
-		description = rule->description;
-		break;
-		//print description of a rule each 1O alerts
-	case 10:
-		//reset counter
-		(*p) = 0;
-		break;
-	}
 
 	len = snprintf( message, MAX_MSG_SIZE, "10,0,\"\",%ld,%"PRIu32",\"%s\",\"%s\",\"%s\",%s",
 			time( NULL ),
 			rule->id,
 			verdict_type_string[verdict],
 			rule->type_string,
-			description,
+			rule->description,
 			string );
 
 	message[ len ] = '\0';

@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <ctype.h>
+#include <inttypes.h>
 #include <mmt_core.h>
 
 static uint32_t total_proto_att = 0;
@@ -74,7 +74,7 @@ void protocols_iterator(uint32_t proto_id, void * args) {
 	int *proto_count = (int *) args, attr_count = 0;
 
 	if( *proto_count > proto_id ){
-		fprintf( stderr, "ERROR: duplicated protocol id %"PRIu32"\n", proto_id );
+		fprintf( stderr, "ERROR: duplicated protocol id %d\n", proto_id );
 		return;
 	}
 

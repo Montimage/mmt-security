@@ -150,6 +150,7 @@ size_t mmt_sec_remove_rules( size_t rules_count, const uint32_t* rules_id_set );
  * Add a set of rules to process
  * @param rules_mask : a string indicating special rules being attributed to special threads
  *    		e.g., "(1:10-13)(2:50)(4:1007-1010)"
+ * @note: the thread_id must start from 1
  * @return number of rules being added
  */
 __thread_safe

@@ -401,31 +401,32 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 
 //TODO: remve this block
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
-	if( total_received_reports % 1000 == 0 ){
-		//need to add/rm or not?
-		if( _rand_bool() ){
-			printf("\n%zu\n", total_received_reports );
-			//add or rm rules?
-			if( _rand_bool() ){
-				//rm random rules ID
-				int nb_rules_to_rm = _rand_int( 5 );
-				for( i=0; i<nb_rules_to_rm; i++ )
-					rm_rules_arr[i] = _rand_int( 50 );
-				mmt_sec_remove_rules( nb_rules_to_rm, rm_rules_arr );
-			}else{
-				//add
-				int nb_rules_to_add = _rand_int( 5 );
-				string[0] = '('; string[1] = '1'; string[2] = ':';
-				ch = & string[3];
-				for( i=0; i<nb_rules_to_add; i++ )
-					ch += sprintf(ch, "%d,", _rand_int( 50 ) );
-				*ch = '\0';
-				*(ch - 1) = ')';
-
-				_add_rules( string );
-
-			}
-		}
+	if( total_received_reports == 1000 ){
+		mmt_debug("Add %zu rules", _add_rules("(1:33,32,34)"));
+//		//need to add/rm or not?
+//		if( _rand_bool() ){
+//			printf("\n%zu\n", total_received_reports );
+//			//add or rm rules?
+//			if( _rand_bool() ){
+//				//rm random rules ID
+//				int nb_rules_to_rm = _rand_int( 5 );
+//				for( i=0; i<nb_rules_to_rm; i++ )
+//					rm_rules_arr[i] = _rand_int( 50 );
+//				mmt_sec_remove_rules( nb_rules_to_rm, rm_rules_arr );
+//			}else{
+//				//add
+//				int nb_rules_to_add = _rand_int( 5 );
+//				ch = string;
+//				ch += sprintf(string, "(%d:", _rand_int(9) );
+//				for( i=0; i<nb_rules_to_add; i++ )
+//					ch += sprintf(ch, "%d,", _rand_int( 50 ) );
+//				*ch = '\0';
+//				*(ch - 1) = ')';
+//
+//				_add_rules( string );
+//
+//			}
+//		}
 	}
 #endif
 

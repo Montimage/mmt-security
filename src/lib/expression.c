@@ -19,7 +19,7 @@
 /**
  * Convert from MMT_DPI_DATA_TYPE to MMT_SEC_DATA_TYPE that is either a STRING or a NUMERIC
  */
-inline enum data_type convert_data_type( int type ){
+inline int convert_data_type( int type ){
 	switch( type ){
 	case MMT_U8_DATA:
 	case MMT_U16_DATA:

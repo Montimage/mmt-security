@@ -4,10 +4,12 @@ Rules mask is a string. It is used to distribute rules on each thread.
 It respects the following BNF syntax:
 
 ```
-rules_mask :== (number:range)+
-range      := number | number-range | number,range
-number     := (1-9)+
+rules_mask    :== (thread_id:rule_id_range)+
+thread_id     := number
+rule_id_range := number | number-rule_id_range | number,rule_id_range
 ```
+
+`thread_id` must be an integer and starts from 1
 
 ### Example
 

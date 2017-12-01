@@ -22,6 +22,8 @@ Currently, this function does not allow to create a new thread to process new ru
     - it has the same ID with the one of a rule being verified.
     - it is assigned to a non-existing thread.
     
+If the current execution contains only a single mmt-security thread, the new rules will be added to this thread for any `thead_id` existing in `rules_mask`.
+
 ### 1.2 Register to MMT-DPI the new protocols/attributes to be extracted
 The new rules may use protocols/attributes that never been used by the existing rules.
 Consequently one need to register to MMT-DPI these new protocols/attributes to be able to extract their data.

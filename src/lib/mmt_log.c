@@ -20,14 +20,14 @@ void mmt_print_execution_trace (void) {
   size_t size;
   char **strings;
   size_t i;
-
   size    = backtrace (array, 10);
   strings = backtrace_symbols (array, size);
 
   mmt_error("Execution trace:");
 
-  for (i = 0; i < size; i++){
-     fprintf(stderr, "\t %zu. %s\n", (i+1), strings[i]);
+  //i=2: ignore 2 first elements in trace as they are: this fun, then mmt_log
+  for (i = 2; i < size; i++){
+     fprintf(stderr, "\t %zu. %s\n", (i-1), strings[i]);
 
      //DEBUG_MODE given by Makefile
 #ifdef DEBUG_MODE

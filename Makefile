@@ -26,7 +26,7 @@ VERSION     := 1.2.0
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lmmt_core
 
-CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wmaybe-uninitialized -Wuninitialized -I/usr/include/libxml2/  -I/opt/mmt/dpi/include  
+CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I/opt/mmt/dpi/include  
 CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -L/usr/local/lib -L/opt/mmt/dpi/lib
 
 #for debuging
@@ -91,6 +91,11 @@ LIB_NAME = libmmt_security2
 
 all: standalone compile_rule rule_info sec_server
 
+gen_dpi $(MMT_DPI_HEADER):
+	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -lmmt_core -ldl
+	$(QUIET) echo "Generate list of protocols and their attributes"	
+	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
+
 %.o: %.c $(MMT_DPI_HEADER)
 	@echo "[COMPILE] $(notdir $@)"
 	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -c -o $@ $<
@@ -99,30 +104,25 @@ test.%: $(MMT_DPI_HEADER) $(LIB_OBJS) test/%.o
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $@ $(CLDFLAGS)  $^ $(LIBS)
 
-perf.%: $(MMT_DPI_HEADER) $(LIB_OBJS) test/perf/%.o
+perf.%: $(LIB_OBJS) test/perf/%.o
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $@ $(CLDFLAGS)  $^ $(LIBS)
 
-compile_rule: $(MMT_DPI_HEADER) $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
+compile_rule: $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
 	@echo "[COMPILE] $(MAIN_GEN_PLUGIN)"
 	$(QUIET) $(CC) -o $(MAIN_GEN_PLUGIN) $(CLDFLAGS) $^ $(LIBS)
 	
-sec_server: $(MMT_DPI_HEADER) $(LIB_OBJS) 
+sec_server: $(LIB_OBJS)  $(SRCDIR)/main_sec_server.o
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER) $(SRCDIR)/main_sec_server.c  $(CFLAGS)  $(CLDFLAGS) $^ $(LIBS) -ldl
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER)  $(CFLAGS)  $(CLDFLAGS) $^ $(LIBS)
 	
-standalone: $(MMT_DPI_HEADER) $(LIB_OBJS) 
+standalone: $(LIB_OBJS)  $(SRCDIR)/main_sec_standalone.o
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(SRCDIR)/main_sec_standalone.c  $(CFLAGS) $(CLDFLAGS) $^ $(LIBS) -lpcap -lmmt_core -ldl
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(CLDFLAGS) $^ $(LIBS) -lpcap
 
-rule_info: $(MMT_DPI_HEADER) $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
+rule_info: $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_PLUGIN_INFO) $(CLDFLAGS) $^ $(LIBS)
-
-gen_dpi:
-	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -lmmt_core -ldl
-	$(QUIET) echo "Generate list of protocols and their attributes"	
-	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
 
 $(LIB_NAME).a: $(LIB_OBJS)
 	$(QUIET) echo "[ARCHIVE] $(notdir $@)"

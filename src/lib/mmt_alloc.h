@@ -206,6 +206,6 @@ static inline void mmt_mem_reset( mmt_memory_t *mem, size_t size ){
 }
 
 
-#define mmt_free_and_assign_to_null( x ) while( x != NULL ){ mmt_mem_free( x ); x = NULL; break; }
+#define mmt_free_and_assign_to_null( x ) do{ mmt_mem_free( x ); x = NULL; }while(0)
 
 #endif /* SRC_MMT_ALLOC_H_ */

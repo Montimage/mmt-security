@@ -105,6 +105,7 @@ static inline void simple_dehash_64( uint64_t val, uint32_t *a, uint32_t *b){
  * @return
  */
 static inline size_t str_split(const char* string, char a_delim, char ***array){
+	__check_null(string, 0);
 	char *a_str = strdup( string );
 	size_t count     = 0;
 	char* tmp        = a_str;
@@ -181,7 +182,7 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 	size_t size = 0, i, j;
 	uint32_t num;
 	//TODO this can handle maximally only 100K rules in rules-mask (lcores in core-mask)
-	uint32_t array[ 100000 ];
+	uint32_t array[ 100000 ] = { 0 }; //init all elements to 0. This is not necessary but used to  pass PVS studio check
 
 	*result = NULL;
 	if( mask == NULL ) return 0;

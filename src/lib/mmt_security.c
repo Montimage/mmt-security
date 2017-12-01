@@ -707,7 +707,8 @@ static inline void _print_proto_atts_hash(){
 //PUBLIC API
 //Note: When removing a rule, its proto_att will not be removed from proto_atts list.
 // 	=> This will help to keep the order/index of the rested proto_att.
-__thread_safe size_t mmt_sec_remove_rules( size_t rules_to_rm_count, const uint32_t* rules_id_to_rm_set ){
+__thread_safe
+size_t mmt_sec_remove_rules( size_t rules_to_rm_count, const uint32_t* rules_id_to_rm_set ){
 	size_t i, j;
 	uint32_t rule_id;
 	size_t number_of_rules_will_be_removed = 0;
@@ -752,6 +753,7 @@ __thread_safe size_t mmt_sec_remove_rules( size_t rules_to_rm_count, const uint3
 }
 
 //PUBLIC API
+__thread_safe
 size_t mmt_sec_add_rules( const char *rules_mask ){
 	//check parameters
 	__check_null( rules_mask, 0 );
@@ -872,6 +874,19 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 #pragma message("Enable module: Add/Remove rules at runtime")
 #else
 #pragma message("Disable module: Add/Remove rules at runtime")
+
+__thread_safe
+size_t mmt_sec_remove_rules( size_t rules_count, const uint32_t* rules_id_set ){
+	mmt_error("This feature is disable.");
+	return 0;
+}
+
+__thread_safe
+size_t mmt_sec_add_rules( const char *rules_mask ){
+	mmt_error("This feature is disable.");
+	return 0;
+}
+
 #endif
 
 

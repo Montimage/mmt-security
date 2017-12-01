@@ -51,7 +51,7 @@ ldconfig
    - `UPDATE_RULES`: this module allows to add or remove rules at runtime. This is enabled by default. To disable this, e.g., in the case we do not need this feature: `MODULE_NAME=0`
 
 - compile mmt-security to get .deb file in order to re-distribute its binary: `make deb`  
-   You will get a .deb file, e.g., `mmt-security_1.0.1_8d5d7ea_Linux_x86_64.deb`, containing everything mmt-security need in order to be able to execute on a new machine.  
+   You will get a .deb file, e.g., `mmt-security_1.0.1_8d5d7ea_Linux_x86_64.deb`, containing everything mmt-security needs in order to be able to execute on a fresh machine.  
    To install this deb file on a new debian-based machine, use: `sudo dpkg -i file_name.deb`
 
 - install mmt-security on the current machine: `make install`
@@ -63,15 +63,15 @@ ldconfig
 
 # Execution
 
-MMT-Security binary can be obtained by compiling its source code or installing its distribution file (*.deb).
+MMT-Security binary files can be obtained by compiling its source code or installing its distribution file (*.deb).
 
 ## compile_rule
 This application parses rules in .xml file, then compile to a plugin .so file.
 
 ```bash
-#generate .so file
+#to generate .so file
 ./compile_rule rules/arp_poisoning.so rules/arp_poisoning.xml
-#generate code c
+#to generate code c (for debug)
 ./compile_rule rules/arp_poisoning.c rules/arp_poisoning.xml -c
 ```
 
@@ -109,7 +109,7 @@ This application can analyze
 
 ## mmt_sec_server
 
-This application receives meta-data, calling `messages`, from mmt-probe and then analyse them.
+This application receives meta-data, calling `messages`, from mmt-probe via internet or Unix sockets and then analyse them.
 
 ```bash
 ./mmt_sec_server -h

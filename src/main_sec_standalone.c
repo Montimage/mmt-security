@@ -484,7 +484,6 @@ static inline void termination(){
 void signal_handler_seg(int signal_type) {
 	mmt_error( "Interrupted by signal %d", signal_type );
 	mmt_print_execution_trace();
-	usleep( 50 );
 	exit( signal_type );
 }
 

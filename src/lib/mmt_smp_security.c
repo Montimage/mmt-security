@@ -149,7 +149,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 	int ret;
 	struct _thread_arg *thread_arg;
 	long cpus_count = get_number_of_online_processors() - 1;
-	const size_t ring_len = 10000;
+	const size_t ring_len = 10000 - 1;
 	char ring[10000], *ring_ptr;
 	uint32_t ring_size = mmt_sec_get_config( MMT_SEC__CONFIG__SECURITY__SMP__RING_SIZE );
 	uint32_t *rule_range, rule_id;
@@ -206,8 +206,8 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 			if( verbose ){
 				size = 0;
 				for( j=0; j<rules_count_per_thread; j++ ){
-					if( size >= ring_len + 1 ) break;
-					size += sprintf(ring + size, "%"PRIu32"%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
+					if( size > ring_len ) break;
+					size += snprintf(ring + size, ring_len - size, "%"PRIu32"%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
 				}
 				ring[size] = '\0';
 
@@ -238,8 +238,8 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		if( verbose){
 			size = 0;
 			for( j=0; j<rules_count_per_thread; j++ ){
-				if( size >= ring_len - 10 ) break;
-				size += sprintf(ring + size, "%"PRIu32"%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
+				if( size > ring_len ) break;
+				size += snprintf(ring + size, ring_len - size,"%"PRIu32"%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
 			}
 			ring[size] = '\0';
 

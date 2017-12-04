@@ -17,7 +17,7 @@
 
 //TODO: this is used to test
 #ifndef MODULE_ADD_OR_RM_RULES_RUNTIME
-//#define MODULE_ADD_OR_RM_RULES_RUNTIME
+#define MODULE_ADD_OR_RM_RULES_RUNTIME
 #endif
 
 #define UNKNOWN -1

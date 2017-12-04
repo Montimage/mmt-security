@@ -34,7 +34,7 @@ void mmt_print_execution_trace (void) {
      /* find first occurence of '(' or ' ' in message[i] and assume
       * everything before that is the file name. (Don't go beyond 0 though
       * (string terminator)*/
-     size_t p = 0;
+     size_t p = 0, size;
      while(strings[i][p] != '(' && strings[i][p] != ' '
    		  && strings[i][p] != 0)
    	  ++p;
@@ -42,7 +42,8 @@ void mmt_print_execution_trace (void) {
      char syscom[256];
 
 
-     sprintf(syscom,"addr2line %p -e %.*s", array[i] , (int)p, strings[i] );
+     size = snprintf(syscom, sizeof( syscom ), "addr2line %p -e %.*s", array[i] , (int)p, strings[i] );
+     syscom[size] = '\0';
      //last parameter is the filename of the symbol
 
      fprintf(stderr, "\t    ");

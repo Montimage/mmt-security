@@ -656,7 +656,7 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 	if( expr->data_type == NUMERIC ){
 		d = *(double *)expr->data;
 		//integer
-		size = sprintf(buff, "%.2f", d);
+		size = snprintf(buff, sizeof(MAX_STR_SIZE), "%.2f", d);
 		//remove zero at the end, e.g., 10.00 ==> 10
 		while( size > 1 && buff[ size - 1 ] == '0' )
 				size --;
@@ -664,7 +664,7 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 	}else if( expr->data_type == STRING )
 		size = snprintf( buff, MAX_STR_SIZE, "\"%s\"", (char *)expr->data );
 	else
-		size = sprintf( buff, "\"__na__\"");
+		size = snprintf( buff, MAX_STR_SIZE, "\"__na__\"");
 
 	*string = mmt_mem_dup( buff, size );
 
@@ -684,9 +684,9 @@ size_t expr_stringify_variable( char **string, const variable_t *var){
 	}
 
 	if( var->ref_index != (uint16_t)UNKNOWN ){
-		size = snprintf(buff, 250, "%s_%s_%d", var->proto, var->att, var->ref_index);
+		size = snprintf(buff, sizeof( buff ), "%s_%s_%d", var->proto, var->att, var->ref_index);
 	}else{
-		size = snprintf(buff, 250, "%s_%s", var->proto, var->att );
+		size = snprintf(buff, sizeof( buff ), "%s_%s", var->proto, var->att );
 	}
 	*string = mmt_mem_dup( buff, size );
 	return size;
@@ -734,19 +734,18 @@ size_t expr_stringify_operation( char **string, operation_t *opt ){
 	expression_t *expr;
 
 	char str[ MAX_STR_SIZE ];
-
 	//change comparison of string to function: "a" == "b" ==> 0 == strcmp("a", "b")
 	if( _is_comparison_operator( opt->operator ) && _is_string_param ( opt ) ){
 		//delimiter
 		delim = ",";
-		index += sprintf( &str[ index ], "0 %s %s(", opt->name,
+		index += snprintf( &str[ index ], MAX_STR_SIZE, "0 %s %s(", opt->name,
 				_is_string_variable( opt) ? "mmt_mem_cmp" : "strcmp" );
 	}else if( opt->operator == FUNCTION ){
 		delim = ",";
-		index += sprintf( &str[ index ], "%s(", opt->name );
+		index += snprintf( &str[ index ], MAX_STR_SIZE, "%s(", opt->name );
 	}else{
 		delim = opt->name;
-		index += sprintf( &str[ index ], "(" );
+		index += snprintf( &str[ index ], MAX_STR_SIZE, "(" );
 	}
 
 	//parameters
@@ -756,9 +755,9 @@ size_t expr_stringify_operation( char **string, operation_t *opt ){
 		(void) expr_stringify_expression( &tmp, expr );
 		//the last parameter ==> no need delimiter but a close-bracket
 		if( node->next == NULL ){
-			index += sprintf( &str[ index ], "%s)", tmp);
+			index += snprintf( &str[ index ], MAX_STR_SIZE - index, "%s)", tmp);
 		}else{
-			index += sprintf( &str[ index ], "%s %s ", tmp , delim);
+			index += snprintf( &str[ index ], MAX_STR_SIZE - index, "%s %s ", tmp , delim);
 		}
 		//tmp was created in expr_stringify_expression( &tmp ...
 		mmt_mem_free( tmp );

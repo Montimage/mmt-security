@@ -492,7 +492,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				case MMT_DATA_IP_NET: /**< ip network address constant value */
 				case MMT_DATA_IP_ADDR: /**< ip address constant value */
 						u8_ptr = (uint8_t *) me->data;
-						size   = sprintf(str_ptr, "\"%d.%d.%d.%d\"",
+						size   = snprintf(str_ptr, total_len, "\"%d.%d.%d.%d\"",
 											u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
 					break;
 
@@ -500,7 +500,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				case MMT_DATA_IP6_ADDR:
 				case MMT_DATA_MAC_ADDR:
 						u8_ptr = (uint8_t *) me->data;
-						size   = sprintf(str_ptr, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
+						size   = snprintf(str_ptr, total_len, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
 								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
 					break;
 				}// end of switch( pro_ptr->proto_id ){
@@ -601,6 +601,7 @@ void mmt_sec_print_rules_info(){
 	char string[ 100000 ], *ch_ptr, tmp_string[ 1000 ];
 	string[ 0 ] = '\0';
 	ch_ptr = &string[ 0 ];
+	int len_remain = sizeof( string );
 
 	BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( &spin_lock );
 	printf("Found %zu rule%s", rules_count, rules_count<=1? ".": "s." );
@@ -621,9 +622,12 @@ void mmt_sec_print_rules_info(){
 						proto->proto_id, proto->att_id );
 
 				//add to unique set
-				sprintf( tmp_string, "%s.%s", proto->proto, proto->att );
-				if( strstr( string, tmp_string ) == NULL )
-					ch_ptr += sprintf( ch_ptr, "\"%s.%s\",", proto->proto, proto->att );
+				snprintf( tmp_string, sizeof( tmp_string), "%s.%s", proto->proto, proto->att );
+				if( strstr( string, tmp_string ) == NULL && len_remain > 0 ){
+					size = snprintf( ch_ptr, len_remain, "\"%s.%s\",", proto->proto, proto->att );
+					ch_ptr     += size;
+					len_remain -= size;
+				}
 			}
 		}
 

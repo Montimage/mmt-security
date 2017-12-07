@@ -109,7 +109,7 @@ static inline const void *get_element_data_message_t( const message_t *msg, uint
 
 #ifdef DEBUG_MODE
 	if( unlikely( index >= msg->elements_count )){
-		mmt_error("Access to outside message's elements");
+		mmt_error("Access to outside message's elements (%d > %d)", index, msg->elements_count);
 		return NULL;
 	}
 #endif
@@ -117,6 +117,13 @@ static inline const void *get_element_data_message_t( const message_t *msg, uint
 	return msg->elements[ index ].data;
 }
 
+/**
+ * This function is used to update message structure to take in to account some modification of rules set.
+ * The modification leads to change elements size of messages.
+ *
+ * This function must be called from the one being calling #create_message_t
+ */
+void reset_message_t();
 
 
 #endif /* SRC_LIB_MESSAGE_T_H_ */

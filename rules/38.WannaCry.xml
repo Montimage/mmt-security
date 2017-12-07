@@ -1,13 +1,13 @@
 <beginning>
 <!-- Property 38: Detection of WannaCry Ransomware-->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="2" property_id="38" type_property="ATTACK" 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="38" type_property="ATTACK" 
     description="Detection of WannaCry Ransomware">
     <event value="COMPUTE" event_id="1" 
-           description="SMB packet"
-           boolean_expression="((smb.packet_count != 0)&amp;&amp;(ip.src != ip.dst))"/>
-    <event value="COMPUTE" event_id="2" 
            description="SMB client/server intend connecting WannaCry host"
-           boolean_expression="((ip.src == ip.dst.1)&amp;&amp;(#em_check_WannaCry(http.host) == 1))"/> 
+           boolean_expression="(#em_check_WannaCry(http.host) == 1)"/>
+     <event value="COMPUTE" event_id="2" 
+           description="Print IP addresses"
+           boolean_expression="(ip.src != ip.dst)"/> 
 </property>
 
 <embedded_functions><![CDATA[
@@ -29,7 +29,6 @@ const char* domain_lst[] = {
 //This fuction is called when the rules in this files being loaded into MMT-Security
 void on_load(){   
    int i;
-   //number of uri
    int length = sizeof( domain_lst ) / sizeof( domain_lst[0] );
    const char*str;
    

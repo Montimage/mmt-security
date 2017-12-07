@@ -32,13 +32,17 @@ void mmt_sec_log( log_level_t level, const char *format, ... )
 
 
 #ifdef DEBUG_MODE
-	#define mmt_debug(...)   do{ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( DEBUG, __VA_ARGS__ ); fflush( stdout ); } while(0)
+	#define EXEC_ONLY_IN_DEBUG_MODE( expr ) expr
+	#define mmt_debug(...)   do{ printf(" %s:%d ", __FILE__, __LINE__); mmt_sec_log( DEBUG, __VA_ARGS__ ); fflush( stdout ); } while(0)
 	#define mmt_halt( ... )  do{ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( HALT, __VA_ARGS__ ); }while( 0 )
-	#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( HALT, __VA_ARGS__ ); break; }
+	//exit(0) is used to pass PVS studio only
+	#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ printf("%s:%d ", __FILE__, __LINE__); mmt_sec_log( HALT, __VA_ARGS__ ); exit(0); }
 #else
+	#define EXEC_ONLY_IN_DEBUG_MODE( expr )
 	#define mmt_debug(...)
 	#define mmt_halt( ... ) mmt_sec_log( HALT, __VA_ARGS__ )
-	#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ mmt_sec_log( HALT, __VA_ARGS__ ); break; }
+	//exit(0) is used to pass PVS studio only
+	#define mmt_assert( expr, ... ) while( unlikely( !(expr) ) ){ mmt_sec_log( HALT, __VA_ARGS__ ); exit(0); }
 #endif
 
 /**

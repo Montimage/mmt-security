@@ -14,11 +14,11 @@ static inline int em_check_sql_injection_ua(const char *str){
    s2 = strstr(str, "UNION"); //find the first occurrence of string "UNION" in string
    s3 = strstr(str, "SELECT"); //find the first occurrence of string "SELECT" in string
    s4 = strstr(str, "CHAR"); //find the first occurrence of string "CHAR" in string  
-   s5 = strstr(str, "DELETE"); //find the first occurrence of string "CHAR" in string
-   s6 = strstr(str, "INSERT"); //find the first occurrence of string "CHAR" in string
-   s7 = strchr(str, '\'');    //find the first occurrence of character "'" in string
-   s8 = strchr(str, '\"');    //find the first occurrence of character """ in string
-   s9 = strstr(str, "--");    //find the first occurrence of string "--" in string
+   s5 = strstr(str, "DELETE"); //find the first occurrence of string "DELETE" in string
+   s6 = strstr(str, "INSERT"); //find the first occurrence of string "INSERT" in string
+   //s7 = strchr(str, '\'');    //find the first occurrence of character "'" in string
+   //s8 = strchr(str, '\"');    //find the first occurrence of character """ in string
+   //s9 = strstr(str, "--");    //find the first occurrence of string "--" in string
      
    if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL) || (s7 !=NULL) || (s8 !=NULL) || (s9 !=NULL)) {
       handle = 1;   
@@ -57,6 +57,7 @@ static inline int em_check_sql_injection_ua(const char *str){
             if( c[1]=='N' && c[2]=='S' && c[3]=='E' && c[4]=='R' && c[5]=='T' )
                return 1;
             break;
+         /*
          case '\'':
             return 1;
          case '"':
@@ -64,6 +65,7 @@ static inline int em_check_sql_injection_ua(const char *str){
          case '-':
             if( c[1] == '-' )
                return 1;
+           */
             break;
       }
       c ++;
@@ -79,7 +81,7 @@ static inline int em_check_sql_injection_ua(const char *str){
            boolean_expression="(#em_check_sql_injection_ua(http.user_agent) == 1)"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP GET"
-           boolean_expression="(http.method == 'GET')"/> 
+           boolean_expression="((http.method == 'GET' &amp;&amp; (ip.src != ip.dst))"/> 
 </property>
 </beginning>
 

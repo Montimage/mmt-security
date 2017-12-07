@@ -23,7 +23,7 @@ static inline int em_check_tor_ip( const char *ip_src, const char *ip_dst ){
 	//addr.s_addr = ip;
 	//mmt_debug("Checking IP %"PRIu32" - %s", ip, inet_ntoa( addr ) );
 	
-	if( mmt_hash_search( table, ip_dst, 4 ) != NULL )
+	if( mmt_hash_search( table, ip_src, 4 ) != NULL )
 	  return true;
 	
 	if( mmt_hash_search( table, ip_dst, 4 ) != NULL )

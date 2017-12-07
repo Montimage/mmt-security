@@ -21,13 +21,9 @@ The repository contains mmt-security toolset:
 
 Suppose on your machine, you have:
 
-- *libxml2-dev, libpcap-dev, libconfuse-dev* : 
+- *libxml2-dev, libpcap-dev, libconfuse-dev* :  `sudo apt-get install libxml2-dev libpcap-dev libconfuse-dev`
 
-```bash
-sudo apt-get install libxml2-dev libpcap-dev libconfuse-dev
-```
-
-- *hiredis*
+- Optional: *hiredis*
 
 ```bash
 git clone https://github.com/redis/hiredis.git
@@ -37,49 +33,45 @@ sudo make install
 ldconfig
 ```
 
-- *mmt-sdk*: see https://bitbucket.org/montimage/mmt-sdk/wiki/Compilation%20and%20Installation%20Instructions
+- mmt-sdk: https://bitbucket.org/montimage/mmt-sdk/wiki/Compilation%20and%20Installation%20Instructions
 
-- *source code of mmt-security* 
+- source code of mmt-security: `git clone https://bitbucket.org/montimage/mmt-security`
 
-```bash
-git clone https://bitbucket.org/montimage/mmt-security
-```
 
 ## Compile
 
 
-- *compile mmt-security on its local directory*
-```
-make
-```
+- compile MMT-Security on its local directory: `make`
 
-- *compile mmt-security to get .deb file in order to re-distribute its binary*
+- compile sample rules existing in `rules` folder: `make sample_rule`
 
-```
-make deb
-```
+- enable some modules use: `make [MODULE_NAME=1]+`. Currently `MODULE_NAME` is one of the followings:
 
-   you will get a .deb file, e.g., `mmt-security_1.0.1_8d5d7ea_Linux_x86_64.deb`, containing everything mmt-security need in order to be able to execute on a new machine.
-   
-   To install this deb file on a new debian-based machine, using `sudo dpkg -i file_name.deb`
+   - `REDIS`: this module allows to output to redis. Consequently `hiredis` library must be installed. 
+   - `UPDATE_RULES`: this module allows to add or remove rules at runtime. This is enabled by default. To disable this, e.g., in the case we do not need this feature: `MODULE_NAME=0`
 
-- *install mmt-security on the current machine*
+- compile mmt-security to get .deb file in order to re-distribute its binary: `make deb`  
+   You will get a .deb file, e.g., `mmt-security_1.0.1_8d5d7ea_Linux_x86_64.deb`, containing everything mmt-security needs in order to be able to execute on a fresh machine.  
+   To install this deb file on a new debian-based machine, use: `sudo dpkg -i file_name.deb`
 
-```
-make install
-```
+- install mmt-security on the current machine: `make install`
+
+- debug MMT-Security: `make DEBUG=1`
+
+
+- if you want to check MMT-Security using Valgrind DRD or Helgrind, you should do `make DEBUG=1 VALGRIND=1`. The option `VALGRIND=1` adds some instruction allowing Valgrind bypass atomic operations that usually causes false positive errors in Valgrind.
 
 # Execution
 
-MMT-Security binary can be obtained by compiling its source code or installing its distribution file (*.deb).
+MMT-Security binary files can be obtained by compiling its source code or installing its distribution file (*.deb).
 
 ## compile_rule
 This application parses rules in .xml file, then compile to a plugin .so file.
 
 ```bash
-#generate .so file
+#to generate .so file
 ./compile_rule rules/arp_poisoning.so rules/arp_poisoning.xml
-#generate code c
+#to generate code c (for debug)
 ./compile_rule rules/arp_poisoning.c rules/arp_poisoning.xml -c
 ```
 
@@ -117,7 +109,7 @@ This application can analyze
 
 ## mmt_sec_server
 
-This application receives meta-data, calling `messages`, from mmt-probe and then analyse them.
+This application receives meta-data, calling `messages`, from mmt-probe via internet or Unix sockets and then analyse them.
 
 ```bash
 ./mmt_sec_server -h

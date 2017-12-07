@@ -1,7 +1,7 @@
 <beginning>
 <!-- Property 8: The field Options must be homogeneous in every IP fragments
 -->
-<property value="THEN" delay_units="s" delay_min="0+" delay_max="100" property_id="8" type_property="EVASION" 
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="100" property_id="8" type_property="EVASION" 
     description="The IP options field must be homogeneous in all IP fragments.">
     <event value="COMPUTE" event_id="1" 
            description="IP segment"

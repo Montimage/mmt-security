@@ -72,7 +72,7 @@ static inline int em_check_nfs_redis(const char *p_payload){
     description="Upload a file coming from NFS server (detection based on two probes)">
     <event value="COMPUTE" event_id="1" 
            description="Context: HTTP packet"
-           boolean_expression="((ip.src == ip.server_addr) &amp;&amp; ((http.packet_count != 0) &amp;&amp; (tcp.payload_len != 0)))"/>
+           boolean_expression="((ip.src != ip.dst) &amp;&amp; ((http.packet_count != 0) &amp;&amp; (tcp.payload_len != 0)))"/>
     <event value="COMPUTE" event_id="2" 
            description="Trigger: HTTP payload contains the file coming from NFS server"
            boolean_expression="(#em_check_nfs_redis(tcp.p_payload) == 1)"/>

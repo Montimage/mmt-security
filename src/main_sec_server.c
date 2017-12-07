@@ -47,7 +47,7 @@
 static bool verbose                     = NO;
 static mmt_sec_handler_t *sec_handler   = NULL;
 static size_t proto_atts_count          = 0;
-const proto_attribute_t **proto_atts    = NULL;
+const proto_attribute_t *const *proto_atts    = NULL;
 //id of socket
 static int socket_server                = 0;
 
@@ -80,7 +80,7 @@ void usage(const char * prg_name) {
 	exit(1);
 }
 
-size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, char *unix_domain, size_t *threads_count,
+size_t parse_options(int argc, char ** argv, uint16_t *port_no, char *unix_domain, size_t *threads_count,
 		size_t *cores_count, uint32_t **core_mask, char *excluded_rules_mask, char *rule_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
 	excluded_rules_mask[0] = '\0';
@@ -194,10 +194,6 @@ static inline size_t receiving_reports( int sock ) {
 			mmt_warn("Overflow: length_of_report = %d", length_of_report );
 			length_of_report = REPORT_SIZE;
 		}
-		else if( unlikely( length_of_report < 0 )){
-			mmt_info( "Impossible len = %d", length_of_report );
-			continue;
-		}
 
 		n = recv( sock, buffer, length_of_report-4, MSG_WAITALL );
 
@@ -220,15 +216,18 @@ static inline size_t receiving_reports( int sock ) {
 
 		for(counter = 0; counter < elements_count; counter ++){
 			//protocol ID
-			proto_id = *(uint32_t *) &buffer[index];
+			//proto_id = *(uint32_t *) &buffer[index];
+			memcpy( &proto_id, &buffer[index], 4 );
 			index += 4;
 
 			//attribute ID
-			att_id = *(uint32_t*) &buffer[index];
+			//att_id = *(uint32_t*) &buffer[index];
+			memcpy( &att_id, &buffer[index], 4 );
 			index += 4;
 
 			//data length
-			data_length = *(uint16_t *) &buffer[index];
+			//data_length = *(uint16_t *) &buffer[index];
+			memcpy( &data_length, &buffer[index], 2 );
 			index += 2;
 
 			//data
@@ -340,10 +339,9 @@ void register_signals(){
 
 
 int main( int argc, char** argv ) {
-	uint32_t port_number = 5000; //port on that the program listens
+	uint16_t port_number = 5000; //port on that the program listens
 	size_t threads_count = 1;    //number of threads for each process
 
-	uint16_t *rules_id_filter;
 	int client_socket, pid, i;
 
 	char str_buffer[256];
@@ -353,7 +351,7 @@ int main( int argc, char** argv ) {
 	struct sockaddr_un un_server_addr, un_cli_addr;
 
 	char un_domain_name[ MAX_FILENAME_SIZE + 1 ];
-	bool is_unix_socket = NO;
+	bool is_unix_socket;
 
 	socklen_t socklen;
 	size_t size, cores_count = 0, alerts_count = 0;
@@ -365,7 +363,7 @@ int main( int argc, char** argv ) {
 
 	parent_pid = getpid();
 
-	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count,
+	parse_options(argc, argv, &port_number, un_domain_name, &threads_count,
 			&cores_count, &core_mask, excluded_rules_mask, rule_mask, &verbose );
 
 	is_unix_socket = (port_number == 0);

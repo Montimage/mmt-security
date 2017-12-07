@@ -12888,7 +12888,7 @@ void on_load(){
       ip  = list_ips[i];
       //convert ip string to uint32_t
       if( inet_aton( ip, &addr ) == 0 ){
-         mmt_error( "Invalide IP address: %s", ip );
+         mmt_error( "Invalid IP address: %s", ip );
          continue;
       }
       

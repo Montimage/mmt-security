@@ -7,7 +7,7 @@
            boolean_expression="(#strlen(http.user_agent) > 256)"/>
     <event value="COMPUTE" event_id="2" 
            description="HTTP GET"
-           boolean_expression="(http.method == 'GET')"/> 
+           boolean_expression="((http.method == 'GET')&amp;&amp;(ip.src != ip.dst))"/> 
 </property>
 </beginning>
 

@@ -6,11 +6,13 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include "mmt_lib.h"
+
+#ifdef MODULE_REDIS_OUTPUT
 #include <time.h>
 #include <hiredis/hiredis.h>
 #include <hiredis/async.h>
 #include "thredis.h"
-#include "mmt_lib.h"
 
 #define REDIS_CHANNEL_NAME "security.report"
 
@@ -28,7 +30,7 @@ void init_redis ( const char *hostname, int port ) {
 	redisContext *redis = NULL;
 
 	// Connect to redis if not yet done
-	if (redis == NULL){
+	if (thredis == NULL){
 		redis = redisConnectWithTimeout(hostname, port, timeout);
 		if (redis == NULL || redis->err) {
 			if (redis) {
@@ -39,12 +41,10 @@ void init_redis ( const char *hostname, int port ) {
 			}
 			exit(0);
 		}
-		if (thredis == NULL){
-			thredis = thredis_new(redis);
-			if(thredis == NULL) {
-				mmt_error("Thredis wrapper thredis_new failed\n");
-				exit(0);
-			}
+		thredis = thredis_new(redis);
+		if(thredis == NULL) {
+			mmt_error("Thredis wrapper thredis_new failed\n");
+			exit(0);
 		}
 	}
 }
@@ -72,3 +72,14 @@ void send_message_to_redis (const char * message) {
 		}
 	}
 }
+
+#pragma message("Enable module: Output to redis")
+#else
+#pragma message("Disable module: Output to redis")
+
+void init_redis ( const char *hostname, int port ) {
+	mmt_warn("Module output to redis is not available");
+}
+
+void send_message_to_redis (const char * message){}
+#endif

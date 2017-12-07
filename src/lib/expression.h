@@ -35,13 +35,13 @@ typedef struct{
  * Convert from data types from MMT_DPI to #data_type that is
  * either a NUMERIC or a STRING
  */
-enum data_type convert_data_type( int mmt_dpi_data_type );
+int convert_data_type( int mmt_dpi_data_type );
 
 /**
  * Variable
  */
 typedef struct{
-	enum data_type data_type;
+	int  data_type;
 	int dpi_type;
 	//a variable: TCP.SRC or TCP.SRC.1
 	char *proto, *att;
@@ -143,7 +143,7 @@ int parse_expression( expression_t **expr, const char *string, size_t size );
  * 	use mmt_free to free the string when one does not need it anymore
  */
 size_t expr_stringify_constant( char **string, const constant_t *expr);
-size_t expr_stringify_variable( char **string, const variable_t *expr);
+size_t expr_stringify_variable( char **string, const variable_t *var);
 size_t expr_stringify_expression( char **string, const expression_t *expr);
 
 

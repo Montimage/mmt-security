@@ -4,7 +4,7 @@
      description="Nikto detection" >
    <event event_id="1" value="COMPUTE" 
            description="Context: an user agent in the HTTP header"
-           boolean_expression="((http.method != '') &amp;&amp; (http.user_agent != ''))"/>
+           boolean_expression="((http.method != '') &amp;&amp; ((http.user_agent != '') &amp;&amp; (ip.src != ip.dst)))"/>
    <event event_id="2" value="COMPUTE" 
            description="Trigger: Nikto detected. "
            boolean_expression="(#strstr(http.user_agent, 'Nikto') != 0)"/>

@@ -539,6 +539,9 @@ static inline void _calculate_hash_number( rule_engine_t *_engine ){
 					break;
 				}
 
+			/*
+			 * When a rule need to explicitly exclude some proto_att from the filter (done by hash)
+			 */
 			if( !is_in_excluded_list ){
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 				index = _mmt_sec_hash_proto_attribute_without_lock( p->proto_id, p->att_id );

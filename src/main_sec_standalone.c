@@ -400,9 +400,9 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 	mmt_sec_process( handler, msg );
 
 //TODO: remve this block
-#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
-	if( total_received_reports == 1000 ){
-		mmt_debug("Add %zu rules", _add_rules("(1:33,32,34)"));
+//#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+//	if( total_received_reports == 1000 ){
+//		mmt_debug("Add %zu rules", _add_rules("(1:33,32,34)"));
 //		//need to add/rm or not?
 //		if( _rand_bool() ){
 //			printf("\n%zu\n", total_received_reports );
@@ -427,8 +427,8 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 //
 //			}
 //		}
-	}
-#endif
+//	}
+//#endif
 
 	total_received_reports ++;
 
@@ -448,7 +448,7 @@ void live_capture_callback( u_char *user, const struct pcap_pkthdr *p_pkthdr, co
 	if (!packet_process( mmt, &header, data )) {
 		fprintf(stderr, "Packet data extraction failure.\n");
 	}
-	printf("."); fflush( stdout );
+	//printf("."); fflush( stdout );
 }
 
 

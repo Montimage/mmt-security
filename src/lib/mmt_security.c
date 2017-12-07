@@ -862,19 +862,14 @@ size_t mmt_sec_add_rules( const char *rules_mask ){
 
 __thread_safe
 size_t mmt_sec_remove_rules( size_t rules_count, const uint32_t* rules_id_set ){
-	mmt_error("This feature is disable.");
+	mmt_error("Remove rules feature is disable.");
 	return 0;
 }
 
 __thread_safe
 size_t mmt_sec_add_rules( const char *rules_mask ){
-	mmt_error("This feature is disable.");
+	mmt_error("Add rules feature is disable.");
 	return 0;
 }
 
-#endif
-
-
-#ifdef VALGRIND_MODE
-	#warning "This compile option is reserved only for testing by Valgrind"
 #endif

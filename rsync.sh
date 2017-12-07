@@ -24,7 +24,7 @@ PORT=2222
 #PORT=2233
 
 #TARGET=/home/server10g/huunghia/mmt-security
-#USER=root
+#USER=server10g
 #IP=192.168.0.7
 #PORT=22
 

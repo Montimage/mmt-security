@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml-stylesheet type="text/xsl" href="properties.xsl"?>
+<!-- MMT_Security Copyright (C) 2014  Montimage-->
+<beginning>
+	<!-- Simple multi-session property -->
+		
+<embedded_functions><![CDATA[
+	
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+
+static inline int em_check_nfs_upload(const char *file_name, const char *p_payload){
+	//return 1;
+	printf("executing em_check_nfs_upload\n");
+	if((file_name == NULL) || (p_payload == NULL)){
+	return 2;
+	}
+  return (strstr(p_payload, file_name) != NULL);
+}
+]]></embedded_functions>
+
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="120" property_id="1" type_property="ATTACK" 
+    description="NFS synchronization and then upload">
+    <event value="COMPUTE" event_id="1" 
+           description="NFS synchronization"
+           boolean_expression="(nfs.file_name != '')"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Upload the same file"
+           boolean_expression="((ip.dst == ip.src.1)&amp;&amp;(#em_check_nfs_upload(nfs.file_name.1, tcp.p_payload) == 1))"/>
+</property>
+</beginning>

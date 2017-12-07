@@ -198,6 +198,8 @@ static inline void _update_rules_hash( ){
  * @return
  */
 int mmt_sec_init( const char* excluded_rules_id ){
+	mmt_assert( is_init == NO, "mmt_sec_init must be called only once.");
+
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	pthread_spin_init( &spin_lock, PTHREAD_PROCESS_PRIVATE );
 #endif
@@ -235,7 +237,7 @@ int mmt_sec_init( const char* excluded_rules_id ){
 
 void mmt_sec_close(){
 	rules_count = 0;
-
+	is_init = NO;
 	proto_atts_count = 0;
 }
 

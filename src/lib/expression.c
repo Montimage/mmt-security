@@ -645,7 +645,7 @@ int parse_expression( expression_t **expr, const char *string, size_t str_size )
  */
 size_t expr_stringify_constant( char **string, const constant_t *expr){
 	char buff[ MAX_STR_SIZE ];
-	size_t size;
+	int size;
 	double d;
 
 	if( expr == NULL ){
@@ -657,14 +657,16 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 		d = *(double *)expr->data;
 		//integer
 		size = snprintf(buff, sizeof(MAX_STR_SIZE), "%.2f", d);
+		size --; //jump over last '\0';
 		//remove zero at the end, e.g., 10.00 ==> 10
 		while( size > 1 && buff[ size - 1 ] == '0' )
 				size --;
 		if( buff[ size - 1 ] == '.' ) size --;
-	}else if( expr->data_type == STRING )
+	}else if( expr->data_type == STRING ){
 		size = snprintf( buff, MAX_STR_SIZE, "\"%s\"", (char *)expr->data );
-	else
+	}else{
 		size = snprintf( buff, MAX_STR_SIZE, "\"__na__\"");
+	}
 
 	*string = mmt_mem_dup( buff, size );
 

@@ -16,9 +16,9 @@
 #include <stdbool.h>
 
 //TODO: this is used to test
-#ifndef MODULE_ADD_OR_RM_RULES_RUNTIME
-#define MODULE_ADD_OR_RM_RULES_RUNTIME
-#endif
+//#ifndef MODULE_ADD_OR_RM_RULES_RUNTIME
+//#define MODULE_ADD_OR_RM_RULES_RUNTIME
+//#endif
 
 #define UNKNOWN -1
 #define NO false
@@ -77,7 +77,7 @@
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	//#pragma message("Enable: add/remove rules at runtime")
 	#define BEGIN_LOCK_IF_ADD_OR_RM_RULES_RUNTIME( spin_lock ) if( pthread_spin_lock( spin_lock ) == 0 ){
-	#define UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( spinlock ) pthread_spin_unlock( spinlock );
+	#define UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( spinlock ) while( pthread_spin_unlock( spinlock ) != 0 ) nanosleep( (const struct timespec[]){{0, 10000}}, NULL );
 	#define END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME }
 #else
 	//#warning "Disable: add/remove rules at runtime"

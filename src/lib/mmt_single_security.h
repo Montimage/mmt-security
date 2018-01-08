@@ -3,6 +3,8 @@
  *
  *  Created on: Oct 10, 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
+ *
+ *  The functions in this file is not thread-free
  */
 
 #ifndef SRC_LIB_MMT_SINGLE_SECURITY_H_
@@ -18,10 +20,36 @@
 #include "plugin_header.h"
 #include "mmt_array_t.h"
 #include "verdict_printer.h"
+#include "rule_verif_engine.h"
 #include "mmt_security.h"
 
+typedef struct mmt_single_sec_handler_struct{
+	size_t rules_count;
+	const rule_info_t ** rules_array;
+	//this is called each time we reach final/error state
+	mmt_sec_callback callback;
+	//a parameter will give to the #callback
+	void *user_data_for_callback;
+	rule_engine_t **engines;
 
-typedef struct mmt_single_sec_handler_struct mmt_single_sec_handler_t;
+	//number of generated alerts
+	size_t *alerts_count;
+
+	//an array of #rules_count elements having type of uint64_t
+	//each element represents required data of one rule
+	uint64_t *rules_hash;
+
+	//a hash number is combination of #rules_hash
+	uint64_t hash;
+
+	//number of messages processed
+	size_t messages_count;
+
+	bool verbose;
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+	pthread_spinlock_t spin_lock_to_add_or_rm_rules;
+#endif
+}mmt_single_sec_handler_t __aligned;
 
 /**
  * Register some rules to validate
@@ -32,7 +60,7 @@ typedef struct mmt_single_sec_handler_struct mmt_single_sec_handler_t;
  * 	+ user_data  : data will be passed to the #callback
  */
 mmt_single_sec_handler_t *mmt_single_sec_register(
-		const rule_info_t **rules_arr,
+		rule_info_t const*const*rules_arr,
 		size_t rules_count,
 		bool verbose,
 		mmt_sec_callback callback,
@@ -48,6 +76,26 @@ size_t mmt_single_sec_unregister( mmt_single_sec_handler_t *handler );
  */
 void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *message );
 
+/**
+ * Return number of messages being processed by this handler
+ */
 size_t mmt_single_sec_get_processed_messages( const mmt_single_sec_handler_t *handler );
+
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+/**
+ * Disable a set of rules that will be no more verified
+ *
+ * @return number of rules being disabled
+ */
+size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler );
+
+/**
+ * Add a set of rules to verify
+ * @param handler
+ * @return number of rules being added
+ */
+size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_rules_count,
+		const uint32_t *new_rules_id_arr );
+#endif
 
 #endif /* SRC_LIB_MMT_SINGLE_SECURITY_H_ */

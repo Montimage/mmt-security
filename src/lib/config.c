@@ -106,13 +106,19 @@ static int _check_then_set_value( int index, const char *line ){
 }
 
 /**
+ * PUBLIC API
  * Load config from file ./mmt-security.conf
  * @return
  */
-bool load_config(){
+__attribute__((constructor))
+bool mmt_sec_load_default_config(){
 	char *line = NULL;
 	size_t len = 0;
 	int i, n = sizeof( config ) / sizeof( uint32_t );
+
+	if( pthread_spin_init( &spin_lock, PTHREAD_PROCESS_PRIVATE ) != 0){
+		mmt_halt("Cannot init spin_lock");
+	}
 
 	FILE *file = fopen( "./mmt-security.conf", "r" );
 	if( file == NULL )
@@ -135,9 +141,4 @@ bool load_config(){
 	free( line );
 
 	return true;
-}
-
-__attribute__((constructor)) void _config_constructor () {
-	pthread_spin_init( &spin_lock, PTHREAD_PROCESS_PRIVATE );
-	load_config();
 }

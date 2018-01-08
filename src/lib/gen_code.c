@@ -58,7 +58,7 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 
 	_gen_code_line( fd );
 
-	fprintf( fd, "\n\n\t data = get_element_data_message_t( %s, _m%d._%s_%s );",
+	fprintf( fd, "\n\n\t data = get_element_data_message_t( %s, _m%"PRIu32"._%s_%s );",
 					( var->ref_index == (uint16_t)UNKNOWN )? "msg" : "his_msg",
 					rule_id,
 					var->proto, var->att
@@ -91,7 +91,7 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	uint32_t rule_id  = _u_data->uint32_val;
 	uint16_t event_id = event->id;
 
-	_gen_comment( fd, "Rule %d, event %d\n  * %s", rule_id, event_id, event->description == NULL? "" : event->description );
+	_gen_comment( fd, "Rule %"PRIu32", event %d\n  * %s", rule_id, event_id, event->description == NULL? "" : event->description );
 	size = expr_stringify_expression( &str, event->expression );
 	if( size == 0 ) return;
 
@@ -99,7 +99,7 @@ static void _iterate_event_to_gen_guards( void *key, void *data, void *user_data
 	var_count = get_unique_variables_of_expression( event->expression, &map, YES );
 
 	//name of function
-	size = snprintf( buffer, sizeof( buffer ) -1, "g_%d_%d", rule_id, event_id );
+	size = snprintf( buffer, sizeof( buffer ) -1, "g_%"PRIu32"_%"PRIu32"", rule_id, event_id );
 	//do not free this as it will be used as a key in variables_map
 	guard_fun_name = mmt_mem_dup( buffer, size );
 
@@ -342,7 +342,7 @@ static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *
 		_gen_transition_before(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, index, NULL, rule, FSM_ACTION_DO_NOTHING);
 		break;
 	default:
-		mmt_assert(0, "Does not support value=%d of operator tag.", opt->value );
+		mmt_halt( "Does not support value=%d of operator tag.", opt->value );
 	}
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -406,16 +406,16 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 		_gen_transition_before(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
 		break;
 	default:
-		mmt_assert(0, "Does not support value=%d of property tag.", rule->value );
+		mmt_halt( "Does not support value=%d of property tag.", rule->value );
 	}
 
-	_gen_comment( fd, "States of FSM for rule %d", rule_id );
+	_gen_comment( fd, "States of FSM for rule %"PRIu32"", rule_id );
 	_gen_comment(fd, "Predefine list of states: init, fail, pass, ..." );
 	fprintf(fd, "static fsm_state_t");
 	p_link_node = states_list;
 	while( p_link_node != NULL ){
 		state = (_meta_state_t *)p_link_node->data;
-		fprintf( fd, " s_%d_%zu%c", rule_id, state->index, (p_link_node->next == NULL? ';':',') );
+		fprintf( fd, " s_%"PRIu32"_%zu%c", rule_id, state->index, (p_link_node->next == NULL? ';':',') );
 
 		p_link_node = p_link_node->next;
 	}
@@ -431,7 +431,7 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 		if( strlen( state->comment ))
 			_gen_comment(fd, "%s", state->comment );
 
-		fprintf( fd, " s_%d_%zu = {", rule_id, state->index );
+		fprintf( fd, " s_%"PRIu32"_%zu = {", rule_id, state->index );
 		if( state->delay == NULL ){
 			fprintf( fd, "\n\t .delay        = {.time_min = 0, .time_max = 0, .counter_min = 0, .counter_max = 0},");
 			fprintf( fd, "\n\t .is_temporary = 0," );
@@ -460,13 +460,13 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 					fprintf( fd, "\n\t\t /** %d %s */", __LINE__, tran->attached_event->description );
 				if( tran->comment[0] != '\0' )
 					fprintf( fd, "\n\t\t /** %d %s */", __LINE__, tran->comment );
-				sprintf( buffer, "&g_%d_%d", rule_id, tran->guard_id );
+				sprintf( buffer, "&g_%"PRIu32"_%"PRIu32"", rule_id, tran->guard_id );
 
 				//always create a new instance when going out from the initial state
 				if( state == s_init )
 					tran->action = FSM_ACTION_CREATE_INSTANCE;
 
-				fprintf( fd, "\n\t\t { .event_type = %d, .guard = %s, .action = %d, .target_state = &s_%d_%zu}%c //%s",
+				fprintf( fd, "\n\t\t { .event_type = %d, .guard = %s, .action = %"PRIu32", .target_state = &s_%d_%zu}%c //%s",
 						tran->event_type,
 						(tran->event_type == FSM_EVENT_TYPE_TIMEOUT ? "NULL  "  : buffer   ), //guard
 						tran->action,
@@ -517,14 +517,14 @@ void _iterate_variables_to_gen_structure( void *key, void *data, void *user_data
 	//first element
 	if( index == 0 ){
 		_gen_comment( fd, "Structure to represent event data");
-		fprintf( fd, "typedef struct _msg_struct_%d{", rule_id );
+		fprintf( fd, "typedef struct _msg_struct_%"PRIu32"{", rule_id );
 	}
 	//first underscore, before proto, ensures to cover the case that proto_name starts by a number
 	fprintf( fd, "\n\t uint16_t _%s_%s;", var->proto, var->att);
 
 	//last element
 	if( index + 1 == total ){
-		fprintf( fd, "\n }_msg_t_%d;", rule_id );
+		fprintf( fd, "\n }_msg_t_%"PRIu32";", rule_id );
 	}
 }
 
@@ -550,12 +550,12 @@ void _iterate_variables_to_init_structure( void *key, void *data, void *user_dat
 
 	//first element
 	if( index == 0 ){
-		_gen_comment( fd, "Create an instance of _msg_t_%d", rule_id);
-		fprintf( fd, "static _msg_t_%d _m%d;", rule_id, rule_id );
-		fprintf( fd, "\n static void _allocate_msg_t_%d( const char* proto, const char* att, uint16_t index ){", rule_id );
+		_gen_comment( fd, "Create an instance of _msg_t_%"PRIu32"", rule_id);
+		fprintf( fd, "static _msg_t_%"PRIu32" _m%"PRIu32";", rule_id, rule_id );
+		fprintf( fd, "\n static void _allocate_msg_t_%"PRIu32"( const char* proto, const char* att, uint16_t index ){", rule_id );
 	}
 
-	fprintf( fd, "\n\t if( strcmp( proto, \"%s\" ) == 0 && strcmp( att, \"%s\" ) == 0 ){ _m%d._%s_%s = index; return; }",
+	fprintf( fd, "\n\t if( strcmp( proto, \"%s\" ) == 0 && strcmp( att, \"%s\" ) == 0 ){ _m%"PRIu32"._%s_%s = index; return; }",
 			var->proto, var->att,
 			rule_id,
 			var->proto, var->att );
@@ -646,7 +646,7 @@ void _iterate_variables_to_gen_pointer_proto_att( void *key, void *data, void *u
 
 	mmt_assert( val >= 0, "Variable %s.%s must be defined before!", var->proto, var->att );
 
-	fprintf( u_data->file, "%c &proto_atts_%d[ %d ] %s",
+	fprintf( u_data->file, "%c &proto_atts_%d[ %"PRIu32" ] %s",
 			index == 0 ? '{':' ',
 			u_data->uint32_val,
 			val,

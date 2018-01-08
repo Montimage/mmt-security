@@ -105,6 +105,7 @@ typedef struct node_uint32_struct{
 
 static inline node_uint32_t *_create_node_uint32_t(uint32_t key, void *data){
 	node_uint32_t *ret = (node_uint32_t *)malloc( sizeof( node_uint32_t) );
+	mmt_assert( ret != NULL, "Not enough memory to allocate %zu bytes", sizeof( node_uint32_t));
 	ret->left  = NULL;
 	ret->right = NULL;
 	ret->key   = key;

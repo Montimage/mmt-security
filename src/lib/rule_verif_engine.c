@@ -6,7 +6,8 @@
  */
 #include "rule_verif_engine.h"
 #include "prefetch.h"
-
+#include "mmt_fsm.h"
+#include "mmt_security.h"
 /**
  * In the next event,
  * the #fsm will fire the #index-th transition of its current state
@@ -121,7 +122,9 @@ void _store_valid_execution_trace( rule_engine_t *_engine, fsm_t *fsm ){
 	const mmt_array_t *array = fsm_get_execution_trace( fsm );
 
 #ifdef DEBUG_MODE
-	mmt_assert( array->elements_count == _engine->events_count, "Impossible" );
+	mmt_assert( array->elements_count == _engine->events_count,
+			"Error when processing rule %d: trace_size != event_count( %zu != %"PRIu32")",
+			_engine->rule_info->id, array->elements_count, _engine->events_count );
 #endif
 
 	for( i=0; i<_engine->events_count; i++ ){
@@ -504,6 +507,10 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 	return VERDICT_UNKNOWN;
 }
 
+//this is defined in mmt_security.c
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+uint16_t _mmt_sec_hash_proto_attribute_without_lock( uint32_t proto_id, uint32_t att_id );
+#endif
 /**
  * Calculate hash of each event
  * This is called only one time at initiation of #_engine
@@ -532,8 +539,16 @@ static inline void _calculate_hash_number( rule_engine_t *_engine ){
 					break;
 				}
 
+			/*
+			 * When a rule need to explicitly exclude some proto_att from the filter (done by hash)
+			 */
 			if( !is_in_excluded_list ){
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+				index = _mmt_sec_hash_proto_attribute_without_lock( p->proto_id, p->att_id );
+#else
 				index = mmt_sec_hash_proto_attribute( p->proto_id, p->att_id );
+#endif
+
 				BIT_SET( _engine->events_hash[i], index );
 			}
 		}

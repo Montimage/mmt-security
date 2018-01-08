@@ -35,11 +35,20 @@ static inline int compare_uint16_t( const void *a, const void *b){
 }
 static inline int compare_uint32_t( const void *a, const void *b){
 	//mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint32_t function %s:%d", __FILE__, __LINE__ );
-	return *(uint32_t *)a - *(uint32_t *)b;
+	//return
+	if( *(uint32_t *)a  ==  *(uint32_t *)b )
+		return 0;
+	else if( *(uint32_t *)a  >  *(uint32_t *)b )
+		return 1;
+	else return -1;
 }
 static inline int compare_uint64_t( const void *a, const void *b){
 	//mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint64_t function %s:%d", __FILE__, __LINE__ );
-	return *(uint64_t *)a - *(uint64_t *)b;
+	if( *(uint64_t *)a  ==  *(uint64_t *)b )
+		return 0;
+	else if( *(uint64_t *)a  >  *(uint64_t *)b )
+		return 1;
+	else return -1;
 }
 
 /**

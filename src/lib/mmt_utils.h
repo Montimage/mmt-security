@@ -105,6 +105,7 @@ static inline void simple_dehash_64( uint64_t val, uint32_t *a, uint32_t *b){
  * @return
  */
 static inline size_t str_split(const char* string, char a_delim, char ***array){
+	__check_null(string, 0);
 	char *a_str = strdup( string );
 	size_t count     = 0;
 	char* tmp        = a_str;
@@ -113,6 +114,8 @@ static inline size_t str_split(const char* string, char a_delim, char ***array){
 	char delim[2];
 	delim[0] = a_delim;
 	delim[1] = 0;
+
+	mmt_assert( a_str != NULL, "Not enough memory");
 
 	/* Count how many elements will be extracted. */
 	while( *tmp ){
@@ -142,13 +145,21 @@ static inline size_t str_split(const char* string, char a_delim, char ***array){
 	return count;
 }
 
+/**
+ * Check if a value is existing in an array
+ * @param val
+ * @param array
+ * @param array_size
+ * @return index of element, from 0 to (array_size-1), if the element is existing
+ *  otherwise, return array_size;
+ */
 static inline
 size_t index_of( uint32_t val, const uint32_t *array, size_t array_size){
 	size_t i;
 	for( i=0; i<array_size; i++ )
 		if( array[i] == val )
-			return i+1;
-	return 0;
+			break;
+	return i;
 }
 
 /**
@@ -171,7 +182,7 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 	size_t size = 0, i, j;
 	uint32_t num;
 	//TODO this can handle maximally only 100K rules in rules-mask (lcores in core-mask)
-	uint32_t array[ 100000 ];
+	uint32_t array[ 100000 ] = { 0 }; //init all elements to 0. This is not necessary but used to  pass PVS studio check
 
 	*result = NULL;
 	if( mask == NULL ) return 0;
@@ -180,12 +191,12 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 	while( *cur != '\0' ){
 		//first number
 		if( !isdigit( *cur ) ){
-			mmt_halt( "Mask: Expected a digit at %s", cur );
+			mmt_error( "Mask: Expected a digit at %s", cur );
 			return 0;
 		}
 
 		num = atoi( cur );
-		if( index_of( num, array, size ) == 0 )
+		if( index_of( num, array, size ) == size )
 			array[ size++ ] = num;
 
 		while( isdigit( *cur ) ) cur ++;
@@ -195,25 +206,26 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 
 		//separator
 		if( *cur != ',' &&  *cur != '-' ){
-			mmt_halt( "Mask: Expected a separator, either ' or , at %s", cur );
+			mmt_error( "Mask: Expected a separator, either ' or , at %s", cur );
 			return 0;
 		}
 
 		//second number
 		if( *cur == '-' ){
 			cur ++;
+			//get another end of range
 			num = atoi( cur );
-			while( isdigit( *cur ) ) cur ++;
+			while( isdigit( *cur ) ) cur ++; //jump over the end of range
 
-			i=array[ size-1 ] + 1;
+			i=array[ size-1 ] + 1; //second number in the range
 
 			if( i > num ){
-				mmt_halt( "Mask: Range is incorrect %zu-%d", i-1, num );
+				mmt_error( "Mask: Range is incorrect %zu-%d", i-1, num );
 				return 0;
 			}
 
 			for(  ; i<=num; i++ )
-				if( index_of( i, array, size ) == 0 )
+				if( index_of( i, array, size ) == size )
 					array[ size ++ ] = i;
 
 			//after the second number must be ',' or '\n'
@@ -222,13 +234,13 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
 		}
 
 		if( *cur != ',' ){
-			mmt_halt( "Mask: Expected a separator , at %s", cur );
+			mmt_error( "Mask: Expected a separator , at %s", cur );
 			return 0;
 		}
 		cur++;
 
 		if( *cur == '\0' ){
-			mmt_halt( "Mask: Unexpected a separator , at the end" );
+			mmt_error( "Mask: Unexpected a separator , at the end" );
 			return 0;
 		}
 	}
@@ -243,9 +255,9 @@ static inline size_t expand_number_range( const char *mask, uint32_t **result ){
  * ==> user must free it using mmt_mem_free after using
  *
  * @param thread_id
- * @param rule_mask
+ * @param rule_mask "(0:1-4,5,9-10)(2:100-300)"
  * @param rule_range
- * @return
+ * @return number of rules
  */
 static inline const size_t get_special_rules_for_thread( uint32_t thread_id, const char *rule_mask, uint32_t **rule_range ){
 	uint32_t id = 0;
@@ -303,4 +315,147 @@ static inline const size_t get_special_rules_for_thread( uint32_t thread_id, con
 	return range_count;
 }
 
+
+
+/**
+ * Get a list of rules id existing in a rule mask
+ * Note: this function create a new memory segment to contain #rules_set
+ * ==> user must free it using mmt_mem_free after using
+ *
+ * @param rule_mask "(0:1-4,5,9-10)(2:100-300)"
+ * @param rules_set
+ * @return number of rules
+ */
+static inline const size_t get_rules_id_list_in_mask( const char *rule_mask, uint32_t **rules_set ){
+	size_t size = 0, rules_count = 0, i, j;
+	const char *c = rule_mask, *ptr;
+	char *string;
+	//TODO this can handle maximally only 100K rules in rules-mask
+	uint32_t array[ 100000 ];
+
+	size_t range_count;
+	uint32_t *rule_range;
+
+	while( *c != '\0'){
+		if( *c != '(' ){
+			mmt_error("Rule mask is not correct. Expected (, not \"%s\"", c );
+			return 0;
+		}
+		//jump over (
+		c ++;
+		//thread id
+		if( !isdigit( *c )){
+			mmt_error("Rule mask is not correct. Expected a digit, not \"%s\"", c );
+			return 0;
+		}
+
+		//jump over thread id
+		while( isdigit( *c ) ) c ++;
+		//jump over separator between thread_id and rule_range
+		if( *c != ':'){
+			mmt_error("Rule mask is not correct. Expected :, not \"%s\"", c );
+			return 0;
+		}
+		c++;
+		//rule range
+		ptr  = c;
+		size = 0;
+		while( *c != ')'){
+			switch( *c ){
+			case ',':
+			case '-':
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				break;
+			default:
+				mmt_error("Rule mask is not correct. Unexpected: %s", c );
+				return 0;
+			}
+			size ++;
+			c++;
+		}
+
+		//jump over )
+		c ++;
+
+		string = mmt_mem_dup( ptr, size );
+		range_count = expand_number_range( string, &rule_range );
+		//add to array if does not exist
+		for( i=0; i<range_count; i++ ){
+			for( j=0; j<rules_count; j++ )
+				if( array[j] == rule_range[i] )
+					break;
+
+			//does not exist
+			if( j == rules_count ){
+				array[ rules_count ] = rule_range[ i ];
+				rules_count ++;
+			}
+		}
+
+		mmt_mem_free( rule_range );
+		mmt_mem_free( string );
+	}
+
+	*rules_set = mmt_mem_dup( array, rules_count * sizeof( uint32_t) );
+
+	return rules_count;
+}
+
+/**
+ * Native sorting an array in ascending order
+ * @param number_of_elements
+ * @param array
+ */
+static inline
+void asc_sort_array_uint64_t( int number_of_elements, uint64_t *array ){
+	uint64_t tmp;
+	int i, j;
+	for( i=0; i<number_of_elements; i++ )
+		for( j=i+1; j<number_of_elements; j++ )
+			if( array[i] > array[j] ){
+				//swap 2 elements
+				tmp = array[i];
+				array[i] = array[j];
+				array[j] = tmp;
+			}
+}
+
+/**
+ * Binary Search
+ * @param number_of_elements is number of elements inside #array
+ * @param array is an array that must be sorted in ascending order
+ * @param key
+ * @return index of element having the same value with #key if found,
+ * 		  otherwise, #number_of_elements
+ *
+ */
+static inline
+size_t binary_search_uint64_t(size_t number_of_elements, const uint64_t *array, uint64_t key) {
+	size_t low = 0, high = number_of_elements-1, mid;
+	while(low <= high) {
+		mid = (low + high)/2;
+
+		// low path
+		__builtin_prefetch (&array[(mid + 1 + high)/2], 0, 1);
+		// high path
+		__builtin_prefetch (&array[(low + mid - 1)/2], 0, 1);
+
+		if(array[mid] < key)
+			low = mid + 1;
+		else if(array[mid] == key)
+			return mid;
+		else// if(array[mid] > key)
+			high = mid-1;
+	}
+	return number_of_elements;
+}
 #endif /* SRC_LIB_MMT_UTILS_H_ */

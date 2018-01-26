@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) 2014-->
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int em_check_ping_eicar_virus(const char *str){
+   return 1;
+}
+]]></embedded_functions>
+<!-- Property 55: Rule for printing icmp data-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="55" type_property="EVASION" 
+     description="This is a test rule for printing ICMP packet data" >
+   <event event_id="1" value="COMPUTE" 
+           description="An ICMP packet"
+           boolean_expression="((icmp.packet_count != 0) &amp;&amp; (ip.src != ip.dst))"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Packet data"
+           boolean_expression="(#em_check_ping_eicar_virus(icmp.data)==1)"/>
+ </property>
+</beginning>

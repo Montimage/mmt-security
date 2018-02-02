@@ -106,7 +106,7 @@ static inline int dpi_message_set_void_data( const ipacket_t *pkt, const void *d
 	size_t new_data_len  = 0;
 	int new_data_type    = VOID;
 
-	if( data == NULL )
+	if( unlikely( data == NULL ))
 		return 0;
 
 	switch( att_id ){
@@ -281,7 +281,7 @@ int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *ms
 		break;
 	}
 
-	if( new_data_len == 0 || new_data == NULL )
+	if( unlikely( new_data_len == 0 || new_data == NULL ))
 		return 0;
 
 	return set_element_data_message_t( msg, proto_id, att_id, new_data, new_data_type, new_data_len );
@@ -294,8 +294,7 @@ int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *ms
  * This function will create a new memory segment to store its result.
  */
 static inline int dpi_message_set_data( const ipacket_t *pkt, int dpi_data_type, message_t *msg, uint32_t proto_id, uint32_t att_id ){
-	uint8_t *data       = (uint8_t *) get_attribute_extracted_data( pkt, proto_id, att_id );
-	const void *new_data= NULL;
+	uint8_t *data = (uint8_t *) get_attribute_extracted_data( pkt, proto_id, att_id );
 
 	//does not exist data for this proto_id and att_id
 	if( data == NULL )

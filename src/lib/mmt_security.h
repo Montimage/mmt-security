@@ -103,15 +103,15 @@ uint16_t mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id );
  */
 static inline uint64_t mmt_sec_encode_timeval( const struct timeval *t ){
         uint64_t val = t->tv_sec;
-        return val * 1000000 + t->tv_usec;;
+        return val * CLOCKS_PER_SEC  + t->tv_usec;;
 }
 
 /**
  * Decode an uint64_t value to a #timeval
  */
 static inline void mmt_sec_decode_timeval( uint64_t val, struct timeval *time ){
-        time->tv_sec  = val / 1000000;     //timestamp: second
-        time->tv_usec = val % 1000000 ; //timestamp: microsecond
+        time->tv_sec  = val / CLOCKS_PER_SEC;     //timestamp: second
+        time->tv_usec = val % CLOCKS_PER_SEC ; //timestamp: microsecond
 }
 /**
  * Print verdicts to the verdict printer that will send the verdicts to files or redis bus.

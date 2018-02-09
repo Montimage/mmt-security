@@ -35,7 +35,7 @@ ldconfig
 
 - mmt-sdk: https://bitbucket.org/montimage/mmt-sdk/wiki/Compilation%20and%20Installation%20Instructions
 
-- source code of mmt-security: `git clone https://bitbucket.org/montimage/mmt-security`
+- source code of mmt-security: `git clone https://YOUR_USERNAME@bitbucket.org/montimage/mmt-security.git`
 
 
 ## Compile

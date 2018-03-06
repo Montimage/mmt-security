@@ -145,7 +145,7 @@ sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
 	
 TMP_DIR=/tmp/mmt
 copy_files:
-	$(QUIET) $(RM) ${TMP_DIR} &> /dev/null
+	$(QUIET) $(RM) ${TMP_DIR} 2> /dev/null
 	$(QUIET) $(MKDIR) ${TMP_DIR}/rules
 	$(QUIET) $(CP) rules/*.so ${TMP_DIR}/rules/
 	
@@ -163,7 +163,9 @@ copy_files:
 	
 	$(QUIET) $(RM)  ${TMP_DIR}/lib/$(LIB_NAME).so ${TMP_DIR}/lib/$(LIB_NAME).a
 	
+ifdef REDIS
 	$(QUIET) $(CP) /usr/local/lib/libhiredis.so.0.13 ${TMP_DIR}/lib/
+endif
 	
 	$(QUIET) cd ${TMP_DIR}/lib/ && $(LN)  $(LIB_NAME).so.$(VERSION) $(LIB_NAME).so
 	$(QUIET) cd ${TMP_DIR}/lib/ && $(LN)  $(LIB_NAME).a.$(VERSION)  $(LIB_NAME).a

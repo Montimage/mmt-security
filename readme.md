@@ -70,9 +70,9 @@ This application parses rules in .xml file, then compile to a plugin .so file.
 
 ```bash
 #to generate .so file
-./compile_rule rules/arp_poisoning.so rules/arp_poisoning.xml
+./compile_rule rules/40.TCP_SYN_scan.so rules/40.TCP_SYN_scan.xml 
 #to generate code c (for debug)
-./compile_rule rules/arp_poisoning.c rules/arp_poisoning.xml -c
+./compile_rule rules/40.TCP_SYN_scan.c rules/40.TCP_SYN_scan.xml -c
 ```
 
 To compile all rules existing in the folder `rules`, use the following command:
@@ -88,8 +88,8 @@ This application prints information of rules encoded in a binary file (.so).
 ```bash
 #print information of all available plugins
 ./rule_info
-#print information of rules encoded in `./rules/arp_poisoning.so`
-./rule_info ./rules/40.TCP_SYN_scan.so
+#print information of rules encoded in `rules/40.TCP_SYN_scan.so`
+./rule_info rules/40.TCP_SYN_scan.so
 ```
 
 ## mmt-sec-standalone
@@ -104,7 +104,7 @@ This application can analyze
 ./mmt_sec_standalone -i eth0
 #to see all parameters, run ./mmt_sec_standalone -h
 #verify a pcap file
-./mmt_sec_standalone -t ./tata.pcap
+./mmt_sec_standalone -t check/pcap/16.two_successive_SYN.pcap 
 ```
 
 ## mmt_sec_server

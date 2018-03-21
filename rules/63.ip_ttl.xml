@@ -1,0 +1,15 @@
+<beginning>
+<!-- Property 63: Not recommended TTL value -->
+<!--              according to: 
+					https://en.wikipedia.org/wiki/Time_to_live
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="63" type_property="EVASION" 
+    description="Not recommended TTL value">
+      <event value="COMPUTE" event_id="1" 
+             description="IP packet with non-recommended IP TTL"
+             boolean_expression="(ip.proto_ttl &gt; 64)"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Print source and destination of IP"
+             boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

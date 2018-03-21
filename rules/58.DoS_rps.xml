@@ -1,8 +1,8 @@
 <beginning>
-<!-- Property 58: Probable DoS attacks (more than 1000 TCP handshake requests per second).
+<!-- Property 58: Probable DoS attacks (4 TCP handshake requests in less than 3ms ~  more than 1000 TCP handshake requests per second).
 -->
 	<property value="THEN" delay_units="ms" delay_min="0+" delay_max="3" property_id="58" type_property="ATTACK" 
-    description="Probable DoS attack: more than 1000 TCP handshake requests comming from the same IP add">
+    description="Probable DoS attack: 4 TCP handshake request in less than 3ms comming from the same IP add">
     <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
       <event value="COMPUTE" event_id="1" 
              description="TCP SYN packet (1)"

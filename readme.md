@@ -89,7 +89,7 @@ This application prints information of rules encoded in a binary file (.so).
 #print information of all available plugins
 ./rule_info
 #print information of rules encoded in `./rules/arp_poisoning.so`
-./rule_info ./rules/arp_poisoning.so
+./rule_info ./rules/40.TCP_SYN_scan.so
 ```
 
 ## mmt-sec-standalone

@@ -20,7 +20,7 @@ static inline int em_check_sql_injection(const char *str){
       switch( *c ){
          case 'D': //DROP | DELETE
             switch( c[1] ){
-               case 'O': //DROP
+               case 'R': //DROP
                   if( c[2]=='O' && c[3]=='P' )
                      return 1;
                   break;

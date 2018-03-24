@@ -1,0 +1,13 @@
+<beginning>
+<!-- Property 66: TCP Urgent Pointer set -->
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="66" type_property="EVASION" 
+    description="TCP Urgent Pointer set (allowed but could be an evasion)">
+      <event value="COMPUTE" event_id="1" 
+             description="TCP packet with non-zero TCP URG flag"
+             boolean_expression="(tcp.urg != 0)"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Print IP source and destination addresses"
+             boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

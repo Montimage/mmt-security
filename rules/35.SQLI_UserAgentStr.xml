@@ -9,7 +9,7 @@ static inline int em_check_sql_injection_ua(const char *str){
    //(using  pattern matching techniques against signatures and 
    //keyword-based stores to identify potentially malicious requests)
 
-   char *s1, *s2, *s3, *s4, *s5, *s6, *s7, *s8, *s9;
+   char *s1 = NULL, *s2 = NULL, *s3 = NULL, *s4 = NULL, *s5 = NULL, *s6 = NULL, *s7 = NULL, *s8 = NULL, *s9 = NULL;
    s1 = strstr(str, "DROP");  //find the first occurrence of string "DROP" in string
    s2 = strstr(str, "UNION"); //find the first occurrence of string "UNION" in string
    s3 = strstr(str, "SELECT"); //find the first occurrence of string "SELECT" in string
@@ -20,7 +20,7 @@ static inline int em_check_sql_injection_ua(const char *str){
    //s8 = strchr(str, '\"');    //find the first occurrence of character """ in string
    //s9 = strstr(str, "--");    //find the first occurrence of string "--" in string
      
-   if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL) || (s7 !=NULL) || (s8 !=NULL) || (s9 !=NULL)) {
+   if ((s1 != NULL)  || (s2 != NULL)   || (s3 != NULL) || (s4 != NULL) || (s5 != NULL) || (s6 != NULL) || (s7 != NULL) || (s8 != NULL) || (s9 != NULL)) {
       handle = 1;   
    }
   return handle;

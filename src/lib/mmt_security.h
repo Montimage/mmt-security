@@ -8,7 +8,13 @@
 #ifndef SRC_LIB_MMT_SECURITY_H_
 #define SRC_LIB_MMT_SECURITY_H_
 
-#include "mmt_lib.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <sys/time.h>
+
+//#include "mmt_lib.h"
 #include "plugin_header.h"
 #include "verdict_printer.h"
 #include "version.h"
@@ -142,7 +148,6 @@ void mmt_sec_print_rules_info();
  * @param rules_id_set
  * @return number of rules being removed
  */
-__thread_safe
 size_t mmt_sec_remove_rules( size_t rules_count, const uint32_t* rules_id_set );
 
 
@@ -153,7 +158,6 @@ size_t mmt_sec_remove_rules( size_t rules_count, const uint32_t* rules_id_set );
  * @note: the thread_id must start from 1
  * @return number of rules being added
  */
-__thread_safe
 size_t mmt_sec_add_rules( const char *rules_mask );
 
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

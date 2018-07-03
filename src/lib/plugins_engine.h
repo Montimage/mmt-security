@@ -13,8 +13,13 @@
 #ifndef MMT_SEC_PLUGINS_REPOSITORY
 	#define MMT_SEC_PLUGINS_REPOSITORY "rules"
 #endif
+
+#ifndef INSTALL_DIR
+	#define INSTALL_DIR "/opt/mmt/security"
+#endif
+
 #ifndef MMT_SEC_PLUGINS_REPOSITORY_OPT
-	#define MMT_SEC_PLUGINS_REPOSITORY_OPT "/opt/mmt/security/rules"
+	#define MMT_SEC_PLUGINS_REPOSITORY_OPT INSTALL_DIR "/rules"
 #endif
 
 #include "plugin_header.h"

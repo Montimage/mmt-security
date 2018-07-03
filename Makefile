@@ -14,19 +14,19 @@ GREEN='\033[0;32m'
 #name of executable file to generate
 OUTPUT   = security
 #directory where probe will be installed on
-INSTALL_DIR = /opt/mmt/security
+INSTALL_DIR ?= /opt/mmt/security
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
 
 # if you update the version number here, 
 # ==> you must also update VERSION_NUMBER in src/lib/version.c 
-VERSION     := 1.2.0
+VERSION     := 1.2.1
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lmmt_core
 
-CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I/opt/mmt/dpi/include  
+CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I/opt/mmt/dpi/include  
 CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -L/usr/local/lib -L/opt/mmt/dpi/lib
 
 #for debuging
@@ -148,6 +148,8 @@ copy_files:
 	$(QUIET) $(RM) ${TMP_DIR} 2> /dev/null
 	$(QUIET) $(MKDIR) ${TMP_DIR}/rules
 	$(QUIET) $(CP) rules/*.so ${TMP_DIR}/rules/
+	
+	$(QUIET) $(CP) mmt-security.conf  ${TMP_DIR}/
 	
 	$(QUIET) $(MKDIR) ${TMP_DIR}/include
 	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h ${TMP_DIR}/include/

@@ -108,7 +108,7 @@ static inline void *_process_one_thread( void *arg ){
 
 	pthread_setcanceltype( PTHREAD_CANCEL_ENABLE, NULL );
 
-	if( move_the_current_thread_to_a_processor( thread_arg->lcore, -14 ))
+	if( thread_arg->lcore != 0 && move_the_current_thread_to_a_processor( thread_arg->lcore, -14 ))
 		mmt_warn("Cannot set affinity of thread %d on lcore %d", gettid(), thread_arg->lcore  );
 
 	while( 1 ){
@@ -257,7 +257,10 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		thread_arg          = mmt_mem_alloc( sizeof( struct _thread_arg ));
 		thread_arg->index   = i;
 		thread_arg->handler = handler;
-		thread_arg->lcore   = core_mask[ i ];
+		if( core_mask == NULL )
+			thread_arg->lcore = 0;
+		else
+			thread_arg->lcore   = core_mask[ i ];
 		ret = pthread_create( &handler->threads_id[ i ], NULL, _process_one_thread, thread_arg );
 		mmt_assert( ret == 0, "Cannot create thread %d", (i+1) );
 	}

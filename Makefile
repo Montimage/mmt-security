@@ -46,11 +46,8 @@ LIBS   += -lhiredis
 $(info => Enable: Output to redis)	
 endif
 
-#Enable update_rules if 
-# - this parameter is ignored
-# - or this parameter is different 0 
+#Enable update_rules if this parameter is different 0 
 ifndef UPDATE_RULES 
-	CFLAGS += -DMODULE_ADD_OR_RM_RULES_RUNTIME
 else
   ifneq "$(UPDATE_RULES)" "0"
   		CFLAGS += -DMODULE_ADD_OR_RM_RULES_RUNTIME
@@ -177,7 +174,7 @@ install: all lib sample_rules uninstall copy_files
 	$(QUIET) $(MV) ${TMP_DIR}/* $(INSTALL_DIR)
 	$(QUIET) $(RM) ${TMP_DIR}
 	
-	@echo "/opt/mmt/security/lib" >> /etc/ld.so.conf.d/mmt-security.conf
+	@echo "$(INSTALL_DIR)/lib" >> /etc/ld.so.conf.d/mmt-security.conf
 	@ldconfig
 	
 	@echo ""

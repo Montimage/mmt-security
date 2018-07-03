@@ -8,7 +8,13 @@
 #ifndef SRC_LIB_MMT_SECURITY_H_
 #define SRC_LIB_MMT_SECURITY_H_
 
-#include "mmt_lib.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <sys/time.h>
+
+//#include "mmt_lib.h"
 #include "plugin_header.h"
 #include "verdict_printer.h"
 #include "version.h"
@@ -103,15 +109,15 @@ uint16_t mmt_sec_hash_proto_attribute( uint32_t proto_id, uint32_t att_id );
  */
 static inline uint64_t mmt_sec_encode_timeval( const struct timeval *t ){
         uint64_t val = t->tv_sec;
-        return val * 1000000 + t->tv_usec;;
+        return val * CLOCKS_PER_SEC  + t->tv_usec;;
 }
 
 /**
  * Decode an uint64_t value to a #timeval
  */
 static inline void mmt_sec_decode_timeval( uint64_t val, struct timeval *time ){
-        time->tv_sec  = val / 1000000;     //timestamp: second
-        time->tv_usec = val % 1000000 ; //timestamp: microsecond
+        time->tv_sec  = val / CLOCKS_PER_SEC;     //timestamp: second
+        time->tv_usec = val % CLOCKS_PER_SEC ; //timestamp: microsecond
 }
 /**
  * Print verdicts to the verdict printer that will send the verdicts to files or redis bus.
@@ -142,7 +148,6 @@ void mmt_sec_print_rules_info();
  * @param rules_id_set
  * @return number of rules being removed
  */
-__thread_safe
 size_t mmt_sec_remove_rules( size_t rules_count, const uint32_t* rules_id_set );
 
 
@@ -153,7 +158,6 @@ size_t mmt_sec_remove_rules( size_t rules_count, const uint32_t* rules_id_set );
  * @note: the thread_id must start from 1
  * @return number of rules being added
  */
-__thread_safe
 size_t mmt_sec_add_rules( const char *rules_mask );
 
 #endif /* SRC_LIB_MMT_SECURITY_H_ */

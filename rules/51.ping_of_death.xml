@@ -12,5 +12,5 @@ that can probably lead to buffer overflow / system crash.
       <event value="COMPUTE" event_id="2" 
              description="Packet length greater than 65 535"
              boolean_expression="((ip.src != ip.dst)&amp;&amp;(meta.packet_len &gt; 65535))"/>
-  </property>
+</property>
 </beginning>

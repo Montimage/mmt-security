@@ -1,0 +1,43 @@
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+static inline int em_check_ip_tos(int i){
+  //printf("IP type of service:%d\n", i);
+  switch (i) {
+    case 0:
+    case 32:
+    case 40:
+    case 56:
+    case 72:
+    case 88:
+    case 96:
+    case 112:
+    case 136:
+    case 144:
+    case 152:
+    case 160:
+    case 184:
+    case 192:
+    case 224:
+      return 0;
+    default:
+  		return 1;    
+  }
+}
+]]></embedded_functions>
+
+<!-- Property 61: Non standard IP type of service value -->
+<!--              according to: 
+                       https://en.wikipedia.org/wiki/Type_of_service
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="61" type_property="EVASION" 
+    description="Non standard IP type of service value">
+      <event value="COMPUTE" event_id="1" 
+             description="IP packet with non-standard IP type of service."
+             boolean_expression="(#em_check_ip_tos(ip.proto_tos) == 1)"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Print source and destination of IP and the next protocol ID after IP"
+             boolean_expression="((ip.src != ip.dst)&amp;&amp;(ip.proto_id != 0))"/>
+</property>
+</beginning>

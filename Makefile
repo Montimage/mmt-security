@@ -14,19 +14,19 @@ GREEN='\033[0;32m'
 #name of executable file to generate
 OUTPUT   = security
 #directory where probe will be installed on
-INSTALL_DIR = /opt/mmt/security
+INSTALL_DIR ?= /opt/mmt/security
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
 
 # if you update the version number here, 
 # ==> you must also update VERSION_NUMBER in src/lib/version.c 
-VERSION     := 1.2.0
+VERSION     := 1.2.1
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lmmt_core
 
-CFLAGS   = -fPIC -Wall -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I/opt/mmt/dpi/include  
+CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I/opt/mmt/dpi/include  
 CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -L/usr/local/lib -L/opt/mmt/dpi/lib
 
 #for debuging
@@ -46,11 +46,8 @@ LIBS   += -lhiredis
 $(info => Enable: Output to redis)	
 endif
 
-#Enable update_rules if 
-# - this parameter is ignored
-# - or this parameter is different 0 
+#Enable update_rules if this parameter is different 0 
 ifndef UPDATE_RULES 
-	CFLAGS += -DMODULE_ADD_OR_RM_RULES_RUNTIME
 else
   ifneq "$(UPDATE_RULES)" "0"
   		CFLAGS += -DMODULE_ADD_OR_RM_RULES_RUNTIME
@@ -145,9 +142,11 @@ sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
 	
 TMP_DIR=/tmp/mmt
 copy_files:
-	$(QUIET) $(RM) ${TMP_DIR} &> /dev/null
+	$(QUIET) $(RM) ${TMP_DIR} 2> /dev/null
 	$(QUIET) $(MKDIR) ${TMP_DIR}/rules
 	$(QUIET) $(CP) rules/*.so ${TMP_DIR}/rules/
+	
+	$(QUIET) $(CP) mmt-security.conf  ${TMP_DIR}/
 	
 	$(QUIET) $(MKDIR) ${TMP_DIR}/include
 	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h ${TMP_DIR}/include/
@@ -163,7 +162,9 @@ copy_files:
 	
 	$(QUIET) $(RM)  ${TMP_DIR}/lib/$(LIB_NAME).so ${TMP_DIR}/lib/$(LIB_NAME).a
 	
+ifdef REDIS
 	$(QUIET) $(CP) /usr/local/lib/libhiredis.so.0.13 ${TMP_DIR}/lib/
+endif
 	
 	$(QUIET) cd ${TMP_DIR}/lib/ && $(LN)  $(LIB_NAME).so.$(VERSION) $(LIB_NAME).so
 	$(QUIET) cd ${TMP_DIR}/lib/ && $(LN)  $(LIB_NAME).a.$(VERSION)  $(LIB_NAME).a
@@ -173,7 +174,7 @@ install: all lib sample_rules uninstall copy_files
 	$(QUIET) $(MV) ${TMP_DIR}/* $(INSTALL_DIR)
 	$(QUIET) $(RM) ${TMP_DIR}
 	
-	@echo "/opt/mmt/security/lib" >> /etc/ld.so.conf.d/mmt-security.conf
+	@echo "$(INSTALL_DIR)/lib" >> /etc/ld.so.conf.d/mmt-security.conf
 	@ldconfig
 	
 	@echo ""

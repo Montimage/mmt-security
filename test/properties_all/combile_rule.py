@@ -64,7 +64,7 @@ for infile in glob.glob('*.xml'):
     for line in finput: 
         if 'static inline' in line: 
             flag = 1
-        if '//This fuction is called when the rules in this files being loaded into MMT-Security' in line: 
+        if '//This fuction is called when the rules in this file being loaded into MMT-Security' in line: 
             flag = 0
             break
         if 'void on_load(){' in line: 

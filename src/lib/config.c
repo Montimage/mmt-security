@@ -10,6 +10,7 @@
 
 #include "config.h"
 #include "mmt_lib.h"
+#include "plugins_engine.h"
 
 static pthread_spinlock_t spin_lock;
 
@@ -122,7 +123,7 @@ bool mmt_sec_load_default_config(){
 
 	FILE *file = fopen( "./mmt-security.conf", "r" );
 	if( file == NULL )
-		file = fopen( "/opt/mmt/security/mmt-security.conf", "r" );
+		file = fopen( INSTALL_DIR "/mmt-security.conf", "r" );
 
 	if( file == NULL )
 		return false;

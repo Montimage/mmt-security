@@ -61,6 +61,16 @@ ldconfig
 
 - if you want to check MMT-Security using Valgrind DRD or Helgrind, you should do `make DEBUG=1 VALGRIND=1`. The option `VALGRIND=1` adds some instruction allowing Valgrind bypass atomic operations that usually causes false positive errors in Valgrind.
 
+## Install directory
+
+By default, MMT-Security will be installed on `/opt/mmt/security`. 
+We can change the directory by giving giving a new directory name to `INSTALL_DIR` parameter when doing `make` and `make install`. For example:
+
+```
+make INSTALL_DIR=/home/tata/security
+make install INSTALL_DIR=/home/tata/security
+```
+
 # Execution
 
 MMT-Security binary files can be obtained by compiling its source code or installing its distribution file (*.deb).

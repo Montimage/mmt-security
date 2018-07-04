@@ -347,6 +347,10 @@ size_t mmt_sec_get_rules_info( rule_info_t const*const**rules_array ){
 
 static inline size_t _copy_plein_text( char *dst, int len, const char* src ){
 	size_t size = 0;
+	//copy maximal 255 characters
+	if( len > 255 )
+		len = 255;
+
 	while( len != 0 && *src != '\0' ){
 		switch( *src ){
 		case '\b': //  Backspace (ascii code 08)
@@ -361,7 +365,7 @@ static inline size_t _copy_plein_text( char *dst, int len, const char* src ){
 			break;
 		default:
 			//non printable
-			if( *src < 32 )
+			if( !isprint( *src ) )
 				*dst = '.';
 			else
 				*dst = *src;

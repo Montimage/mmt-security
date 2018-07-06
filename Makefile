@@ -18,7 +18,7 @@ GIT_VERSION := $(shell git log --format="%h" -n 1)
 
 # if you update the version number here, 
 # ==> you must also update VERSION_NUMBER in src/lib/version.c 
-VERSION     := 1.2.1
+VERSION     := 1.2.2
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lmmt_core

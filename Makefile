@@ -6,15 +6,12 @@ CP     = cp
 MV     = mv
 LN     = ln -s
 
-######color
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-GREEN='\033[0;32m'
-
 #name of executable file to generate
 OUTPUT   = security
 #directory where probe will be installed on
 INSTALL_DIR ?= /opt/mmt/security
+# directory where MMT-DPI was installed
+MMT_DPI_DIR ?= /opt/mmt/dpi
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
@@ -26,8 +23,8 @@ VERSION     := 1.2.1
 #set of library
 LIBS     = -ldl -lpthread -lxml2 -lmmt_core
 
-CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I/opt/mmt/dpi/include  
-CLDFLAGS = -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -L/usr/local/lib -L/opt/mmt/dpi/lib
+CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include  
+CLDFLAGS = -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib
 
 #for debuging
 ifdef DEBUG
@@ -88,12 +85,22 @@ LIB_NAME = libmmt_security2
 
 all: standalone compile_rule rule_info sec_server
 
-gen_dpi $(MMT_DPI_HEADER):
-	$(QUIET) $(CC) -I/opt/mmt/dpi/include -L/opt/mmt/dpi/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -lmmt_core -ldl
-	$(QUIET) echo "Generate list of protocols and their attributes"	
+
+# check if there exists the folder of MMT-DPI 
+--check-mmt-dpi:
+	@test -d $(MMT_DPI_DIR)                                                   \
+		||( echo "ERROR: Not found MMT-DPI at folder $(MMT_DPI_DIR)."          \
+		&& echo "       Please give MMT-DPI folder via MMT_DPI_DIR parameter"  \
+		&& echo "       (for example: make MMT_DPI_DIR=/home/tata/dpi)"        \
+		&& exit 1                                                              \
+		)
+	
+gen_dpi $(MMT_DPI_HEADER): --check-mmt-dpi
+	$(QUIET) $(CC) -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -lmmt_core -ldl
+	$(QUIET) echo "Generate list of protocols and their attributes"
 	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
 
-%.o: %.c $(MMT_DPI_HEADER)
+%.o: %.c $(MMT_DPI_HEADER) 
 	@echo "[COMPILE] $(notdir $@)"
 	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -c -o $@ $<
 	
@@ -139,40 +146,54 @@ rules/%.so: compile_rule
 	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/$*.so rules/$*.xml
 	
 sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
-	
-TMP_DIR=/tmp/mmt
+
+# create a temporal folder in /tmp with a random number	
+TMP_DIR := tmp/__mmt_security_$(shell bash -c 'echo $$RANDOM')
+
 copy_files:
-	$(QUIET) $(RM) ${TMP_DIR} 2> /dev/null
-	$(QUIET) $(MKDIR) ${TMP_DIR}/rules
-	$(QUIET) $(CP) rules/*.so ${TMP_DIR}/rules/
+	$(QUIET) $(RM) $(TMP_DIR) 2> /dev/null
+	$(QUIET) $(MKDIR) $(TMP_DIR)/rules
+	$(QUIET) $(CP) rules/*.so $(TMP_DIR)/rules/
 	
-	$(QUIET) $(CP) mmt-security.conf  ${TMP_DIR}/
+	$(QUIET) $(CP) mmt-security.conf  $(TMP_DIR)/
 	
-	$(QUIET) $(MKDIR) ${TMP_DIR}/include
-	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h ${TMP_DIR}/include/
+	$(QUIET) $(MKDIR) $(TMP_DIR)/include
+	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(TMP_DIR)/include/
 	
-	$(QUIET) $(MKDIR) ${TMP_DIR}/bin
-	$(QUIET) $(CP)  $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO)  ${TMP_DIR}/bin
-	$(QUIET) $(CP)  $(MAIN_STAND_ALONE) ${TMP_DIR}/bin/mmt_security
-	$(QUIET) $(CP)  $(MAIN_SEC_SERVER) ${TMP_DIR}/bin/
+	$(QUIET) $(MKDIR) $(TMP_DIR)/bin
+	$(QUIET) $(CP)    $(MAIN_GEN_PLUGIN)  $(MAIN_PLUGIN_INFO)  $(TMP_DIR)/bin
+	$(QUIET) $(CP)    $(MAIN_STAND_ALONE) $(TMP_DIR)/bin/mmt_security
+	$(QUIET) $(CP)    $(MAIN_SEC_SERVER)  $(TMP_DIR)/bin/
 	
-	$(QUIET) $(MKDIR) ${TMP_DIR}/lib
-	$(QUIET) $(MV)  $(LIB_NAME).so ${TMP_DIR}/lib/$(LIB_NAME).so.$(VERSION)
-	$(QUIET) $(MV)  $(LIB_NAME).a ${TMP_DIR}/lib/$(LIB_NAME).a.$(VERSION)
+	$(QUIET) $(MKDIR) $(TMP_DIR)/lib
+	$(QUIET) $(MV)    $(LIB_NAME).so  $(TMP_DIR)/lib/$(LIB_NAME).so.$(VERSION)
+	$(QUIET) $(MV)    $(LIB_NAME).a   $(TMP_DIR)/lib/$(LIB_NAME).a.$(VERSION)
 	
-	$(QUIET) $(RM)  ${TMP_DIR}/lib/$(LIB_NAME).so ${TMP_DIR}/lib/$(LIB_NAME).a
+	$(QUIET) $(RM)  $(TMP_DIR)/lib/$(LIB_NAME).so $(TMP_DIR)/lib/$(LIB_NAME).a
 	
 ifdef REDIS
-	$(QUIET) $(CP) /usr/local/lib/libhiredis.so.0.13 ${TMP_DIR}/lib/
+	$(QUIET) $(CP) /usr/local/lib/libhiredis.so.0.13 $(TMP_DIR)/lib/
 endif
 	
-	$(QUIET) cd ${TMP_DIR}/lib/ && $(LN)  $(LIB_NAME).so.$(VERSION) $(LIB_NAME).so
-	$(QUIET) cd ${TMP_DIR}/lib/ && $(LN)  $(LIB_NAME).a.$(VERSION)  $(LIB_NAME).a
+	$(QUIET) cd $(TMP_DIR)/lib/ && $(LN)  $(LIB_NAME).so.$(VERSION) $(LIB_NAME).so
+	$(QUIET) cd $(TMP_DIR)/lib/ && $(LN)  $(LIB_NAME).a.$(VERSION)  $(LIB_NAME).a
 	
-install: all lib sample_rules uninstall copy_files
+
+# This target is to deal with the issue when user uses 
+#   2 differrent values of INSTALL_DIR for "make" and "make install"
+# Ex: make; sudo make install INSTALL_DIR=/tmp/mmt/security
+#   - the first "make" will set in the codes MMT_SEC_PLUGINS_REPOSITORY_OPT to /opt/mmt/security/rules
+#   - while the second "make install" will install to /tmp/mmt
+# Thus we need to recompile the codes that use MMT_SEC_PLUGINS_REPOSITORY_OPT to update the new directory.
+# The following target will remove the object files of the codes, thus it will trigger to recompile them.
+# So, in the example above, the MMT_SEC_PLUGINS_REPOSITORY_OPT will be update to /tmp/mmt/security/rules.
+--refresh-plugin-engine:
+	$(QUIET) $(RM) $(SRCDIR)/lib/plugins_engine.o
+	
+install: --refresh-plugin-engine all lib sample_rules uninstall copy_files
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)
-	$(QUIET) $(MV) ${TMP_DIR}/* $(INSTALL_DIR)
-	$(QUIET) $(RM) ${TMP_DIR}
+	$(QUIET) $(MV) $(TMP_DIR)/* $(INSTALL_DIR)
+	$(QUIET) $(RM) $(TMP_DIR)
 	
 	@echo "$(INSTALL_DIR)/lib" >> /etc/ld.so.conf.d/mmt-security.conf
 	@ldconfig
@@ -185,8 +206,8 @@ DEB_NAME = mmt-security_$(VERSION)_$(GIT_VERSION)_$(shell uname -s)_$(shell unam
 TMP="/tmp"
 deb: all lib sample_rules copy_files
 	$(QUIET) $(MKDIR) $(DEB_NAME)/DEBIAN $(DEB_NAME)/$(INSTALL_DIR)
-	$(QUIET) $(MV) ${TMP_DIR}/* $(DEB_NAME)/$(INSTALL_DIR)
-	$(QUIET) $(RM) ${TMP_DIR}
+	$(QUIET) $(MV) $(TMP_DIR)/* $(DEB_NAME)/$(INSTALL_DIR)
+	$(QUIET) $(RM) $(TMP_DIR)
 	
 	$(QUIET) echo "Package: mmt-security \
         \nVersion: $(VERSION) \
@@ -200,7 +221,7 @@ deb: all lib sample_rules copy_files
 		> $(DEB_NAME)/DEBIAN/control
 		
 	$(QUIET) $(MKDIR) $(DEB_NAME)/etc/ld.so.conf.d/
-	@echo "/opt/mmt/security/lib" >> $(DEB_NAME)/etc/ld.so.conf.d/mmt-security.conf
+	@echo "$(INSTALL_DIR)/lib" > $(DEB_NAME)/etc/ld.so.conf.d/mmt-security.conf
 	
 	$(QUIET) dpkg-deb -b $(DEB_NAME)
 	$(QUIET) $(RM) $(DEB_NAME)
@@ -231,9 +252,9 @@ rpm: all lib sample_rules copy_files
       \n%prep\
       \nrm -rf %{buildroot}\
       \nmkdir -p %{buildroot}/$(INSTALL_DIR)\
-      \ncp -rL ${TMP_DIR}/* %{buildroot}/$(INSTALL_DIR)\
+      \ncp -rL $(TMP_DIR)/* %{buildroot}/$(INSTALL_DIR)\
       \nmkdir -p %{buildroot}/etc/ld.so.conf.d/\
-      \necho "/opt/mmt/security/lib" >> %{buildroot}/etc/ld.so.conf.d/mmt-security.conf\
+      \necho "$(INSTALL_DIR)/lib" >> %{buildroot}/etc/ld.so.conf.d/mmt-security.conf\
       \n\
       \n%clean\
       \nrm -rf %{buildroot}\
@@ -247,7 +268,7 @@ rpm: all lib sample_rules copy_files
    " > ./mmt-security.spec
 	
 	$(QUIET) rpmbuild --quiet --rmspec --define "_topdir $(shell pwd)/rpmbuild" --define "_rpmfilename ../../$(DEB_NAME).rpm" -bb ./mmt-security.spec
-	$(QUIET) $(RM) ${TMP_DIR} rpmbuild
+	$(QUIET) $(RM) $(TMP_DIR) rpmbuild
 	@echo "[PACKAGE] $(DEB_NAME).rpm"
 		
 dist-clean: uninstall

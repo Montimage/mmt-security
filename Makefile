@@ -8,39 +8,46 @@ LN     = ln -s
 
 #name of executable file to generate
 OUTPUT   = security
+
 #directory where probe will be installed on
-INSTALL_DIR ?= /opt/mmt/security
+ifndef MMT_BASE
+  MMT_BASE             := /opt/mmt
+  NEED_ROOT_PERMISSION := 1
+else
+  $(info INFO: Set default folder of MMT to $(MMT_BASE))
+endif
+
+INSTALL_DIR := $(MMT_BASE)/security
+MMT_DPI_DIR := $(MMT_BASE)/dpi
+
 # directory where MMT-DPI was installed
-MMT_DPI_DIR ?= /opt/mmt/dpi
+
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
-
-# if you update the version number here, 
-# ==> you must also update VERSION_NUMBER in src/lib/version.c 
-VERSION     := 1.2.2
+VERSION     := 1.2.3
 
 #set of library
-LIBS     = -ldl -lpthread -lxml2 -lmmt_core
+LIBS     = -ldl -lpthread -lxml2 -l:libmmt_core.so
 
-CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include  
+CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include  
 CLDFLAGS = -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib
 
 #for debuging
 ifdef DEBUG
-CFLAGS   += -g -DDEBUG_MODE -O0 -fstack-protector-all
+  CFLAGS   += -g -DDEBUG_MODE -O0 -fstack-protector-all
 else
-CFLAGS   += -O3
+  CFLAGS   += -O3
 endif
 
 ifdef VALGRIND
-CFLAGS += -DVALGRIND_MODE
+  CFLAGS += -DVALGRIND_MODE
 endif
 
 ifdef REDIS
-CFLAGS += -DMODULE_REDIS_OUTPUT
-LIBS   += -lhiredis
-$(info => Enable: Output to redis)	
+  CFLAGS += -DMODULE_REDIS_OUTPUT
+  LIBS   += -lhiredis
+  $(info => Enable: Output to redis)	
 endif
 
 #Enable update_rules if this parameter is different 0 
@@ -68,7 +75,7 @@ MAIN_OBJS := $(patsubst %.c,%.o, $(MAIN_SRCS))
 MMT_DPI_HEADER = $(SRCDIR)/dpi/mmt_dpi.h
 
 ifndef VERBOSE
-	QUIET := @
+  QUIET := @
 endif
 
 MAIN_DPI = gen_dpi_header
@@ -85,13 +92,14 @@ LIB_NAME = libmmt_security2
 
 all: standalone compile_rule rule_info sec_server
 
+#this is useful when running the tools, such as, gen_dpi, compile_rule
+# but libmmt_core, ... are not found by ldd
+export LD_LIBRARY_PATH=$(MMT_DPI_DIR)/lib
 
 # check if there exists the folder of MMT-DPI 
 --check-mmt-dpi:
 	@test -d $(MMT_DPI_DIR)                                                   \
 		||( echo "ERROR: Not found MMT-DPI at folder $(MMT_DPI_DIR)."          \
-		&& echo "       Please give MMT-DPI folder via MMT_DPI_DIR parameter"  \
-		&& echo "       (for example: make MMT_DPI_DIR=/home/tata/dpi)"        \
 		&& exit 1                                                              \
 		)
 	
@@ -140,7 +148,10 @@ lib: $(LIB_NAME).a $(LIB_NAME).so
 	
 uninstall:
 	$(QUIET) $(RM) $(INSTALL_DIR)
+	
+ifdef NEED_ROOT_PERMISSION
 	$(QUIET) $(RM) /etc/ld.so.conf.d/mmt-security.conf
+endif
 
 rules/%.so: compile_rule
 	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/$*.so rules/$*.xml
@@ -148,17 +159,17 @@ rules/%.so: compile_rule
 sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
 
 # create a temporal folder in /tmp with a random number	
-TMP_DIR := tmp/__mmt_security_$(shell bash -c 'echo $$RANDOM')
+TMP_DIR := build_mmt_security_$(shell bash -c 'echo $$RANDOM')
 
 copy_files:
-	$(QUIET) $(RM) $(TMP_DIR) 2> /dev/null
+	$(QUIET) $(RM)    $(TMP_DIR) 2> /dev/null
 	$(QUIET) $(MKDIR) $(TMP_DIR)/rules
-	$(QUIET) $(CP) rules/*.so $(TMP_DIR)/rules/
+	$(QUIET) $(CP)    rules/*.so $(TMP_DIR)/rules/
 	
-	$(QUIET) $(CP) mmt-security.conf  $(TMP_DIR)/
+	$(QUIET) $(CP)    mmt-security.conf  $(TMP_DIR)/
 	
 	$(QUIET) $(MKDIR) $(TMP_DIR)/include
-	$(QUIET) $(CP) $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(TMP_DIR)/include/
+	$(QUIET) $(CP)    $(SRCDIR)/dpi/* $(SRCDIR)/lib/*.h $(TMP_DIR)/include/
 	
 	$(QUIET) $(MKDIR) $(TMP_DIR)/bin
 	$(QUIET) $(CP)    $(MAIN_GEN_PLUGIN)  $(MAIN_PLUGIN_INFO)  $(TMP_DIR)/bin
@@ -166,15 +177,16 @@ copy_files:
 	$(QUIET) $(CP)    $(MAIN_SEC_SERVER)  $(TMP_DIR)/bin/
 	
 	$(QUIET) $(MKDIR) $(TMP_DIR)/lib
-	$(QUIET) $(MV)    $(LIB_NAME).so  $(TMP_DIR)/lib/$(LIB_NAME).so.$(VERSION)
-	$(QUIET) $(MV)    $(LIB_NAME).a   $(TMP_DIR)/lib/$(LIB_NAME).a.$(VERSION)
+	$(QUIET) $(MV)    $(LIB_NAME).so      $(TMP_DIR)/lib/$(LIB_NAME).so.$(VERSION)
+	$(QUIET) $(MV)    $(LIB_NAME).a       $(TMP_DIR)/lib/$(LIB_NAME).a.$(VERSION)
 	
 	$(QUIET) $(RM)  $(TMP_DIR)/lib/$(LIB_NAME).so $(TMP_DIR)/lib/$(LIB_NAME).a
 	
 ifdef REDIS
 	$(QUIET) $(CP) /usr/local/lib/libhiredis.so.0.13 $(TMP_DIR)/lib/
 endif
-	
+
+#create symbolic links	
 	$(QUIET) cd $(TMP_DIR)/lib/ && $(LN)  $(LIB_NAME).so.$(VERSION) $(LIB_NAME).so
 	$(QUIET) cd $(TMP_DIR)/lib/ && $(LN)  $(LIB_NAME).a.$(VERSION)  $(LIB_NAME).a
 	
@@ -192,18 +204,20 @@ endif
 	
 install: --refresh-plugin-engine all lib sample_rules uninstall copy_files
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)
-	$(QUIET) $(MV) $(TMP_DIR)/* $(INSTALL_DIR)
-	$(QUIET) $(RM) $(TMP_DIR)
+	$(QUIET) $(MV)    $(TMP_DIR)/* $(INSTALL_DIR)
+	$(QUIET) $(RM)    $(TMP_DIR)
 	
+ifdef NEED_ROOT_PERMISSION
 	@echo "$(INSTALL_DIR)/lib" >> /etc/ld.so.conf.d/mmt-security.conf
 	@ldconfig
-	
+endif
+
 	@echo ""
-	@echo "Installed mmt-security in $(INSTALL_DIR)"
+	@echo "INFO: Installed successfully MMT-Security in $(INSTALL_DIR)"
 	
 	
 DEB_NAME = mmt-security_$(VERSION)_$(GIT_VERSION)_$(shell uname -s)_$(shell uname -m)
-TMP="/tmp"
+
 deb: all lib sample_rules copy_files
 	$(QUIET) $(MKDIR) $(DEB_NAME)/DEBIAN $(DEB_NAME)/$(INSTALL_DIR)
 	$(QUIET) $(MV) $(TMP_DIR)/* $(DEB_NAME)/$(INSTALL_DIR)
@@ -272,21 +286,21 @@ rpm: all lib sample_rules copy_files
 	@echo "[PACKAGE] $(DEB_NAME).rpm"
 		
 dist-clean: uninstall
-	@echo "Removed mmt-security from $(INSTALL_DIR)"
+	@echo "INFO: Removed successfully MMT-Security from $(INSTALL_DIR)"
 	
 clean:
 	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* \
 			$(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)
 	
 ################################################################################
-#auto test 
+# Auto test 
 ################################################################################
 NAMES := $(sort $(patsubst check/pcap/%.pcap,%, $(wildcard check/pcap/*.pcap)))
 
 ifdef VAL
-	VALGRIND = valgrind --leak-check=yes
+  VALGRIND = valgrind --leak-check=yes
 else
-	VALGRIND =
+  VALGRIND =
 endif
 
 TEST_INDEX=1

@@ -4,17 +4,16 @@
  *  Created on: Apr 18, 2017
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@me.com>
  */
-#include "version.h"
 #include <stdlib.h>
+#include "version.h"
 
-//if you update the version number here,
-// ==> you must also update VERSION in ../../Makefile
-#define VERSION_NUMBER "1.2.0"
+//VERSION_NUMBER is given by Makefile
+#ifndef VERSION_NUMBER
+  #error("Not found VERSION_NUMBER")
+#endif
 
-
+//update this number when structure of plugin has been changed
 #define REQUIRE_PLUGIN "1.2.0"
-
-
 
 
 #define __NOW__   __DATE__ " " __TIME__

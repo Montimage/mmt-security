@@ -17,7 +17,7 @@
 #define MAX_STR_SIZE 10000
 
 /**
- * Convert from MMT_DPI_DATA_TYPE to MMT_SEC_DATA_TYPE that is either a STRING or a NUMERIC
+ * Convert from MMT_DPI_DATA_TYPE to MMT_SEC_DATA_TYPE that is either a MMT_SEC_MSG_DATA_TYPE_STRING or a MMT_SEC_MSG_DATA_TYPE_NUMERIC
  */
 inline int convert_data_type( int type ){
 	switch( type ){
@@ -28,7 +28,7 @@ inline int convert_data_type( int type ){
 	case MMT_DATA_PORT:
 	case MMT_DATA_CHAR:
 	case MMT_DATA_FLOAT:
-		return NUMERIC;
+		return MMT_SEC_MSG_DATA_TYPE_NUMERIC;
 
 	case MMT_DATA_MAC_ADDR:
 	case MMT_STRING_DATA:
@@ -39,7 +39,7 @@ inline int convert_data_type( int type ){
 	case MMT_DATA_IP_ADDR:
 	case MMT_DATA_IP6_ADDR:
 	case MMT_STRING_DATA_POINTER:
-		return STRING;
+		return MMT_SEC_MSG_DATA_TYPE_STRING;
 
 	case MMT_DATA_POINTER:
 	case MMT_DATA_PATH:
@@ -55,11 +55,11 @@ inline int convert_data_type( int type ){
 	case MMT_DATA_FILTER_STATE:
 	case MMT_DATA_PARENT:
 	case MMT_STATS:
-		return VOID;
+		return MMT_SEC_MSG_DATA_TYPE_BINARY;
 	default:
 		return UNKNOWN;
 	}
-	return STRING;
+	return MMT_SEC_MSG_DATA_TYPE_STRING;
 }
 
 size_t str_trim( uint8_t *string, size_t size ){
@@ -343,14 +343,14 @@ size_t _parse_constant( constant_t **expr, const char *string, size_t str_size )
 	index = _parse_a_number( &number, string, str_size );
 	//found a number
 	if( number != NULL ){
-		*expr = expr_create_a_constant(NUMERIC, sizeof( double), number);
+		*expr = expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), number);
 		return index;
 	}
 
 	//not found any number => find a string
 	index = _parse_a_string( &name, string, str_size );
 	if( name != NULL ){
-		*expr = expr_create_a_constant(STRING, mmt_mem_size( name ), name);
+		*expr = expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_STRING, mmt_mem_size( name ), name);
 		return index;
 	}
 	return index;
@@ -457,7 +457,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		index = _parse_a_string( &new_string, temp, MAX_STR_SIZE );
 
 		new_expr = expr_create_an_expression( CONSTANT,
-				expr_create_a_constant(STRING, mmt_mem_size( new_string ), new_string) );
+				expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_STRING, mmt_mem_size( new_string ), new_string) );
 		new_expr->father = expr;
 
 		//append new_expr to expr->params_list
@@ -481,7 +481,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 				mmt_mem_free( new_number );
 				mmt_halt("Error 37c: Illegal name:\"%s\".\nExpected either \"true\", \"false\", or proto.att or proto.att.ref", temp + 1 );
 			}
-			new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(NUMERIC, sizeof( double), new_number) );
+			new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
 			new_expr->father = expr;
 			//append new_expr to expr->params_list
 			expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
@@ -515,7 +515,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		index = _parse_a_number( &new_number, temp, MAX_STR_SIZE );
 		//found a number
 		//create a new expression
-		new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(NUMERIC, sizeof( double), new_number) );
+		new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
 		new_expr->father = expr;
 		//append new_expr to expr->params_list
 		expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
@@ -653,7 +653,7 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 		return 0;
 	}
 
-	if( expr->data_type == NUMERIC ){
+	if( expr->data_type == MMT_SEC_MSG_DATA_TYPE_NUMERIC ){
 		d = *(double *)expr->data;
 		//integer
 		size = snprintf(buff, sizeof(MAX_STR_SIZE), "%.2f", d);
@@ -662,7 +662,7 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 		while( size > 1 && buff[ size - 1 ] == '0' )
 				size --;
 		if( buff[ size - 1 ] == '.' ) size --;
-	}else if( expr->data_type == STRING ){
+	}else if( expr->data_type == MMT_SEC_MSG_DATA_TYPE_STRING ){
 		size = snprintf( buff, MAX_STR_SIZE, "\"%s\"", (char *)expr->data );
 	}else{
 		size = snprintf( buff, MAX_STR_SIZE, "\"__na__\"");
@@ -704,7 +704,7 @@ static inline bool _is_string_variable( const operation_t *opt ){
 	ptr = opt->params_list;
 	while( ptr != NULL ){
 		expr = (expression_t *) ptr->data;
-		if( expr->type != VARIABLE || expr->variable->data_type != STRING )
+		if( expr->type != VARIABLE || expr->variable->data_type != MMT_SEC_MSG_DATA_TYPE_STRING )
 			return NO;
 		ptr = ptr->next;
 	}
@@ -717,9 +717,9 @@ static inline bool _is_string_param( const operation_t *opt ){
 	ptr = opt->params_list;
 	while( ptr != NULL ){
 		expr = (expression_t *) ptr->data;
-		if( expr->type == VARIABLE && expr->variable->data_type != STRING )
+		if( expr->type == VARIABLE && expr->variable->data_type != MMT_SEC_MSG_DATA_TYPE_STRING )
 			return NO;
-		if( expr->type == CONSTANT && expr->variable->data_type != STRING )
+		if( expr->type == CONSTANT && expr->variable->data_type != MMT_SEC_MSG_DATA_TYPE_STRING )
 			return NO;
 		ptr = ptr->next;
 	}

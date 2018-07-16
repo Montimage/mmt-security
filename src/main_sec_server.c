@@ -36,8 +36,8 @@
 //maximum length of file name storing alerts
 #define MAX_FILENAME_SIZE 500
 
-#define STRING 1
-#define VOID   2
+#define MMT_SEC_MSG_DATA_TYPE_STRING 1
+#define MMT_SEC_MSG_DATA_TYPE_BINARY   2
 
 #ifndef __FAVOR_BSD
 #define __FAVOR_BSD
@@ -238,10 +238,10 @@ static inline size_t receiving_reports( int sock ) {
 			case MMT_STRING_DATA_POINTER:
 			case MMT_GENERIC_HEADER_LINE :
 			case MMT_HEADER_LINE :
-				set_element_data_message_t( msg, proto_id, att_id,  &buffer[index], STRING, data_length );
+				set_element_data_message_t( msg, proto_id, att_id,  &buffer[index], MMT_SEC_MSG_DATA_TYPE_STRING, data_length );
 				break;
 			case MMT_DATA_POINTER:
-				set_element_data_message_t( msg, proto_id, att_id,  &buffer[index], VOID, data_length );
+				set_element_data_message_t( msg, proto_id, att_id,  &buffer[index], MMT_SEC_MSG_DATA_TYPE_BINARY, data_length );
 				break;
 			default:
 				dpi_message_set_dpi_data( &buffer[index], dpi_data_type, msg, proto_id, att_id );

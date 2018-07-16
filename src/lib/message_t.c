@@ -155,7 +155,7 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 	//- proto_id = TCP
 	//- att_id = FLAGS, FIN, SYN, RST, PSH, ACK, URG, ECE, CWR
 	//=> if its data is zero => obmit => consider as NULL
-	else if( proto_id == 354 && data_type == NUMERIC && (*(double*) data)  == 0 && (6 <= att_id && att_id <= 14 ))
+	else if( proto_id == 354 && data_type == MMT_SEC_MSG_DATA_TYPE_NUMERIC && (*(double*) data)  == 0 && (6 <= att_id && att_id <= 14 ))
 		return MSG_CONTINUE;
 
 

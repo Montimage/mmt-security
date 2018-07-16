@@ -17,7 +17,9 @@
 
 
 enum data_type{
-	NUMERIC, STRING, VOID
+	MMT_SEC_MSG_DATA_TYPE_NUMERIC,
+	MMT_SEC_MSG_DATA_TYPE_STRING,
+	MMT_SEC_MSG_DATA_TYPE_BINARY
 };
 
 /**
@@ -26,7 +28,7 @@ enum data_type{
 typedef struct message_element_struct{
 	uint32_t proto_id;
 	uint32_t att_id;
-	int data_type; //NUMERIC, STRING, VOID
+	int data_type; //MMT_SEC_MSG_DATA_TYPE_NUMERIC, MMT_SEC_MSG_DATA_TYPE_STRING, MMT_SEC_MSG_DATA_TYPE_BINARY
 	void *data;
 }message_element_t;
 

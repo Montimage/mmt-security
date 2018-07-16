@@ -72,9 +72,9 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 
 	//TODO: what happen if a proto's name starts by a number
 	fprintf( fd, "\n\t %s%s = %s data;",
-			((var->data_type == NUMERIC)? "double " : ((var->data_type == STRING)? "const char *" : "const void *") ),
+			((var->data_type == MMT_SEC_MSG_DATA_TYPE_NUMERIC)? "double " : ((var->data_type == MMT_SEC_MSG_DATA_TYPE_STRING)? "const char *" : "const void *") ),
 			str,
-			((var->data_type == NUMERIC)? "*(double*) " : ((var->data_type == STRING)? "(char *)" : "") )
+			((var->data_type == MMT_SEC_MSG_DATA_TYPE_NUMERIC)? "*(double*) " : ((var->data_type == MMT_SEC_MSG_DATA_TYPE_STRING)? "(char *)" : "") )
 	);
 
 	mmt_mem_free( str );

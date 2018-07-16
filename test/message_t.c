@@ -23,23 +23,23 @@ int main( int argc, char **argv){
 	message_t *msg = create_message_t( 5 );
 	int i;
 
-	set_element_data_message_t( msg, 1, 2, "a", STRING, 1 );
+	set_element_data_message_t( msg, 1, 2, "a", MMT_SEC_MSG_DATA_TYPE_STRING, 1 );
 
 	print( msg );
 
-	set_element_data_message_t( msg, 2, 7, "c", STRING, 1 );
+	set_element_data_message_t( msg, 2, 7, "c", MMT_SEC_MSG_DATA_TYPE_STRING, 1 );
 
 	print( msg );
 
-	set_element_data_message_t( msg, 5, 9, "d", STRING, 1 );
+	set_element_data_message_t( msg, 5, 9, "d", MMT_SEC_MSG_DATA_TYPE_STRING, 1 );
 
 	print( msg );
 
-	set_element_data_message_t( msg, 1, 7, "b", STRING, 1 );
+	set_element_data_message_t( msg, 1, 7, "b", MMT_SEC_MSG_DATA_TYPE_STRING, 1 );
 
 	print( msg );
 
-	set_element_data_message_t( msg, 2, 7, "X", STRING, 1 );
+	set_element_data_message_t( msg, 2, 7, "X", MMT_SEC_MSG_DATA_TYPE_STRING, 1 );
 
 	print( msg );
 

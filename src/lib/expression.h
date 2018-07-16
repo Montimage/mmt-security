@@ -33,7 +33,7 @@ typedef struct{
 
 /**
  * Convert from data types from MMT_DPI to #data_type that is
- * either a NUMERIC or a STRING
+ * either a MMT_SEC_MSG_DATA_TYPE_NUMERIC or a MMT_SEC_MSG_DATA_TYPE_STRING
  */
 int convert_data_type( int mmt_dpi_data_type );
 

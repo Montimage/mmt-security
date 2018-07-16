@@ -104,27 +104,27 @@ static inline size_t dpi_get_ip_option_len(const ipacket_t * ipacket ){
 static inline int dpi_message_set_void_data( const ipacket_t *pkt, const void *data, message_t *msg, uint32_t proto_id, uint32_t att_id ){
 	const void *new_data = NULL;
 	size_t new_data_len  = 0;
-	int new_data_type    = VOID;
+	int new_data_type    = MMT_SEC_MSG_DATA_TYPE_BINARY;
 
 	if( unlikely( data == NULL ))
 		return 0;
 
 	switch( att_id ){
 	case PROTO_PAYLOAD:
-		new_data_type = VOID;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
 		new_data      = data;
 		new_data_len  = dpi_get_payload_len( pkt, proto_id );
 		break;
 
 	case PROTO_DATA:
-		new_data_type = VOID;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
 		new_data      = data;
 		new_data_len  = dpi_get_data_len( pkt, proto_id );
 		break;
 
 	case FTP_LAST_COMMAND:
 		if ( proto_id == PROTO_FTP ){
-			new_data_type = STRING;
+			new_data_type = MMT_SEC_MSG_DATA_TYPE_STRING;
 			new_data      = ((ftp_command_t *)data)->str_cmd;
 			new_data_len  = strlen( ((ftp_command_t *)data)->str_cmd );
 		}
@@ -132,7 +132,7 @@ static inline int dpi_message_set_void_data( const ipacket_t *pkt, const void *d
 
 	case FTP_LAST_RESPONSE_CODE:
 		if ( proto_id == PROTO_FTP ){
-			new_data_type = STRING;
+			new_data_type = MMT_SEC_MSG_DATA_TYPE_STRING;
 			new_data      = ((ftp_response_t *)data)->str_code;
 			new_data_len  = strlen( ((ftp_response_t *)data)->str_code );
 		}
@@ -140,7 +140,7 @@ static inline int dpi_message_set_void_data( const ipacket_t *pkt, const void *d
 
 	case IP_OPTS:
 		if( proto_id == PROTO_IP){
-			new_data_type = VOID;
+			new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
 			new_data      = data;
 			new_data_len  = dpi_get_ip_option_len( pkt );
 		}
@@ -173,7 +173,7 @@ int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *ms
 	double number       = 0;
 	const void *new_data= NULL;
 	size_t new_data_len = 0;
-	int new_data_type   = VOID;
+	int new_data_type   = MMT_SEC_MSG_DATA_TYPE_BINARY;
 
 	//does not exist data for this proto_id and att_id
 	if( unlikely( data == NULL ))
@@ -184,14 +184,14 @@ int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *ms
 		break;
 	case MMT_DATA_CHAR: /**< 1 character constant value */
 		number = *(char *) data;
-		new_data_type = NUMERIC;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_NUMERIC;
 		new_data      = &number;
 		new_data_len  = sizeof( double );
 		break;
 
 	case MMT_U8_DATA: /**< unsigned 1-byte constant value */
 		number    = *(uint8_t *) data;
-		new_data_type = NUMERIC;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_NUMERIC;
 		new_data      = &number;
 		new_data_len  = sizeof( double );
 		break;
@@ -199,42 +199,42 @@ int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *ms
 	case MMT_DATA_PORT: /**< tcp/udp port constant value */
 	case MMT_U16_DATA: /**< unsigned 2-bytes constant value */
 		number    = *(uint16_t *) data;
-		new_data_type = NUMERIC;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_NUMERIC;
 		new_data      = &number;
 		new_data_len  = sizeof( double );
 		break;
 
 	case MMT_U32_DATA: /**< unsigned 4-bytes constant value */
 		number    = *(uint32_t *) data;
-		new_data_type = NUMERIC;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_NUMERIC;
 		new_data      = &number;
 		new_data_len  = sizeof( double );
 		break;
 
 	case MMT_U64_DATA: /**< unsigned 8-bytes constant value */
 		number    = *(uint64_t *) data;
-		new_data_type = NUMERIC;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_NUMERIC;
 		new_data      = &number;
 		new_data_len  = sizeof( double );
 		break;
 
 	case MMT_DATA_FLOAT: /**< float constant value */
 		number   =  *(float *) data;
-		new_data_type = NUMERIC;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_NUMERIC;
 		new_data      = &number;
 		new_data_len  = sizeof( double );
 		break;
 
 	case MMT_DATA_IP6_ADDR: /**< ip6 address constant value */
 	case MMT_DATA_MAC_ADDR: /**< ethernet mac address constant value */
-		new_data_type = VOID;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
 		new_data      = data;
 		new_data_len  = 6;
 		break;
 
 	case MMT_DATA_IP_NET: /**< ip network address constant value */
 	case MMT_DATA_IP_ADDR: /**< ip address constant value */
-		new_data_type = VOID;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
 		new_data      = data;
 		new_data_len  = 4;
 		break;
@@ -258,21 +258,21 @@ int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *ms
 	case MMT_BINARY_VAR_DATA: /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
 	case MMT_STRING_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum BINARY_64DATA_LEN long */
 	case MMT_STRING_LONG_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum STRING_DATA_LEN long */
-		new_data_type = STRING;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_STRING;
 		new_data      = ((mmt_binary_var_data_t *)data)->data;
 		new_data_len  = ((mmt_binary_var_data_t *)data)->len;
 		break;
 
 
 	case MMT_HEADER_LINE: /**< string pointer value with a variable size. The string is not necessary null terminating */
-		new_data_type = STRING;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_STRING;
 		new_data      = ((mmt_header_line_t *)data)->ptr;
 		new_data_len  = ((mmt_header_line_t *)data)->len;
 		break;
 
 	case MMT_GENERIC_HEADER_LINE: /**< structure representing an RFC2822 header line with null terminating field and value elements. */
 	case MMT_STRING_DATA_POINTER: /**< pointer constant value (size is void *). The data pointed to is of type string with null terminating character included */
-		new_data_type = STRING;
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_STRING;
 		new_data      = data;
 		new_data_len  = strlen( (char*) data);
 		break;

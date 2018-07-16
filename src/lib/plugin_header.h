@@ -36,7 +36,7 @@ typedef struct proto_attribute_struct{
 	 */
 	uint32_t att_id;
 	/**
-	 * Data type defined by MMT-Security such as NUMERIC, STRING
+	 * Data type defined by MMT-Security such as MMT_SEC_MSG_DATA_TYPE_NUMERIC, MMT_SEC_MSG_DATA_TYPE_STRING
 	 */
 	int data_type;
 	/**

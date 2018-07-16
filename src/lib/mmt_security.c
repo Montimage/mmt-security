@@ -458,7 +458,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 			//pro_ptr->data_type;
 			switch( me->data_type ){
-			case NUMERIC:
+			case MMT_SEC_MSG_DATA_TYPE_NUMERIC:
 				double_val = *(double *)me->data;
 
 				//do not forget }

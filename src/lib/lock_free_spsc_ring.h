@@ -18,6 +18,16 @@
 #include "mmt_lib.h"
 #include "valgrind.h"
 
+//this lib needs to be compiled by gcc >= 4.9
+#define GCC_VERSION (__GNUC__ * 10000        \
+                     + __GNUC_MINOR__ * 100  \
+                     + __GNUC_PATCHLEVEL__)
+
+// Test for GCC < 4.9.0
+#if GCC_VERSION < 40900
+	#warning Need gcc >= 4.9
+#endif
+
 #define RING_EMPTY  -1
 #define RING_FULL   -2
 #define RING_SUCCESS 0

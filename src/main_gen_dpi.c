@@ -5,7 +5,7 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  *
  *  Generate a list of available protocols and for each protocol, the list of its attributes
- *  The output is printed to the screen.
+ *  The output is printed to the screen or to file (if having one running parameter that represent a file path).
  *  By using this list, mmt-security can be independent from mmt-dpi, e.g., one does not need
  *  to install mmt-dpi to run mmt-security as all it needs is this list.
  *
@@ -18,7 +18,9 @@
 #include <inttypes.h>
 #include <mmt_core.h>
 
+
 static uint32_t total_proto_att = 0;
+static FILE *output = NULL;
 
 static const char *data_type_name[] = {
 		"MMT_UNDEFINED_TYPE",  " /**< no type constant value */",
@@ -61,7 +63,7 @@ void attributes_iterator(attribute_metadata_t * attribute, uint32_t proto_id,
 		void * args) {
 	int *attr_count = (int *) args;
 
-	printf("%c\n\t { .gid = %5"PRIu32", .id = %4"PRIu32", .data_type = %-23s, .name = \"%s\"}",
+	fprintf( output,"%c\n\t { .gid = %5"PRIu32", .id = %4"PRIu32", .data_type = %-23s, .name = \"%s\"}",
 			(*attr_count == 0 ? ' ': ','),
 			++total_proto_att,
 			attribute->id,
@@ -80,18 +82,18 @@ void protocols_iterator(uint32_t proto_id, void * args) {
 
 	//dummy protocol
 	while( *proto_count < proto_id ){
-		printf("%c\n{.id = %i, .name = NULL, .attributes = NULL, .attributes_count = 0}/*dummy*/",
+		fprintf( output,"%c\n{.id = %i, .name = NULL, .attributes = NULL, .attributes_count = 0}/*dummy*/",
 				(*proto_count == 0? ' ': ','), *proto_count );
 		(*proto_count) ++;
 	}
 
-	printf("%c\n {.id = %"PRIu32", .name = \"%s\", .attributes = (struct dpi_attribute[]){",
+	fprintf( output,"%c\n {.id = %"PRIu32", .name = \"%s\", .attributes = (struct dpi_attribute[]){",
 			 (*proto_count == 0? ' ': ','),
 			proto_id, ( get_protocol_name_by_id(proto_id) ));
 
 	iterate_through_protocol_attributes(proto_id, attributes_iterator, &attr_count );
 
-	printf("},\n\t .attributes_count = %d\n }", attr_count );
+	fprintf( output,"},\n\t .attributes_count = %d\n }", attr_count );
 
 	(*proto_count) ++;
 }
@@ -104,104 +106,119 @@ int main(int argc, char** argv) {
 	struct tm *t = localtime(&now);
 	int i;
 
-	strftime(text, sizeof(text)-1, "%Y-%m%d %H:%M:%S", t);
+	if( argc == 2 ){
+		output = fopen( argv[1], "w" );
+		if( output == NULL ){
+			fprintf( stderr,"Cannot open file %s to write\n", argv[1] );
+			return 0;
+		}
+	}
+	else
+		output = stdout;
 
-	printf("/**This code is generated automatically on %s.*/", text );
+	strftime(text, sizeof(text)-1, "%Y-%m-%d %H:%M:%S", t);
 
-	printf("\n #ifndef __MMT_SEC_DPI_H_\n #define __MMT_SEC_DPI_H_");
-	printf("\n #include <stdint.h>\n #include <stdlib.h>\n #include <string.h>");
+	fprintf( output,"/* This code is generated automatically on %s using MMT-DPI v%s. */", text, mmt_version() );
+	fprintf( output,"\n/* If you want to modify something, goto %s */", __FILE__ );
+
+	fprintf( output,"\n #ifndef __MMT_SEC_DPI_H_\n #define __MMT_SEC_DPI_H_");
+	fprintf( output,"\n #include <stdint.h>\n #include <stdlib.h>\n #include <string.h>");
 
 	//avoid duplicate from data_types.h
-	printf("\n\n #ifndef TYPES_DEFS_H" );
-	printf("\n #define TYPES_DEFS_H" );
-	printf("\nenum data_types { ");
+	fprintf( output,"\n\n #ifndef TYPES_DEFS_H" );
+	fprintf( output,"\n #define TYPES_DEFS_H" );
+	fprintf( output,"\nenum data_types { ");
 	for( i=0; i<data_type_count; i++ )
-		printf("\n\t %s, %s", data_type_name[i*2], data_type_name[i*2+1] );
-	printf("\n};");
-	printf("\n #endif //end TYPES_DEFS_H\n" );
+		fprintf( output,"\n\t %s, %s", data_type_name[i*2], data_type_name[i*2+1] );
+	fprintf( output,"\n};");
+	fprintf( output,"\n #endif //end TYPES_DEFS_H\n" );
 
-	printf("\n\n static const char *dpi_data_types_name[] = {" );
+	fprintf( output,"\n\n static const char *dpi_data_types_name[] = {" );
 	for( i=0; i<data_type_count; i++ )
-		printf("\n\t \"%s\", %s", data_type_name[i*2], data_type_name[i*2+1] );
-	printf("\n };\n");
+		fprintf( output,"\n\t \"%s\", %s", data_type_name[i*2], data_type_name[i*2+1] );
+	fprintf( output,"\n };\n");
 
-	printf("\n struct dpi_attribute{\n\t uint32_t gid; \n\t uint16_t id;\n\t const char *name;\n\t long data_type;};");
-	printf("\n struct dpi_proto{\n\t uint16_t id;\n\t const char *name;\n\t struct dpi_attribute *attributes;\n\t size_t attributes_count;};");
+	fprintf( output,"\n struct dpi_attribute{\n\t uint32_t gid; \n\t uint16_t id;\n\t const char *name;\n\t long data_type;};");
+	fprintf( output,"\n struct dpi_proto{\n\t uint16_t id;\n\t const char *name;\n\t struct dpi_attribute *attributes;\n\t size_t attributes_count;};");
 
 
-	printf("\n\n static const struct dpi_proto *DPI_PROTO = (struct dpi_proto[]){");
+	fprintf( output,"\n\n static const struct dpi_proto *DPI_PROTO = (struct dpi_proto[]){");
 
 	init_extraction();
 	iterate_through_protocols( protocols_iterator, &proto_count );
 	close_extraction();
 
-	printf("}; //TYPES_DEFS_H\n"); //end of struct
+	fprintf( output,"}; //TYPES_DEFS_H\n"); //end of struct
 
 
-	printf( "\n #define DPI_PROTO_SIZE %d", proto_count );
-	printf( "\n #define DPI_PROTO_ATT_SIZE %"PRIu32"\n", total_proto_att );
+	fprintf( output, "\n #define DPI_PROTO_SIZE %d", proto_count );
+	fprintf( output, "\n #define DPI_PROTO_ATT_SIZE %d\n", total_proto_att );
 
-	printf("\n #ifndef MMT_CORE_H\n #define MMT_CORE_H");
+	fprintf( output,"\n #ifndef MMT_CORE_H\n #define MMT_CORE_H");
 
-	printf( "\n static inline uint32_t get_protocol_id_by_name( const char *name ){");
-	printf( "\n	size_t i;");
-	printf( "\n	for( i=0; i<DPI_PROTO_SIZE; i++ )");
-	printf( "\n	if( DPI_PROTO[i].name == NULL )");
-	printf( "\n	  continue;");
-	printf( "\n	else if( strcmp( name, DPI_PROTO[i].name) == 0 )");
-	printf( "\n	  return DPI_PROTO[i].id;");
-	printf( "\n	return -1;");
-	printf( "\n}");
+	fprintf( output, "\n static inline uint32_t get_protocol_id_by_name( const char *name ){");
+	fprintf( output, "\n	size_t i;");
+	fprintf( output, "\n	for( i=0; i<DPI_PROTO_SIZE; i++ )");
+	fprintf( output, "\n	if( DPI_PROTO[i].name == NULL )");
+	fprintf( output, "\n	  continue;");
+	fprintf( output, "\n	else if( strcmp( name, DPI_PROTO[i].name) == 0 )");
+	fprintf( output, "\n	  return DPI_PROTO[i].id;");
+	fprintf( output, "\n	return -1;");
+	fprintf( output, "\n}");
 
-	printf( "\n static inline const char* get_protocol_name_by_id( uint32_t p_id ){");
-	printf( "\n	size_t i;");
-	printf( "\n	if( p_id >= DPI_PROTO_SIZE ) return NULL; ");
-	printf( "\n	return DPI_PROTO[ p_id ].name;");
-	printf( "\n}");
+	fprintf( output, "\n static inline const char* get_protocol_name_by_id( uint32_t p_id ){");
+	fprintf( output, "\n	size_t i;");
+	fprintf( output, "\n	if( p_id >= DPI_PROTO_SIZE ) return NULL; ");
+	fprintf( output, "\n	return DPI_PROTO[ p_id ].name;");
+	fprintf( output, "\n}");
 
-	printf( "\n static inline uint32_t get_attribute_id_by_protocol_id_and_attribute_name( uint32_t p_id, const char*attr_name ){");
-	printf( "\n	size_t i; const struct dpi_proto *proto;");
-	printf( "\n	if( p_id >= DPI_PROTO_SIZE ) return -1; ");
-	printf( "\n	proto = &( DPI_PROTO[ p_id ] );");
-	printf( "\n	for( i=0; i<proto->attributes_count; i++ )");
-	printf( "\n		if( strcmp(attr_name, proto->attributes[i].name) == 0 )");
-	printf( "\n			return proto->attributes[i].id;");
-	printf( "\n	return -1;");
-	printf( "\n}");
+	fprintf( output, "\n static inline uint32_t get_attribute_id_by_protocol_id_and_attribute_name( uint32_t p_id, const char*attr_name ){");
+	fprintf( output, "\n	size_t i; const struct dpi_proto *proto;");
+	fprintf( output, "\n	if( p_id >= DPI_PROTO_SIZE ) return -1; ");
+	fprintf( output, "\n	proto = &( DPI_PROTO[ p_id ] );");
+	fprintf( output, "\n	for( i=0; i<proto->attributes_count; i++ )");
+	fprintf( output, "\n		if( strcmp(attr_name, proto->attributes[i].name) == 0 )");
+	fprintf( output, "\n			return proto->attributes[i].id;");
+	fprintf( output, "\n	return -1;");
+	fprintf( output, "\n}");
 
-	printf( "\n static inline const char* get_attribute_id_by_protocol_id_and_attribute_id( uint32_t p_id, uint32_t attr_id ){");
-	printf( "\n	size_t i; const struct dpi_proto *proto;");
-	printf( "\n	if( p_id >= DPI_PROTO_SIZE ) return NULL; ");
-	printf( "\n	proto = &( DPI_PROTO[ p_id ] );");
-	printf( "\n	for( i=0; i<proto->attributes_count; i++ )");
-	printf( "\n		if( proto->attributes[i].id == attr_id )");
-	printf( "\n			return proto->attributes[i].name;");
-	printf( "\n	return NULL;");
-	printf( "\n}");
+	fprintf( output, "\n static inline const char* get_attribute_id_by_protocol_id_and_attribute_id( uint32_t p_id, uint32_t attr_id ){");
+	fprintf( output, "\n	size_t i; const struct dpi_proto *proto;");
+	fprintf( output, "\n	if( p_id >= DPI_PROTO_SIZE ) return NULL; ");
+	fprintf( output, "\n	proto = &( DPI_PROTO[ p_id ] );");
+	fprintf( output, "\n	for( i=0; i<proto->attributes_count; i++ )");
+	fprintf( output, "\n		if( proto->attributes[i].id == attr_id )");
+	fprintf( output, "\n			return proto->attributes[i].name;");
+	fprintf( output, "\n	return NULL;");
+	fprintf( output, "\n}");
 
-	printf( "\nstatic inline long get_attribute_data_type( uint32_t p_id, uint32_t a_id ){");
-	printf( "\n	size_t i; const struct dpi_proto *proto;");
-	printf( "\n	if( p_id >= DPI_PROTO_SIZE ) return -1; ");
-	printf( "\n	proto = &( DPI_PROTO[ p_id ] );");
-	printf( "\n	for( i=0; i<proto->attributes_count; i++ )");
-	printf( "\n		if( a_id == proto->attributes[i].id )");
-	printf( "\n			return proto->attributes[i].data_type;");
-	printf( "\n	return -1;");
-	printf( "\n}");
+	fprintf( output, "\nstatic inline long get_attribute_data_type( uint32_t p_id, uint32_t a_id ){");
+	fprintf( output, "\n	size_t i; const struct dpi_proto *proto;");
+	fprintf( output, "\n	if( p_id >= DPI_PROTO_SIZE ) return -1; ");
+	fprintf( output, "\n	proto = &( DPI_PROTO[ p_id ] );");
+	fprintf( output, "\n	for( i=0; i<proto->attributes_count; i++ )");
+	fprintf( output, "\n		if( a_id == proto->attributes[i].id )");
+	fprintf( output, "\n			return proto->attributes[i].data_type;");
+	fprintf( output, "\n	return -1;");
+	fprintf( output, "\n}");
 
-	printf( "\n#endif //MMT_CORE_H");
+	fprintf( output, "\n#endif //MMT_CORE_H");
 
-	printf( "\nstatic inline long get_attribute_index( uint32_t p_id, uint32_t a_id ){");
-	printf( "\n	size_t i; const struct dpi_proto *proto;");
-	printf( "\n	if( p_id >= DPI_PROTO_SIZE ) return -1; ");
-	printf( "\n	proto = &( DPI_PROTO[ p_id ] );");
-	printf( "\n	for( i=0; i<proto->attributes_count; i++ )");
-	printf( "\n		if( a_id == proto->attributes[i].id )");
-	printf( "\n			return proto->attributes[i].gid;");
-	printf( "\n	return -1;");
-	printf( "\n}");
+	fprintf( output, "\nstatic inline long get_attribute_index( uint32_t p_id, uint32_t a_id ){");
+	fprintf( output, "\n	size_t i; const struct dpi_proto *proto;");
+	fprintf( output, "\n	if( p_id >= DPI_PROTO_SIZE ) return -1; ");
+	fprintf( output, "\n	proto = &( DPI_PROTO[ p_id ] );");
+	fprintf( output, "\n	for( i=0; i<proto->attributes_count; i++ )");
+	fprintf( output, "\n		if( a_id == proto->attributes[i].id )");
+	fprintf( output, "\n			return proto->attributes[i].gid;");
+	fprintf( output, "\n	return -1;");
+	fprintf( output, "\n}");
 
-	printf( "\n#endif //__MMT_SEC_DPI_H_");
+	fprintf( output,"\n static inline const char* mmt_version(){");
+	fprintf( output,"\n    return \"%s\";", mmt_version() );
+	fprintf( output, "\n}");
+
+	fprintf( output, "\n#endif //__MMT_SEC_DPI_H_");
 
 	return (EXIT_SUCCESS);
 }

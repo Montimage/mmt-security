@@ -1,4 +1,4 @@
-CC     = gcc-4.9
+CC     = gcc
 AR     = ar rcs
 RM     = rm -rf
 MKDIR  = mkdir -p
@@ -28,7 +28,7 @@ GIT_VERSION := $(shell git log --format="%h" -n 1)
 VERSION     := 1.2.4
 
 #set of library
-LIBS     = -ldl -lpthread -lxml2 -l:libmmt_core.so
+LIBS     = -ldl -lpthread -lxml2
 
 CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include  
 CLDFLAGS = -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib
@@ -59,7 +59,7 @@ else
 endif
 
 #folders containing source files
-SRCDIR = src
+SRCDIR := $(abspath ./src )
 
 #objects to generate
 LIB_OBJS  :=  $(patsubst %.c,%.o, $(wildcard $(SRCDIR)/lib/*.c))
@@ -72,7 +72,7 @@ MAIN_SRCS := $(filter-out $(SRCDIR)/tips.c, $(MAIN_SRCS))
 MAIN_SRCS := $(filter-out $(SRCDIR)/main_dpi.c, $(MAIN_SRCS))
 MAIN_OBJS := $(patsubst %.c,%.o, $(MAIN_SRCS))
 
-MMT_DPI_HEADER = $(SRCDIR)/dpi/mmt_dpi.h
+MMT_DPI_HEADER := $(SRCDIR)/dpi/mmt_dpi.h
 
 ifndef VERBOSE
   QUIET := @
@@ -90,25 +90,23 @@ MAIN_SEC_SERVER = mmt_sec_server
 
 LIB_NAME = libmmt_security2
 
-all: standalone compile_rule rule_info sec_server
+all: $(MMT_DPI_HEADER) standalone compile_rule rule_info sec_server
 
 #this is useful when running the tools, such as, gen_dpi, compile_rule
 # but libmmt_core, ... are not found by ldd
 export LD_LIBRARY_PATH=$(MMT_DPI_DIR)/lib
 
 # check if there exists the folder of MMT-DPI 
---check-mmt-dpi:
-	@test -d $(MMT_DPI_DIR)                                                   \
-		||( echo "ERROR: Not found MMT-DPI at folder $(MMT_DPI_DIR)."          \
-		&& exit 1                                                              \
-		)
+$(MMT_DPI_DIR):
+	@echo "ERROR: Not found MMT-DPI at folder $(MMT_DPI_DIR).\n"
+	@exit 1
 	
-gen_dpi $(MMT_DPI_HEADER): --check-mmt-dpi
-	$(QUIET) $(CC) -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -lmmt_core -ldl
-	$(QUIET) echo "Generate list of protocols and their attributes"
-	$(QUIET) ./$(MAIN_DPI) > $(MMT_DPI_HEADER)
+gen_dpi $(MMT_DPI_HEADER): $(MMT_DPI_DIR)
+	$(QUIET) $(CC) -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -l:libmmt_core.so -ldl
+	$(QUIET) echo ">>> Generate list of protocols and their attributes to $(MMT_DPI_HEADER)"
+	$(QUIET) ./$(MAIN_DPI) $(MMT_DPI_HEADER)
 
-%.o: %.c $(MMT_DPI_HEADER) 
+%.o: %.c
 	@echo "[COMPILE] $(notdir $@)"
 	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -c -o $@ $<
 	
@@ -128,9 +126,9 @@ sec_server: $(LIB_OBJS)  $(SRCDIR)/main_sec_server.o
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER)  $(CFLAGS)  $(CLDFLAGS) $^ $(LIBS)
 	
-standalone: $(LIB_OBJS)  $(SRCDIR)/main_sec_standalone.o
+standalone:  $(MMT_DPI_DIR) $(LIB_OBJS)  $(SRCDIR)/main_sec_standalone.o
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(CLDFLAGS) $^ $(LIBS) -lpcap
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(CLDFLAGS) $(LIB_OBJS)  $(SRCDIR)/main_sec_standalone.o $(LIBS) -lpcap  -l:libmmt_core.so
 
 rule_info: $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"
@@ -291,6 +289,9 @@ dist-clean: uninstall
 clean:
 	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* \
 			$(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)
+	
+clean-all: clean
+	$(QUIET) $(RM) $(MMT_DPI_HEADER)
 	
 ################################################################################
 # Auto test 

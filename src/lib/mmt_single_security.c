@@ -21,7 +21,6 @@
 #include "version.h"
 #include "plugin_header.h"
 
-#include "../dpi/types_defs.h"
 #include "../dpi/mmt_dpi.h"
 #include "mmt_single_security.h"
 #include "mmt_security.h"

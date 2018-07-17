@@ -5,7 +5,7 @@
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
 
-#include <mmt_core.h>
+#include "../dpi/mmt_dpi.h"
 #include "gen_code.h"
 #include "mmt_utils.h"
 #include "mmt_lib.h"

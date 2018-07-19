@@ -581,6 +581,7 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 					mmt_sec_get_version_index(),
 					mmt_version() //dpi
 					);
+
 	fprintf( fd, "\nconst rule_version_info_t * mmt_sec_get_rule_version_info(){ return &version;};" );
 
 	//fprintf( fd, "\ntypedef struct fun_struct{const char* name, mmt_rule_satisfied_callback *func; }fun_t;");
@@ -876,6 +877,41 @@ static inline void _gen_fsm_for_a_rule( FILE *fd, const rule_t *rule ){
 }
 
 /**
+ * Check if code blocks contain a function 'void fn_name'
+ * @param fn_name
+ * @param code
+ * @return
+ * TODO: need to exclude the code inside a comment block
+ */
+static inline bool _hash_function( const char*fn_name, const char *code ){
+	if( code == NULL )
+		return false;
+
+	while( code != '\0'){
+		//start by "void"
+		code = strstr( code, "void" );
+		if( code == NULL )
+			return false;
+
+		//jump over "void"
+		code += 4;
+
+		//jump over space
+		while( isspace(*code ) )
+			code ++;
+
+		//is end of string?
+		if( *code == '\0' )
+			return false;
+
+		//compare function name
+		if( strncmp( fn_name, code, strlen( fn_name ) ) == 0 )
+			return true;
+	}
+	return false;
+}
+
+/**
  * Public API
  */
 int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, const char*embedded_functions ){
@@ -892,10 +928,42 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, con
 	//include
 	fprintf( fd, "#include <string.h>\n #include <stdio.h>\n #include <stdlib.h>\n #include \"plugin_header.h\"\n #include \"mmt_fsm.h\"\n #include \"mmt_lib.h\"\n #include \"pre_embedded_functions.h\"\n");
 
+	//this part allows user add a suffix when compile rule.
+	//This will be helpful when linking statically rules into a program.
+	// Since it will create different name of public functions, depending on the RULE_SUFFIX.
+	//By default, 2 public functions are: mmt_sec_get_rule_version_info, mmt_sec_get_plugin_info
+	//When one wants to load at least 2 rule .so files, the functions will create a conflict of the same name.
+
+	fprintf( fd, "\n#ifndef RULE_SUFFIX" );
+	fprintf( fd, "\n#define RULE_SUFFIX" );
+	fprintf( fd, "\n#endif");
+
+	fprintf( fd, "\n#define __NAME(x,y)    x ## y");
+	fprintf( fd, "\n#define  _NAME(x,y)  __NAME(x,y)");
+	fprintf( fd, "\n#define   NAME(x)     _NAME(x,RULE_SUFFIX)");
+
+	//4 specific functions (2 defined by users in embedded_functions tag, 2 generated auto)
+	fprintf( fd, "\n#define on_load                       NAME(on_load)");
+	fprintf( fd, "\n#define on_unload                     NAME(on_unload)");
+	fprintf( fd, "\n#define mmt_sec_get_plugin_info       NAME(mmt_sec_get_plugin_info)");
+	fprintf( fd, "\n#define mmt_sec_get_rule_version_info NAME(mmt_sec_get_rule_version_info)");
+
 	//embedded_functions
 	_gen_comment(fd, "Embedded functions");
 	if(embedded_functions != NULL )
 		fprintf( fd, "%s", embedded_functions );
+
+	//check if embedded_functions have on_load/on_unload function
+	if( !_hash_function("on_load", embedded_functions )){
+		_gen_comment_line( fd, "Create a dummy on_load function as it has not been defined by users in embedded_functions tag" );
+		fprintf(fd, "\nvoid on_load(){}\n");
+		mmt_debug("Create a dummy on_load function");
+	}
+	if( !_hash_function("on_unload", embedded_functions )){
+		_gen_comment_line( fd, "Create a dummy on_unload function as it has not been defined by users in embedded_functions tag" );
+		fprintf(fd, "\nvoid on_unload(){}\n");
+		mmt_debug("Create a dummy on_unload function");
+	}
 
 	for( i=0; i<count; i++ )
 		_gen_fsm_for_a_rule( fd, rules[i] );

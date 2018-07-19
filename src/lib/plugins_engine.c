@@ -12,6 +12,8 @@
 #include "mmt_lib.h"
 #include "version.h"
 
+typedef size_t ( *mmt_sec_get_plugin_info_fn_t )( const rule_info_t ** );
+typedef void (*void_fn_t)();
 
 typedef struct plugin_struct{
 	char *path;                //full path of this plugin
@@ -22,7 +24,10 @@ typedef struct plugin_struct{
 
 	uint16_t rules_count;    //number of rules in this plugin
 	uint16_t original_rules_count;
+
+	void_fn_t on_unload;
 }plugin_t;
+
 
 //TODO: this limit 50K files .so and 50K rules
 #define MAX_PLUGIN_COUNT 50000
@@ -35,24 +40,10 @@ static uint32_t plugins_count = 0; //number of plugins (number of .so files)
 static uint32_t rules_count   = 0; //number of rules inside the plugins
 
 
-
 static int _load_filter( const struct dirent *entry ){
 	char *ext = strrchr( entry->d_name, '.' );
 	return( ext && !strcmp( ext, ".so" ));
 }
-
-//size_t _load_mmt_sec_rules( const rule_info_t ***ret_array ){
-//	const rule_info_t *tmp_array, **array;
-//	size_t size = 0, i;
-////
-////	size = mmt_sec_get_plugin_info( &tmp_array );
-////	array = mmt_mem_alloc( size * sizeof( void * ));
-////	for( i=0; i<size; i++ )
-////		array[i] = & tmp_array[i];
-////	*ret_array = array;
-//
-//	return size;
-//}
 
 static inline bool _find_plugin_has_rule_id( uint32_t rule_id, size_t *plugin_index, size_t *rule_index ){
 	size_t i, j;
@@ -66,13 +57,188 @@ static inline bool _find_plugin_has_rule_id( uint32_t rule_id, size_t *plugin_in
 	return NO;
 }
 
+
+/**
+ * Check if a plugin was loaded
+ * @param lib_path
+ * @return - index of plugin in #plugins set if it was loaded
+ *         - total number of existing plugins, otherwise
+ */
+static inline int _find_plugin_by_name( const char *lib_path ){
+	int i;
+	for( i=0; i<plugins_count; i++ )
+		//found a path existing in #dl_libs_path
+		if( strcmp( lib_path, plugins[i].path ) == 0 )
+			return i;
+
+	return plugins_count;
+}
+
+
+static inline bool _load_plugin_by_functions(
+		plugin_t *plugin,
+		mmt_sec_get_plugin_info_fn_t mmt_sec_get_plugin_info,
+		void_fn_t on_load,
+		void_fn_t on_unload ){
+
+	rule_info_t const* tmp_array;
+	rule_info_t const** original_rules_array;
+	rule_info_t const** rules_array;
+
+	size_t size, i, index = 0, p_index, r_index;
+
+	size = mmt_sec_get_plugin_info( &tmp_array );
+	if( size == 0 )
+		return false;
+
+	uint32_t required_plugin = mmt_sec_get_required_plugin_version_number();
+	original_rules_array = malloc( sizeof( rule_info_t *) * size );
+
+	//filter out the rules that are not satisfied the requirement version
+	for( i=0; i<size; i++ ){
+		if( tmp_array[i].version->index < required_plugin )
+			mmt_warn( "Ignored rule %d as it is not up to date.\nRule description: %s",
+					tmp_array[i].id,
+					tmp_array[i].description );
+		else
+			original_rules_array[ index++ ] = &tmp_array[i];
+	}
+
+	plugin->original_rules       = original_rules_array;
+	plugin->original_rules_count = index;
+	plugin->rules                = malloc( sizeof( void*) *  plugin->original_rules_count );
+	mmt_assert( plugin->rules != NULL, "Not enough memory");
+
+	//filter out the duplicated rules
+	//add distinct rules from #original_rules to #rules
+	for( i=0; i<plugin->original_rules_count; i++ ){
+		//not exist ?
+		if( ! _find_plugin_has_rule_id( plugin->original_rules[i]->id, &p_index, &r_index )){
+			mmt_assert( rules_count < MAX_RULES_COUNT, "Support maximally %d rules", MAX_RULES_COUNT );
+
+			//this rule is fresh
+
+			//set of rules of this plugin
+			plugin->rules[ plugin->rules_count ++ ] = plugin->original_rules[i];
+
+			//a set of total rules
+			rules[ rules_count ++ ] = plugin->original_rules[i];
+		}else
+			mmt_warn( "Ignore duplicated rule id %d (%s)",
+					plugin->original_rules[i]->id,
+					plugin->original_rules[i]->description );
+	}
+
+	if( plugin->rules_count == 0 ){
+		free( plugin->original_rules );
+		free( plugin->rules );
+		return false;
+	}
+
+	//remember unload function to call it when finish
+	plugin->on_unload = on_unload;
+
+	//we call on_load here as the plugin has been sucessfully loaded
+	if( on_load != NULL )
+		on_load();
+	//else
+	//	mmt_debug("Not found on_load on %s", plugin_path_name);
+	return true;
+}
+
+
+size_t mmt_sec_load_plugin(
+		size_t ( *mmt_sec_get_plugin_info ) ( const rule_info_t ** ),
+		void (*on_load)(),
+		void (*on_unload)() ){
+
+	if( mmt_sec_get_plugin_info == NULL )
+		return 0;
+
+	mmt_assert( plugins_count < MAX_PLUGIN_COUNT, "Support maximally %d plugins", MAX_PLUGIN_COUNT );
+
+	plugin_t *plugin = &plugins[ plugins_count ];
+
+	if( _load_plugin_by_functions(plugin, mmt_sec_get_plugin_info, on_load, on_unload )){
+		plugin->path      = NULL;
+		plugin->dl_lib    = NULL;
+
+		plugins_count ++;
+		return plugin->rules_count;
+	}
+
+	return 0;
+}
+
+static inline size_t _load_plugin_by_path( const char *plugin_path_name ){
+	__check_null( plugin_path_name, 0 );
+
+	//this .so is opening
+	//this happens when #load_mmt_sec_rules is called many times
+	int plugin_index = _find_plugin_by_name( plugin_path_name );
+	if( plugin_index < plugins_count )
+		return plugins[ plugin_index ].original_rules_count ;
+
+	mmt_assert( plugins_count < MAX_PLUGIN_COUNT, "Support maximally %d plugins", MAX_PLUGIN_COUNT );
+
+	void *lib = dlopen( plugin_path_name, RTLD_NOW );
+
+	mmt_assert( lib != NULL, "Cannot open library: %s.\n%s", plugin_path_name, dlerror() );
+
+	mmt_sec_get_plugin_info_fn_t mmt_sec_get_plugin_info = dlsym ( lib, "mmt_sec_get_plugin_info" );
+
+	mmt_assert( mmt_sec_get_plugin_info != NULL, "File %s is incorrect!", plugin_path_name );
+
+	void_fn_t on_load   = dlsym( lib, "on_load" );
+	void_fn_t on_unload = dlsym( lib, "on_unload" );
+
+	plugin_t *plugin = &plugins[ plugins_count ];
+
+	if( _load_plugin_by_functions(plugin, mmt_sec_get_plugin_info, on_load, on_unload )){
+		plugin->path      = strdup( plugin_path_name );
+		plugin->dl_lib    = lib;
+
+		plugins_count ++;
+		return plugin->rules_count;
+	}
+	return 0;
+}
+
+#ifdef STATIC_RULES_SUFFIX_LIST
+#define __STATIC_RULES
+
+/* At compiling moment, if we got a list of plugins that will be embedded into libmmt_security,
+ * STATIC_RULES_SUFFIX_LIST is list of header functions
+ * - on_load
+ * - on_unload
+ * - mmt_sec_get_plugin_info
+ * ex:
+ * void on_load_xx();
+ * void on_unload_xx();
+ * size_t mmt_sec_get_plugin_info_xx( const rule_info_t ** );
+ */
+#define SUFFIX(xx)\
+	extern void on_load_xx();\
+	extern void on_unload_xx();\
+	extern size_t mmt_sec_get_plugin_info_xx( const rule_info_t ** );
+
+STATIC_RULES_SUFFIX_LIST
+
+#undef SUFFIX
+#define SUFFIX(xx) mmt_sec_load_plugin( mmt_sec_get_plugin_info_xx, on_load_xx, on_unload_xx);
+
+void _preload_static_rules(){
+	STATIC_RULES_SUFFIX_LIST
+}
+
+#endif
+
 size_t load_mmt_sec_rules( rule_info_t const*const**ret_array ){
 	size_t i, j, k;
 	char path[ 1001 ];
 	struct dirent **entries, *entry;
 	const char *plugin_folder;
 
-	rule_info_t const*const* tmp_array;
 	int n;
 
 	plugin_folder = MMT_SEC_PLUGINS_REPOSITORY;
@@ -93,138 +259,48 @@ size_t load_mmt_sec_rules( rule_info_t const*const**ret_array ){
 		(void) snprintf( path, 1000, "%s/%s", plugin_folder, entry->d_name );
 
 		//load plugin
-		load_mmt_sec_rule( &tmp_array, path );
+		_load_plugin_by_path( path );
 
 		free( entry );
 	}
 	free( entries );
 
-	//reload rules set
-	k = 0;
-	//for each plugin
-	for( i=0; i<plugins_count; i++ )
-		//for each rule inside a plugin
-		for( j=0; j<plugins[i].rules_count; j++ )
-			rules[ k++ ] = plugins[i].rules[j];
-
-	mmt_assert( k == rules_count, "Must not happen" );
+	//we give higher priority to the plugins being loaded dynamically
+	// we then load statically plugins that have been embedded into the program
+#ifdef __STATIC_RULES
+	_preload_static_rules();
+#endif
 
 	*ret_array = rules;
 
 	return rules_count;
 }
 
-/**
- * Check if a plugin was loaded
- * @param lib_path
- * @return - index of plugin in #plugins set if it was loaded
- *         - total number of existing plugins, otherwise
- */
-static inline int _find_plugin( const char *lib_path ){
-	int i;
-	for( i=0; i<plugins_count; i++ )
-		//found a path existing in #dl_libs_path
-		if( strcmp( lib_path, plugins[i].path ) == 0 )
-			return i;
-
-	return plugins_count;
-}
 
 /**
  * PUBLIC API
- * @param plugins_arr
- * @param plugin_path_name
- * @return
  */
-size_t load_mmt_sec_rule( rule_info_t const*const ** plugins_arr, const char *plugin_path_name ){
-	__check_null( plugin_path_name, 0 );
-	size_t plugin_index;
-
-	//this .so is opening
-	//this happens when #load_mmt_sec_rules is called many times
-	plugin_index = _find_plugin( plugin_path_name );
-	if( plugin_index < plugins_count ){
-		*plugins_arr = plugins[ plugin_index ].original_rules;
-		return plugins[ plugin_index ].original_rules_count ;
-	}
-
+size_t load_mmt_sec_rule( rule_info_t const*const**rules_array, const char *plugin_path_name ){
 	void *lib = dlopen( plugin_path_name, RTLD_NOW );
-
-	rule_info_t const* tmp_array;
-	rule_info_t const** original_rules_array;
-	rule_info_t const** rules_array;
-
-	size_t size, i, index = 0, p_index, r_index;
-	plugin_t *plugin;
-	uint32_t required_plugin = mmt_sec_get_required_plugin_version_number();
 
 	mmt_assert( lib != NULL, "Cannot open library: %s.\n%s", plugin_path_name, dlerror() );
 
-	const rule_version_info_t* ( *mmt_sec_get_rule_version_info ) () = dlsym ( lib, "mmt_sec_get_rule_version_info" );
+	mmt_sec_get_plugin_info_fn_t mmt_sec_get_plugin_info = dlsym ( lib, "mmt_sec_get_plugin_info" );
 
-	mmt_assert( mmt_sec_get_rule_version_info != NULL, "File %s is incorrect!", plugin_path_name );
+	rule_info_t const* tmp_array;
 
-	if( mmt_sec_get_rule_version_info()->index < required_plugin ){
-		mmt_warn( "Ignored rules in file %s as it is not up to date.", plugin_path_name );
-		return 0;
-	}
-
-	size_t ( *mmt_sec_get_plugin_info ) ( const rule_info_t ** ) = dlsym ( lib, "mmt_sec_get_plugin_info" );
-	mmt_assert( mmt_sec_get_plugin_info != NULL, "File %s is incorrect!", plugin_path_name );
-
-	mmt_assert( plugins_count < MAX_PLUGIN_COUNT, "Support maximally %d plugins", MAX_PLUGIN_COUNT );
+	size_t size, i;
 
 	size = mmt_sec_get_plugin_info( &tmp_array );
-	original_rules_array = malloc( sizeof( rule_info_t *) * size );
+
+	const rule_info_t **rules = malloc( sizeof( void*) *  size );
+	mmt_assert( rules != NULL, "Not enough memory");
+
 	for( i=0; i<size; i++ ){
-		if( tmp_array[i].version->index < required_plugin )
-			mmt_warn( "Ignored rule %d as it is not up to date.\nRule description: %s",
-					tmp_array[i].id,
-					tmp_array[i].description );
-		else
-			original_rules_array[ index++ ] = & (tmp_array[i] );
+		//set of rules of this plugin
+		rules[ i ] = &tmp_array[i];
 	}
-
-	*plugins_arr = original_rules_array;
-
-	plugin = &plugins[ plugins_count ];
-
-	plugin->original_rules       = original_rules_array;
-	plugin->original_rules_count = index;
-
-	plugin->rules   = malloc( sizeof( void*) *  plugin->original_rules_count );
-	mmt_assert( plugin->rules != NULL, "Not enough memory");
-
-	//add distinct rules from #original_rules to #rules
-	for( i=0; i<plugin->original_rules_count; i++ ){
-		//not exist ?
-		if( ! _find_plugin_has_rule_id(plugin->original_rules[i]->id, &p_index, &r_index) ){
-			mmt_assert( rules_count < MAX_RULES_COUNT, "Support maximally %d rules", MAX_RULES_COUNT );
-
-			//this rule is fresh
-			plugin->rules[ plugin->rules_count ] = plugin->original_rules[i];
-			plugin->rules_count ++;
-
-			//total rules
-			rules_count ++;
-		}else
-			mmt_warn( "Rule %d in file %s uses the same id as one rule in %s",
-					plugin->original_rules[i]->id,
-					plugin_path_name,
-					plugins[ p_index ].path );
-	}
-
-	plugin->path    = strdup( plugin_path_name );
-	plugin->dl_lib  = lib;
-	plugins_count ++;
-
-	//execute on_load function inside each .so file
-	void ( *on_load ) () = dlsym ( lib, "on_load" );
-	if( on_load != NULL )
-		on_load();
-	//else
-	//	mmt_debug("Not found on_load on %s", plugin_path_name);
-
+	*rules_array = rules;
 	return size;
 }
 
@@ -233,17 +309,18 @@ size_t load_mmt_sec_rule( rule_info_t const*const ** plugins_arr, const char *pl
  * @param plugin
  */
 static inline int _close_plugin( plugin_t *plugin ){
-	int ret;
+	int ret = 0;
 	//execute on_unload function inside the plugin if need
-	void ( *on_unload ) () = dlsym ( plugin->dl_lib, "on_unload" );
-	if( on_unload != NULL )
-		on_unload();
+	if( plugin->on_unload != NULL )
+		plugin->on_unload();
 	//else
 	//	mmt_debug("Not found on_unload");
 
-	ret = dlclose( plugin->dl_lib );
-	if( ret != 0 )
-		mmt_warn("Cannot close properly plugin: %s", plugin->path );
+	if( plugin->dl_lib ){
+		ret = dlclose( plugin->dl_lib );
+		if( ret != 0 )
+			mmt_warn("Cannot close properly plugin: %s", plugin->path );
+	}
 
 	//free memory created by strdup
 	free( plugin->path );
@@ -297,7 +374,7 @@ size_t unload_mmt_sec_rules( size_t count, const uint32_t* rules_id ){
 //call when exiting application
 __attribute__((destructor))
 void unload_mmt_sec_all_rules() {
-	size_t i, ret = 0;
+	int i, ret = 0;
 	for( i=0; i<plugins_count; i++ )
 		ret |= _close_plugin( &plugins[i] );
 

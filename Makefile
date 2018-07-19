@@ -134,9 +134,47 @@ rule_info: $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_PLUGIN_INFO) $(CLDFLAGS) $^ $(LIBS)
 
-$(LIB_NAME).a: $(LIB_OBJS)
+RULE_OBJS :=
+
+ifdef STATIC_LINK
+#this block is for statically linking rules into libmmt_security.a
+
+#here we got a list of rule files
+RULE_OBJS := $(sort $(patsubst %.xml,%.o, $(wildcard rules/*.xml)))
+
+#Generate code C of a rule
+rules/%.c: compile_rule
+	$(QUIET) echo [COMPILE] rules/$*.xml
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) $@ rules/$*.xml -c
+
+#Compile code C of a rule and add a RULE_SUFFIX is the name of the rule
+# (we replace the non-alphanumeric characters by underscores)
+rules/%.o: rules/%.c
+#replace non-alphanumeric characters in the file name of rule(s) by underscores
+	$(eval RULE_SUFFIX=$(shell echo $* | sed "s/[^[:alnum:]]/_/g"))
+	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -I./src/lib -I./src/dpi -c -o $@ $< -DRULE_SUFFIX=_$(RULE_SUFFIX)
+	$(QUIET) $(RM) $< #delete C code of the rule
+	$(eval STATIC_RULES_SUFFIX_LIST += SUFFIX($(RULE_SUFFIX)) ) #remember the list of suffix
+	
+
+# We need to recompile "plugins_engine.o" in order to recompile it to take into account the 2 following macros
+# - STATIC_RULES_SUFFIX_LIST : is list of suffix
+PLUGIN_ENGINE_FLAGS = -DSTATIC_RULES_SUFFIX_LIST="$(STATIC_RULES_SUFFIX_LIST)"
+
+PLUGIN_ENGINE := $(SRCDIR)/lib/plugins_engine
+recompile-plugins-engine:
+	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -c -o $(PLUGIN_ENGINE).o $(PLUGIN_ENGINE).c $(PLUGIN_ENGINE_FLAGS)
+	
+RECOMPILE_PLUGINS_ENGINE := recompile-plugins-engine
+else
+
+endif
+
+# RULE_OBJS is a list of .o files of rules
+#   This list is empty if we compile without STATIC_LINK option
+$(LIB_NAME).a: clean $(RULE_OBJS) $(RECOMPILE_PLUGINS_ENGINE) $(LIB_OBJS)
 	$(QUIET) echo "[ARCHIVE] $(notdir $@)"
-	$(QUIET) $(AR) $(LIB_NAME).a  $(LIB_OBJS)
+	$(QUIET) $(AR) $(LIB_NAME).a  $(LIB_OBJS) $(RULE_OBJS)
 
 $(LIB_NAME).so: $(LIB_OBJS)
 	@echo "[LIBRARY] $(notdir $@)"
@@ -151,10 +189,13 @@ ifdef NEED_ROOT_PERMISSION
 	$(QUIET) $(RM) /etc/ld.so.conf.d/mmt-security.conf
 endif
 
+
 rules/%.so: compile_rule
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/$*.so rules/$*.xml
+	$(QUIET) echo [COMPILE] rules/$*.xml
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/$*.so rules/$*.xml $(RULE_OBJ_OPTIONS)
 	
 sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
+
 
 # create a temporal folder in /tmp with a random number	
 TMP_DIR := build_mmt_security_$(shell bash -c 'echo $$RANDOM')
@@ -288,7 +329,8 @@ dist-clean: uninstall
 	
 clean:
 	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* \
-			$(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)
+			$(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)\
+			$(RULE_OBJS) rules/*.so
 	
 clean-all: clean
 	$(QUIET) $(RM) $(MMT_DPI_HEADER)

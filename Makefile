@@ -25,7 +25,7 @@ MMT_DPI_DIR := $(MMT_BASE)/dpi
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
-VERSION     := 1.2.4
+VERSION     := 1.2.5
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2

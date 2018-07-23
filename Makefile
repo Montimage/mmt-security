@@ -27,11 +27,16 @@ MMT_DPI_DIR := $(MMT_BASE)/dpi
 GIT_VERSION := $(shell git log --format="%h" -n 1)
 VERSION     := 1.2.5
 
+CACHE_LINESIZE := $(shell getconf LEVEL1_DCACHE_LINESIZE)
+
 #set of library
 LIBS     = -ldl -lpthread -lxml2
 
-CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=`getconf LEVEL1_DCACHE_LINESIZE` -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include  
+CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=$(CACHE_LINESIZE) -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include  
 CLDFLAGS = -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib
+
+#a specific flag for each .o file
+CFLAGS += $(CFLAGS-$@)
 
 #for debuging
 ifdef DEBUG
@@ -90,7 +95,8 @@ MAIN_SEC_SERVER = mmt_sec_server
 
 LIB_NAME = libmmt_security2
 
-all: $(MMT_DPI_HEADER) standalone compile_rule rule_info sec_server lib
+
+all: $(MMT_DPI_HEADER) compile_rule rule_info sec_server lib standalone
 
 #this is useful when running the tools, such as, gen_dpi, compile_rule
 # but libmmt_core, ... are not found by ldd
@@ -101,6 +107,7 @@ $(MMT_DPI_DIR):
 	@echo "ERROR: Not found MMT-DPI at folder $(MMT_DPI_DIR).\n"
 	@exit 1
 	
+#Generate a DPI header, so mmt-security does not depend on mmt-dpi after having the header
 gen_dpi $(MMT_DPI_HEADER): $(MMT_DPI_DIR)
 	$(QUIET) $(CC) -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -o $(MAIN_DPI) $(SRCDIR)/main_gen_dpi.c -l:libmmt_core.so -ldl
 	$(QUIET) echo ">>> Generate list of protocols and their attributes to $(MMT_DPI_HEADER)"
@@ -126,21 +133,22 @@ sec_server: $(LIB_OBJS)  $(SRCDIR)/main_sec_server.o
 	@echo "[COMPILE] $@"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_SEC_SERVER)  $(CFLAGS)  $(CLDFLAGS) $^ $(LIBS)
 	
-standalone:  $(MMT_DPI_DIR) $(LIB_OBJS)  $(SRCDIR)/main_sec_standalone.o
+standalone:  $(MMT_DPI_DIR) $(LIB_OBJS)  $(SRCDIR)/main_sec_standalone.o $(RULE_OBJS) --refresh-plugin-engine
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(CLDFLAGS) $(LIB_OBJS)  $(SRCDIR)/main_sec_standalone.o $(LIBS) -lpcap  -l:libmmt_core.so
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(CLDFLAGS) $(LIB_OBJS)  $(RULE_OBJS)  $(SRCDIR)/main_sec_standalone.o $(LIBS) -lpcap  -l:libmmt_core.so
 
 rule_info: $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"
 	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_PLUGIN_INFO) $(CLDFLAGS) $^ $(LIBS)
 
-RULE_OBJS :=
+
+RULE_XML := $(sort $(wildcard rules/*.xml))
 
 ifdef STATIC_LINK
 #this block is for statically linking rules into libmmt_security.a
 
 #here we got a list of rule files
-RULE_OBJS := $(sort $(patsubst %.xml,%.o, $(wildcard rules/*.xml)))
+RULE_OBJS := $(patsubst %.xml,%.o, $(RULE_XML))
 
 #Generate code C of a rule
 rules/%.c: compile_rule
@@ -154,38 +162,48 @@ rules/%.o: rules/%.c
 	$(eval RULE_SUFFIX=$(shell echo $* | sed "s/[^[:alnum:]]/_/g"))
 	
 	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -I./src/lib -I./src/dpi -c -o $@ $< -DRULE_SUFFIX=_$(RULE_SUFFIX)
-	@#delete C code of the rule
+	@#we do not need its C code any more, delete it
 	$(QUIET) $(RM) $<
-	@#remember the list of suffix
-	$(eval STATIC_RULES_SUFFIX_LIST += SUFFIX($(RULE_SUFFIX)) ) 
-	
+	@#remember the list of suffix of compiled rules
+	$(eval STATIC_RULES_SUFFIX_LIST += SUFFIX($(RULE_SUFFIX)))
 
-# We need to recompile "plugins_engine.o" in order to recompile it to take into account the 2 following macros
-# - STATIC_RULES_SUFFIX_LIST : is list of suffix
-PLUGIN_ENGINE_FLAGS = -DSTATIC_RULES_SUFFIX_LIST="$(STATIC_RULES_SUFFIX_LIST)"
 
-PLUGIN_ENGINE := $(SRCDIR)/lib/plugins_engine
-recompile-plugins-engine:
-	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -c -o $(PLUGIN_ENGINE).o $(PLUGIN_ENGINE).c $(PLUGIN_ENGINE_FLAGS)
-	
-RECOMPILE_PLUGINS_ENGINE := recompile-plugins-engine
+#update the CFLAG for plugins_engine.so
+CFLAG-PLUGINS-ENGINE +=  -DSTATIC_RULES_SUFFIX_LIST="$(STATIC_RULES_SUFFIX_LIST)"
+  
+SAMPLE_RULES :=
 else
-
+  SAMPLE_RULES := $(patsubst %.xml,%.so, $(RULE_XML))
+  RULE_OBJS    :=
 endif
+
+# This target is to deal with the issue when user uses 
+#   2 differrent values of INSTALL_DIR for "make" and "make install"
+# Ex: make; sudo make install INSTALL_DIR=/tmp/mmt/security
+#   - the first "make" will set in the codes MMT_SEC_PLUGINS_REPOSITORY_OPT to /opt/mmt/security/rules
+#   - while the second "make install" will install to /tmp/mmt
+# Thus we need to recompile the codes that use MMT_SEC_PLUGINS_REPOSITORY_OPT to update the new directory.
+# The following target will remove the object files of the codes, thus it will trigger to recompile them.
+# So, in the example above, the MMT_SEC_PLUGINS_REPOSITORY_OPT will be update to /tmp/mmt/security/rules.
+	
+--refresh-plugin-engine:
+	$(QUIET) echo [RE-COMPILE] plugins_engine.o
+	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) $(CFLAG-PLUGINS-ENGINE) -c -o $(SRCDIR)/lib/plugins_engine.o $(SRCDIR)/lib/plugins_engine.c
+
 
 # RULE_OBJS is a list of .o files of rules
 #   This list is empty if we compile without STATIC_LINK option
-$(LIB_NAME).a: $(RULE_OBJS) $(LIB_OBJS) $(RULE_OBJS)
+$(LIB_NAME).a:
 	$(QUIET) echo "[ARCHIVE] $(notdir $@)"
 	$(QUIET) $(AR) $(LIB_NAME).a  $(LIB_OBJS) $(RULE_OBJS)
 	
-	$(QUIET) $(RM) $(RULE_OBJS) #we do not need rules/*.o anymore
+	@#$(QUIET) $(RM) $(RULE_OBJS) #we do not need rules/*.o anymore
 
-$(LIB_NAME).so: $(LIB_OBJS)
+$(LIB_NAME).so:
 	@echo "[LIBRARY] $(notdir $@)"
-	$(QUIET) $(CC)  -fPIC -shared -O3 -o $(LIB_NAME).so $(LIB_OBJS)
+	$(QUIET) $(CC)  -fPIC -shared -O3 -o $(LIB_NAME).so $(LIB_OBJS)  $(RULE_OBJS)
 	
-lib: $(LIB_NAME).a $(LIB_NAME).so
+lib:  $(LIB_OBJS)  $(RULE_OBJS) --refresh-plugin-engine $(LIB_NAME).a $(LIB_NAME).so
 	
 uninstall:
 	$(QUIET) $(RM) $(INSTALL_DIR)
@@ -196,9 +214,9 @@ endif
 
 
 rules/%.so: compile_rule
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/$*.so rules/$*.xml $(RULE_OBJ_OPTIONS)
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/$*.so rules/$*.xml
 	
-sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
+sample_rules: $(SAMPLE_RULES)
 
 
 # create a temporal folder in /tmp with a random number	
@@ -207,8 +225,11 @@ TMP_DIR := build_mmt_security_$(shell bash -c 'echo $$RANDOM')
 copy_files:
 	$(QUIET) $(RM)    $(TMP_DIR) 2> /dev/null
 	$(QUIET) $(MKDIR) $(TMP_DIR)/rules
-	$(QUIET) $(CP)    rules/*.so $(TMP_DIR)/rules/
 	
+ifndef STATIC_LINK
+	$(QUIET) $(CP)    rules/*.so $(TMP_DIR)/rules/
+endif
+
 	$(QUIET) $(CP)    mmt-security.conf  $(TMP_DIR)/
 	
 	$(QUIET) $(MKDIR) $(TMP_DIR)/include
@@ -233,19 +254,8 @@ endif
 	$(QUIET) cd $(TMP_DIR)/lib/ && $(LN)  $(LIB_NAME).so.$(VERSION) $(LIB_NAME).so
 	$(QUIET) cd $(TMP_DIR)/lib/ && $(LN)  $(LIB_NAME).a.$(VERSION)  $(LIB_NAME).a
 	
-
-# This target is to deal with the issue when user uses 
-#   2 differrent values of INSTALL_DIR for "make" and "make install"
-# Ex: make; sudo make install INSTALL_DIR=/tmp/mmt/security
-#   - the first "make" will set in the codes MMT_SEC_PLUGINS_REPOSITORY_OPT to /opt/mmt/security/rules
-#   - while the second "make install" will install to /tmp/mmt
-# Thus we need to recompile the codes that use MMT_SEC_PLUGINS_REPOSITORY_OPT to update the new directory.
-# The following target will remove the object files of the codes, thus it will trigger to recompile them.
-# So, in the example above, the MMT_SEC_PLUGINS_REPOSITORY_OPT will be update to /tmp/mmt/security/rules.
---refresh-plugin-engine:
-	$(QUIET) $(RM) $(SRCDIR)/lib/plugins_engine.o
 	
-install: --refresh-plugin-engine all lib sample_rules uninstall copy_files
+install: all sample_rules uninstall copy_files
 	$(QUIET) $(MKDIR) $(INSTALL_DIR)
 	$(QUIET) $(MV)    $(TMP_DIR)/* $(INSTALL_DIR)
 	$(QUIET) $(RM)    $(TMP_DIR)
@@ -330,11 +340,13 @@ rpm: all lib sample_rules copy_files
 		
 dist-clean: uninstall
 	@echo "INFO: Removed successfully MMT-Security from $(INSTALL_DIR)"
-	
-clean:
+
+clean-rules:
+	$(QUIET) $(RM) rules/*.so rules/*.o rules/*.c
+clean: clean-rules
 	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* \
 			$(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)\
-			$(RULE_OBJS) $(SRCDIR)/rules/*.so $(SRCDIR)/rules/*.o 
+			$(RULE_OBJS)
 	
 clean-all: clean
 	$(QUIET) $(RM) $(MMT_DPI_HEADER)

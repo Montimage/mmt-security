@@ -204,6 +204,8 @@ static inline size_t _load_plugin_by_path( const char *plugin_path_name ){
 	return 0;
 }
 
+//#define STATIC_RULES_SUFFIX_LIST SUFFIX(1_ssh) SUFFIX(10_http_port) SUFFIX(100_test_TCP) SUFFIX(101_SQI_session_payload) SUFFIX(11_ip_size) SUFFIX(12_http_uri) SUFFIX(13_datainSYN) SUFFIX(14_illegal_port) SUFFIX(15_nikto)
+
 #ifdef STATIC_RULES_SUFFIX_LIST
 #define __STATIC_RULES
 
@@ -218,17 +220,17 @@ static inline size_t _load_plugin_by_path( const char *plugin_path_name ){
  * void on_unload_xx();
  * size_t mmt_sec_get_plugin_info_xx( const rule_info_t ** );
  */
-#define SUFFIX(xx)\
-	extern void on_load_xx();\
-	extern void on_unload_xx();\
-	extern size_t mmt_sec_get_plugin_info_xx( const rule_info_t ** );
+#define SUFFIX(xx)           \
+	void on_load_ ##xx();    \
+	void on_unload_ ##xx();  \
+	size_t mmt_sec_get_plugin_info_ ##xx( const rule_info_t ** );
 
 //we declare the header list here
 STATIC_RULES_SUFFIX_LIST
 
 //redefine SUFFIX macro to fire the functions declared above
 #undef SUFFIX
-#define SUFFIX(xx) mmt_sec_load_plugin( mmt_sec_get_plugin_info_xx, on_load_xx, on_unload_xx);
+#define SUFFIX(xx) mmt_sec_load_plugin( mmt_sec_get_plugin_info_ ##xx, on_load_ ##xx, on_unload_ ##xx);
 
 void _preload_static_rules(){
 	STATIC_RULES_SUFFIX_LIST

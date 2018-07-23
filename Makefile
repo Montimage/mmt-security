@@ -90,7 +90,7 @@ MAIN_SEC_SERVER = mmt_sec_server
 
 LIB_NAME = libmmt_security2
 
-all: $(MMT_DPI_HEADER) standalone compile_rule rule_info sec_server
+all: $(MMT_DPI_HEADER) standalone compile_rule rule_info sec_server lib
 
 #this is useful when running the tools, such as, gen_dpi, compile_rule
 # but libmmt_core, ... are not found by ldd
@@ -145,16 +145,19 @@ RULE_OBJS := $(sort $(patsubst %.xml,%.o, $(wildcard rules/*.xml)))
 #Generate code C of a rule
 rules/%.c: compile_rule
 	$(QUIET) echo [COMPILE] rules/$*.xml
-	$(QUIET) ./$(MAIN_GEN_PLUGIN) $@ rules/$*.xml -c
+	$(QUIET) ./$(MAIN_GEN_PLUGIN) $@ rules/$*.xml -c > /dev/null 2>&1
 
 #Compile code C of a rule and add a RULE_SUFFIX is the name of the rule
 # (we replace the non-alphanumeric characters by underscores)
 rules/%.o: rules/%.c
-#replace non-alphanumeric characters in the file name of rule(s) by underscores
+	@#replace non-alphanumeric characters in the file name of rule(s) by underscores
 	$(eval RULE_SUFFIX=$(shell echo $* | sed "s/[^[:alnum:]]/_/g"))
+	
 	$(QUIET) $(CC) $(CFLAGS) $(CLDFLAGS) -I./src/lib -I./src/dpi -c -o $@ $< -DRULE_SUFFIX=_$(RULE_SUFFIX)
-	$(QUIET) $(RM) $< #delete C code of the rule
-	$(eval STATIC_RULES_SUFFIX_LIST += SUFFIX($(RULE_SUFFIX)) ) #remember the list of suffix
+	@#delete C code of the rule
+	$(QUIET) $(RM) $<
+	@#remember the list of suffix
+	$(eval STATIC_RULES_SUFFIX_LIST += SUFFIX($(RULE_SUFFIX)) ) 
 	
 
 # We need to recompile "plugins_engine.o" in order to recompile it to take into account the 2 following macros
@@ -172,9 +175,11 @@ endif
 
 # RULE_OBJS is a list of .o files of rules
 #   This list is empty if we compile without STATIC_LINK option
-$(LIB_NAME).a: clean $(RULE_OBJS) $(RECOMPILE_PLUGINS_ENGINE) $(LIB_OBJS)
+$(LIB_NAME).a: $(RULE_OBJS) $(LIB_OBJS) $(RULE_OBJS)
 	$(QUIET) echo "[ARCHIVE] $(notdir $@)"
 	$(QUIET) $(AR) $(LIB_NAME).a  $(LIB_OBJS) $(RULE_OBJS)
+	
+	$(QUIET) $(RM) $(RULE_OBJS) #we do not need rules/*.o anymore
 
 $(LIB_NAME).so: $(LIB_OBJS)
 	@echo "[LIBRARY] $(notdir $@)"
@@ -191,7 +196,6 @@ endif
 
 
 rules/%.so: compile_rule
-	$(QUIET) echo [COMPILE] rules/$*.xml
 	$(QUIET) ./$(MAIN_GEN_PLUGIN) rules/$*.so rules/$*.xml $(RULE_OBJ_OPTIONS)
 	
 sample_rules: $(sort $(patsubst %.xml,%.so, $(wildcard rules/*.xml)))
@@ -330,7 +334,7 @@ dist-clean: uninstall
 clean:
 	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* \
 			$(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)\
-			$(RULE_OBJS) rules/*.so
+			$(RULE_OBJS) $(SRCDIR)/rules/*.so $(SRCDIR)/rules/*.o 
 	
 clean-all: clean
 	$(QUIET) $(RM) $(MMT_DPI_HEADER)

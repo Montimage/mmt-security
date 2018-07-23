@@ -208,11 +208,12 @@ static inline size_t _load_plugin_by_path( const char *plugin_path_name ){
 #define __STATIC_RULES
 
 /* At compiling moment, if we got a list of plugins that will be embedded into libmmt_security,
- * STATIC_RULES_SUFFIX_LIST is list of header functions
- * - on_load
- * - on_unload
- * - mmt_sec_get_plugin_info
- * ex:
+ * STATIC_RULES_SUFFIX_LIST is list of suffix of rule plugins.
+ *
+ * We use this list to declare 3 kinds of header functions that have been implemented by the rule plugins:
+ * A suffix xx is created from the name a plugin by replacing non-alphanumeric characters by underscores.
+ * For example: the rule plugin "1.ssh.xml" will give a suffix "1_ssh".
+ *
  * void on_load_xx();
  * void on_unload_xx();
  * size_t mmt_sec_get_plugin_info_xx( const rule_info_t ** );
@@ -222,8 +223,10 @@ static inline size_t _load_plugin_by_path( const char *plugin_path_name ){
 	extern void on_unload_xx();\
 	extern size_t mmt_sec_get_plugin_info_xx( const rule_info_t ** );
 
+//we declare the header list here
 STATIC_RULES_SUFFIX_LIST
 
+//redefine SUFFIX macro to fire the functions declared above
 #undef SUFFIX
 #define SUFFIX(xx) mmt_sec_load_plugin( mmt_sec_get_plugin_info_xx, on_load_xx, on_unload_xx);
 

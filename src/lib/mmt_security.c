@@ -10,6 +10,7 @@
 #include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 #include "mmt_security.h"
 #include "mmt_lib.h"
 
@@ -502,8 +503,15 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 											u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
 					break;
 
-				//IPV6 or MAC address
+					//IPV6 address
 				case MMT_DATA_IP6_ADDR:
+					u8_ptr = (uint8_t *) me->data;
+					char ip_string[ INET6_ADDRSTRLEN ];
+					if( inet_ntop(AF_INET6, (void*) u8_ptr, ip_string, INET6_ADDRSTRLEN )){
+						size =  sprintf( str_ptr, "\"%s\"", ip_string );
+					}
+					break;
+					//MAC address
 				case MMT_DATA_MAC_ADDR:
 						u8_ptr = (uint8_t *) me->data;
 						size   = snprintf(str_ptr, total_len, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",

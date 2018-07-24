@@ -226,6 +226,11 @@ int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *ms
 		break;
 
 	case MMT_DATA_IP6_ADDR: /**< ip6 address constant value */
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
+		new_data      = data;
+		new_data_len  = 16;
+		break;
+
 	case MMT_DATA_MAC_ADDR: /**< ethernet mac address constant value */
 		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
 		new_data      = data;

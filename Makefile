@@ -219,8 +219,8 @@ rules/%.so: compile_rule
 sample_rules: $(SAMPLE_RULES)
 
 
-# create a temporal folder in /tmp with a random number	
-TMP_DIR := build_mmt_security_$(shell bash -c 'echo $$RANDOM')
+# create a temporal folder
+TMP_DIR := build_mmt_security
 
 copy_files:
 	$(QUIET) $(RM)    $(TMP_DIR) 2> /dev/null
@@ -346,7 +346,7 @@ clean-rules:
 clean: clean-rules
 	$(QUIET) $(RM) $(LIB_NAME).* $(MAIN_OBJS) $(LIB_OBJS) $(OUTPUT) test.* \
 			$(MAIN_DPI) $(MAIN_GEN_PLUGIN) $(MAIN_PLUGIN_INFO) $(MAIN_STAND_ALONE) $(MAIN_SEC_SERVER)\
-			$(RULE_OBJS)
+			$(RULE_OBJS) $(TMP_DIR)
 	
 clean-all: clean
 	$(QUIET) $(RM) $(MMT_DPI_HEADER)

@@ -255,20 +255,20 @@ size_t load_mmt_sec_rules( rule_info_t const*const**ret_array ){
 		 */
 		plugin_folder = MMT_SEC_PLUGINS_REPOSITORY_OPT;
 		n = scandir( plugin_folder, &entries, _load_filter, alphasort );
-		if (n<0)
-			return 0;
 	}
 
-	for( i = 0 ; i < n ; ++i ) {
-		entry = entries[i];
-		(void) snprintf( path, 1000, "%s/%s", plugin_folder, entry->d_name );
+	if( n >= 0 ){
+		for( i = 0 ; i < n ; ++i ) {
+			entry = entries[i];
+			(void) snprintf( path, 1000, "%s/%s", plugin_folder, entry->d_name );
 
-		//load plugin
-		_load_plugin_by_path( path );
+			//load plugin
+			_load_plugin_by_path( path );
 
-		free( entry );
+			free( entry );
+		}
+		free( entries );
 	}
-	free( entries );
 
 	//we give higher priority to the plugins being loaded dynamically
 	// we then load statically plugins that have been embedded into the program

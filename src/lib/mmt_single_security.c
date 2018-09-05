@@ -129,6 +129,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 	//as it does not contain any proto.att required by the handler
 	if( unlikely((msg->hash & handler->hash) == 0 )){
 		free_message_t( msg );
+		UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
 		return;
 	}
 

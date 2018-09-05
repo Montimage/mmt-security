@@ -50,6 +50,10 @@ typedef struct message_struct{
 	uint8_t *_data;
 	uint32_t _data_index; //index of data
 	uint32_t _data_length;
+
+	//user_data allows users to store the context when giving the message to MMT-Sec
+	// and get the context when having alerts
+	void *user_data;
 } __aligned message_t;
 
 #define MSG_CONTINUE 0

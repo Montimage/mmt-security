@@ -269,6 +269,22 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 	return handler;
 }
 
+void mmt_smp_sec_set_ignore_remain_flow( mmt_smp_sec_handler_t *handler, bool ignore ){
+	int i;
+	for( i=0; i<handler->threads_count; i++ )
+		mmt_single_sec_set_ignore_remain_flow( handler->mmt_single_sec_handlers[ i ], ignore );
+}
+
+bool mmt_smp_is_ignore_remain_flow( mmt_smp_sec_handler_t *handler, uint64_t flow_id ){
+	int i;
+	for( i=0; i<handler->threads_count; i++ ){
+		bool ret = mmt_single_is_ignore_remain_flow( handler->mmt_single_sec_handlers[ i ], flow_id );
+		if( ! ret )
+			return false;
+	}
+	return true;
+}
+
 /**
  * Public API
  */

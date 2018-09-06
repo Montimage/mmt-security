@@ -13,7 +13,7 @@
 #endif
 
 //update this number when structure of plugin has been changed
-#define REQUIRE_PLUGIN "1.2.0"
+#define REQUIRE_PLUGIN "1.2.7"
 
 
 #define __NOW__   __DATE__ " " __TIME__

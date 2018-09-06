@@ -25,9 +25,9 @@ MMT_DPI_DIR := $(MMT_BASE)/dpi
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
-VERSION     := 1.2.6
+VERSION     := 1.2.7
 
-CACHE_LINESIZE := $(shell getconf LEVEL1_DCACHE_LINESIZE)
+CACHE_LINESIZE := 64 #$(shell getconf LEVEL1_DCACHE_LINESIZE)
 
 #set of library
 LIBS     = -ldl -lpthread -lxml2

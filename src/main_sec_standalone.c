@@ -56,6 +56,7 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-m <string>    : Attributes special rules to special threads using format (lcore:range) e.g., \"(1:1-8,10-13)(2:50)(4:1007-1010)\".\n");
 	fprintf(stderr, "\t-f <string>    : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string>    : Output results to redis, e.g., \"localhost:6379\"\n");
+	fprintf(stderr, "\t-g             : Ignore the rest of a flow when an alert was detetected on the flow.\n");
 	fprintf(stderr, "\t-v             : Verbose.\n");
 	fprintf(stderr, "\t-l             : Prints the available rules then exit.\n");
 	fprintf(stderr, "\t-h             : Prints this help.\n");
@@ -63,7 +64,7 @@ void usage(const char * prg_name) {
 }
 
 size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id,
-		size_t *threads_count, uint32_t **core_mask, char *excludes_rules_mask, char *rule_mask, bool *verbose ) {
+		size_t *threads_count, uint32_t **core_mask, char *excludes_rules_mask, char *rule_mask, bool *is_ignore, bool *verbose ) {
 	int opt, optcount = 0, x;
 	char file_string[MAX_FILENAME_SIZE]  = {0};
 	char redis_string[MAX_FILENAME_SIZE] = {0};
@@ -73,7 +74,7 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 
 	*verbose = NO;
 	filename[0] = '\0';
-	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:x:lbhv")) != EOF) {
+	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:x:lhvg")) != EOF) {
 		switch (opt) {
 		case 't':
 			optcount++;
@@ -112,8 +113,9 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 			mmt_sec_print_rules_info();
 			mmt_sec_close();
 			exit( 0 );
-		case 'b':
+		case 'g':
 			optcount++;
+			*is_ignore = true;
 			//Do nothing. Keep for future use.
 			break;
 		case 'v':
@@ -525,14 +527,14 @@ int main(int argc, char** argv) {
 	uint32_t *core_mask = NULL;
 	int type;
 	size_t threads_count = 0;
-	bool verbose;
+	bool verbose, is_ignore_remain_flow;
 	struct pkthdr header;
 	char rule_mask[ MAX_RULE_MASK_SIZE ], excludes_rules_mask[ MAX_RULE_MASK_SIZE ];
 	size_t i, j, size;
 	uint16_t *rules_id_filter = NULL;
 
 	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count,
-			&core_mask, excludes_rules_mask, rule_mask, &verbose );
+			&core_mask, excludes_rules_mask, rule_mask, &is_ignore_remain_flow, &verbose );
 
 	register_signals();
 
@@ -543,6 +545,8 @@ int main(int argc, char** argv) {
 		threads_count --;
 
 	sec_handler =  mmt_sec_register( threads_count, core_mask, rule_mask, verbose, _print_output, NULL );
+
+	mmt_sec_set_ignore_remain_flow(sec_handler, is_ignore_remain_flow);
 
 	if( core_mask != NULL ){
 		//main thread on the last core

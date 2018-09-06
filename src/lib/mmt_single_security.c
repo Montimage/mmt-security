@@ -47,6 +47,7 @@ mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t *const*rule
 	handler->verbose      = verbose;
 	handler->hash         = 0;
 	handler->rules_hash   = mmt_mem_alloc( sizeof( uint64_t ) * rules_count );
+	handler->flow_ids_to_ignore = NULL;
 	//one fsm for one rule
 	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
 	for( i=0; i<rules_count; i++ ){
@@ -72,9 +73,32 @@ mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t *const*rule
 	pthread_spin_init( &handler->spin_lock_to_add_or_rm_rules, PTHREAD_PROCESS_PRIVATE );
 #endif
 
+	pthread_spin_init( &handler->spin_lock_to_ignore_flow, PTHREAD_PROCESS_PRIVATE );
 	return handler;
 }
 
+void mmt_single_sec_set_ignore_remain_flow( mmt_single_sec_handler_t *handler, bool ignore ){
+	if( !ignore || handler->flow_ids_to_ignore != NULL ){
+		mmt_set64_free( handler->flow_ids_to_ignore );
+		handler->flow_ids_to_ignore = NULL;
+	}
+
+	if( ignore )
+		handler->flow_ids_to_ignore = mmt_set64_create();
+}
+
+bool mmt_single_is_ignore_remain_flow( mmt_single_sec_handler_t *handler, uint64_t flow_id ){
+	bool has_alerts = false;
+
+	//the spin_lock allows this function can be called from different threads
+	if( handler->flow_ids_to_ignore != NULL && pthread_spin_lock( &handler->spin_lock_to_ignore_flow )){
+
+		has_alerts = mmt_set64_check( handler->flow_ids_to_ignore, flow_id );
+
+		pthread_spin_unlock( &handler->spin_lock_to_ignore_flow );
+	}
+	return has_alerts;
+}
 
 /**
  * Public API
@@ -92,6 +116,9 @@ size_t mmt_single_sec_unregister( mmt_single_sec_handler_t *handler ){
 
 		alerts_count += handler->alerts_count[ i ];
 	}
+
+	if( handler->flow_ids_to_ignore != NULL )
+		mmt_set64_free( handler->flow_ids_to_ignore );
 
 	//free data elements of handler
 	for( i=0; i<handler->rules_count; i++ )
@@ -119,7 +146,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 	mmt_assert( msg != NULL, "msg cannot be null");
 #endif
 
-	size_t i;
+	size_t i, j;
 	int verdict;
 	const mmt_array_t *execution_trace;
 
@@ -127,16 +154,18 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 
 	//the message does not concern to any rules handled by this #handler
 	//as it does not contain any proto.att required by the handler
-	if( unlikely((msg->hash & handler->hash) == 0 )){
-		free_message_t( msg );
-		UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
-		return;
-	}
+	if( unlikely((msg->hash & handler->hash) == 0 ))
+		goto _finish;
+
+	//if the message can be ignored as it is in a flow that has been detected an alert
+	if( mmt_single_is_ignore_remain_flow( handler, msg->flow_id ))
+		goto _finish;
 
 	handler->messages_count ++;
 
 	//for each rule
 	for( i=0; i<handler->rules_count; i++){
+
 		//msg does not contain any proto.att for i-th rule
 		if( (msg->hash & handler->rules_hash[i]) == 0 )
 			continue;
@@ -146,7 +175,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 		verdict = rule_engine_process( handler->engines[i], msg );
 
 		//found a validated/invalid trace
-		if( verdict != VERDICT_UNKNOWN ){
+		if( unlikely( verdict != VERDICT_UNKNOWN )){
 			handler->alerts_count[i] ++;
 
 			//get execution trace
@@ -171,8 +200,22 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 					execution_trace,
 					handler->user_data_for_callback );
 			}
+
+			//if we need to ignore the messages in a flow that has been detected an alert
+			if( handler->flow_ids_to_ignore != NULL && pthread_spin_lock( &handler->spin_lock_to_ignore_flow ) == 0 ){
+
+				for( j=0; j<execution_trace->elements_count; j++ ){
+					message_t *m = (message_t *) execution_trace->data[j];
+					if( m )
+						mmt_set64_add( handler->flow_ids_to_ignore, m->flow_id );
+				}
+
+				pthread_spin_unlock( &handler->spin_lock_to_ignore_flow );
+			}
 		}
 	}
+
+	_finish:
 
 	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
 	END_LOCK_IF_ADD_OR_RM_RULES_RUNTIME

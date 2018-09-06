@@ -22,6 +22,7 @@
 #include "verdict_printer.h"
 #include "rule_verif_engine.h"
 #include "mmt_security.h"
+#include "mmt_set64.h"
 
 typedef struct mmt_single_sec_handler_struct{
 	size_t rules_count;
@@ -49,6 +50,10 @@ typedef struct mmt_single_sec_handler_struct{
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
 	pthread_spinlock_t spin_lock_to_add_or_rm_rules;
 #endif
+
+
+	mmt_set64_t *flow_ids_to_ignore; //set of ID of flows having alert
+	pthread_spinlock_t spin_lock_to_ignore_flow;
 }mmt_single_sec_handler_t __aligned;
 
 /**
@@ -65,6 +70,23 @@ mmt_single_sec_handler_t *mmt_single_sec_register(
 		bool verbose,
 		mmt_sec_callback callback,
 		void *user_data);
+
+/**
+ * Ignore the remain of a flow when an alert was detected on it
+ * @param handler
+ * @param ignore
+ */
+void mmt_single_sec_set_ignore_remain_flow( mmt_single_sec_handler_t *handler, bool ignore );
+
+/**
+ * Check whether the remain of a flow can be ignored.
+ * This function is thread-safety
+ * @param handler
+ * @param flow_id
+ * @return
+ */
+bool mmt_single_is_ignore_remain_flow( mmt_single_sec_handler_t *handler, uint64_t flow_id );
+
 
 /**
  * Unregister, free resources

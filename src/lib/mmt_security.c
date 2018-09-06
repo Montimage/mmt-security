@@ -299,6 +299,20 @@ mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores
 	return ret;
 }
 
+void mmt_sec_set_ignore_remain_flow( mmt_sec_handler_t *handler, bool ignore ){
+	if( handler->threads_count > 0 )
+		mmt_smp_sec_set_ignore_remain_flow( handler->sec_handler, ignore );
+	else
+		mmt_single_sec_set_ignore_remain_flow( handler->sec_handler, ignore );
+}
+
+bool mmt_sec_is_ignore_remain_flow( mmt_sec_handler_t *handler, uint64_t flow_id ){
+	if( handler->threads_count > 0 )
+		return mmt_smp_is_ignore_remain_flow( handler->sec_handler, flow_id );
+	else
+		return mmt_single_is_ignore_remain_flow( handler->sec_handler, flow_id );
+}
+
 void mmt_sec_process( mmt_sec_handler_t *handler, message_t *msg ){
 	handler->process( handler->sec_handler, msg );
 }

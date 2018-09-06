@@ -40,6 +40,16 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		void *user_data);
 
 /**
+ * Ignore the remain of a flow when an alert was detected on it.
+ * This function must not be called after #mmt_smp_sec_process
+ * @param handler
+ * @param ignore
+ */
+void mmt_smp_sec_set_ignore_remain_flow( mmt_smp_sec_handler_t *handler, bool ignore );
+
+bool mmt_smp_is_ignore_remain_flow( mmt_smp_sec_handler_t *handler, uint64_t flow_id );
+
+/**
  * Unregister, free resources
  */
 size_t mmt_smp_sec_unregister( mmt_smp_sec_handler_t *handler, bool stop_immediatly );

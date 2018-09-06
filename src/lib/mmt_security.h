@@ -71,6 +71,26 @@ void mmt_sec_close( );
 mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores_id, const char *rules_mask,
 		bool verbose, mmt_sec_callback callback, void *user_data );
 
+/**
+ * Ignore the remain of a flow when an alert was detected on it.
+ * This function must not be called after #mmt_sec_process
+ * @param handler
+ * @param ignore
+ */
+void mmt_sec_set_ignore_remain_flow( mmt_sec_handler_t *handler, bool ignore );
+
+
+/**
+ * Check whether the remain of a flow can be ignored.
+ * The rest of a flow can be ignored from verification if we have the 2 following conditions:
+ * - the parameter ignore is true when calling #mmt_sec_set_ignore_remain_flow
+ * - found an alert on the flow
+ *
+ * @param handler
+ * @param flow_id
+ * @return
+ */
+bool mmt_sec_is_ignore_remain_flow( mmt_sec_handler_t *handler, uint64_t flow_id );
 
 /**
  * Give message to validate

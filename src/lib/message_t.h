@@ -36,6 +36,7 @@ typedef struct message_element_struct{
 typedef struct message_struct{
 	uint64_t counter;
 	uint64_t timestamp;
+	uint64_t flow_id;
 
 	message_element_t *elements;
 	//number of total elements being allocated

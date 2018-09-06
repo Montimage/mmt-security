@@ -91,7 +91,8 @@ bool mmt_single_is_ignore_remain_flow( mmt_single_sec_handler_t *handler, uint64
 	bool has_alerts = false;
 
 	//the spin_lock allows this function can be called from different threads
-	if( handler->flow_ids_to_ignore != NULL && pthread_spin_lock( &handler->spin_lock_to_ignore_flow )){
+	if( handler->flow_ids_to_ignore != NULL
+			&& pthread_spin_lock( &handler->spin_lock_to_ignore_flow ) == 0 ){
 
 		has_alerts = mmt_set64_check( handler->flow_ids_to_ignore, flow_id );
 
@@ -202,11 +203,12 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 			}
 
 			//if we need to ignore the messages in a flow that has been detected an alert
-			if( handler->flow_ids_to_ignore != NULL && pthread_spin_lock( &handler->spin_lock_to_ignore_flow ) == 0 ){
+			if( handler->flow_ids_to_ignore != NULL
+					&& pthread_spin_lock( &handler->spin_lock_to_ignore_flow ) == 0 ){
 
 				for( j=0; j<execution_trace->elements_count; j++ ){
 					message_t *m = (message_t *) execution_trace->data[j];
-					if( m )
+					if( m != NULL )
 						mmt_set64_add( handler->flow_ids_to_ignore, m->flow_id );
 				}
 

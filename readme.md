@@ -102,7 +102,7 @@ This application prints information of rules encoded in a binary file (.so).
 ./rule_info rules/40.TCP_SYN_scan.so
 ```
 
-## mmt-sec-standalone
+## `mmt_sec_standalone`
 
 This application can analyze
  
@@ -110,14 +110,29 @@ This application can analyze
 - or traffic saved in a pcap file. The verdicts will be printed to the current screen.
 
 ```bash
+./mmt_sec_standalone [<options>]
+Option:
+   -t <trace file>: Gives the trace file to analyse.
+   -i <interface> : Gives the interface name for live traffic analysis.
+   -c <string>    : Gives the range of logical cores to run on, e.g., "1,3-8,16"
+   -x <string>    : Gives the range of rules id to be excluded, e.g., "99,107-1010".
+   -m <string>    : Attributes special rules to special threads using format (lcore:range) e.g., "(1:1-8,10-13)(2:50)(4:1007-1010)".
+   -f <string>    : Output results to file, e.g., "/home/tata/:5" => output to folder /home/tata and each file contains reports during 5 seconds 
+   -r <string>    : Output results to redis, e.g., "localhost:6379"
+   -g             : Ignore the rest of a flow when an alert was detetected on the flow.
+   -v             : Verbose.
+   -l             : Prints the available rules then exit.
+   -h             : Prints this help.
+   
 #online analysis on eth0
 ./mmt_sec_standalone -i eth0
 #to see all parameters, run ./mmt_sec_standalone -h
 #verify a pcap file
 ./mmt_sec_standalone -t check/pcap/16.two_successive_SYN.pcap 
+
 ```
 
-## mmt_sec_server
+## `mmt_sec_server`
 
 This application receives meta-data, calling `messages`, from mmt-probe via internet or Unix sockets and then analyse them.
 

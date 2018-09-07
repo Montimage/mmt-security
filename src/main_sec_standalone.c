@@ -555,7 +555,7 @@ int main(int argc, char** argv) {
 
 	sec_handler =  mmt_sec_register( threads_count, core_mask, rule_mask, verbose, _print_output, NULL );
 
-	mmt_sec_set_ignore_remain_flow(sec_handler, is_ignore_remain_flow);
+	mmt_sec_set_ignore_remain_flow(sec_handler, is_ignore_remain_flow, 100000);
 
 	if( core_mask != NULL ){
 		//main thread on the last core

@@ -19,4 +19,5 @@
 #include "system_info.h"
 #include "mmt_hash64.h"
 #include "mmt_hash.h"
+#include "mmt_bit.h"
 #endif /* SRC_LIB_MMT_LIB_H_ */

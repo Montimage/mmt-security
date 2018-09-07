@@ -4,6 +4,7 @@
  *  Created on: Oct 10, 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
  */
+
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
@@ -79,12 +80,12 @@ mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t *const*rule
 
 void mmt_single_sec_set_ignore_remain_flow( mmt_single_sec_handler_t *handler, bool ignore ){
 	if( !ignore || handler->flow_ids_to_ignore != NULL ){
-		mmt_set64_free( handler->flow_ids_to_ignore );
+		mmt_set_ex_free( handler->flow_ids_to_ignore );
 		handler->flow_ids_to_ignore = NULL;
 	}
 
 	if( ignore )
-		handler->flow_ids_to_ignore = mmt_set64_create();
+		handler->flow_ids_to_ignore = mmt_set_ex_create( 1000000 );
 }
 
 bool mmt_single_is_ignore_remain_flow( mmt_single_sec_handler_t *handler, uint64_t flow_id ){
@@ -94,7 +95,7 @@ bool mmt_single_is_ignore_remain_flow( mmt_single_sec_handler_t *handler, uint64
 	if( handler->flow_ids_to_ignore != NULL
 			&& pthread_spin_lock( &handler->spin_lock_to_ignore_flow ) == 0 ){
 
-		has_alerts = mmt_set64_check( handler->flow_ids_to_ignore, flow_id );
+		has_alerts = mmt_set_ex_check( handler->flow_ids_to_ignore, flow_id );
 
 		pthread_spin_unlock( &handler->spin_lock_to_ignore_flow );
 	}
@@ -119,7 +120,7 @@ size_t mmt_single_sec_unregister( mmt_single_sec_handler_t *handler ){
 	}
 
 	if( handler->flow_ids_to_ignore != NULL )
-		mmt_set64_free( handler->flow_ids_to_ignore );
+		mmt_set_ex_free( handler->flow_ids_to_ignore );
 
 	//free data elements of handler
 	for( i=0; i<handler->rules_count; i++ )
@@ -209,7 +210,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 				for( j=0; j<execution_trace->elements_count; j++ ){
 					message_t *m = (message_t *) execution_trace->data[j];
 					if( m != NULL )
-						mmt_set64_add( handler->flow_ids_to_ignore, m->flow_id );
+						mmt_set_ex_add( handler->flow_ids_to_ignore, m->flow_id );
 				}
 
 				pthread_spin_unlock( &handler->spin_lock_to_ignore_flow );

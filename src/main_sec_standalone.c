@@ -162,7 +162,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 	message_t *msg = create_message_t();
 	msg->timestamp = mmt_sec_encode_timeval( &pkt->p_hdr->ts );
 	msg->counter   = pkt->packet_id;
-
+	msg->flow_id   = get_session_id_from_packet( pkt );
 	//get a list of proto/attributes being used by mmt-security
 	for( i=0; i<proto_atts_count; i++ )
 		dpi_message_set_data( pkt, proto_atts[i]->dpi_type, msg, proto_atts[i]->proto_id, proto_atts[i]->att_id );

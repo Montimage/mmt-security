@@ -22,7 +22,8 @@
 #include "verdict_printer.h"
 #include "rule_verif_engine.h"
 #include "mmt_security.h"
-#include "mmt_set64.h"
+
+#include "mmt_set_uint64.h"
 
 typedef struct mmt_single_sec_handler_struct{
 	size_t rules_count;
@@ -52,7 +53,7 @@ typedef struct mmt_single_sec_handler_struct{
 #endif
 
 
-	mmt_set64_t *flow_ids_to_ignore; //set of ID of flows having alert
+	mmt_set_ex_t *flow_ids_to_ignore; //set of ID of flows having alert
 	pthread_spinlock_t spin_lock_to_ignore_flow;
 }mmt_single_sec_handler_t __aligned;
 

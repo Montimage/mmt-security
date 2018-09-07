@@ -77,7 +77,7 @@ mmt_single_sec_handler_t *mmt_single_sec_register(
  * @param handler
  * @param ignore
  */
-void mmt_single_sec_set_ignore_remain_flow( mmt_single_sec_handler_t *handler, bool ignore );
+void mmt_single_sec_set_ignore_remain_flow( mmt_single_sec_handler_t *handler, bool ignore, uint64_t buffer_size );
 
 /**
  * Check whether the remain of a flow can be ignored.

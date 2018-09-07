@@ -63,6 +63,7 @@ void usage(const char * prg_name) {
 	exit(1);
 }
 
+static bool can_ignore_remain_flow = false;
 size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id,
 		size_t *threads_count, uint32_t **core_mask, char *excludes_rules_mask, char *rule_mask, bool *is_ignore, bool *verbose ) {
 	int opt, optcount = 0, x;
@@ -116,6 +117,7 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 		case 'g':
 			optcount++;
 			*is_ignore = true;
+			can_ignore_remain_flow = true;
 			//Do nothing. Keep for future use.
 			break;
 		case 'v':
@@ -159,6 +161,7 @@ static inline message_t* _get_packet_info( const ipacket_t *pkt ){
 	int i;
 	void *data;
 	int type;
+
 	message_t *msg = create_message_t();
 	msg->timestamp = mmt_sec_encode_timeval( &pkt->p_hdr->ts );
 	msg->counter   = pkt->packet_id;
@@ -393,6 +396,12 @@ int packet_handler( const ipacket_t *ipacket, void *args ) {
 	int i;
 
 	mmt_sec_handler_t *handler = (mmt_sec_handler_t *)args;
+
+	uint64_t flow_id = get_session_id_from_packet( ipacket );
+
+	if( can_ignore_remain_flow && mmt_sec_is_ignore_remain_flow(handler, flow_id) )
+		return 0;
+
 	message_t *msg = _get_packet_info( ipacket );
 
 	//if there is no interested information

@@ -78,14 +78,14 @@ mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t *const*rule
 	return handler;
 }
 
-void mmt_single_sec_set_ignore_remain_flow( mmt_single_sec_handler_t *handler, bool ignore ){
+void mmt_single_sec_set_ignore_remain_flow( mmt_single_sec_handler_t *handler, bool ignore, uint64_t buffer_size ){
 	if( !ignore || handler->flow_ids_to_ignore != NULL ){
 		mmt_set_ex_free( handler->flow_ids_to_ignore );
 		handler->flow_ids_to_ignore = NULL;
 	}
 
 	if( ignore )
-		handler->flow_ids_to_ignore = mmt_set_ex_create( 1000000 );
+		handler->flow_ids_to_ignore = mmt_set_ex_create( buffer_size );
 }
 
 bool mmt_single_is_ignore_remain_flow( mmt_single_sec_handler_t *handler, uint64_t flow_id ){

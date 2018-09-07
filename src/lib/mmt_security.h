@@ -76,8 +76,9 @@ mmt_sec_handler_t* mmt_sec_register( size_t threads_count, const uint32_t *cores
  * This function must not be called after #mmt_sec_process
  * @param handler
  * @param ignore
+ * @param buffer_size is the size of buffer to remember the IDs of flows having alerts.
  */
-void mmt_sec_set_ignore_remain_flow( mmt_sec_handler_t *handler, bool ignore );
+void mmt_sec_set_ignore_remain_flow( mmt_sec_handler_t *handler, bool ignore, uint64_t buffer_size );
 
 
 /**

@@ -45,7 +45,7 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register(
  * @param handler
  * @param ignore
  */
-void mmt_smp_sec_set_ignore_remain_flow( mmt_smp_sec_handler_t *handler, bool ignore );
+void mmt_smp_sec_set_ignore_remain_flow( mmt_smp_sec_handler_t *handler, bool ignore, uint64_t buffer_size );
 
 bool mmt_smp_is_ignore_remain_flow( mmt_smp_sec_handler_t *handler, uint64_t flow_id );
 

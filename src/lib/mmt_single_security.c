@@ -207,10 +207,17 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 			if( handler->flow_ids_to_ignore != NULL
 					&& pthread_spin_lock( &handler->spin_lock_to_ignore_flow ) == 0 ){
 
+				uint64_t last_flow_id = -1;
 				for( j=0; j<execution_trace->elements_count; j++ ){
 					message_t *m = (message_t *) execution_trace->data[j];
-					if( m != NULL )
-						mmt_set_ex_add( handler->flow_ids_to_ignore, m->flow_id );
+					if( m == NULL ||
+							//usually the messages in the trace are in the same flow
+							m->flow_id == last_flow_id
+						)
+						continue;
+
+					last_flow_id = m->flow_id;
+					mmt_set_ex_add( handler->flow_ids_to_ignore, m->flow_id );
 				}
 
 				pthread_spin_unlock( &handler->spin_lock_to_ignore_flow );

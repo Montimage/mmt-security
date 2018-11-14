@@ -887,7 +887,7 @@ static inline bool _hash_function( const char*fn_name, const char *code ){
 	if( code == NULL )
 		return false;
 
-	while( code != '\0'){
+	while( *code != '\0'){
 		//start by "void"
 		code = strstr( code, "void" );
 		if( code == NULL )

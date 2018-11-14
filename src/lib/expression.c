@@ -656,16 +656,16 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 	if( expr->data_type == MMT_SEC_MSG_DATA_TYPE_NUMERIC ){
 		d = *(double *)expr->data;
 		//integer
-		size = snprintf(buff, sizeof(MAX_STR_SIZE), "%.2f", d);
+		size = snprintf(buff, sizeof(buff), "%.2f", d);
 		size --; //jump over last '\0';
 		//remove zero at the end, e.g., 10.00 ==> 10
 		while( size > 1 && buff[ size - 1 ] == '0' )
 				size --;
 		if( buff[ size - 1 ] == '.' ) size --;
 	}else if( expr->data_type == MMT_SEC_MSG_DATA_TYPE_STRING ){
-		size = snprintf( buff, MAX_STR_SIZE, "\"%s\"", (char *)expr->data );
+		size = snprintf( buff, sizeof(buff), "\"%s\"", (char *)expr->data );
 	}else{
-		size = snprintf( buff, MAX_STR_SIZE, "\"__na__\"");
+		size = snprintf( buff, sizeof(buff), "\"__na__\"");
 	}
 
 	*string = mmt_mem_dup( buff, size );

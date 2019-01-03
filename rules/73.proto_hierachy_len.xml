@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) 2014-->
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int em_check_max_proto_len(const char *str){
+   
+   const char* c = str;
+   while( *c != '\0' ){
+      if (*c=='X' && c[1]=='5' && c[2]=='O' && c[3]=='!' && c[4]=='P'){
+      	if (strstr(c, "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*") != NULL) return 1;
+      	// "\\" represents "\"
+      	break;
+      	} 
+      c ++;
+   }
+   return 1;
+}
+]]></embedded_functions>
+<!-- Property 73: Protocol hierarchy length is 16 -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="73" type_property="ATTACK" 
+     description="Exceeded the maximum protocol hierarchy length" >
+   <event event_id="1" value="COMPUTE" 
+           description="Print out IP addresses"
+           boolean_expression="(ip.src != ip.dst)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Maximum protocol hierarchy length exceeded"
+           boolean_expression="(#em_check_max_proto_len(meta.proto_hierarchy)==1)"/>
+ </property>
+</beginning>

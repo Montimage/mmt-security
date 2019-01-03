@@ -536,7 +536,7 @@ int main(int argc, char** argv) {
 	uint32_t *core_mask = NULL;
 	int type;
 	size_t threads_count = 0;
-	bool verbose, is_ignore_remain_flow;
+	bool verbose, is_ignore_remain_flow = true;
 	struct pkthdr header;
 	char rule_mask[ MAX_RULE_MASK_SIZE ], excludes_rules_mask[ MAX_RULE_MASK_SIZE ];
 	size_t i, j, size;

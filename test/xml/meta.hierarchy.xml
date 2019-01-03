@@ -1,0 +1,49 @@
+<beginning>
+<embedded_functions><![CDATA[
+#include <mmt_core.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+
+static inline int check_hierarchy(const void *data){
+    char buff[200];
+    int len = 200;
+    buff[0] = '\0';
+    
+    int offset = 0;
+    proto_hierarchy_t * p = (proto_hierarchy_t *) data;
+    if (p->len < 1) {
+        offset += snprintf(buff, len, ".");
+    } else {
+        int index = 1;
+        offset += snprintf(buff, len - offset, "%u", p->proto_path[index]);
+        index++;
+        for (; (index < p->len) && (index < 16) && offset < len; index++) {
+            offset += snprintf(&buff[offset], len - offset, ".%u", p->proto_path[index]);
+        }
+    }
+   
+   printf("meta.hierarchy: %s\n", buff );
+   
+   return 0;
+}
+
+]]>
+</embedded_functions>
+
+
+<!-- C4_Analyse_04g : SQL Injection detection.-->
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1" type_property="ATTACK" 
+    description="Test meta.hierarchy"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="Get protocol hierarchy"
+           boolean_expression="(#check_hierarchy(meta.proto_hierarchy) == 1)"/>
+    <event value="COMPUTE" event_id="2" boolean_expression="true" />
+</property>
+
+
+</beginning>

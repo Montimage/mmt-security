@@ -169,7 +169,7 @@ static inline int dpi_message_set_void_data( const ipacket_t *pkt, const void *d
  * - return:
  * 	+ 0 if success
  */
-int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *msg, uint32_t proto_id, uint32_t att_id ){
+static inline int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *msg, uint32_t proto_id, uint32_t att_id ){
 	double number       = 0;
 	const void *new_data= NULL;
 	size_t new_data_len = 0;
@@ -282,6 +282,10 @@ int dpi_message_set_dpi_data( const void *data, int dpi_data_type, message_t *ms
 		new_data_len  = strlen( (char*) data);
 		break;
 
+	case MMT_DATA_PATH:
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
+		new_data      = data;
+		new_data_len  = sizeof( proto_hierarchy_t );
 	default:
 		break;
 	}

@@ -66,9 +66,9 @@ int main( int argc, char** argv ){
 	}else{
 		//compile code file
 		if( argc == 3 )
-			ret = compile_gen_code(output_file, c_file,"./src/lib -I ./src/dpi -I/opt/mmt/security/include" );
+			ret = compile_gen_code(output_file, c_file,"./src/lib -I ./src/dpi -I/opt/mmt/security/include -I/opt/mmt/dpi/include" );
 		else{
-			snprintf( gcc_param, sizeof( gcc_param), "./src/lib -I ./src/dpi -I/opt/mmt/security/include %s", argv[3] );
+			snprintf( gcc_param, sizeof( gcc_param), "./src/lib -I ./src/dpi -I/opt/mmt/security/include -I/opt/mmt/dpi/include %s", argv[3] );
 			ret = compile_gen_code(output_file, c_file, gcc_param );
 		}
 

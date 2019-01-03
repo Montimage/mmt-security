@@ -1,0 +1,13 @@
+<beginning>
+<!-- Property 8: The field Options must be homogeneous in every IP fragments
+-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="100" property_id="8" type_property="EVASION" 
+    description="The IP options field must be homogeneous in all IP fragments.">
+    <event value="COMPUTE" event_id="1" 
+           description="IP segment"
+           boolean_expression="(ip.ip_frag_packets_count &gt; 0)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Other IP segment with different ip.options"
+           boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.options != ip.options.1))))"/>
+</property>
+</beginning>

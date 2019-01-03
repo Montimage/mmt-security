@@ -1,0 +1,16 @@
+<beginning>
+<!-- Property 51: This rule aims to detect "Ping of death" attack. Ref: https://en.wikipedia.org/wiki/Ping_of_death
+The maximum packet length of an IPv4 packet is 65 535 bytes (2^16 - 1)
+The attacker sends a number of IP fragments with the regrouped payload at the end will be an ICMP packet bigger than 65 535 bytes 
+that can probably lead to buffer overflow / system crash.
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="51" type_property="ATTACK" 
+          description="Ping of death attack">
+      <event value="COMPUTE" event_id="1" 
+             description="A defragmented ICMP packet"
+             boolean_expression="((icmp.packet_count != 0) &amp;&amp; ((ip.df_flag + ip.mf_flag) ==0))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Packet length greater than 65 535"
+             boolean_expression="((ip.src != ip.dst)&amp;&amp;(meta.packet_len &gt; 65535))"/>
+</property>
+</beginning>

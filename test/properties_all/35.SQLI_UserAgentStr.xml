@@ -1,0 +1,40 @@
+<beginning>
+<embedded_functions><![CDATA[
+static inline int em_check_sql_injection_ua(const char *str){
+   int handle = 0;
+   if (str==NULL) return 2;
+   
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+
+   char *s1, *s2, *s3, *s4, *s5, *s6, *s7, *s8, *s9;
+   s1 = strstr(str, "DROP");  //find the first occurrence of string "DROP" in string
+   s2 = strstr(str, "UNION"); //find the first occurrence of string "UNION" in string
+   s3 = strstr(str, "SELECT"); //find the first occurrence of string "SELECT" in string
+   s4 = strstr(str, "CHAR"); //find the first occurrence of string "CHAR" in string  
+   s5 = strstr(str, "DELETE"); //find the first occurrence of string "CHAR" in string
+   s6 = strstr(str, "INSERT"); //find the first occurrence of string "CHAR" in string
+   s7 = strchr(str, '\'');    //find the first occurrence of character "'" in string
+   s8 = strchr(str, '\"');    //find the first occurrence of character """ in string
+   s9 = strstr(str, "--");    //find the first occurrence of string "--" in string
+     
+   if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL) || (s7 !=NULL) || (s8 !=NULL) || (s9 !=NULL)) {
+      handle = 1;   
+   }
+  return handle;
+}
+]]></embedded_functions>
+<!-- Property 35: SQL Injection detection in HTTP User-Agent strings.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="35" type_property="ATTACK" 
+    description="SQL Injection detection in HTTP User-Agent strings">
+    <event value="COMPUTE" event_id="1" 
+           description="SQL syntax found in HTTP User-Agent string"
+           boolean_expression="(#em_check_sql_injection_ua(http.user_agent) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+</beginning>
+
+

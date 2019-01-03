@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 11: Packet size less than 34 (incorrect).-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="11" type_property="EVASION" 
+    description="IP packet size incorrect">
+    <event value="COMPUTE" event_id="1" 
+           description="Packet size incorrect"
+           boolean_expression="((meta.packet_len &lt; 34)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Ethernet packet"
+           boolean_expression="(ethernet.proto == ethernet.proto)"/>
+</property>
+</beginning>

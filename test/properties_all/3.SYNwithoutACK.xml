@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 3: Several TCP SYN requests without SYN ACK. Source address is spoofed, infected machine or attacker. Note: done on port 445.-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="3" type_property="SECURITY" 
+    description="TCP SYN requests on microsoft-ds port 445 without SYN ACK.">
+    <event value="COMPUTE" event_id="1"
+           description="SYN request"
+           boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 445)&amp;&amp;(ip.src != ip.dst)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="SYN ACK reply"
+           boolean_expression="((tcp.flags == 18)&amp;&amp;((ip.src == ip.dst.1)&amp;&amp;(ip.dst == ip.src.1)))"/>
+</property>
+</beginning>

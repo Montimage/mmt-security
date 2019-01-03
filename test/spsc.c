@@ -24,7 +24,7 @@ void *_consumer_fn( void *arg ){
 	_user_data_t *u_data = (_user_data_t * ) arg;
 
 	lock_free_spsc_ring_t *ring = u_data->ring;
-	void **arr = NULL;
+	void *arr[10];
 	int ret;
 
 	size_t total_cpu = get_number_of_online_processors();
@@ -37,22 +37,26 @@ void *_consumer_fn( void *arg ){
 	}
 
 	do{
-		ret = ring_pop_burst( ring, &arr );
+		ret = ring_pop_burst( ring, 10, arr );
 		if( unlikely( ret == 0 ))
-			ring_wait_for_pushing( ring );
+			ring_wait_for_pushing( NULL );
 		else{
 			for( i=0; i<ret; i++ )
 				total += (size_t) arr[i];
-			if( unlikely( arr[ret - 1] == NULL )){
-				mmt_mem_force_free( arr );
+			//last msg
+			if( arr[ret-1] == NULL )
 				break;
-			}
-			else
-				mmt_mem_force_free( arr );
 		}
 	}while( 1 );
-	mmt_info("Thread %2zu (pid = %d): total from 1 to %'zu = %'zu", u_data->index, gettid(), u_data->total, total );
+
+
+	VALGRIND_MODE(ANNOTATE_IGNORE_READS_BEGIN());
+//	mmt_info("Thread %2zu (pid = %d): total from 1 to %'zu = %'zu",
+//			u_data->index,
+//			gettid(),
+//			u_data->total, total );
 	mmt_mem_free( u_data );
+	VALGRIND_MODE(ANNOTATE_IGNORE_READS_END());
 	return NULL;
 }
 
@@ -74,7 +78,7 @@ int main( int argc, char **args ){
 	if( argc > 3 )
 		ring_size       = atoll( args[ 3 ] );
 	mmt_info( "Usage: %s consumers_count loops_count ring_size", args[ 0 ] );
-	mmt_info( "Number of online processors: %ld", get_number_of_online_processors() );
+	mmt_info( "Number of online lcores: %ld", get_number_of_online_processors() );
 	setlocale(LC_ALL,"en_US.UTF-8");
 	mmt_info( "Running %'zu loops with 1 producer and %'zu consumers. Size of each ring is %'zu",
 			loops_count, consumers_count, ring_size );
@@ -87,11 +91,12 @@ int main( int argc, char **args ){
 
 	time_t start = time(NULL);
 	for( i=0; i< consumers_count; i++ ){
-
+		VALGRIND_MODE(ANNOTATE_IGNORE_WRITES_BEGIN());
 		u_data = mmt_mem_alloc( sizeof( _user_data_t) );
 		u_data->ring  = rings[ i ];
 		u_data->index = i;
 		u_data->total = loops_count;
+		VALGRIND_MODE(ANNOTATE_IGNORE_WRITES_END());
 		mmt_assert( pthread_create( &(p_ids[i]), NULL, _consumer_fn, u_data ) == 0,
 				"Cannot create thread %zu", i );
 	}
@@ -109,7 +114,7 @@ int main( int argc, char **args ){
 				if( likely( ret == RING_SUCCESS ))
 					break;
 				else
-					ring_wait_for_poping( rings[ i ] );
+					ring_wait_for_poping( NULL );
 			}while( 1 );
 		}
 	}
@@ -121,7 +126,7 @@ int main( int argc, char **args ){
 			if( likely( ret == RING_SUCCESS ))
 				break;
 			else
-				ring_wait_for_poping( rings[ i ] );
+				ring_wait_for_poping( NULL );
 		}while( 1 );
 	}
 

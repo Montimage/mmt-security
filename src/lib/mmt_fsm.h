@@ -47,10 +47,8 @@ typedef struct fsm_delay_struct{
 	uint64_t counter_min, counter_max;
 	int counter_min_sign, counter_max_sign;
 }fsm_delay_t;
-/**
- *  Finite State Machine
- */
-typedef void fsm_t;
+
+typedef struct fsm_struct fsm_t;
 
 #define FSM_EVENT_TYPE_TIMEOUT 0
 
@@ -107,7 +105,7 @@ typedef struct fsm_transition_struct
     * - Return
     * 	+ YES if the event's data fulfills the condition, otherwise NO.
     */
-   int ( *guard )( const void *event_data, const fsm_t *fsm );
+   int ( *guard )( const message_t *msg, const fsm_t *fsm );
 
    /**
     * When the #guard is fulfilled, some pre-defined action will be performed.
@@ -155,10 +153,6 @@ typedef struct fsm_state_struct{
     */
    size_t transitions_count;
    /**
-    *  Data that will be available in its #entry_action and #exit_action
-    */
-   void *data;
-   /**
     *  This function is called whenever the state is being entered. May be NULL.
     */
    int entry_action;
@@ -168,6 +162,36 @@ typedef struct fsm_state_struct{
    int exit_action;
 }fsm_state_t;
 
+
+/**
+ *  Finite State Machine
+ */
+struct fsm_struct{
+	uint64_t time_min, time_max;
+//	uint64_t counter_min, counter_max;
+
+	//id of the FSM
+	uint16_t id;
+
+	/** ID of event to be verified */
+	uint16_t current_event_id;
+
+   /**  Pointer to the current fsm_state_struct */
+   const fsm_state_t *current_state;
+
+   const fsm_state_t *init_state;
+
+   const fsm_state_t *error_state;
+
+   const fsm_state_t *incl_state;
+
+   const fsm_state_t *success_state;
+
+   mmt_array_t *execution_trace;
+
+   //this is for internal usage. It points to _rule_engine_t
+   void *user_data;
+} __aligned;
 
 /**
  *  Initialize the machine
@@ -257,9 +281,6 @@ enum fsm_handle_event_value{
  * 	+ transition_index: indicates the transition T at index #transition_index of
  * 		the current state of #fsm will be verified to fire.
  * 	+ message_data: data to be stored in the execution trace of the machine if T fired.
- * 	+ event_data: is a representation of #message_data. In fact #event_data is generated
- * 		from #message_data by a convert function defined in each rule (being encoded in file .so).
- * 		#event_data will be stored in execution history of the machine if T fired.
  * - Output:
  * 	+ new_fsm: points to a new instance of #fsm if the #action of the transition T
  * 		is #FSM_ACTION_CREATE_INSTANCE and the transition has been fired, otherwise
@@ -272,7 +293,7 @@ enum fsm_handle_event_value{
  * 	be verified firstly, before the transition having index == #transition_index. Thus if one of them
  * 	can fire, the machine will fire that transition, not the one having index == #transition_index
  */
-enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message_data, const void *event_data, fsm_t **new_fsm );
+enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message, fsm_t **new_fsm );
 
 
 bool fsm_is_verifying_single_packet( const fsm_t *fsm );
@@ -283,7 +304,7 @@ bool fsm_is_verifying_single_packet( const fsm_t *fsm );
  * @param event_data
  * @return FSM_ERR_ARG if this fsm verifies on multiple packets
  */
-enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *message_data, const void *event_data );
+enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *message );
 /**
  *  Get the current state
  *
@@ -292,18 +313,11 @@ enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *mes
  *	- Return:
  *		+ a pointer to the current state, otherwise, NULL if fsm is NULL.
  */
-const fsm_state_t *fsm_get_current_state( const fsm_t *fsm );
+static inline const fsm_state_t *fsm_get_current_state( const fsm_t *fsm) {
+	__check_null( fsm, NULL );
 
-/**
- *  Get the previous state
- *
- *	- Input:
- * 	+ the state machine to get the previous state from.
- * - Return:
- * 	+ the previous state, otherwise, NULL if #fsm is NULL
- * 		or if there has not yet been any transitions.
- */
-const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm );
+	return fsm->current_state;
+}
 
 /**
  *  Check if the state machine has stopped
@@ -314,7 +328,10 @@ const fsm_state_t *fsm_get_previous_state( const fsm_t *fsm );
  *		+ true if the state machine is at a state having no outgoing transition,
  *			otherwise, false
  */
-bool fsm_is_stopped( const fsm_t *fsm );
+static inline bool fsm_is_stopped( const fsm_t *fsm) {
+	__check_null( fsm, YES );
+	return (fsm->current_state->transitions_count == 0);
+}
 
 /**
  * Free the machine created by #fsm_init function
@@ -333,16 +350,6 @@ void fsm_free( fsm_t *fsm );
 fsm_t * fsm_clone( const fsm_t *fsm );
 
 /**
- * Get id of the machine
- */
-uint16_t fsm_get_id( const fsm_t *fsm );
-
-/**
- * Set id of the machine
- */
-void fsm_set_id( fsm_t *fsm, uint16_t id );
-
-/**
  * Get the current execution trace of the machine
  *
  * - Input:
@@ -351,13 +358,47 @@ void fsm_set_id( fsm_t *fsm, uint16_t id );
  *		+ a map of events and its data. Each element of the map is indexed by event_id
  *		  of the machine, and its data has type #message_t that validates the event.
  */
-const mmt_array_t* fsm_get_execution_trace( const fsm_t *fsm );
+static inline const mmt_array_t* fsm_get_execution_trace( const fsm_t *fsm ){
+#ifdef DEBUG_MODE
+	__check_null( fsm, NULL );
+#endif
+	return( fsm->execution_trace );
+}
+
 
 /**
- * Get data of an event_id
+ * Public API
  */
-const void *fsm_get_history( const fsm_t *fsm, uint32_t event_id );
+static inline const message_t *fsm_get_history( const fsm_t *fsm, uint32_t event_id ){
+#ifdef DEBUG_MODE
+	__check_null( fsm, NULL );
+#endif
+	if( unlikely( event_id >= fsm->execution_trace->elements_count )){
+		mmt_halt("Access outside of array");
+	}
 
+	return fsm->execution_trace->data[ event_id ];
+}
+
+/**
+ * Public API
+ */
+static inline uint16_t fsm_get_id( const fsm_t *fsm ){
+#ifdef DEBUG_MODE
+	__check_null( fsm, -1 );
+#endif
+	return fsm->id;
+}
+
+/**
+ * Public API
+ */
+static inline void fsm_set_id( fsm_t *fsm, uint16_t id ){
+#ifdef DEBUG_MODE
+	__check_null( fsm,  );
+#endif
+	fsm->id = id;
+}
 /**
  * Free a #fsm_event_t object
  */
@@ -369,7 +410,18 @@ static inline void fsm_free_event( fsm_event_t *event, bool free_data ){
 }
 
 
-void fsm_set_user_data( fsm_t *fsm, void *data);
+static inline void fsm_set_user_data( fsm_t *fsm, void *data){
+#ifdef DEBUG_MODE
+	__check_null( fsm,  );
+#endif
+	fsm->user_data = data;
+}
 
-void * fsm_get_user_data( const fsm_t *fsm );
+static inline void * fsm_get_user_data( const fsm_t *fsm ){
+#ifdef DEBUG_MODE
+	__check_null( fsm, NULL );
+#endif
+	return fsm->user_data;
+}
+
 #endif /* SRC_LIB_FSM_H_ */

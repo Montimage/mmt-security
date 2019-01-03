@@ -1,0 +1,4 @@
+10,0,"",1496155641,29,"not_respected","security","There must be HTTP response after HTTP GET. Otherwise, there could be an evasion based on HTTP version 0.9 ((HTTP response with no header) )",{"event_1":{"timestamp":1492706164.048638,"counter":37,"attributes":[{"ip.src":"192.168.0.59"},{"ip.dst":"192.168.0.101"}]}}
+10,0,"",1496155641,29,"not_respected","security","",{"event_1":{"timestamp":1492706164.048741,"counter":38,"attributes":[{"ip.src":"192.168.0.59"},{"ip.dst":"192.168.0.101"}]}}
+10,0,"",1496155641,29,"not_respected","security","",{"event_1":{"timestamp":1492706164.048777,"counter":39,"attributes":[{"ip.src":"192.168.0.59"},{"ip.dst":"192.168.0.101"}]}}
+10,0,"",1496155641,29,"not_respected","security","",{"event_1":{"timestamp":1492706164.048823,"counter":40,"attributes":[{"ip.src":"192.168.0.101"},{"ip.dst":"192.168.0.59"}]}}

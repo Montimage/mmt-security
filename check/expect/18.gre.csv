@@ -1,0 +1,2 @@
+10,0,"",1495199024,18,"detected","attack","Invalid GRE version detected", {"event_1":{"timestamp":1481906024.908726,"counter":7,"attributes":[{"gre.proto":8}]},"event_2":{"timestamp":1481906024.908726,"counter":7,"attributes":[]}}
+10,0,"",1495199024,18,"detected","attack","", {"event_1":{"timestamp":1481906024.908919,"counter":8,"attributes":[{"gre.proto":8}]},"event_2":{"timestamp":1481906024.908919,"counter":8,"attributes":[]}}

@@ -1,0 +1,98 @@
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+static inline int em_check_port(int i){
+  
+  //printf("Port:%d\n", i);
+  //according to: 
+  //https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+  //and
+  //https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
+
+  switch (i) {
+    case 78:
+    case 79:
+    case 100:
+    case 106:
+    case 787:
+    case 1053:
+    case 1491:
+    case 2662:
+    case 3060:
+    case 3131:
+    case 3145:
+    case 3300:
+    case 3301:
+    case 4045:
+    case 4315:
+    case 4443:
+    case 4967:
+    case 5151:
+    case 5152:
+    case 5162:
+    case 5444:
+    case 5555:
+    case 5556:
+    case 6100:
+    case 6200:
+    case 6501:
+    case 8882:
+    case 9001:
+    case 6632:
+    case 7001:
+    case 7002:
+    case 7005:
+    case 7011:
+    case 7012:
+    case 7501:
+    case 7777:
+    case 8001:
+    case 16000:
+    case 49151:
+      return 1;
+    default:
+      if(i<1023) return 0;
+		if(i>49151 && i< 65536) return 0;
+		if(i>65535) return 1;
+		
+		if(i>2193 && i<2197) return 1;
+		if(i>4488 && i<4500) return 1;
+		if(i>4953 && i<4969) return 1;
+		if(i>5569 && i<5573) return 1;
+		if(i>5646 && i<5670) return 1;
+		if(i>6657 && i<6665) return 1;
+		if(i>7491 && i<7500) return 1;
+		if(i>7784 && i<7790) return 1;
+		if(i>27999 && i<28119) return 1;
+		if(i>5554 && i<5558) return 1;
+		if(i>5999 && i<6064) return 1;
+		if(i>8615 && i<8665) return 1;
+		if(i>8801 && i<8804) return 1;
+		if(i>8887 && i<8891) return 1;
+		if(i>11430 && i<11489) return 1;
+		if(i>11623 && i<11720) return 1;
+		if(i>27009 && i<27345) return 1;
+		if(i>41797 && i<42508) return 1;
+		if(i>44444 && i<44544) return 1;
+  }
+  return 0;
+}
+]]></embedded_functions>
+
+<!-- Property 14: C4_Analyse_3f bis: Unauthorized port number.-->
+<!--              according to: 
+                       https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+                  and
+                       https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="14" type_property="EVASION" 
+    description="C4_Analyse_3f bis: Unauthorized port number.">
+      <event value="COMPUTE" event_id="1" 
+             description="TCP packet with non-authorized port number."
+             boolean_expression="((#em_check_port(tcp.dest_port) == 1)||(#em_check_port(tcp.src_port) == 1))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Print source and destination of IP"
+             boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

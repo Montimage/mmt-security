@@ -1,0 +1,10 @@
+.DS_Store
+.vscode
+*.so
+*.o
+rules/*.c
+compile_rule
+rule_info
+mmt_sec_standalone
+mmt_sec_server
+gen_dpi_header

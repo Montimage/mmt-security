@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 29: Evasion based on HTTP version 0.9 detection-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="29" type_property="SECURITY" 
+    description="There must be HTTP response after HTTP GET. Otherwise, there could be an evasion based on HTTP version 0.9 ((HTTP response with no header) )">
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a HTTP GET packet"
+           boolean_expression="(http.method == 'GET')"/>
+   <event value="COMPUTE" event_id="2" 
+           description="Trigger: There must be a HTTP response after that"
+		   boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;(http.response==http.response)))"/>
+</property>
+</beginning>

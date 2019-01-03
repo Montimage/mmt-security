@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 28: XMAS s00can : TCP with all flags FIN, URG, PSH active.-->
+    <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="28" type_property="ATTACK"
+         description="XMAS scan : TCP with all flags FIN, URG, PSH active.">
+    <event value="COMPUTE" event_id="1"
+         description="TCP packet with flag FIN active"
+         boolean_expression="((tcp.urg == 1)&amp;&amp;(ip.src != ip.dst))"/>
+    <event value="COMPUTE" event_id="2"
+         description="TCP packet with flags URG and PSH active"
+         boolean_expression="((tcp.fin == 1)&amp;&amp;(tcp.psh == 1))"/>
+    </property>
+</beginning>

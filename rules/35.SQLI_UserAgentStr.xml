@@ -1,0 +1,88 @@
+<beginning>
+<embedded_functions><![CDATA[
+static inline int em_check_sql_injection_ua(const char *str){
+/*
+   int handle = 0;
+   if (str==NULL) return 2;
+   
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+
+   char *s1 = NULL, *s2 = NULL, *s3 = NULL, *s4 = NULL, *s5 = NULL, *s6 = NULL, *s7 = NULL, *s8 = NULL, *s9 = NULL;
+   s1 = strstr(str, "DROP");  //find the first occurrence of string "DROP" in string
+   s2 = strstr(str, "UNION"); //find the first occurrence of string "UNION" in string
+   s3 = strstr(str, "SELECT"); //find the first occurrence of string "SELECT" in string
+   s4 = strstr(str, "CHAR"); //find the first occurrence of string "CHAR" in string  
+   s5 = strstr(str, "DELETE"); //find the first occurrence of string "DELETE" in string
+   s6 = strstr(str, "INSERT"); //find the first occurrence of string "INSERT" in string
+   //s7 = strchr(str, '\'');    //find the first occurrence of character "'" in string
+   //s8 = strchr(str, '\"');    //find the first occurrence of character """ in string
+   //s9 = strstr(str, "--");    //find the first occurrence of string "--" in string
+     
+   if ((s1 != NULL)  || (s2 != NULL)   || (s3 != NULL) || (s4 != NULL) || (s5 != NULL) || (s6 != NULL) || (s7 != NULL) || (s8 != NULL) || (s9 != NULL)) {
+      handle = 1;   
+   }
+  return handle;
+*/
+
+   const char* c = str;
+   while( *c != '\0' ){
+      switch( *c ){
+         case 'D': //DROP | DELETE
+            switch( c[1] ){
+               case 'R': //DROP
+                  if( c[2]=='O' && c[3]=='P' )
+                     return 1;
+                  break;
+               case 'E': //DELETE
+                  if( c[2]=='L' && c[3]=='E' && c[4]=='T' && c[5]=='E' )
+                     return 1;
+                  break;
+            }
+            break;
+         case 'U': //UNION
+            if( c[1]=='N' && c[2]=='I' && c[3]=='O' && c[4]=='N' )
+               return 1;
+            break;
+         case 'S': //SELECT
+            if( c[1]=='E' && c[2]=='L' && c[3]=='E' && c[4]=='C' && c[5]=='T' )
+               return 1;
+            break;
+         case 'C': //CHAR
+            if( c[1]=='H' && c[2]=='A' && c[3]=='R' )
+               return 1;
+            break;
+         case 'I': //INSERT
+            if( c[1]=='N' && c[2]=='S' && c[3]=='E' && c[4]=='R' && c[5]=='T' )
+               return 1;
+            break;
+         /*
+         case '\'':
+            return 1;
+         case '"':
+            return 1;
+         case '-':
+            if( c[1] == '-' )
+               return 1;
+           */
+            break;
+      }
+      c ++;
+   }
+   return 0;
+}
+]]></embedded_functions>
+<!-- Property 35: SQL Injection detection in HTTP User-Agent strings.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="35" type_property="ATTACK" 
+    description="SQL Injection detection in HTTP User-Agent strings">
+    <event value="COMPUTE" event_id="1" 
+           description="SQL syntax found in HTTP User-Agent string"
+           boolean_expression="(#em_check_sql_injection_ua(http.user_agent) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="((http.method == 'GET' &amp;&amp; (ip.src != ip.dst))"/> 
+</property>
+</beginning>
+
+

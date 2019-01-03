@@ -1,0 +1,56 @@
+<beginning>
+<!-- Property 38: Detection of WannaCry Ransomware-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="38" type_property="ATTACK" 
+    description="Detection of WannaCry Ransomware">
+    <event value="COMPUTE" event_id="1" 
+           description="SMB client/server intend connecting WannaCry host"
+           boolean_expression="(#em_check_WannaCry(http.host) == 1)"/>
+     <event value="COMPUTE" event_id="2" 
+           description="Print IP addresses"
+           boolean_expression="(ip.src != ip.dst)"/> 
+</property>
+
+<embedded_functions><![CDATA[
+static mmt_hash_t *table = NULL;
+
+static inline int em_check_WannaCry(const char * str){
+   return ( mmt_hash_search( table, str, strlen( str ) ) != NULL );
+}
+
+const char* domain_lst[] = {
+"iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com",
+"ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com",
+"ayylmaotjhsstasdfasdfasdfasdfasdfasdfasdf.com",
+"iuqssfsodp9ifjaposdfjhgosurijfaewrwergwea.com",
+"iuqerfsodp9ifjaposdfjhgosurijfaewrwergweb.com",  
+};
+
+
+//This fuction is called when the rules in this files being loaded into MMT-Security
+void on_load(){   
+   int i;
+   int length = sizeof( domain_lst ) / sizeof( domain_lst[0] );
+   const char*str;
+   
+   //create a new hash table
+   table = mmt_hash_create( length );
+   mmt_debug("Rule 38.Wannacry: Created a table for checking WannaCry having %d URI", length );
+   
+   //add items to the hash table
+   for( i=0; i<length; i++ ){
+      str = domain_lst[i];
+      
+      if( !mmt_hash_add( table, str, strlen(str), (void*) str, false ) )
+         break; 
+   } 
+}//end on_load()
+
+//This fuction is called when exiting MMT-Security
+void on_unload(){
+   mmt_hash_free( table );
+}//end on_unload()
+
+]]></embedded_functions>
+
+
+</beginning>

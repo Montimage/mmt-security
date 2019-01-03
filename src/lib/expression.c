@@ -17,9 +17,9 @@
 #define MAX_STR_SIZE 10000
 
 /**
- * Convert from MMT_DPI_DATA_TYPE to MMT_SEC_DATA_TYPE that is either a STRING or a NUMERIC
+ * Convert from MMT_DPI_DATA_TYPE to MMT_SEC_DATA_TYPE that is either a MMT_SEC_MSG_DATA_TYPE_STRING or a MMT_SEC_MSG_DATA_TYPE_NUMERIC
  */
-inline enum data_type convert_data_type( int type ){
+inline int convert_data_type( int type ){
 	switch( type ){
 	case MMT_U8_DATA:
 	case MMT_U16_DATA:
@@ -28,7 +28,7 @@ inline enum data_type convert_data_type( int type ){
 	case MMT_DATA_PORT:
 	case MMT_DATA_CHAR:
 	case MMT_DATA_FLOAT:
-		return NUMERIC;
+		return MMT_SEC_MSG_DATA_TYPE_NUMERIC;
 
 	case MMT_DATA_MAC_ADDR:
 	case MMT_STRING_DATA:
@@ -39,7 +39,7 @@ inline enum data_type convert_data_type( int type ){
 	case MMT_DATA_IP_ADDR:
 	case MMT_DATA_IP6_ADDR:
 	case MMT_STRING_DATA_POINTER:
-		return STRING;
+		return MMT_SEC_MSG_DATA_TYPE_STRING;
 
 	case MMT_DATA_POINTER:
 	case MMT_DATA_PATH:
@@ -55,16 +55,11 @@ inline enum data_type convert_data_type( int type ){
 	case MMT_DATA_FILTER_STATE:
 	case MMT_DATA_PARENT:
 	case MMT_STATS:
-		return VOID;
+		return MMT_SEC_MSG_DATA_TYPE_BINARY;
 	default:
 		return UNKNOWN;
 	}
-	return STRING;
-}
-
-static inline enum data_type _get_attribute_data_type( uint32_t p_id, uint32_t a_id ){
-	long type = get_attribute_data_type( p_id, a_id );
-	return convert_data_type( type );
+	return MMT_SEC_MSG_DATA_TYPE_STRING;
 }
 
 size_t str_trim( uint8_t *string, size_t size ){
@@ -95,7 +90,8 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint16_t ref_index 
 	var->ref_index = ref_index;
 	var->proto_id  = get_protocol_id_by_name( var->proto );
 	var->att_id    = get_attribute_id_by_protocol_id_and_attribute_name( var->proto_id, var->att );
-	var->data_type = _get_attribute_data_type( var->proto_id, var->att_id );
+	var->dpi_type  = get_attribute_data_type( var->proto_id, var->att_id  );
+	var->data_type = convert_data_type( var->dpi_type );
 
 	mmt_assert( var->data_type != UNKNOWN, "Error 2: Data type for %s.%s has not implemented yet.", proto, attr);
 
@@ -194,7 +190,7 @@ void expr_free_an_expression( expression_t *expr, bool free_data){
  * 	+ str_size if the string contains only space
  * 	+ index where the character is not a space
  */
-inline size_t _jump_space( const char *string, size_t str_size ){
+static inline size_t _jump_space( const char *string, size_t str_size ){
 	size_t i=0;
 	if( (string == NULL) || (str_size == 0) )
 			return 0;
@@ -347,14 +343,14 @@ size_t _parse_constant( constant_t **expr, const char *string, size_t str_size )
 	index = _parse_a_number( &number, string, str_size );
 	//found a number
 	if( number != NULL ){
-		*expr = expr_create_a_constant(NUMERIC, sizeof( double), number);
+		*expr = expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), number);
 		return index;
 	}
 
 	//not found any number => find a string
 	index = _parse_a_string( &name, string, str_size );
 	if( name != NULL ){
-		*expr = expr_create_a_constant(STRING, mmt_mem_size( name ), name);
+		*expr = expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_STRING, mmt_mem_size( name ), name);
 		return index;
 	}
 	return index;
@@ -461,7 +457,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		index = _parse_a_string( &new_string, temp, MAX_STR_SIZE );
 
 		new_expr = expr_create_an_expression( CONSTANT,
-				expr_create_a_constant(STRING, mmt_mem_size( new_string ), new_string) );
+				expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_STRING, mmt_mem_size( new_string ), new_string) );
 		new_expr->father = expr;
 
 		//append new_expr to expr->params_list
@@ -471,13 +467,35 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 	} else if (isalpha(*temp) || *temp == '_') {
 		//a variable: PROTO.FIELD.EVENT
 		index = _parse_variable( &new_var, temp, MAX_STR_SIZE );
-		mmt_assert( new_var != NULL, "Error 37c: Illegal variable name: %s", temp );
-		new_expr = expr_create_an_expression( VARIABLE, new_var );
-		new_expr->father = expr;
-		//append new_expr to expr->params_list
-		expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
-		expr->operation->params_size ++;
+
+		//not a variable
+		//=> give one more chance to check constant
+		if( new_var == NULL ){
+			index = _parse_a_name( &new_string, temp, MAX_STR_SIZE );
+			new_number = mmt_mem_alloc( sizeof( double ) );
+			if( strcmp( new_string, "true") == 0 ){
+				*new_number = true;
+			}else if( strcmp( new_string, "false") == 0 ){
+				*new_number = false;
+			}else {
+				mmt_mem_free( new_number );
+				mmt_halt("Error 37c: Illegal name:\"%s\".\nExpected either \"true\", \"false\", or proto.att or proto.att.ref", temp + 1 );
+			}
+			new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
+			new_expr->father = expr;
+			//append new_expr to expr->params_list
+			expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
+			expr->operation->params_size ++;
+		}else{
+			new_expr = expr_create_an_expression( VARIABLE, new_var );
+			new_expr->father = expr;
+			//append new_expr to expr->params_list
+			expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
+			expr->operation->params_size ++;
+		}
+
 		_parse_a_boolean_expression(NO, expr, temp + index);
+
 	} else if (*temp == '#') {
 		//an embedded function: #func(param_1, param_2)
 		temp ++;
@@ -497,7 +515,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		index = _parse_a_number( &new_number, temp, MAX_STR_SIZE );
 		//found a number
 		//create a new expression
-		new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(NUMERIC, sizeof( double), new_number) );
+		new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
 		new_expr->father = expr;
 		//append new_expr to expr->params_list
 		expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
@@ -627,7 +645,7 @@ int parse_expression( expression_t **expr, const char *string, size_t str_size )
  */
 size_t expr_stringify_constant( char **string, const constant_t *expr){
 	char buff[ MAX_STR_SIZE ];
-	size_t size;
+	int size;
 	double d;
 
 	if( expr == NULL ){
@@ -635,18 +653,20 @@ size_t expr_stringify_constant( char **string, const constant_t *expr){
 		return 0;
 	}
 
-	if( expr->data_type == NUMERIC ){
+	if( expr->data_type == MMT_SEC_MSG_DATA_TYPE_NUMERIC ){
 		d = *(double *)expr->data;
 		//integer
-		size = sprintf(buff, "%.2f", d);
+		size = snprintf(buff, sizeof(buff), "%.2f", d);
+		size --; //jump over last '\0';
 		//remove zero at the end, e.g., 10.00 ==> 10
 		while( size > 1 && buff[ size - 1 ] == '0' )
 				size --;
 		if( buff[ size - 1 ] == '.' ) size --;
-	}else if( expr->data_type == STRING )
-		size = snprintf( buff, MAX_STR_SIZE, "\"%s\"", (char *)expr->data );
-	else
-		size = sprintf( buff, "\"__na__\"");
+	}else if( expr->data_type == MMT_SEC_MSG_DATA_TYPE_STRING ){
+		size = snprintf( buff, sizeof(buff), "\"%s\"", (char *)expr->data );
+	}else{
+		size = snprintf( buff, sizeof(buff), "\"__na__\"");
+	}
 
 	*string = mmt_mem_dup( buff, size );
 
@@ -666,40 +686,40 @@ size_t expr_stringify_variable( char **string, const variable_t *var){
 	}
 
 	if( var->ref_index != (uint16_t)UNKNOWN ){
-		size = snprintf(buff, 250, "%s_%s_%d", var->proto, var->att, var->ref_index);
+		size = snprintf(buff, sizeof( buff ), "%s_%s_%d", var->proto, var->att, var->ref_index);
 	}else{
-		size = snprintf(buff, 250, "%s_%s", var->proto, var->att );
+		size = snprintf(buff, sizeof( buff ), "%s_%s", var->proto, var->att );
 	}
 	*string = mmt_mem_dup( buff, size );
 	return size;
 }
 
-inline bool _is_comparison_operator( int op ){
+static inline bool _is_comparison_operator( int op ){
 	return op == NEQ || op == EQ || op == GT || op == GTE || op == LT || op == LTE;
 }
 
-inline bool _is_string_variable( const operation_t *opt ){
+static inline bool _is_string_variable( const operation_t *opt ){
 	link_node_t *ptr;
 	expression_t *expr;
 	ptr = opt->params_list;
 	while( ptr != NULL ){
 		expr = (expression_t *) ptr->data;
-		if( expr->type != VARIABLE || expr->variable->data_type != STRING )
+		if( expr->type != VARIABLE || expr->variable->data_type != MMT_SEC_MSG_DATA_TYPE_STRING )
 			return NO;
 		ptr = ptr->next;
 	}
 	return YES;
 }
 
-inline bool _is_string_param( const operation_t *opt ){
+static inline bool _is_string_param( const operation_t *opt ){
 	link_node_t *ptr;
 	expression_t *expr;
 	ptr = opt->params_list;
 	while( ptr != NULL ){
 		expr = (expression_t *) ptr->data;
-		if( expr->type == VARIABLE && expr->variable->data_type != STRING )
+		if( expr->type == VARIABLE && expr->variable->data_type != MMT_SEC_MSG_DATA_TYPE_STRING )
 			return NO;
-		if( expr->type == CONSTANT && expr->variable->data_type != STRING )
+		if( expr->type == CONSTANT && expr->variable->data_type != MMT_SEC_MSG_DATA_TYPE_STRING )
 			return NO;
 		ptr = ptr->next;
 	}
@@ -716,19 +736,18 @@ size_t expr_stringify_operation( char **string, operation_t *opt ){
 	expression_t *expr;
 
 	char str[ MAX_STR_SIZE ];
-
 	//change comparison of string to function: "a" == "b" ==> 0 == strcmp("a", "b")
 	if( _is_comparison_operator( opt->operator ) && _is_string_param ( opt ) ){
 		//delimiter
 		delim = ",";
-		index += sprintf( &str[ index ], "0 %s %s(", opt->name,
+		index += snprintf( &str[ index ], MAX_STR_SIZE, "0 %s %s(", opt->name,
 				_is_string_variable( opt) ? "mmt_mem_cmp" : "strcmp" );
 	}else if( opt->operator == FUNCTION ){
 		delim = ",";
-		index += sprintf( &str[ index ], "%s(", opt->name );
+		index += snprintf( &str[ index ], MAX_STR_SIZE, "%s(", opt->name );
 	}else{
 		delim = opt->name;
-		index += sprintf( &str[ index ], "(" );
+		index += snprintf( &str[ index ], MAX_STR_SIZE, "(" );
 	}
 
 	//parameters
@@ -738,9 +757,9 @@ size_t expr_stringify_operation( char **string, operation_t *opt ){
 		(void) expr_stringify_expression( &tmp, expr );
 		//the last parameter ==> no need delimiter but a close-bracket
 		if( node->next == NULL ){
-			index += sprintf( &str[ index ], "%s)", tmp);
+			index += snprintf( &str[ index ], MAX_STR_SIZE - index, "%s)", tmp);
 		}else{
-			index += sprintf( &str[ index ], "%s %s ", tmp , delim);
+			index += snprintf( &str[ index ], MAX_STR_SIZE - index, "%s %s ", tmp , delim);
 		}
 		//tmp was created in expr_stringify_expression( &tmp ...
 		mmt_mem_free( tmp );

@@ -1,0 +1,2307 @@
+<!-- MMT_Security Copyright (C) 2014  Montimage: All rules (last update in 2017-05-18 14:17:17.769967)-->
+<beginning>
+<!-- Property 1: Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="3" property_id="1" type_property="ATTACK" 
+    description="Several attempts to connect via ssh (brute force attack). Source address is either infected machine or attacker (no spoofing is possible).">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="100">
+      <event value="COMPUTE" event_id="1" 
+             description="SYN request"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;(ip.src != ip.dst)))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="SYN ACK reply"
+             boolean_expression="((tcp.flags == 18)&amp;&amp;((tcp.src_port == 22)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;(ip.src == ip.dst.1))))"/>
+    </operator>
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="2">
+      <event value="COMPUTE" event_id="3" 
+             description="2nd attempt"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))))"/>
+      <event value="COMPUTE" event_id="4" 
+             description="3rd attempt"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))))"/>
+    </operator>
+</property>
+<!-- Property 2: Attempted to connect via ssh but reseted immediately. Source address is spoofed, infected machine or attacker.-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="2" type_property="ATTACK" 
+    description="Attempted to connect via ssh but reseted immediately. Source address is either infected machine or attacker (no spoofing is possible).">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
+      <event value="COMPUTE" event_id="1" 
+             description="SYN request"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.dest_port == 22))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="SYN ACK reply"
+             boolean_expression="((tcp.flags == 18)&amp;&amp;((tcp.src_port == 22)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;(ip.src == ip.dst.1))))"/>
+    </operator>
+    <event value="COMPUTE" event_id="3" 
+           description="RST reset"
+           boolean_expression="((tcp.flags == 4)&amp;&amp;((tcp.dest_port == 22)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
+</property>
+<!-- Property 3: Several TCP SYN requests without SYN ACK. Source address is spoofed, infected machine or attacker. Note: done on port 445.-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="3" type_property="SECURITY" 
+    description="TCP SYN requests on microsoft-ds port 445 without SYN ACK.">
+    <event value="COMPUTE" event_id="1"
+           description="SYN request"
+           boolean_expression="((tcp.flags == 2)&amp;&amp;((tcp.dest_port == 445)&amp;&amp;(ip.src != ip.dst)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="SYN ACK reply"
+           boolean_expression="((tcp.flags == 18)&amp;&amp;((ip.src == ip.dst.1)&amp;&amp;(ip.dst == ip.src.1)))"/>
+</property>
+<!-- Property 4: One ARP request receives two replies with different MAC addresses.
+-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="4" property_id="4" type_property="ATTACK" 
+          description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="4">
+      <event value="COMPUTE" event_id="1" 
+             description="An arp who was requested"
+             boolean_expression="((arp.ar_op == 1) &amp;&amp; (ethernet.src != ethernet.dst))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="An arp reply with MAC address"
+             boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1)) &amp;&amp; (ethernet.packet_count &gt; 1))"/>
+    </operator>
+    <event value="COMPUTE" event_id="3" 
+           description="An arp reply but with different MAC address"
+           boolean_expression="((((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_tip.1))&amp;&amp;(arp.ar_sha != arp.ar_sha.2)) &amp;&amp; (ethernet.packet_count != 0))"/>
+</property>
+<!-- Property 5: Two ARP replies that should provide the same MAC address are different. This rule is simpler than Property 1 
+                 above and detects the same potential attacks without generating a message for each combination of request-reply.
+-->
+
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="4" property_id="5" type_property="ATTACK" 
+          description="IPv4 address conflict detection (RFC5227). Possible arp poisoning.">
+      <event value="COMPUTE" event_id="1" 
+             description="An arp reply with MAC address"
+             boolean_expression="(arp.ar_op == 2)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="An arp reply but with different MAC address"
+           boolean_expression="(((arp.ar_op == 2)&amp;&amp;(arp.ar_sip == arp.ar_sip.1))&amp;&amp;(arp.ar_sha != arp.ar_sha.1))"/>
+</property>
+<!-- Property 6: 4_Analyse_03b : TCP SYN scan to detect SYNFUL compromise) (|ack - seq| == 0xC123D ou 791101). -->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="100" property_id="6" type_property="EVASION" 
+    description="SYN and ACK packets with a 0xC123D delta between TCP sequence numbers (scan done by SYNFUL attack).">
+    <event value="COMPUTE" event_id="1"
+           description="TCP SYN"
+           boolean_expression="(tcp.flags == 2)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="TCP ACK"
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((ip.src == ip.dst.1)&amp;&amp;(((tcp.ack_nb - tcp.seq_nb.1) == 791101)||((tcp.seq_nb.1 - tcp.ack_nb) == 791101)))))"/>
+</property>
+<!-- Property 7: TCP RST is invalid if there is no corresponding TCP ACK (tcp.flags == 16) before belonging to the same session containing correct seq_nb and ack_nb .-->
+<property value="BEFORE" delay_units="s" delay_min="0+" delay_max="1" property_id="7" type_property="ATTACK" 
+    description="R4_Decod_1a : TCP RST is invalid: there is no corresponding TCP ACK before belonging to the same session containing correct seq_nb and ack_nb.">
+    <event value="COMPUTE" event_id="1"
+           description="Context: TCP RST"
+           boolean_expression="((tcp.rst == 1)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;((tcp.ack_nb.2 != tcp.seq_nb)&amp;&amp;((ip.src.2 == ip.dst)&amp;&amp;(ip.dst.2 == ip.src)))))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: the last TCP ACK packets have different seg_nb and ack_nb"
+           boolean_expression="((tcp.flags == 16)&amp;&amp;((tcp.ack_nb == tcp.ack_nb)&amp;&amp;((tcp.seq_nb == tcp.seq_nb)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+<!-- Property 8: The field Options must be homogeneous in every IP fragments
+-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="100" property_id="8" type_property="EVASION" 
+    description="The IP options field must be homogeneous in all IP fragments.">
+    <event value="COMPUTE" event_id="1" 
+           description="IP segment"
+           boolean_expression="(ip.ip_frag_packets_count &gt; 0)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Other IP segment with different ip.options"
+           boolean_expression="((ip.ip_frag_packets_count == ip.ip_frag_packets_count.1 +1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.options != ip.options.1))))"/>
+</property>
+<!-- Property 9: C4_Analyse_03h : The minimum size of an IP fragment is 28 bytes and for an IP fragment with offset 0 it is 40.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="9" type_property="EVASION" 
+    description="The minimum size of an IP fragment is 28 bytes and for an IP fragment with offset 0 it is 40.">
+    <event value="COMPUTE" event_id="1" 
+           description="IP segment and packet size"
+           boolean_expression="((ip.mf_flag &gt; 0)&amp;&amp;((ip.tot_len &lt; 28)||((ip.frag_offset == 0)&amp;&amp;(ip.tot_len &lt; 40))))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="IP segment"
+           boolean_expression="(1)"/>
+</property>
+<!-- Property 10: HTTP using a port different from 80 and 8080.-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="10" type_property="EVASION" 
+    description="HTTP using a port different from 80 and 8080.">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet using a port different from 80 and 8080"
+           boolean_expression="((http.method != '')&amp;&amp;((tcp.dest_port != 80)&amp;&amp;(tcp.dest_port != 8080)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<!-- Property 11: La taille d un IP incorrect (tronque).-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="11" type_property="EVASION" 
+    description="IP packet size incorrect">
+    <event value="COMPUTE" event_id="1" 
+           description="Packet size incorrect"
+           boolean_expression="((meta.packet_len &lt; 34)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Ethernet packet"
+           boolean_expression="(ethernet.proto == ethernet.proto)"/>
+</property>
+<!-- Property 12: C4_Analyse_03c|d|e : HTTP packet URI contains non authorized characters according to RFC2396 and RFC2234 or possibly directory traversal attack.-->
+<!-- URI invalid character set:
+     octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="12" type_property="EVASION" 
+    description="HTTP packet URI contains non authorized characters according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#em_check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(1)"/>
+</property>
+<!-- Property 13: C4_Analyse_3b : Data in SYN packet.-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="13" type_property="EVASION" 
+    description="Data in SYN packet.">
+      <event value="COMPUTE" event_id="1" 
+             description="SYN request with data"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;(tcp.payload_len &gt; 0))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP addresses"
+             boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<!-- Property 14: C4_Analyse_3f bis: Unauthorized port number.-->
+<!--              according to: 
+                       https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+                  and
+                       https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="14" type_property="EVASION" 
+    description="C4_Analyse_3f bis: Unauthorized port number.">
+      <event value="COMPUTE" event_id="1" 
+             description="TCP packet with non-authorized port number."
+             boolean_expression="(((tcp.dest_port == tcp.dest_port)&amp;&amp;(tcp.src_port == tcp.src_port))&amp;&amp;((#em_check_port(tcp.dest_port) == 1)||(#em_check_port(tcp.src_port) == 1)))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="TCP packet"
+             boolean_expression="((tcp.dest_port == tcp.dest_port)&amp;&amp;(tcp.src_port == tcp.src_port))"/>
+</property>
+<!-- Property 15: Web scan with Nikto. User-Agent based detection-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="15" type_property="ATTACK" 
+     description="Nikto detection" >
+   <event event_id="1" value="COMPUTE" 
+           description="Context: an user agent in the HTTP header"
+           boolean_expression="((http.method != '') &amp;&amp; (http.user_agent != ''))"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Trigger: Nikto detected. "
+           boolean_expression="(#strstr(http.user_agent, 'Nikto') != 0)"/>
+ </property>
+<!-- Property 16: Two successive TCP SYN requests but with different destination addresses.-->
+
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="200" property_id="16" type_property="ATTACK" 
+    description="Two successive TCP SYN requests but with different destination addresses.">
+    <event value="COMPUTE" event_id="1" 
+           description="SYN request"
+           boolean_expression="(tcp.flags == 2)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="SYN request"
+           boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.dst != ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+</property>
+<!-- Property 17: C4_Decod_01 : SMTP detection.-->
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="17" type_property="ATTACK" 
+    description="SMTP detected">
+   <event value="COMPUTE" event_id="1" 
+           description="SMTP packet"
+           boolean_expression="(smtp.packet_count &gt; 0)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="IP addresses"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<!-- Property 18: C4_Analyse_03l : Invalid GRE version detection.-->
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="18" type_property="ATTACK" 
+    description="Invalid GRE version detected">
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Gre protocol"
+           boolean_expression="(gre.proto &gt; 0)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: Invalid GRE version"
+           boolean_expression="(1)"/>
+</property>
+<!-- Property: SQL Injection detection.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="19" type_property="ATTACK" 
+    description="SQL Injection detected"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a TCP packet (it can be regrouped from IP segments)"
+           boolean_expression="(tcp.payload_len &gt; 0)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: SQL Injection in the payload"
+           boolean_expression="(#em_check_sql_injection(tcp.p_payload) == 1)"/>
+</property>
+<!-- Property 20: C4_Analyse_04i: ICMP redirect flood detection-->
+<!-- Depending on OS implementation, these host based routes can have the characteristic of being short lived.  
+Solaris implements aggressive aging where redirects will only last for a specified amount of time.  
+Each redirect is given a short lifetime value and will be automatically removed from the routing table when the timer expires.   
+This is to ensure that redirects do not remain the routing table indefinitely at the risk of further sub optimal routing.  
+In BSD networking code, redirects will be removed if they are being used by TCP and only after the fourth consecutive retransmission attempt.  
+Routed and Gated perform similar forms of redirect expiration.  
+Since ICMP redirects are dynamic and may not reflect the most current topology 
+it is nice to have an automated method of redirect expiration.
+-->
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="6" property_id="20" type_property="ATTACK" 
+    description="4 consecutive ICMP redirect packets. Possibly ICMP redirect flood."
+    >
+   <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+   <event value="COMPUTE" event_id="1" 
+           description="Context: ICMP redirect"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst)&amp;&amp;(ip.src == ip.src)))"/>
+   <event value="COMPUTE" event_id="2" 
+           description="Trigger: 2nd consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+   </operator>
+   <operator value="THEN" delay_units="s" delay_min="0+" delay_max="3">
+   <event value="COMPUTE" event_id="3" 
+           description="Trigger: 3rd consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+   <event value="COMPUTE" event_id="4" 
+           description="Trigger: 4th consecutive ICMP redirect packet"
+           boolean_expression="((icmp.type == 5)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+   </operator>
+</property>
+<!-- Property 21: IP fragmentation : fragments with offset always = 0 (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="100" property_id="21" type_property="EVASION" 
+    description="IP fragmentation : fragments with offset always = 0 (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment with offset = 0 followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and an offset = 0"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset == 0)&amp;&amp;(ip.src != ip.dst)))"/>
+</property>
+<!-- Property 22: IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="22" type_property="EVASION" 
+    description="IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and an offset less than 9 bytes"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset - ip.frag_offset.1) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+<!-- Property 23: Out of order IP fragmentation.-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="23" type_property="EVASION" 
+    description="Out of order IP fragmentation : a fragment with a size less than 9 bytes (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and an offset less than 9 bytes"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset.1 - ip.frag_offset) &lt; 9)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+<!-- Property 24: Overlapping IP fragmentation : difference in offset of concomitant fragments < fragment length (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="24" type_property="EVASION" 
+    description="Overlapping IP fragmentation : difference in offset of concomitant fragments less than fragment length (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and differences in offsets less than length"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &gt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset - ip.frag_offset.1) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+<!-- Property 25: Overlapping unordered IP fragmentation : difference in offset of concomitant fragments < fragment length (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="25" type_property="EVASION" 
+    description="Overlapping unordered IP fragmentation : difference in offset of concomitant fragments less than fragment length (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and differences in offsets less than length"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset.1 - ip.frag_offset) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+<!-- Property 26: Probable IP protocol scan (4 different attempts in a row on different protocols).
+-->
+
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="20" property_id="26" type_property="ATTACK" 
+    description="Probable IP protocol scan (4 different attempts in a row on different protocols)."
+    >
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="1" 
+          description="IP packet header with the eight-bit IP protocol field set (1)"
+             boolean_expression="((ip.proto_id != 0)&amp;&amp;(ip.src != ip.dst))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP packet header with another eight-bit IP protocol field set (2)"
+             boolean_expression="((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))"/>
+    </operator>
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="3" 
+             description="IP packet header with another eight-bit IP protocol field set (3)"
+             boolean_expression="((ip.proto_id != ip.proto_id.2)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
+      <event value="COMPUTE" event_id="4" 
+             description="IP packet header with another eight-bit IP protocol field set (4)"
+             boolean_expression="((ip.proto_id != ip.proto_id.3)&amp;&amp;((ip.proto_id != ip.proto_id.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
+    </operator>
+</property>
+<!-- Property 27: Probable UDP protocol scan (4 different attempts in a row on different ports).
+-->
+
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="27" type_property="ATTACK" 
+    description="Probable UDP protocol scan (4 different attempts in a row on different ports)."
+    >
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="1" 
+             description="UDP packet header with a destination port field set (1)"
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != 0)&amp;&amp;(ip.src != ip.dst)))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="UDP packet header with another destination port field set (2)"
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1))))"/>
+    </operator>
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="3" 
+             description="UDP packet header with another destination port field set (3)"
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.2)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
+      <event value="COMPUTE" event_id="4"
+             description="UDP packet header with another destination port field set (4)"
+             boolean_expression="((ip.proto_id == 17)&amp;&amp;((udp.dest_port != udp.dest_port.3)&amp;&amp;((udp.dest_port != udp.dest_port.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.src == ip.src.1)))))"/>
+    </operator>
+</property>
+<!-- Property 28: XMAS s00can : TCP with all flags FIN, URG, PSH active.-->
+    <property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="28" type_property="ATTACK"
+         description="XMAS scan : TCP with all flags FIN, URG, PSH active.">
+    <event value="COMPUTE" event_id="1"
+         description="TCP packet with flag FIN active"
+         boolean_expression="(tcp.urg == 1)"/>
+    <event value="COMPUTE" event_id="2"
+         description="TCP packet with flags URG and PSH active"
+         boolean_expression="((tcp.fin == 1)&amp;&amp;(tcp.psh == 1))"/>
+    </property>
+<!-- Property 29: Evasion based on HTTP version 0.9 detection-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="500" property_id="29" type_property="SECURITY" 
+    description="There must be HTTP response after HTTP GET. Otherwise, there could be an evasion based on HTTP version 0.9 ((HTTP response with no header) )">
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a HTTP GET packet"
+           boolean_expression="(http.method == 'GET')"/>
+   <event value="COMPUTE" event_id="2" 
+           description="Trigger: There must be a HTTP response after that"
+		   boolean_expression="((ip.src == ip.dst.1)&amp;&amp;((ip.dst == ip.src.1)&amp;&amp;((http.packet_count == (http.packet_count.1 +1))&amp;&amp;(http.response==http.response))))"/>
+</property>
+<!-- Property 30: Simple multi-session property. Detection of NFS synchronization and then upload -->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="20" property_id="30" type_property="ATTACK" 
+	description="NFS synchronization and then upload">
+    <event value="COMPUTE" event_id="1" 
+           description="NFS synchronization"
+           boolean_expression="(nfs.file_name != '')"/> 
+    <event value="COMPUTE" event_id="2" 
+           description="Upload the same file"
+           boolean_expression="((http.packet_count != 0)&amp;&amp;(#strstr(tcp.p_payload, nfs.file_name.1) != 0))"/>
+</property>
+<!-- Property 31: Simple multi-session property. Detection of NFS synchronization and then upload (based on two probes) -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="31" type_property="ATTACK" 
+    description="Upload a file coming from NFS server (detection based on two probes)">
+    <event value="COMPUTE" event_id="1" 
+           description="Context: HTTP packet"
+           boolean_expression="((ip.src == ip.server_addr) &amp;&amp; ((http.packet_count != 0) &amp;&amp; (tcp.payload_len != 0)))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: HTTP payload contains the file coming from NFS server"
+           boolean_expression="(#em_check_nfs_redis(tcp.p_payload) == 1)"/>
+</property>
+<!-- Property 32: Botnet Command and Control detection based on blacklisted IP addresses. 
+This rule replaces 299 Suricata rules and covers 12835 blacklisted IP addr. 
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="32" type_property="ATTACK" 
+    description="Botnet Command and Control detection"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="IP source or IP destination is a bot"
+           boolean_expression="(#em_check_botnetcc(ip.src, ip.dst) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="IP packet"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+<!-- Property 33: TROJAN detection based on the hash table of 978 blacklisted http_uri (978 rules)
+(Ref: Suricata rules emerging-trojan.rules). 
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="33" type_property="ATTACK" 
+    description="Trojan detection">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI"
+           boolean_expression="(#em_check_trojan_uri(http.uri) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+<!-- Property 34: Detection of DoS attack based on HTTP User-Agent field.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="34" type_property="ATTACK" 
+    description="Detection of DoS attack based on HTTP User-Agent field">
+    <event value="COMPUTE" event_id="1" 
+           description="Too long HTTP User-Agent string. Possibly DoS attack."
+           boolean_expression="(#strlen(http.user_agent) > 256)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+<!-- Property 35: SQL Injection detection in HTTP User-Agent strings.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="35" type_property="ATTACK" 
+    description="SQL Injection detection in HTTP User-Agent strings">
+    <event value="COMPUTE" event_id="1" 
+           description="SQL syntax found in HTTP User-Agent string"
+           boolean_expression="(#em_check_sql_injection_ua(http.user_agent) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+<!-- Property 36: Detection of robot, crawler, spider, spam and bad bot based on blacklisted User-Agent strings (hash-table). 
+528 signatures from the source: http://www.user-agents.org/ 
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="36" type_property="ATTACK" 
+    description="Detection of robot, crawler, spider, spam and bad bot based on blacklisted User-Agent strings (hash-table)">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP User-Agent string representing robot, crawler, spider, spam and bad bot"
+           boolean_expression="(#em_check_malicious_UA(http.user_agent) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+<!-- Property 37: Detection of robot, crawler, spider, spam and bad bot based on blacklisted User-Agent strings (SQLite approach). 
+528 signatures from the source: http://www.user-agents.org/ -->
+<!-- Attention: Compile this rule with -lsqlite3 option. E.g., ./compile_rule rules/rule.so test/properties_all/37.robot.user_agent.xml -lsqlite3  -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="37" type_property="ATTACK" 
+    description="Detection of robot, crawler, spider, spam and bad bot based on blacklisted User-Agent strings (hash-table)">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP User-Agent string representing robot, crawler, spider, spam and bad bot"
+           boolean_expression="(#em_check_malicious_UA_sqlite(http.user_agent) == 1)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP GET"
+           boolean_expression="(http.method == 'GET')"/> 
+</property>
+<!-- Property 38: Detection of WannaCry Ransomware-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="2" property_id="38" type_property="ATTACK" 
+    description="Detection of WannaCry Ransomware">
+    <event value="COMPUTE" event_id="1" 
+           description="SMB packet"
+           boolean_expression="((smb.packet_count != 0)&amp;&amp;(ip.src != ip.dst))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="SMB client/server intend connecting WannaCry host"
+           boolean_expression="((ip.src == ip.dst.1)&amp;&amp;(#em_check_WannaCry(http.host) == 1))"/> 
+</property>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <inttypes.h>
+#include "types_defs.h"
+#include "hiredis/hiredis.h"
+#include <sys/time.h>
+#include "hash_table_str.h"
+#include <sqlite3.h> 
+#include "hash_table_ipadd.h"
+#include <arpa/inet.h>
+static inline int em_check_URI(const char *uri_str){
+  int handle = 0;
+  if(uri_str == NULL){
+    return 2;
+  }
+ 
+  const char *x = uri_str;
+  
+  //fprintf(stderr, "%s\n",x);
+  while (*x != '\0'){
+      //octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+      if(*x < 32 || *x == 92 || *x == '"' || *x == '<' || *x == '>' || *x == '[' || *x == ']' || *x == '^' || *x == '`' || *x == '{' || 
+         *x == '|' || *x == '}' || *x == '%' || *x > 126) {
+              handle = 1;
+              break;
+      }
+      x = x+1;
+  }
+  //detect directory traversal attack
+  char *s0, *s1, *s2, *s3;
+  s0 = strstr(uri_str, ".."); //find the first occurrence of string ".." in string
+  s1 = strstr(uri_str, "./"); //find the first occurrence of string "./" in string
+  s2 = strstr(uri_str, "//"); //find the first occurrence of string "//" in string
+  s3 = strstr(uri_str, "/."); //find the first occurrence of string "//" in string
+  
+  if ((s0 !=NULL) || (s1 !=NULL) || (s2 !=NULL) || (s3 !=NULL))  
+   handle = 1;
+   
+//#ifdef DEBUG
+//  fprintf(stderr, "executing check_URI with parameters:h=%d:nb=%u:a1=%o:a2=%o\n", 
+//                                           handle, *(char*)(BLOC3+6),*(char*)(BLOC3+9));
+//#endif
+  return handle;
+}
+static inline int em_check_nfs_redis(const char *p_payload){	
+  redisContext *c, *command;
+  redisReply *reply;
+  
+  const char *hostname = "127.0.0.1";
+  int port = 6379;
+  
+  struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+  c = redisConnectWithTimeout(hostname, port, timeout);
+  if (c == NULL || c->err) {
+        if (c) {
+            printf("Connection error: %s\n", c->errstr);
+            redisFree(c);
+        } else {
+            printf("Connection error: Impossible to allocate redis context\n");
+        }
+        exit(0);
+    }
+  
+    /* Let's check what we have inside the list */
+    reply = redisCommand(c,"LRANGE multisession.report 0 -1");
+    if (reply->type == REDIS_REPLY_ARRAY) {
+ 		int j=0;
+        for (j = 0; j < reply->elements; j++) {
+			char probe_report[256];
+            char *token;
+            strcpy(probe_report, reply->element[j]->str);
+            token = strtok(reply->element[j]->str, ",");
+            int i = 0;
+			while (token != NULL) {
+				if (i==1) {
+					//check the validity of the report
+					struct timeval now;
+					gettimeofday(&now, NULL);
+					double element_ts = atof(token);
+					if (now.tv_sec - element_ts > 300) {
+							redisCommand(c,"LREM multisession.report 1 %s", probe_report);//Delete the out-dated report
+							i++;
+							break;
+							}
+					}
+				if (i==2){
+					if (token[0] == ' '){
+					break;
+					}
+					if (strstr(p_payload, token) != NULL){
+					redisFree(c);
+					return 1;
+					}        
+					}
+				token = strtok(NULL, ",");
+				i++;
+				}
+        }
+    }
+  redisFree(c);
+  return 0;
+}
+static inline int em_check_trojan_uri(const char * uri){
+   	int handle = 0;
+	if(search_hash_str(Str2DataItem(uri)->key) != NULL) handle = 1;  
+	return handle;
+  }
+
+ 
+static inline int em_check_nfs_upload(const char * file_name, const char *p_payload){
+   //printf("Enter the em\n");
+   //find the first occurrence of file_name in p_payload
+   return (strstr(p_payload, file_name) != NULL);   
+  }  
+static inline int em_check_malicious_UA_sqlite(const char * UA){
+   	int handle = 0;
+   	sqlite3 *db;
+        char *zErrMsg = 0;
+        int rc;
+        char *sql = malloc(sizeof(char) * (strlen(UA) + 64));
+        const char* data = "Callback function called";
+   
+    int callback(void *data, int argc, char **argv, char **azColName){
+  	if (argc > 0) handle = 1;
+	return handle;
+	}
+    
+    rc = sqlite3_open("test/hoa/db_blacklisted_UA.sqlite", &db);
+    if( rc ){
+      	fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+      	return 2;
+      	}
+  	
+    /* Create SQL statement */
+    sprintf(sql, "SELECT * FROM blacklisted_UA WHERE UA = \"%s\"", UA);
+    rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+    if( rc != SQLITE_OK ){
+    	fprintf(stderr, "SQL error: %s\n", zErrMsg);
+      	sqlite3_free(zErrMsg);
+   	}
+   sqlite3_close(db);
+   free(sql);
+   return handle;
+  }
+static inline int em_check_sql_injection_ua(const char *str){
+   int handle = 0;
+   if (str==NULL) return 2;
+   
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+
+   char *s1, *s2, *s3, *s4, *s5, *s6, *s7, *s8, *s9;
+   s1 = strstr(str, "DROP");  //find the first occurrence of string "DROP" in string
+   s2 = strstr(str, "UNION"); //find the first occurrence of string "UNION" in string
+   s3 = strstr(str, "SELECT"); //find the first occurrence of string "SELECT" in string
+   s4 = strstr(str, "CHAR"); //find the first occurrence of string "CHAR" in string  
+   s5 = strstr(str, "DELETE"); //find the first occurrence of string "CHAR" in string
+   s6 = strstr(str, "INSERT"); //find the first occurrence of string "CHAR" in string
+   s7 = strchr(str, '\'');    //find the first occurrence of character "'" in string
+   s8 = strchr(str, '\"');    //find the first occurrence of character """ in string
+   s9 = strstr(str, "--");    //find the first occurrence of string "--" in string
+     
+   if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL) || (s7 !=NULL) || (s8 !=NULL) || (s9 !=NULL)) {
+      handle = 1;   
+   }
+  return handle;
+}
+static inline int em_check_sql_injection(const char *str){
+   int handle = 0;
+   if (str==NULL) return 2;
+   
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+
+   char *s1, *s2, *s3, *s4, *s5, *s6;
+   s1 = strstr(str, "DROP");  //find the first occurrence of string "DROP" in string
+   s2 = strstr(str, "UNION"); //find the first occurrence of string "UNION" in string
+   s3 = strstr(str, "SELECT"); //find the first occurrence of string "SELECT" in string
+   s4 = strstr(str, "CHAR"); //find the first occurrence of string "CHAR" in string  
+   s5 = strstr(str, "DELETE"); //find the first occurrence of string "CHAR" in string
+   s6 = strstr(str, "INSERT"); //find the first occurrence of string "CHAR" in string
+     
+   if ((s1 !=NULL)  || (s2 !=NULL)   || (s3 !=NULL) || (s4 !=NULL) || (s5 !=NULL) || (s6 !=NULL))  {
+      //printf ("SQL injection detected\n");
+      handle = 1;   
+   }
+  return handle;
+}
+static inline int em_check_port(int i){
+  
+  //printf("Port:%d\n", i);
+  //according to: 
+  //https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+  //and
+  //https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt
+
+  if(i<1023) return 0;
+  if(i>49151 && i< 65536) return 0;
+  if(i>65535) return 1;
+
+  if(i>2193 && i<2197) return 1;
+  if(i>4488 && i<4500) return 1;
+  if(i>4953 && i<4969) return 1;
+  if(i>5569 && i<5573) return 1;
+  if(i>5646 && i<5670) return 1;
+  if(i>6657 && i<6665) return 1;
+  if(i>7491 && i<7500) return 1;
+  if(i>7784 && i<7790) return 1;
+  if(i>27999 && i<28119) return 1;
+  if(i>5554 && i<5558) return 1;
+  if(i>5999 && i<6064) return 1;
+  if(i>8615 && i<8665) return 1;
+  if(i>8801 && i<8804) return 1;
+  if(i>8887 && i<8891) return 1;
+  if(i>11430 && i<11489) return 1;
+  if(i>11623 && i<11720) return 1;
+  if(i>27009 && i<27345) return 1;
+  if(i>41797 && i<42508) return 1;
+  if(i>44444 && i<44544) return 1;
+  switch (i) {
+    case 78:
+    case 79:
+    case 100:
+    case 106:
+    case 787:
+    case 1053:
+    case 1491:
+    case 2662:
+    case 3060:
+    case 3131:
+    case 3145:
+    case 3300:
+    case 3301:
+    case 4045:
+    case 4315:
+    case 4443:
+    case 4967:
+    case 5151:
+    case 5152:
+    case 5162:
+    case 5444:
+    case 5555:
+    case 5556:
+    case 6100:
+    case 6200:
+    case 6501:
+    case 8882:
+    case 9001:
+    case 6632:
+    case 7001:
+    case 7002:
+    case 7005:
+    case 7011:
+    case 7012:
+    case 7501:
+    case 7777:
+    case 8001:
+    case 16000:
+    case 49151:
+      return 1;
+    default:
+      return 0;
+  }
+  return 0;
+}
+static inline int em_check_malicious_UA(const char * UA){
+   	int handle = 0;
+   	if(search_hash_str(Str2DataItem(UA)->key) != NULL) handle = 1;  
+	return handle;
+  }
+  
+static inline int em_check_botnetcc(const char *ipsrc, const char *ipdst){
+	int handle = 0;
+	
+	char ip_src[16], ip_dst[16];
+	if (inet_ntop(AF_INET,ipsrc,ip_src,sizeof(ip_src)) == 0) printf("Failed to convert address to string\n");
+	if (inet_ntop(AF_INET,ipdst,ip_dst,sizeof(ip_dst)) == 0) printf("Failed to convert address to string\n");
+   
+   //Look up in hash tables
+	if((search_hash_ip(ipStr2DataItem(ip_src)->key) != NULL) || (search_hash_ip(ipStr2DataItem(ip_dst)->key) != NULL)) handle = 1;
+    return handle;
+}
+static inline int em_check_WannaCry(const char * str){
+   	int handle = 0;
+   	if(strstr(str, "iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com") != NULL) handle = 1;
+   	if(strstr(str, "ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com") != NULL) handle = 1;
+   	if(strstr(str, "ayylmaotjhsstasdfasdfasdfasdfasdfasdfasdf.com") != NULL) handle = 1;
+   	if(strstr(str, "iuqssfsodp9ifjaposdfjhgosurijfaewrwergwea.com") != NULL) handle = 1;
+   	if(strstr(str, "iuqerfsodp9ifjaposdfjhgosurijfaewrwergweb.com") != NULL) handle = 1;  
+	return handle;
+  }
+
+ void on_load(){
+const char *list_trojan_uri[] = {
+"/download/Antivirus_.exe",
+"/install/ws.exe",
+"/codec.exe",
+"/pcdef.exe",
+"/crack..exe",
+"/InternetAntivirus.exe",
+"/AntivirusPlus.exe",
+"/installer..exe",
+"download/install.php",
+"?mail=subject=Keylogger&body=",
+"/newuser.php?saff=",
+"/client_update_urls.php",
+"&OT=&IV=",
+"/?action=&pc_id=&abbr=&a=&l=",
+"nick=&group=&os=",
+"?type=scanner&pin=&lnd=",
+"/forum.php",
+"b=&idf=&v=&o=",
+"cbID=cbVer=",
+".php?affid=subid=guid=ver=key=",
+"/add.php",
+".php",
+"/ctrl/cnt_boot.php?pgv=",
+".php?PC=&Data=&Mac=",
+"/envio.php?",
+"appdata=computador=",
+"/keylogf.jpg",
+"guid=",
+".php?action=",
+"&version2=",
+".dll",
+"&ie=",
+"/envia.php",
+"mac=sys=yp=rand=",
+"=&SCRNSZ&BRSRSZ=&TIMEZONE=",
+"?type=slg&id=",
+"/ff.ie?rnd=",
+"/getcfg.php",
+"/u/",
+"?wmid=&l=&it=&s=",
+"&first=&rnd=",
+"&entity=",
+"v=&s=&uid=&p=",
+"&d=",
+"?ddos=x",
+"&r=",
+"&from=",
+"/search?q=",
+"/search?q=&aq=",
+"/kernel/zz.htm?Ver=",
+"/index.php",
+".php?tma=&mode=",
+".php?l&rvz1=&rvz2=",
+"/stat.php",
+"&id=",
+"/x/?0",
+"/mdfexcute/",
+"&MAC=",
+"&=w",
+"&botstatus=",
+"&rnd=",
+"/getnumtemp.asp?nip=0",
+".php?c=&v=&b=&id=&cnt=&q=",
+".php?mode=&PartID=&mac=",
+"/dialer_min/getnum.asp?nip",
+"/exit.php?if=",
+"&extlogin=",
+"/tx.txt",
+"/down/down/?s=&t=&v=",
+"/rpt",
+"m=&a=&r=&os=00000",
+"?id=&e=&err=&c=",
+".php?p=&s=",
+"mac=key=ver=",
+"cht=",
+"/tlog.php?logn=",
+"/ntarg.php?",
+"/tnewu.php?nlogin=",
+"&veri=",
+"?spl=&br=&vers=&s=",
+".php?spl=",
+"&affid=",
+"/getmac.asp?x=&y=",
+"/automation/n09230945.asp",
+".asp?type=&machinename=",
+".php?p4=&p5=&hs=",
+".php?cmd=getFile&counter=",
+"magic=&id=&cache=&tm=&ox=",
+"/common/MSCommonInfoEx.php",
+"in.php?affid=&url=&win=&sts=",
+"os=&user=&status=&uptime=&cmd=",
+"/test.php?abc=?def=",
+".php?param=&socks=",
+".php?codec=",
+"/reg|3f|u=|26|v=",
+"/eH",
+"/oH",
+"&r=http",
+".asp",
+"&id=&up=&mid=",
+"&nickname=",
+".php?win=&id=&lip=",
+"?getexe=.exe",
+"mode=boot&MyValue=&code=",
+"name=",
+"&fxp=",
+"c=&wv=&wd=&ie=",
+"kgen_up.intfxp=",
+"/9kgen_up.int",
+"/NewsFolder/News00.ASP?id=",
+"/ack.php?version=&uid=&status=",
+"/update.asp",
+"/cgi/x640<x",
+".php?4x4x4x4x4x6x",
+"/gate/.php",
+"/gate.php?hash=",
+".php?id=",
+".php?2=&n=&v=&i=&sp=&lcp=",
+".php?1=&i=",
+"&e=",
+"/?bot_id=0&mode=1",
+"?m=&a=&os=&ComPut=",
+"__utm.gif?",
+"/prinimalka.py",
+"/trash.py",
+"/LoginFacebook.php",
+"pdfopen.pdf",
+"pdfswf.pdf",
+"libtiff.pdf",
+"/cd/cd.php?id=&ver=",
+"/cd/un2.php?id=&ver=",
+"/cd/un.php?id=&ver=",
+"log.php?mac=&ver=&ie=&win=",
+"ind.php?p=&uid=",
+"m=&a=&os=",
+"start=&Edition=",
+"?mod=cmd&user=",
+"getowner=1&uniqueid=",
+"/ld/.phpid=&n=&try=",
+"?n=&id=&t=&i=",
+"/snatch/module",
+".php?&v=&s=&cip=&lid=",
+"/?&v=&s=&cip=&lid=",
+"&ns=&id=",
+"/manda.php?",
+"bl=&cuid=&cnid=&luid=&rnd=",
+"/cs/bux/check.php",
+"Srv.SSA-KeyLogger",
+"/nomodem.phpif=&am=&cl={&id=",
+"/t/d2hsdWF3OzJ0OHY5Oj0,cyJtI",
+".php?adv=adv",
+"/track.cgi",
+"AID=",
+".php?&mode=&id=&output=&time=",
+".asp?username=&serverMac=",
+".php?U=@",
+"?sid=",
+"abbr=",
+".asp?mac=&ver=",
+".asp?mac=&rw=&ver=",
+"/lgate.php?n=",
+"?cuid=&suid=&affid=",
+"/frame.html?",
+"/dwn/d.html?sid=",
+"/getgewinnspiel.php?uid=",
+"/postgewinnspiel.phpuid=",
+"/cgi-bin/pr.cgi",
+"/e/",
+".cgi",
+"/log/proc.php?key=",
+"/ClientReg.aspx?mac=&Type=&Sn=",
+"/ClientTask.aspx?mac=&Type=&Sn=",
+"/MicroinstallServiceReport.php",
+"/image/logo.jpg?queryid=",
+"btn=q=",
+"/loads.php?r=",
+"&o=",
+".bin",
+".phpm=&ydf=&e=&w=&t=&apz=",
+".php?wmid=",
+"/nte/",
+"v=&step=&hostid=",
+"/getfile.php?r=&p=",
+".com.exe",
+".exe",
+"?id=&co=&us=&os=&vr=&dt=",
+"/search&kls=",
+"GoGo.ashx?Mac=&UserId=&Bate=",
+"/index.php?data=66a96e28",
+"&v=",
+"/?rnd=&id=",
+"&status=",
+"&pcname=",
+"&fff=&coid=do=lct=",
+"&fff=&coid=saf=",
+"/ask?&u=a=&m=&h=",
+".php?strID=strPC=",
+"&magic=",
+"&port=",
+"/receiver/ftp",
+"receiver/online",
+"/webhp",
+"/set/first.html",
+"/task.php?id=&task=",
+"subid=br=os=flg=",
+".php?ver=&id=",
+"id=",
+"/cfg/.plug",
+"guid=ver=stat=ie=os=",
+".php?id=x=os=n=",
+"/html/license_",
+"/flash_player.exe",
+"type=email=hwinfo=",
+"hl=",
+"hlto=",
+".htm",
+".php?=v",
+"/set/task.html",
+".asp?prj=&pid=&logdata=",
+".asp?prj=&pid=&mac=",
+"/forum/?",
+"grabbers.php",
+"/report3.ashx?uid=",
+"/app/count/inst.php?pcode=",
+"/dx.php?i=&x64=os=&a=&f=",
+".php?=javajsm",
+"?Hook1=1,Setup=",
+".php?build=&id=&SA=1-0&SP=1-",
+"/bhanx.php?&p=",
+"?mod=lr&id=&ver=&bit=&uni=",
+"?mod=vv&i=&id=&uni=",
+"/photo/6x5x5772=712x5772=716x",
+"/install.php?affid=",
+"/lurl.php?affid=",
+"/sys7.",
+"list.php?c=",
+"/install.asp?mac=",
+"/curubacom.php?op=",
+".php?",
+".aspx&b=&c=&f=",
+"/nconfirm.php?code=param=num=",
+"php?partner_id=&u=&log_id=&os=",
+"/dfrg/dfrg",
+".php?affid=&data=&v=",
+"/getnewv.php?keyword=google&id=",
+".php|3F|a|3D|QQk",
+"/getpmnum.asp?id=",
+".php?v=&id=&wv=",
+"/xxxx_",
+"/nxdtic.txt",
+"webgetinfo.aspx?ver=",
+"?v&tq=",
+"/u/upd_cb",
+"/cgi-bin/jl/ad03.pl?pv=2&d=",
+"/cgi-bin/jl/ad03.pl",
+"/prod/MEADInst.exe",
+"/load.php?file=",
+"/grabbers.php",
+"/gateway/index",
+"fQ_fQ_fQ_fQ",
+"/bot.php?hwid=pcname=",
+"/isup.php?v=&sox=",
+"?aid=&si=&rd=",
+"/1020000",
+"?user_id=&version_id=&sys=",
+"/username.asp?Uid=",
+"/?uid=&aid=&linkuid=",
+"/download.php?nd=&id=",
+"/Install/Post.asp?Uid=",
+".cgi?s&r=",
+"/datan.php",
+"&logdata=MacTryCnt|3A|",
+"/geo/productid.php",
+"/bot/gate.php",
+"/version.php?ver=&app=",
+"/update_check?version=",
+"/tool/mavatarcfg/.cfg",
+"/adv.php?login=&key=&subacc=",
+"id=&hwid=&step=&wd=",
+".cgi?p=&i=&j=&m=&h=&u=&q=&t=201",
+"|2f 3f|data=",
+"/GetGrid.asp",
+".php?aid=&uncv=&skey=",
+"/whois/usgoodluck.com",
+"/images/logo.gif",
+"/kill/",
+"/sleep",
+"/https",
+"/oms.php",
+"&uid=",
+"==/count.htm",
+"?r=&gen=",
+"/gate.php?id=&pc=&os=&version=",
+"/active_count.php??mac=&pid=",
+"/popcode.php?aid=&lc=&domain=",
+".php?e=&o=&b=&id=",
+"/count.asp?exe=&act=",
+".php?key=",
+"/list.php?c=&v=",
+"/sn.php?c=&t=",
+"&log=",
+"/distrib_serv/ip_list_",
+"/search=ip_list_",
+"/search=",
+"knock.php?ver=&sid=",
+".php?seller=&hash={",
+"?gname=&pid=&m=",
+"inst.php?pcode=&ucode=",
+"size.php?file=",
+"/server_privileges.php?",
+"/listdir.php?dir=",
+"/mkdir.php?dir=",
+"/fsize.php?name=/WF-update.log",
+"/touch.php?dir=",
+"/postit3.php",
+".php?w=&i=&a=",
+".php?w=&fail=&i=",
+"/passport.asp?ID=&fn=&Var=",
+"/command.php?IP=ID=",
+".asp?ID=&Action=GetMyIP",
+"/Count.asp?UserID=",
+"/gameover",
+"/Default.aspx?INDEX=",
+".php?id=&ext=",
+"/gift.exe",
+".php?v=",
+"&coid=&fff=&IP=&lct=",
+"&tq=",
+"value.php?md=&pc=",
+"/britix/a",
+"/count.php?m=c&n=",
+"/count.php?m=w&n=",
+"?tq=",
+".php?datos=c|3A|&user=",
+"/stat.php?w=&i=00000000000&a=",
+"/ufr.php",
+"/arq.php",
+"&hostname=",
+"cmd=getgrab",
+"cmd=getproxy&login=",
+"cmd=getsocks&login=",
+"cmd=getload&login=",
+".functions",
+"/yahoo.com",
+".php?num=",
+"/total_visitas.php",
+".php?m=&s=&v=",
+".php?s=&m=",
+".php?email=&lici=&ver=",
+"/update.aspx",
+"/adobe-flash.exe",
+"/search",
+".aspx?ID=",
+"/count",
+".php?rnd=",
+"trf?q=&edv=&o=&kp=&tk=&fk=&ks=",
+"/search?qu=",
+"/count.asp?mac=&os=&av=",
+"/update?product=windows",
+"/update?id=",
+"?aid=&url=",
+"?subid=",
+"/data/index.asp?act=&ver=Ver&a=",
+"/NfStart.asp?ClientId=",
+"&ver=30&group=",
+"/?&affid=",
+"/stat.php?w=&i=&a=",
+"/ping.php",
+"/loc/gate.php?getpic=getpic",
+"0000/log",
+"/jucheck.exe",
+"/stats/counterz.php?id=&stat=",
+"/bbs/info.asp",
+"/abc.php",
+"/guidcheck.php?q=&g=&n=&h=",
+"/uup.php",
+"/forum/",
+"/index.html?mac=&ver=&os=",
+".php?m=&n=_@",
+"/?path=qx200.exe",
+"/index.dat?",
+"/stat_d/",
+"/stat_u/",
+"/stat_n/",
+"/stat_svc/",
+".php?id=121212121212",
+".txt",
+"/temp1.jpg",
+"/agent.htm",
+"/owncheck/",
+"/scheck/",
+"/search?q=&ua===&al=&cv=",
+"/up.php?id=201",
+"/space.php",
+"/clients.php?os=",
+"/id=AAAAAAAAAAA",
+".php?r=gate&&group=&debug=",
+"/stat/tuk/",
+"/ddos?uid=&ver=",
+"/count.php?id=&c=&d=",
+".php?cstype=",
+"/locker/lock.php?id=",
+"/api/urls/?ts=&affid=",
+"/wp-content/rss.php",
+"/zb/v_01_a/in/",
+".php?src=&gpr=&tkr=",
+"?ac=1&fd=&gb=&rt=",
+"/support/s",
+".php?0Q9oBPXEN0uECUg",
+"/registraMaquina",
+"/updMaqStatus",
+"/yeni_urunler.php?hdd=",
+"/js/data/encryptedtest.dll",
+"/common/versions.php",
+"/lost.dat",
+"/common/timestamps.php",
+"/tUrl.xml?num=",
+"&mid=",
+"/check_counter.php?pid=&mid=",
+"/XPSecurityCenter/",
+"/ip.txt",
+"/logexp.php?aid=&pid=&kind=",
+"/check_version.php&version=",
+"/getiplist.php",
+"/get_servers.php?",
+"/botinfo.php?",
+"/was/vas.php",
+"&i=&v=",
+"?f=&t=&sid5=",
+"?mode=&f=&sid5=",
+"/mx5/B/in/",
+"/cc.php3",
+"/data.asp?mydata=&uid=&state=",
+"/read.php?nm=",
+"?uid={",
+"&digits=&siteId=",
+"/update/WinUpdater.exe",
+".html",
+"ch=1",
+"ts=affid=",
+"/cgi-bin/feed.cgi",
+"/cgi-bin/counter.cgi",
+".php?m=login",
+"/api.php//iframer/",
+"/api.php//vnc/botI",
+"/bots/botI",
+"/video/botI",
+"/1234.functions",
+"/modules/docs/upload/calc.exe",
+"/get/.crp",
+"/1/?",
+"/iis/host.aspx",
+".php?cn&file=",
+"&version_id=&crc=",
+"/prinimalka.py/",
+"/list.php?db=",
+"/write.php",
+"/antivirus-install.exe",
+".asp?imageid=",
+".php?php=receipt",
+"/proxy_info.php",
+"/file.php",
+"/gate.php",
+"/status.php",
+"/.ru|60|utr/qiq",
+"/upload/fid=AAAAAAAAAAA",
+"/forum/viewtopic.php",
+"&p2=&id=",
+"/pir/bfg.php?dll=",
+"/cgi-bin/nt/th",
+"/cgi-bin/nt/sk",
+"/cgi-bin/dllhost/ac",
+"/cgi-bin/ms/check",
+"/cgi-bin/ms/flush",
+"/cgi-bin/win/wcx",
+"/cgi-bin/win/cab",
+"/api/ping?stage=&uid=",
+"/viruslist/?uid=",
+"/admin/count.php?isOnline=1",
+"port=|3A|&uname=",
+"/Count.asp?mac=&ver=&t=",
+"/footer.php",
+"/atp.txt",
+"&mac=type=id=",
+"/admin/plugins/",
+"/picture.php",
+"/upload/img.jpg",
+"/upload/mp3.mp3",
+"/param",
+"/js.php?ran=&t=&u=",
+"/forum/images.php?id",
+"?rands=",
+"/s/asp?",
+"/Default.asp",
+"/Default.aspx?ID=",
+"open=myid=",
+"/images/logo.png",
+".CAB.bin",
+"/ping.html?r=/utils/",
+"&id=&inst=&net",
+"mainsettings/settings.sol",
+"/features/fetch/time/",
+"/features/get/new/mac/",
+"/features/set/done/day/",
+"/features/fetch/header/",
+"/news/show.asp?id1=",
+"/pics/.asp?id=",
+"/count/bindplugin.ini",
+"/pdf.php?id=",
+"svchost.exe",
+"&OSbit=",
+".php?id=&os=&bot_id=",
+".php?id=&gr",
+"/pro/file.php",
+"/lnd/template=",
+"/index.aspx?i=",
+"/uploading/id=",
+"/indexs.zip",
+"/forum/login.cgi",
+"/Photos/Query.cgi?loginid=",
+"/Catelog/login1.cgi",
+"/downloads/IPFilter.exe",
+"&key=&av=&os=&vm=&digital=",
+"&tg=",
+"/gate.php?reg=",
+"/gate.php?cmd=getinstallconfig",
+"/gate.php?id=",
+"/get",
+"/index.asp",
+"/search?hl=q=",
+"/info/privacy_security.htm",
+".gif?",
+"/d/.jpg",
+"/cmd.php",
+"/bruteres.php",
+"/bbs/search.asp",
+"/search.asp?newsid=",
+"/proxy/proxychecker/",
+"/search?query=",
+"/register_slave.php",
+".bmp.gz",
+"/is-ready",
+"/is-sending.exe",
+"/get_did=",
+"dj02LjAmaWQ9",
+"/gr-mail/tr-mail.php",
+"/nlog/nlog.php",
+"/cp/?",
+"/static/hotkey.txt",
+"/updater/",
+"/attachments/ip.php",
+"/home/",
+"/pk/request.flv",
+"/crypt_",
+"/tools.ini",
+"/officeaddinupdate.xml",
+"&a2=&a3=",
+"&arg2=",
+"/js/",
+"/?ts=&ver=&group=&token=",
+".php?bot=",
+"/api",
+"/viewimage.php?s=&",
+"/rssfeed.php?a=",
+"/psp.php?p=&g=&s=&t=&r=",
+"/tsone/ajuno.php",
+".php?subid=",
+".jsp?",
+"Target|3a|Message|3a|",
+"/poll/update.txt",
+".php?&bot_id=",
+"/bc.exe",
+".aspx?Random=",
+"/feed404/mysfeeds.php",
+"/images/gx.php",
+"/dl/",
+"/get//final",
+".php?mark=&type=&theos=",
+"/201.jsp",
+"?title=2.0_-",
+"&aid=&id=&os=",
+"/loadp=&t=",
+"/444.jpg",
+"&mk=&rs=&rq=&ver=",
+"/Limitless/Login/",
+"/MessageBox.bin",
+"/ComputerInfo.bin",
+"/WalletSteal.bin",
+".rar",
+"/forumdisplay.php?fid=",
+"/2015",
+".php?a1=",
+"/pdf.exe",
+"/kia.exe",
+"/wav.exe",
+"/heap.exe",
+"/b/eve/",
+"/b/",
+"/client/config.ini",
+".cgi?Group=&Ver=&Inst&Ask=&Bn=",
+"/task/2000",
+"androidbugreport.php",
+"/files/def",
+"/ppp/ta.php",
+"2p/",
+".php?text=",
+"/log?|7c|version=|7c|id=|7c|os=",
+"/api.php",
+"/1/6b-558694705129b01c0",
+".exe?",
+"/gate.php?user=&id=&type=",
+"/help.html",
+"/install/",
+"/get/?q=",
+"/install/?q=",
+"/ccc/tab.php",
+"/2p/",
+"AAA==",
+".exedownload_helper.ns",
+"/setup/?name=&ini=&v=",
+"/check_value.php",
+"/0001",
+"/el/sregister.php?name=",
+"/el/slogin.php?uid=",
+".php?secue=&pro=",
+"?user=&type=&id=",
+".php?m=",
+"/index.html",
+"/getc/?c=",
+"/image/.jpg",
+"/default.asp?tmp=",
+"_W/publickey/",
+"&folder=",
+"/?ver=",
+".php?file",
+".php?Re=",
+".php?verify=",
+"&user&versao&pcname=",
+"/soft.dll",
+"/update",
+"/auth.cgi?mode=&id=",
+"/default.asp?act=&id=",
+"/project/check.asp",
+"/dr.asp",
+"/support/main.html",
+"/kb/",
+"/0/Service Pack ",
+"&data=",
+"/u.html",
+"/api/",
+"_W/replace/",
+".aspx",
+"/wp-content/themes/",
+"/buy.php?",
+"/upfornow/connect.php",
+"/333",
+".php?t=&o=&i=&task_id=",
+".php?compname=",
+".php?srs=",
+"/log/",
+"/ord/.exe",
+"/ip/",
+"/zConfig/",
+"/zImprimer/",
+"/enc/1",
+".phpos=&osbit=&antiv=",
+"/222",
+"/pruebas.doc",
+"?id=/0",
+"/tmps.",
+"/get.php?file=cmds/main",
+"/compose.aspx?s=",
+"/dll",
+".php?&co=&us=&av=&os=&tr2=",
+"/key/index.php",
+"/random.php",
+"/feed.dll?pub_id=",
+".php?/index.phpact=bkw9",
+"/usdeclar.txt",
+"/proto/netstrings.txt",
+".php?sid=",
+"/dirconf/check.php",
+"/0/0000",
+"/catalog/",
+"/mod_jshoppi",
+"/newage.txt",
+"/api/client.asmx/SendData",
+"=0=0000",
+"/00000",
+".asp?M00=",
+"/~/cgi-bin/sptr.cgi?_",
+"/~/cgi-bin/brvc.cgi?_",
+"/webhp?rel=ai=",
+"/~xh/sn.cgi?",
+"/?&ai=",
+"btc",
+".php?a=start&id=",
+"/mac_log/?appid=",
+"/getversion.php?sn=",
+"/getversion.php?v=",
+"/mac/update.zip",
+"/images/view.php",
+"/txt/read.php",
+".asp?i=0&v=o10.1",
+"/title.php?pizza=",
+"/.ni|67 67|ers/bin.sh",
+"/ncsi.txt",
+"/b/pkg/",
+"/payment_gateway/.gz",
+"/upload.php",
+"&uname=&pword=",
+"/me/",
+".php?i=&data=&hash=",
+"/igfxtpers.exe",
+"/check.jsp",
+"/checkupdate.asmx",
+"/notify.php",
+"/log/index.php",
+"&user_pass=",
+".txt?dummy=",
+".exe?dummy=",
+"update.php?&key=&dummy=",
+"/Prack",
+"/connect.php?a=1",
+"/index.php?c=&r=",
+"/uploads/images/201",
+"/download.php?listfiles=",
+".php?a=n|60|e|3e|",
+"?uid=&context=&mode=text&data=",
+".php?page=&enckey=",
+".tar",
+"/action.php?action=&sent_all=",
+"/action.php?action=get_",
+"/data_updater.dat",
+"/data.cfg",
+"/bn_versions/.exe",
+"/ok.txt",
+"/app.exe",
+".asp?cstring=&tom=",
+"/manager",
+"/sys/",
+"/index.php/customer/onlin",
+"/index.php/customer/do_it",
+".php?name=&user=",
+".php?name=path=",
+".php?name=&serial=",
+".php?name=&date=",
+"_rtemp.php?n=",
+"/n.php",
+"/attach/1759CB3B5124F217143044",
+"/9.php?safe=",
+"/verify.php?version=&GUID=|7b|",
+"/timezone/0/0",
+"/upd.php",
+"/cou.php",
+"/?f",
+"/web_.jpg",
+"?encoding=&t=&cc=&process=",
+"/isup.php",
+"/rp?v=a=u=d=",
+"v=a=u=i=0",
+"/v.php",
+"/state.php?",
+".php?U3ViamVjdD1",
+"hl=source=aq=aqi=aql=oq=",
+"ext=&pid=&country=&regd=",
+"./im/",
+"/video/?n=",
+".php?win=",
+".php?micro=",
+"/wp-content/themes/citytv.com",
+"/index.php?N=",
+"/im.php?id=",
+"/.c.php?request=",
+"/menu.php",
+"/redirect.php?loc=mail",
+"/id.exe",
+"/do.asp?search=",
+"/command.php?id=&os=&com=&ver=",
+"/log.php?id=|5b|",
+"/keylogger.php?id=&com=&key=",
+".php?fn=",
+"/STTip.asp",
+"/?bit=&version=",
+"/?check",
+".jpg",
+"/dw/gtk",
+"/setup/",
+".php?type=",
+"docs/",
+"/v.vlt",
+".php?=c3NoOi8v",
+"/ohupdate.php?program=&q=",
+".asp?sn=&tmac=&action=&ver=",
+".asp?",
+"?wd=",
+"/is-rinoy",
+"/proxy",
+"/blog",
+"/target",
+"/botlogger.php",
+"/?action=&guid=",
+"/infects/",
+"/loglogin.html",
+".php?p=",
+"/?ip=&referer=&ua=",
+"/?action=getuid",
+"/?action=&uid=&bit=&version=",
+"&machinetime=",
+"&x=",
+".jpg?resid=",
+".asp?resid=&photoid=",
+".jpg?id=",
+".py",
+".php?q=",
+".php?c=",
+"click?sid=&cid=",
+"/cl1",
+"/css/bootstrap.min.css",
+"/api/?a=",
+"/lns.txt",
+".ini?",
+"/download/ftp/grabftp.bin",
+"/check?iid=kernel=",
+"/adm/contador.php",
+"/post.php?type=&machinename=",
+"/access.php",
+"/status",
+"/checkupdate",
+"=http/?",
+".php/",
+"/config.jpg",
+"/PhantomSuper.class",
+"/ArrayReplace.class",
+"/?p2=",
+".asp?cookie=&type=&vid=",
+".jpg?vid=",
+"/viewphoto.asp?photoid=",
+"&mac=",
+".php?type=creation",
+"/index.jsp",
+"/im?id=",
+"/wp-.exe",
+"/r.php?",
+".ico",
+".exx",
+".php?userid=&auth=",
+".php?id=&stat=",
+".dat",
+"/raw",
+"/user?pid=&data=",
+".php?m=&v=&os=&c=&u=",
+"/upx/",
+"/images/",
+"/check",
+"/i686?ver=",
+"/mips?ver=",
+"/armel?ver=",
+"/mipsel?ver=",
+"/srv_report?ver=",
+"/r0/index.php",
+".php?&o=&av=",
+".php?key=pdf=",
+"&act=",
+"?id=",
+"/adobe_flashplayer_7.exe",
+"/go/flashplayer_support/",
+"redir.php",
+"000",
+"/?ID=&Serial=&acao=&Log=",
+"|2e|",
+"/fwlink/?LinkId=",
+".php?hwid=",
+".php?check=",
+"/general.png",
+".php?/12345",
+"/wp-content/plugins/",
+"/misc.php?",
+"/forum.php?sid=",
+".zip",
+".php?id=&token1=&token2=&C=",
+"/crond",
+"/logo.gif?sessd=&sessc=&sessk=",
+".php?RIGHTS=&WIN=",
+".php?SSTART=&CRYPTED_DATA=&ID=",
+"/sipvoice.php?&session=",
+"/counter/?id=&rnd=",
+"/gate.php?id=&ver=&m=",
+",0x",
+"/flamme.php",
+"/cgi-bin/s2.cgi",
+"/main.php",
+"?q=",
+".pdcr",
+"/ping",
+".old",
+"/submit.php",
+".php?ch=",
+"/gate.phprequest=true",
+"/counter/?ad=",
+"?---",
+"/userinfo.php",
+".png?",
+".aspx?",
+"/access.cgi",
+".php?a=",
+"/EPWD",
+"/PWD",
+"/cdosys.php?=noupdate&ver=",
+"/cdosys.php?=statuslog&log=",
+"/cdosys.php?=update&username=",
+"/cdosys.php?&log=GetLastError",
+"/cdosys.php?key&log=TWND",
+"/cdosys.php?add&log=&foundin=",
+"?action=.aspx",
+".pdf/?",
+".zip/?",
+".htm/?",
+".xml/?",
+".php?computerid=",
+".php?id= - RAA",
+".php?filename=",
+".log",
+".so",
+"/images/_2",
+"/pm.sh?",
+"/dw.php",
+".asp?m=&v=",
+"/assets/timepicker/x.php?",
+"?ver=",
+".html&nocache=",
+".html?a=",
+"/final111?&nocache=",
+".html?s=",
+".php/data",
+"/v1",
+"/victim.php?info=&ip=",
+"/index.php?id=",
+".php?e=",
+".php?cookie=1",
+"/get.php",
+"/savekey.php?file=&id=",
+".php?cId=",
+"&os=&bits=&av=&host=&plugins=",
+".php?HWInfo=}&Time=",
+"/index.shtml",
+".php?user=&try=&status=",
+".php?id=&hi",
+".php?b=",
+".php?cg=",
+".php?shinu=",
+"/counter/?&r=",
+"?q=K",
+"/Hello",
+"?-----BEGIN|20|CERTIFICATE-----",
+".php?uuid=",
+".exe???????????????",
+"/inst.exe",
+"/order.php",
+"/config.php?id=",
+".?=",
+"a=i=",
+"/assets/",
+"X32.jpg",
+"X64.jpg",
+".vbn",
+"/catalog/outgoing",
+"/pro.bat",
+".asmx",
+".aspx?n=",
+"=11&",
+"/api/asyncTwitter.php",
+"/counter/",
+"/counter/?",
+".php?file=",
+"/api/?act=in",
+".php?V=",
+"/products.php?"};
+	
+	//init_hashArrayStr;
+	int i = 0;
+	for (i=0; i<978; i++){
+		struct StrDataItem* item = Str2DataItem(list_trojan_uri[i]);
+		if (insert_hash_str(item) == 0) printf("Insert failed\n");
+		} 
+   	
+const char *list_malicious_UA[] = {
+"*/Nutch-0.9-dev",
+"192.comAgent",
+"4anything.com LinkChecker v2.0",
+"8484 Boston Project v 1.0",
+"A-Online Search",
+"aardvark-crawler",
+"AbachoBOT",
+"AbachoBOT (Mozilla compatible)",
+"ABCdatos BotLink/5.xx.xxx#BBL",
+"Aberja Checkomat",
+"About/0.1libwww-perl/5.47",
+"Accelatech RSSCrawler/0.4",
+"accoona",
+"Ack (http://www.ackerm.com/)",
+"AcoiRobot",
+"Acoon Robot v1.50.001",
+"AESOP_com_SpiderMan",
+"AgentName/0.1 libwww-perl/5.48",
+"Aladin/3.324",
+"AlkalineBOT/1.3",
+"Allesklar/0.1 libwww-perl/5.46",
+"Allrati/1.1 (+)",
+"AmfibiBOT",
+"amibot",
+"antibot-V1.1.5/i586-linux-2.2",
+"Apexoo Spider 1.x",
+"Aport",
+"appie 1.1 (www.walhello.com)",
+"ArachBot",
+"ArchitextSpider",
+"archive.org_bot",
+"Arikus_Spider",
+"Asahina-Antenna/1.x",
+"ask.24x.info",
+"ASPSeek/1.2.5",
+"ASPseek/1.2.9d",
+"ASPSeek/1.2.x",
+"ASPSeek/1.2.xa",
+"ASPseek/1.2.xx",
+"ASPSeek/1.2.xxpre",
+"ASSORT/0.10",
+"asterias/2.0",
+"Atomic_Email_Hunter/4.0",
+"Atomz/1.0",
+"atSpider/1.0",
+"augurfind",
+"augurnfind V-1.x",
+"autoemailspider",
+"AV Fetch 1.0",
+"AVSearch-3.0(AltaVista/AVC)",
+"BaiDuSpider",
+"bdcindexer_2.6.2 (research@bdc)",
+"BDFetch",
+"BIGLOTRON (Beta 2;GNU/Linux)",
+"Bitacle bot/1.1",
+"BlackWidow",
+"BlitzBOT@tricus.net",
+"BlogBot/1.x",
+"Blogpulse (info@blogpulse.com)",
+"blogsearchbot-pumpkin-3",
+"BloobyBot",
+"boitho.com-robot/1.x",
+"BSDSeek/1.0",
+"BullsEye",
+"bumblebee@relevare.com",
+"bwh3_user_agent",
+"carleson/1.0",
+"Catall Spider",
+"ccubee/x.x",
+"cfetch/1.0",
+"China Local Browse 2.6",
+"ChristCRAWLER 2.0",
+"ClariaBot/1.0",
+"Claymont.com",
+"combine/0.0",
+"Combine/x.0",
+"ContactBot/0.2",
+"ContentSmartz",
+"Convera Internet Spider V6.x",
+"ConveraCrawler/0.2",
+"CoolBot",
+"cosmos/0.8_(robot@xyleme.com)",
+"cosmos/0.9_(robot@xyleme.com)",
+"Covac TexAs Arachbot",
+"Crawler admin@crawler.de",
+"crawler@alexa.com",
+"CrawlerBoy Pinpoint.com",
+"csci_b659/0.13",
+"CurryGuide SiteScan 1.1",
+"DataCha0s/2.0",
+"DataFountains/DMOZ Downloader",
+"daypopbot/0.x",
+"DBrowse 1.4b",
+"DBrowse 1.4d",
+"dCSbot/1.1",
+"deepak-USC/ISI",
+"DeepIndex",
+"DeepIndexer.ca",
+"Demo Bot DOT 16b",
+"Demo Bot Z 16b",
+"Diamond/x.0",
+"DiamondBot",
+"Digger/1.0 JDK/1.3.0rc3",
+"DigOut4U",
+"DIIbot/1.2",
+"DittoSpyder",
+"dloader(NaverRobot)/1.0",
+"DoCoMo/1.0/Nxxxi/c10",
+"DoCoMo/1.0/Nxxxi/c10/TB",
+"dodgebot/experimental",
+"DSurf15a 01",
+"DSurf15a 71",
+"DSurf15a 81",
+"DSurf15a VA",
+"dtSearchSpider",
+"Dumbot(version 0.1 beta)",
+"EasyDL/3.xx",
+"EBrowse 1.4b",
+"EchO!/2.0",
+"Educate Search VxB",
+"ejupiter.com",
+"EmailSiphon",
+"EmailSpider",
+"EmailWolf 1.00",
+"EMPAS_ROBOT",
+"Enfish Tracker",
+"Enterprise_Search/1.0",
+"Enterprise_Search/1.0.xxx",
+"EroCrawler",
+"ESISmartSpider",
+"ESurf15a 15",
+"EvaalSE - bot@evaal.com",
+"Exabot-Images/1.0",
+"Exabot-Test/1.0",
+"Exabot/2.0",
+"Exabot/3.0",
+"ExactSeek Crawler/0.1",
+"exactseek.com",
+"ExperimentalHenrytheMiragoRobot",
+"ExtractorPro",
+"Fast Crawler Gold Edition",
+"Fast PartnerSite Crawler",
+"FAST-WebCrawler/3.2 test",
+"FAST-WebCrawler/3.x Multimedia",
+"FastBug http://www.ay-up.com",
+"Faxobot/1.0",
+"Feed24.com",
+"FeedChecker/0.01",
+"Feedjit Favicon Crawler 1.0",
+"FFC Trap Door Spider",
+"Filtrbox/1.0",
+"FineBot",
+"Firefly/1.0",
+"firstsbot",
+"Flexum spider",
+"Flexum/2.0",
+"flunky",
+"FocusedSampler/1.0",
+"Franklin Locator 1.8",
+"FSurf15a 01",
+"Full Web Bot 0416B",
+"Full Web Bot 0516B",
+"Full Web Bot 2816B",
+"FuseBulb.Com",
+"GAIS Robot/1.0B2",
+"GammaSpider/1.0",
+"gazz/x.x (gazz@nttrd.com)",
+"generic_crawler/01.0217/",
+"geniebot wgao@genieknows.com",
+"Gigabot/2.0 (gigablast.com)",
+"Gigabot/2.0att",
+"Gigabot/x.0",
+"GNODSPIDER (www.gnod.net)",
+"GoForIt.com",
+"Goofer/0.2",
+"Googlebot-Image/1.0",
+"GrapeFX/0.3 libwww/5.4.0",
+"Gromit/1.0",
+"grub-client",
+"Guestbook Auto Submitter",
+"Gulliver/1.3",
+"HappyFunBot/1.1",
+"Harvest-NG/1.0.2",
+"Hatena Pagetitle Agent/1.0",
+"HeinrichderMiragoRobot",
+"HenrytheMiragoRobot",
+"Hippias/0.9 Beta",
+"HitList",
+"holmes/3.9 (onet.pl)",
+"holmes/x.x",
+"HolmesBot (http://holmes.ge)",
+"Homerbot: www.homerweb.com",
+"HPL/Nutch-0.9 -",
+"htdig/3.1.x (root@localhost)",
+"http://www.monogol.de",
+"IAArchiver-1.0",
+"ia_archiver",
+"ia_archiver-web.archive.org",
+"ia_archiver/1.6",
+"ichiro/x.0 (ichiro@nttr.co.jp)",
+"ICRA_label_spider/x.0",
+"icsbot-0.1",
+"ideare - SignSite/1.x",
+"ilial/Nutch-0.9-dev",
+"IlseBot/1.x",
+"IncyWincy(http://www.look.com)",
+"IndexTheWeb.com Crawler7",
+"Industry Program 1.0.x",
+"Inet library",
+"INFOMINE/8.0 Adders",
+"INFOMINE/8.0 RemoteServices",
+"InfoNaviRobot(F107)",
+"InfoSeek Sidewinder/0.9",
+"InfoSeek Sidewinder/1.0A",
+"InfoSeek Sidewinder/1.1A",
+"Inktomi Search",
+"Insitornaut",
+"Internet Ninja x.0",
+"InternetSeer.com",
+"IPiumBot laurion(dot)com",
+"ISC Systems iRc Search 2.1",
+"IUPUI Research Bot v 1.9a",
+"Jack",
+"Jetbot/1.0",
+"JobSpider_BA/1.1",
+"Jyxobot/x",
+"k2spider",
+"KAIST AITrc Crawler",
+"Kenjin Spider",
+"Kevin http://dznet.com/kevin/",
+"KE_1.0/2.0 libwww/5.2.8",
+"kinjabot (http://www.kinja.com)",
+"KIT-Fireball/2.0",
+"Knowledge.com/0.x",
+"kuloko-bot/0.x",
+"kulturarw3/0.1",
+"larbin (samualt9@bigfoot.com)",
+"LECodeChecker/3.0 libgetdoc/1.0",
+"LEIA/2.90",
+"LexiBot/1.00",
+"Libby_1.1/libwww-perl/5.47",
+"LibertyW (+http://www.lw01.com)",
+"libwww-perl/5.41",
+"libwww-perl/5.45",
+"libwww-perl/5.48",
+"libwww-perl/5.52 FP/2.1",
+"libwww-perl/5.52 FP/4.0",
+"libwww-perl/5.65",
+"libwww-perl/5.800",
+"libwww/5.3.2",
+"Lincoln State Web Browser",
+"linkbot",
+"linknzbot",
+"LinkScan/9.0g Unix",
+"LinkScan/x.x Unix",
+"LMQueueBot/0.2",
+"LNSpiderguy",
+"Lockstep Spider/1.0",
+"Look.com",
+"lwp-trivial/1.32",
+"lwp-trivial/1.34",
+"LWP::Simple/5.22",
+"LWP::Simple/5.36",
+"LWP::Simple/5.48",
+"LWP::Simple/5.50",
+"LWP::Simple/5.51",
+"LWP::Simple/5.53",
+"LWP::Simple/5.63",
+"LWP::Simple/5.803",
+"Lycos_Spider_(modspider)",
+"Lycos_Spider_(T-Rex)",
+"Mac Finder 1.0.xx",
+"Mail.Ru/1.0",
+"mailto:webcraft@bea.com",
+"MantraAgent",
+"Marketwave Hit List",
+"Martini",
+"MARTINI",
+"Marvin v0.3",
+"MasterSeek",
+"Mata Hari/2.00 ",
+"MediaCrawler-1.0 (Experimental)",
+"MediaSearch/0.1",
+"Mercator-1.x",
+"Mercator-2.0",
+"Mercator-Scrub-1.1",
+"MetaGer-LinkChecker",
+"MetaGer_PreChecker0.1",
+"MicroBaz",
+"Missauga Locate 1.0.0",
+"Missigua Locator 1.9",
+"Missouri College Browse",
+"Miva (AlgoFeedback@miva.com)",
+"Mizzu Labs 2.2",
+"MJBot (SEO assessment)",
+"MLBot (www.metadatalabs.com)",
+"MnogoSearch/3.2.xx",
+"Mo College 1.9",
+"moget/x.x (moget@goo.ne.jp)",
+"mogimogi/1.0",
+"Mozilla (Mozilla@somewhere.com)",
+"Mozilla/4.0",
+"Mozilla/4.0 (Sleek Spider/1.2)",
+"Mozilla/4.0 efp@gmx.net",
+"Mozilla/4.7",
+"Mozilla/5.0",
+"Mozilla/5.0 URL-Spider",
+"Mozilla/5.0 wgao@genieknows.com",
+"MSNPTC/1.0",
+"MultiText/0.1",
+"MVAClient",
+"Mylinea.com Crawler 2.0",
+"NABOT/5.0",
+"nabot_1.0",
+"NameOfAgent (CMS Spider)",
+"NASA Search 1.0",
+"NationalDirectory-WebSpider/1.3",
+"NationalDirectoryAddURL/1.0",
+"NaverBot_dloader/1.5",
+"NavissoBot",
+"NetLookout/2.24",
+"NetNoseCrawler/v1.0",
+"Netprospector JavaCrawler",
+"NetSprint -- 2.0",
+"NetZippy",
+"NG/1.0",
+"NG/4.0.1229",
+"NITLE Blog Spider/0.01",
+"Noago Spider",
+"Norbert the Spider(Burf.com)",
+"noyona_0_1",
+"NPBot-1/2.0",
+"Nsauditor/1.x",
+"Nutch",
+"oBot ((compatible;Win32))",
+"Octora Beta - www.octora.com",
+"OntoSpider/1.0 libwww-perl/5.65",
+"Openfind Robot/1.1A2",
+"OpenTextSiteCrawler/2.9.2",
+"OpenWebSpider/x",
+"Oracle Ultra Search",
+"OrangeSpider",
+"PADLibrary Spider",
+"PBrowse 1.4b",
+"PEERbot www.peerbot.com",
+"PEval 1.4b",
+"PicoSearch/1.0",
+"Piffany_Web_Scraper_v0.x",
+"Piffany_Web_Spider_v0.x",
+"Pita",
+"PlagiarBot/1.0",
+"Poirot",
+"Pompos/1.x pompos@iliad.fr",
+"Popdexter/1.0",
+"Port Huron Labs",
+"potbot 1.0",
+"PrivacyFinder Cache Bot v1.0",
+"PrivacyFinder/1.1",
+"Production Bot 0116B",
+"Production Bot 2016B",
+"Production Bot DOT 3016B",
+"Program Shareware 1.0.2",
+"Project XP5 [2.03.07-111203]",
+"PROve AnswerBot 4.0",
+"PSurf15a 11",
+"PSurf15a 51",
+"PSurf15a VA",
+"psycheclone",
+"pulseBot (pulse Web Miner)",
+"PycURL",
+"Python-urllib/1.1x",
+"Python-urllib/2.0a1",
+"QuepasaCreep v0.9.1x",
+"QueryN Metasearch",
+"ramBot xtreme x.x",
+"Rational SiteCheck (Windows NT)",
+"rico/0.1",
+"Robot/www.pj-search.com",
+"Robot@SuperSnooper.Com",
+"Robozilla/1.0",
+"Rotondo/3.1 libwww/5.3.1",
+"RRC (crawler_admin@bigfoot.com)",
+"RSurf15a 41",
+"RSurf15a 51",
+"RSurf15a 81",
+"savvybot/0.2",
+"ScanWeb",
+"Scooter-3.0.EU",
+"Scooter-3.0.FS",
+"Scooter-3.0.HD",
+"Scooter-3.0.VNS",
+"Scooter-3.0QI",
+"Scooter-3.2",
+"Scooter-3.2.BT",
+"Scooter-3.2.DIL",
+"Scooter-3.2.EX",
+"Scooter-3.2.JT",
+"Scooter-3.2.NIV",
+"Scooter-3.2.SF0",
+"Scooter-3.2.snippet",
+"Scooter-3.3dev",
+"Scooter-ARS-1.1",
+"Scooter-ARS-1.1-ih",
+"scooter-venus-3.0.vns",
+"Scooter-W3-1.0",
+"Scooter-W3.1.2",
+"Scooter/1.0",
+"Scooter/1.0 scooter@pa.dec.com",
+"Scooter/1.1 (custom)",
+"Scooter/2.0 G.R.A.B. V1.1.0",
+"Scooter/2.0 G.R.A.B. X2.0",
+"Scooter/3.3",
+"Scooter/3.3.QA.pczukor",
+"Scooter/3.3.vscooter",
+"Scooter/3.3_SF",
+"Scooter2_Mercator_x-x.0",
+"Scooter_bh0-3.0.3",
+"Scooter_trk3-3.0.3",
+"ScoutAbout",
+"scoutmaster",
+"Search+",
+"Search-Engine-Studio",
+"search.ch V1.4",
+"searchbot admin@google.com",
+"SearchdayBot",
+"SearchExpress Spider0.99",
+"Searchmee! Spider v0.98a",
+"SearchSpider.com/1.1",
+"SearchTone2.0 - IDEARE",
+"Seeker.lookseek.com",
+"SeznamBot/1.0",
+"ShablastBot 1.0",
+"Shim Crawler",
+"Shoula.com Crawler 2.0",
+"silk/1.0",
+"SiteXpert",
+"Slarp/0.1",
+"Slider_Search_v1-de",
+"Slurpy Verifier/1.0",
+"smartwit.com",
+"SmiffyDCMetaSpider/1.0",
+"snap.com beta crawler v0",
+"Snapbot/1.0",
+"SocSciBot ()",
+"sogou develop spider",
+"sogou spider",
+"sohu agent",
+"sohu-search",
+"speedfind ramBot xtreme 8.1",
+"Sphider",
+"Spida/0.1",
+"spider.batsch.com",
+"SpiderKU/0.x",
+"SpiderMan",
+"Spinne/2.0",
+"Spinne/2.0 med",
+"Spinne/2.0 med_AH",
+"SSurf15a 11 ",
+"StackRambler/x.x ",
+"stat statcrawler@gmail.com",
+"suchbaer.de",
+"suchbot",
+"Suchknecht.at-Robot",
+"SurferF3 1/0",
+"suzuran",
+"SygolBot http://www.sygol.net",
+"SynoBot",
+"Szukacz/1.x",
+"TECOMAC-Crawler/0.x",
+"Teoma MP",
+"teoma_agent1",
+"Test spider",
+"TheSuBot/0.1 (www.thesubot.de)",
+"TJG/Spider",
+"Trampelpfad-Spider",
+"Trampelpfad-Spider-v0.1",
+"TSurf15a 11",
+"Tycoon Agent/Nutch-1.0-dev",
+"TygoBot",
+"TygoProwler",
+"UIowaCrawler/1.0",
+"Ultraseek",
+"Under the Rainbow 2.2",
+"Uptimebot",
+"UptimeBot(www.uptimebot.com)",
+"URL_Spider_Pro/x.x",
+"VadixBot",
+"Vagabondo/2.0 MT",
+"Vespa Crawler",
+"voyager-hc/1.0",
+"voyager/1.0",
+"vspider",
+"vspider/3.x",
+"Web Snooper",
+"webbandit/4.xx.0",
+"Webclipping.com",
+"WebCompass 2.0",
+"WebCorp/1.0",
+"webcrawl.net",
+"Weblog Attitude Diffusion 1.0",
+"WebsiteWorth v1.0",
+"Websquash.com (Add url robot)",
+"Wells Search II",
+"WEP Search 00",
+"WFARC",
+"whatUseek_winona/3.0",
+"WhizBang! Lab",
+"WinHTTP Example/1.0",
+"WorldLight",
+"Wwlib/Linux",
+"www.arianna.it",
+"X-Crawler ",
+"xyro_(xcrawler@cosmos.inria.fr)",
+"Y!J-SRD/1.0",
+"Yahoo Pipes 1.0",
+"Yahoo! Mindset",
+"Yahoo-Test/4.0",
+"yarienavoir.net/0.2",
+"Yeti",
+"yoogliFetchAgent/0.1",
+"yoono/1.0 web-crawler/1.0",
+"Zao-Crawler",
+"Zao-Crawler 0.2b",
+"ZBot/1.00 (icaulfield@zeus.com)",
+"Zearchit",
+"ZeBot_lseek.net (bot@ze.bz)",
+"Zippy v2.0 - Zippyfinder.com",
+"ZoomSpider - wrensoft.com"};
+	
+	int j = 0;
+	for (j=0; j<528; j++){
+		struct StrDataItem* item = Str2DataItem(list_malicious_UA[j]);
+		if (insert_hash_str(item) == 0) printf("Insert failed\n");
+		} 
+	init_hashArrayIPAdd();
+
+ }//end on_load()
+
+ void on_unload(){
+   free_hashArrayStr();
+   free_hashArrayStr();
+   free_hashArrayIPAdd();
+
+ }//end on_unload()
+]]></embedded_functions>
+</beginning>

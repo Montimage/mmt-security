@@ -1,0 +1,23 @@
+<beginning>
+<!-- Property 43: Probable TCP FIN scan (4 different attempts in a row on different ports).
+-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="43" type_property="ATTACK" 
+    description="Probable TCP FIN scan (4 different attempts in a row on different ports).">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="1" 
+             description="TCP FIN packet header with a destination port field set (1)"
+             boolean_expression="(tcp.flags == 1)"/>
+      <event value="COMPUTE" event_id="2" 
+             description="TCP FIN packet header with another destination port field set (2)"
+             boolean_expression="((tcp.flags == 1)&amp;&amp;((tcp.dest_port != tcp.dest_port.1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))))"/>
+    </operator>
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="3" 
+             description="TCP FIN packet header with another destination port field set (3)"
+             boolean_expression="((tcp.flags == 1)&amp;&amp;((tcp.dest_port != tcp.dest_port.1)&amp;&amp;((tcp.dest_port != tcp.dest_port.2)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))))"/>
+      <event value="COMPUTE" event_id="4"
+             description="TCP FIN packet header with another destination port field set (4)"
+             boolean_expression="((tcp.flags == 1)&amp;&amp;((tcp.dest_port != tcp.dest_port.1)&amp;&amp;((tcp.dest_port != tcp.dest_port.2)&amp;&amp;((tcp.dest_port != tcp.dest_port.3)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))))"/>
+    </operator>
+</property>
+</beginning>

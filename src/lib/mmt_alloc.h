@@ -20,6 +20,7 @@
 #include "mmt_alloc.h"
 #include "mmt_log.h"
 #include "config.h"
+#include "valgrind.h"
 
 typedef struct mmt_memory_struct{
 	uint32_t  ref_count;
@@ -76,9 +77,9 @@ size_t mmt_mem_free( void *x ){
 
 /**
  * Get size of the memory segment pointed by ptr.
- * Note that ptr is the pointer created by one of function: mmt_malloc, mmt_calloc
+ * Note that ptr is the pointer created by the function: mmt_mem_alloc, mmt_mem_dup
  * - Error:
- * 	+ Maybe crashed if ptr is not created by mmt_malloc or mmt_calloc
+ * 	+ Maybe crashed if ptr is not created by mmt_mem_alloc, mmt_mem_dup
  */
 static inline
 size_t mmt_mem_size( const void *x ){
@@ -193,6 +194,8 @@ static inline int mmt_mem_cmp( const void *x, const void *y){
 }
 
 static inline void mmt_mem_reset( mmt_memory_t *mem, size_t size ){
+	__check_null( mem, );
+
 	//mem->data points to the memory segment after sizeof( mmt_memory_t )
 	mem->data      = mem + 1;
 	//safe string
@@ -203,6 +206,6 @@ static inline void mmt_mem_reset( mmt_memory_t *mem, size_t size ){
 }
 
 
-#define mmt_free_and_assign_to_null( x ) while( x != NULL ){ mmt_mem_free( x ); x = NULL; break; }
+#define mmt_free_and_assign_to_null( x ) do{ mmt_mem_free( x ); x = NULL; }while(0)
 
 #endif /* SRC_MMT_ALLOC_H_ */

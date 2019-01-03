@@ -1,0 +1,1 @@
+10,0,"",1495199020,11,"detected","evasion","IP packet size incorrect", {"event_1":{"timestamp":1492700365.296542,"counter":1,"attributes":[{"meta.packet_len":28}]},"event_2":{"timestamp":1492700365.296542,"counter":1,"attributes":[{"ethernet.proto":1}]}}

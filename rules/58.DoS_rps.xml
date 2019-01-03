@@ -1,0 +1,23 @@
+<beginning>
+<!-- Property 58: Probable DoS attacks (4 TCP handshake requests in less than 3ms ~  more than 1000 TCP handshake requests per second).
+-->
+	<property value="THEN" delay_units="ms" delay_min="0+" delay_max="3" property_id="58" type_property="ATTACK" 
+    description="Probable DoS attack: 4 TCP handshake request in less than 3ms comming from the same IP add">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
+      <event value="COMPUTE" event_id="1" 
+             description="TCP SYN packet (1)"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;(ip.src != ip.dst))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="TCP SYN packet (2)"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))"/>
+    </operator>
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="1">
+      <event value="COMPUTE" event_id="3" 
+             description="TCP SYN packet (3)"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))"/>
+      <event value="COMPUTE" event_id="4" 
+             description="TCP SYN packet (4)"
+             boolean_expression="((tcp.flags == 2)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))"/>
+    </operator>
+</property>
+</beginning>

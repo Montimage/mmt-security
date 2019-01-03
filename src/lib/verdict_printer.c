@@ -20,7 +20,6 @@ void send_message_to_redis(const char*);
 void init_file();
 void send_message_to_file(const char*);
 void close_file();
-void reset_file();
 
 enum output_mode{
 	OUTPUT_NONE  = 0,
@@ -47,6 +46,8 @@ void verdict_printer_init( const char *file_string, const char *redis_string ){
 			init_file( file_string, 0 );
 		else{
 			len = pos - file_string;
+			mmt_assert(len < MAX_STRING_LEN, "Max length of file name is %d", MAX_STRING_LEN );
+
 			strncpy( str, file_string, len );
 			str[ len ] = '\0';
 
@@ -67,6 +68,7 @@ void verdict_printer_init( const char *file_string, const char *redis_string ){
 				init_redis( redis_string, DEFAULT_REDIS_PORT );
 			else{
 				len = pos - redis_string;
+				mmt_assert(len < MAX_STRING_LEN, "Max length of file name is %d", MAX_STRING_LEN );
 				strncpy( str, redis_string, len );
 				str[ len ] = '\0';
 

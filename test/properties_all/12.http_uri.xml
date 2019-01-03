@@ -1,0 +1,67 @@
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "types_defs.h"
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int em_check_URI(const char *uri_str){
+  int handle = 0;
+  if(uri_str == NULL){
+    return 2;
+  }
+ 
+  const char *x = uri_str;
+  
+  //fprintf(stderr, "%s\n",x);
+  while (*x != '\0'){
+      //octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+      if(*x < 32 || *x == 92 || *x == '"' || *x == '<' || *x == '>' || *x == '[' || *x == ']' || *x == '^' || *x == '`' || *x == '{' || 
+         *x == '|' || *x == '}' || *x == '%' || *x > 126) {
+              handle = 1;
+              break;
+      }
+      x = x+1;
+  }
+  //detect directory traversal attack
+  char *s0, *s1, *s2, *s3;
+  s0 = strstr(uri_str, ".."); //find the first occurrence of string ".." in string
+  s1 = strstr(uri_str, "./"); //find the first occurrence of string "./" in string
+  s2 = strstr(uri_str, "//"); //find the first occurrence of string "//" in string
+  s3 = strstr(uri_str, "/."); //find the first occurrence of string "//" in string
+  
+  if ((s0 !=NULL) || (s1 !=NULL) || (s2 !=NULL) || (s3 !=NULL))  
+   handle = 1;
+   
+//#ifdef DEBUG
+//  fprintf(stderr, "executing check_URI with parameters:h=%d:nb=%u:a1=%o:a2=%o\n", 
+//                                           handle, *(char*)(BLOC3+6),*(char*)(BLOC3+9));
+//#endif
+  return handle;
+}
+]]></embedded_functions>
+
+
+<!-- Property 12: C4_Analyse_03c|d|e : HTTP packet URI contains non authorized characters according to RFC2396 and RFC2234 or possibly directory traversal attack.-->
+<!-- URI invalid character set:
+     octets 0-32 (0-20 hex) | "\" | """ | "&" | "<" | ">" | "[" | "]" | "^" | "`" | "{" | "|" | "}" | "~" | octets 127-255 (7F-FF hex)
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="12" type_property="EVASION" 
+    description="HTTP packet URI contains non authorized characters according to RFC2396 and RFC2234 or possibly directory traversal attack.">
+    <event value="COMPUTE" event_id="1" 
+           description="HTTP URI invalid"
+           boolean_expression="((http.method == http.method)&amp;&amp;(#em_check_URI(http.uri) == 1))"/>
+    <event value="COMPUTE" event_id="2" 
+           description="HTTP packet"
+           boolean_expression="(1)"/>
+</property>
+</beginning>

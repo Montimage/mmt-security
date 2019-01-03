@@ -7,7 +7,10 @@ ssh root@192.168.0.7  "export TZ=Europe/Paris && date --set \"$(date)\""
 ssh root@192.168.0.35 "export TZ=Europe/Paris && date --set \"$(date)\""
 ssh root@192.168.0.36 "export TZ=Europe/Paris && date --set \"$(date)\""
 
-INDEX=30
+TYPE="complex"
+#TYPE="simple"
+
+INDEX=1
 #print out header
 FIRST=0
 
@@ -16,7 +19,7 @@ function run_test() {
   INDEX=$((INDEX + 1))
 
   echo "$INDEX ================= $(date)" | tee -a logs/log.txt
-  ./one-test.sh $INDEX $BW $PKT $A_RATE $CORE $RULE $FIRST >> logs/log.txt 2>&1
+  ./one-test.sh $INDEX $BW $PKT $A_RATE $CORE $RULE $TYPE $FIRST >> logs/log.txt 2>&1
 
   #print header of output-file only for the first time
   unset FIRST
@@ -36,14 +39,14 @@ function test_one_loop() {
 
 #rm logs/*
 
-for test_loop in 1 2 3 4 5
+for test_loop in 1 2 3
 do
 
 #base
-for BW in $(seq 4700 200 5700)
+for BW in $(seq 8900 200 9900)
 do
   CORE=16
-  RULE=200
+  RULE=400
   PKT=800
   A_RATE=10
   
@@ -53,10 +56,10 @@ done
 test_one_loop
 
 #pkt
-for BW in $(seq 6100 200 6900);
+for BW in $(seq 7900 200 8900);
 do
   CORE=16
-  RULE=200
+  RULE=400
   PKT=600 #
   A_RATE=10
   
@@ -67,10 +70,10 @@ done
 test_one_loop
 
 #pkt
-for BW in $(seq 3300 200 3900);
+for BW in $(seq 5900 200 6900);
 do
   CORE=16
-  RULE=200
+  RULE=400
   PKT=1000 #
   A_RATE=10
   
@@ -81,10 +84,10 @@ done
 test_one_loop
 
 #a_rate
-for BW in $(seq 5100 200 6100);
+for BW in $(seq 8500 200 9900);
 do
   CORE=16
-  RULE=200
+  RULE=400
   PKT=800
   A_RATE=20 #
   
@@ -95,10 +98,10 @@ done
 test_one_loop
 
 #a_rate
-for BW in $(seq 5500 200 6500);
+for BW in $(seq 8500 200 9900);
 do
   CORE=16
-  RULE=200
+  RULE=400
   PKT=800
   A_RATE=40 #
   
@@ -110,10 +113,10 @@ test_one_loop
 
 
 #core
-for BW in $(seq 3900 200 4900);
+for BW in $(seq 3900 200 5900);
 do
   CORE=8 #
-  RULE=200
+  RULE=400
   PKT=800
   A_RATE=10
   
@@ -125,18 +128,18 @@ done
 test_one_loop
 
 #rule
-for BW in $(seq 4100 200 4700)
-do
-  CORE=16
-  RULE=400
-  PKT=800
-  A_RATE=10
-  
-  run_test
-done
+#for BW in $(seq 6900 200 7500)
+#do
+#  CORE=16
+#  RULE=400
+#  PKT=800
+#  A_RATE=10
+#  
+#  run_test
+#done
 
 
-test_one_loop
+#test_one_loop
 
 echo "$INDEX,test_loop,$test_loop" >> logs/output.csv
 

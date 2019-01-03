@@ -265,15 +265,11 @@ int main(){
 }
 
 static void entry_action(void *stateData, const fsm_event_t *event) {
-	const char *stateName = (const char *) stateData;
-
-	mmt_debug("Entering %s\n", stateName);
+	mmt_debug("Entering %s\n", (const char *) stateData);
 }
 
 static void exit_action(void *stateData, const fsm_event_t *event) {
-	const char *stateName = (const char *) stateData;
-
-	mmt_debug("Exiting %s\n", stateName);
+	mmt_debug("Exiting %s\n", (const char *) stateData);
 }
 
 static void trans_action(void *oldStateData, const fsm_event_t *event,

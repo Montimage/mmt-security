@@ -14,73 +14,39 @@
 #include "system_info.h"
 #include "lock_free_spsc_ring.h"
 
-//implemented in mmt_security.c
-typedef struct _mmt_smp_sec_handler_struct{
+struct mmt_smp_sec_handler_struct{
 	size_t threads_count;
 
-	size_t rules_count;
-	const rule_info_t **rules_array;
-
-	mmt_sec_handler_t **mmt_sec_handlers;
+	mmt_single_sec_handler_t **mmt_single_sec_handlers;
 	pthread_t *threads_id;
 
-	size_t proto_atts_count;
-	const proto_attribute_t **proto_atts_array;
+	//one ring per thread
+	lock_free_spsc_ring_t **rings;
 
-	//one buffer per thread
-	lock_free_spsc_ring_t **messages_buffers;
-
-	uint8_t *hash_array;
 	bool verbose;
-}_mmt_smp_sec_handler_t;
+}__aligned;
 
 struct _thread_arg{
-	size_t index;
-	size_t lcore;
-	mmt_sec_handler_t *mmt_sec;
-	lock_free_spsc_ring_t *ring;
+	uint32_t index; //index of thread
+	uint32_t lcore; //lcore id on which thread will run on
+	const mmt_smp_sec_handler_t *handler;
 };
 
-/**
- * Public API
- */
-size_t mmt_smp_sec_get_rules(  const mmt_smp_sec_handler_t *handler, const rule_info_t ***rules_array ){
-	__check_null( handler, 0 );
-	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *) handler;
-
-	*rules_array = _handler->rules_array;
-	return _handler->rules_count;
-}
-
-
-/**
- * Public API
- */
-size_t mmt_smp_sec_get_unique_protocol_attributes( const mmt_smp_sec_handler_t *handler, const proto_attribute_t ***proto_atts_array ){
-	__check_null( handler, 0 );
-
-	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *) handler;
-
-	*proto_atts_array = _handler->proto_atts_array;
-	return _handler->proto_atts_count;
-}
 
 static inline void _mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_immediately  ){
 	size_t i;
 	int ret;
 
-	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *)handler;
-
 	if( stop_immediately ){
-		for( i=0; i<_handler->threads_count; i++ )
-			pthread_cancel( _handler->threads_id[ i ] );
+		for( i=0; i<handler->threads_count; i++ )
+			pthread_cancel( handler->threads_id[ i ] );
 	}else{
 		//insert NULL message at the end of ring
 		mmt_smp_sec_process( handler, NULL );
 
 		//waiting for all threads finish their job
-		for( i=0; i<_handler->threads_count; i++ ){
-			ret = pthread_join( _handler->threads_id[ i ], NULL );
+		for( i=0; i<handler->threads_count; i++ ){
+			ret = pthread_join( handler->threads_id[ i ], NULL );
 			switch( ret ){
 			case EDEADLK:
 				mmt_error("A deadlock was detected or thread specifies the calling thread");
@@ -102,75 +68,67 @@ static inline void _mmt_smp_sec_stop( mmt_smp_sec_handler_t *handler, bool stop_
 /**
  * Public API
  */
-size_t mmt_smp_sec_unregister( mmt_sec_handler_t *handler, bool stop_immediately ){
-	size_t i, alerts_count = 0, size;
+size_t mmt_smp_sec_unregister( mmt_smp_sec_handler_t *handler, bool stop_immediately ){
+	size_t i, total_alerts = 0, alerts_count, messages_count;
 
 	__check_null( handler, 0);
 
-	_mmt_smp_sec_handler_t *_handler = (_mmt_smp_sec_handler_t *)handler;
-
 	_mmt_smp_sec_stop( handler, stop_immediately );
 
-	//free data elements of _handler
-	for( i=0; i<_handler->threads_count; i++ ){
-		size = mmt_sec_unregister( _handler->mmt_sec_handlers[i] );
-		if( _handler->verbose )
-			mmt_info("Thread %2zu generated %8zu alerts", i+1, size );
-		alerts_count += size;
+	//free data elements of handler
+	for( i=0; i<handler->threads_count; i++ ){
+		messages_count = mmt_single_sec_get_processed_messages( handler->mmt_single_sec_handlers[i] );
+		alerts_count   = mmt_single_sec_unregister( handler->mmt_single_sec_handlers[i] );
+		if( handler->verbose )
+			mmt_info("MMT-Security thread %2zu processed %8zu messages and generated %8zu alerts", i+1, messages_count, alerts_count );
+
+		total_alerts += alerts_count;
 	}
 
-	for( i=0; i<_handler->threads_count; i++ )
-		ring_free( _handler->messages_buffers[ i ] );
+	for( i=0; i<handler->threads_count; i++ )
+		ring_free( handler->rings[ i ] );
 
-	mmt_mem_free( _handler->messages_buffers );
+	mmt_mem_free( handler->rings );
+	mmt_mem_free( handler->mmt_single_sec_handlers );
+	mmt_mem_free( handler->threads_id );
 
-	mmt_mem_free( _handler->mmt_sec_handlers );
-	mmt_mem_free( _handler->threads_id );
-
-	mmt_mem_free( _handler->proto_atts_array );
-
-	mmt_mem_free( _handler->hash_array );
-
-	mmt_mem_free( _handler );
-	return alerts_count;
+	mmt_mem_free( handler );
+	return total_alerts;
 }
 
 
 static inline void *_process_one_thread( void *arg ){
 	struct _thread_arg *thread_arg = (struct _thread_arg *) arg;
-	mmt_sec_handler_t *mmt_sec     = thread_arg->mmt_sec;
-	lock_free_spsc_ring_t *ring    = thread_arg->ring;
+	mmt_single_sec_handler_t *mmt_sec = thread_arg->handler->mmt_single_sec_handlers[ thread_arg->index ];
+	lock_free_spsc_ring_t *ring       = thread_arg->handler->rings[ thread_arg->index ];
 
-	void **arr;
+	void *array[100];
+	const size_t length = 100;
 	size_t size, i;
 
 	pthread_setcanceltype( PTHREAD_CANCEL_ENABLE, NULL );
 
-	if( move_the_current_thread_to_a_processor( thread_arg->lcore, -14 ))
-		mmt_warn("Cannot set affinity of thread %d on lcore %zu", gettid(), thread_arg->lcore  );
+	if( thread_arg->lcore != 0 && move_the_current_thread_to_a_processor( thread_arg->lcore, -14 ))
+		mmt_warn("Cannot set affinity of thread %d on lcore %d", gettid(), thread_arg->lcore  );
 
 	while( 1 ){
+		//get all possible messages in ring
+		size = ring_pop_burst( ring, length, array );
 
-		size = ring_pop_burst( ring, &arr );
-
-		if( unlikely( size == 0 ))
+		if( size == 0 )
 			ring_wait_for_pushing( ring );
 		else{
-
-			//do not process the last msg in the for
+			//do not process the last msg in the for-loop
 			size -= 1;
 			for( i=0; i< size; i++ )
-				mmt_sec_process( mmt_sec, arr[i] );
+				mmt_single_sec_process( mmt_sec, array[i] );
 
 			//only the last msg can be NULL
-			if( unlikely( arr[ size ] == NULL ) ){
-				mmt_mem_force_free( arr );
+			if( unlikely( array[ size ] == NULL ) ){
 				break;
 			}else{
-				mmt_sec_process( mmt_sec, arr[size] );
+				mmt_single_sec_process( mmt_sec, array[size] );
 			}
-
-			mmt_mem_force_free( arr );
 		}
 	}
 
@@ -182,47 +140,25 @@ static inline void *_process_one_thread( void *arg ){
 /**
  * Public API
  */
-mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, size_t rules_count,
+mmt_smp_sec_handler_t *mmt_smp_sec_register(
 		uint8_t threads_count, const uint32_t *core_mask, const char* rule_mask, bool verbose,
 		mmt_sec_callback callback, void *user_data){
 	int i, j, k, rules_count_per_thread;
-	mmt_sec_handler_t *mmt_sec_handler;
-	const proto_attribute_t **p_atts;
 
-	const rule_info_t **rule_ptr, *tmp;
+	const rule_info_t **rule_ptr, *tmp, **all_rules;
 	int ret;
 	struct _thread_arg *thread_arg;
 	long cpus_count = get_number_of_online_processors() - 1;
-	const size_t buffer_len = 10000;
-	char buffer[10000], *buffer_ptr;
-	uint32_t ring_size = get_config()->security.smp.ring_size;
+	const size_t ring_len = 10000 - 1;
+	char ring[10000], *ring_ptr;
+	uint32_t ring_size = mmt_sec_get_config( MMT_SEC__CONFIG__SECURITY__SMP__RING_SIZE );
 	uint32_t *rule_range, rule_id;
 	uint32_t thread_id;
 	size_t size;
+	rule_info_t const*const*rules_array;
 
-	__check_null( rules_array, NULL );
-
-	//Rules to be disabled
-	if( rule_mask != NULL ){
-		//rules are not verified
-		rules_count_per_thread = get_special_rules_for_thread( 0, rule_mask, &rule_range );
-		if( rules_count_per_thread > 0 ){
-			//move ignored rules to the end
-			//rule_ptr will ignored the last n rules
-			for( j=rules_count_per_thread-1; j>=0; j-- ){
-				rule_id = rule_range[ j ];
-				mmt_assert( rules_count != 0, "No rule to verify" );
-				for( k=rules_count-1; k>=0; k-- )
-					if( rule_id == rules_array[k]->id ){
-						//ignore this rule: rules_array[rules_count--]
-						rules_count --;
-
-						rules_array[k] = rules_array[ rules_count ];;
-						break;
-					}
-			}
-		}
-	}
+	size_t rules_count = mmt_sec_get_rules_info( &rules_array );
+	mmt_assert(rules_count > 0, "No rule to verify");
 
 	//number of threads <= number of rules
 	if( rules_count < threads_count ){
@@ -230,36 +166,21 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 		threads_count = rules_count;
 	}
 
-	if( verbose )
-		mmt_info(" MMT-Security version %s verifies %zu rule(s) using %d thread(s).",
-				mmt_sec_get_version_info(), rules_count, threads_count );
+	mmt_smp_sec_handler_t *handler = mmt_mem_alloc( sizeof( mmt_smp_sec_handler_t ));
 
-	_mmt_smp_sec_handler_t *handler = mmt_mem_alloc( sizeof( _mmt_smp_sec_handler_t ));
+	handler->verbose       = verbose;
+	handler->threads_count = threads_count;
+	handler->rings         = mmt_mem_alloc( sizeof( void *) * handler->threads_count );
 
-	handler->verbose         = verbose;
-	handler->rules_count     = rules_count;
-	handler->rules_array     = rules_array;
-	handler->threads_count   = threads_count;
-	handler->messages_buffers= mmt_mem_alloc( sizeof( void *) * handler->threads_count );
+	handler->mmt_single_sec_handlers = mmt_mem_alloc( sizeof( mmt_single_sec_handler_t *) * handler->threads_count );
 
-	//this is only for get mmt_sec_get_unique_protocol_attributes
-	mmt_sec_handler = mmt_sec_register( rules_array, rules_count, false, NULL, NULL );
-	handler->proto_atts_count = mmt_sec_get_unique_protocol_attributes( mmt_sec_handler, &p_atts );
-	handler->proto_atts_array = mmt_mem_dup( p_atts, sizeof( void *) * handler->proto_atts_count );
-	mmt_sec_unregister( mmt_sec_handler ); //free this handler after getting unique set of proto_atts
-	mmt_sec_handler = NULL;
-	//end of using #mmt_sec_handler
-
-	handler->mmt_sec_handlers = mmt_mem_alloc( sizeof( mmt_sec_handler_t *) * handler->threads_count );
-
-	//one buffer per thread
+	//one ring per thread
 	for( i=0; i<handler->threads_count; i++){
-		handler->messages_buffers[ i ] = ring_init( ring_size );
-		handler->mmt_sec_handlers[ i ] = NULL;
+		handler->rings[ i ] = ring_init( ring_size );
+		handler->mmt_single_sec_handlers[ i ] = NULL;
 	}
 
-
-	rule_ptr = rules_array;
+	all_rules = rule_ptr = mmt_mem_dup( rules_array, rules_count * sizeof( void*));
 	if( rule_mask != NULL ){
 		for( i=0; i<handler->threads_count; i++ ){
 			rules_count_per_thread = get_special_rules_for_thread( i+1, rule_mask, &rule_range );
@@ -282,22 +203,24 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 				mmt_assert( k <= rules_count, "Rule mask is incorrect: rule %"PRIu32" does not exist.", rule_id );
 			}
 
-			if( verbose){
+			if( verbose ){
 				size = 0;
 				for( j=0; j<rules_count_per_thread; j++ ){
-					if( size >= buffer_len + 1 ) break;
-					size += sprintf(buffer + size, "%d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
+					if( size > ring_len ) break;
+					size += snprintf(ring + size, ring_len - size, "%"PRIu32"%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
 				}
-				buffer[size] = '\0';
+				ring[size] = '\0';
 
-				mmt_info("Thread %2d processes %4d rules: %s", i + 1, rules_count_per_thread, buffer );
+				mmt_info("Thread %2d processes %4d rules: %s", i + 1, rules_count_per_thread, ring );
 			}
 
-			handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, verbose, callback, user_data );
+			handler->mmt_single_sec_handlers[ i ] = mmt_single_sec_register( rule_ptr, rules_count_per_thread, verbose, callback, user_data );
 
 			rule_ptr      += rules_count_per_thread;
 			rules_count   -= rules_count_per_thread; //number of remaining rules
 			threads_count --;//number of remaining threads
+
+			mmt_mem_free( rule_range );
 		}
 	}//end if( rule_mask != NULL )
 
@@ -307,87 +230,173 @@ mmt_smp_sec_handler_t *mmt_smp_sec_register( const rule_info_t **rules_array, si
 	for( i=0; i<handler->threads_count; i++ ){
 
 		//this thread has been initiated above
-		if( handler->mmt_sec_handlers[ i ] != NULL )
+		if( handler->mmt_single_sec_handlers[ i ] != NULL )
 			continue;
 
 		rules_count_per_thread = rules_count / threads_count;
 
-		//TODO: this is for test only (uncomment after testing)
-//		if( verbose){
-//			size = 0;
-//			for( j=0; j<rules_count_per_thread; j++ ){
-//				if( size >= buffer_len - 10 ) break;
-//				size += sprintf(buffer + size, "%d%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
-//			}
-//			buffer[size] = '\0';
-//
-//			mmt_info("Thread %2d processes %4d rules: %s", i + 1, rules_count_per_thread, buffer );
-//		}
+		if( verbose){
+			size = 0;
+			for( j=0; j<rules_count_per_thread; j++ ){
+				if( size > ring_len ) break;
+				size += snprintf(ring + size, ring_len - size,"%"PRIu32"%c", rule_ptr[j]->id, j == rules_count_per_thread - 1? ' ':',' );
+			}
+			ring[size] = '\0';
 
-		handler->mmt_sec_handlers[ i ] = mmt_sec_register( rule_ptr, rules_count_per_thread, verbose, callback, user_data );
+			mmt_info("Thread %2d processes %4d rules: %s", i + 1, rules_count_per_thread, ring );
+		}
+
+		handler->mmt_single_sec_handlers[ i ] = mmt_single_sec_register( rule_ptr, rules_count_per_thread, verbose, callback, user_data );
 		rule_ptr    += rules_count_per_thread;
 		rules_count -= rules_count_per_thread; //number of remaining rules
 		threads_count --;//number of remaining threads
 	}
 
-
 	handler->threads_id = mmt_mem_alloc( sizeof( pthread_t ) * handler->threads_count );
 	for( i=0; i<handler->threads_count; i++ ){
 		thread_arg          = mmt_mem_alloc( sizeof( struct _thread_arg ));
 		thread_arg->index   = i;
-		thread_arg->lcore   = core_mask[ i ];
-		thread_arg->mmt_sec = handler->mmt_sec_handlers[ i ];
-		thread_arg->ring    = handler->messages_buffers[ i ];
+		thread_arg->handler = handler;
+		if( core_mask == NULL )
+			thread_arg->lcore = 0;
+		else
+			thread_arg->lcore   = core_mask[ i ];
 		ret = pthread_create( &handler->threads_id[ i ], NULL, _process_one_thread, thread_arg );
 		mmt_assert( ret == 0, "Cannot create thread %d", (i+1) );
 	}
 
-	handler->hash_array = mmt_mem_alloc( handler->threads_count );
+	mmt_mem_force_free( all_rules );
+	return handler;
+}
 
-	return (mmt_smp_sec_handler_t *)handler;
+void mmt_smp_sec_set_ignore_remain_flow( mmt_smp_sec_handler_t *handler, bool ignore, uint64_t buffer_size ){
+	int i;
+	for( i=0; i<handler->threads_count; i++ )
+		mmt_single_sec_set_ignore_remain_flow( handler->mmt_single_sec_handlers[ i ], ignore, buffer_size );
+}
+
+bool mmt_smp_is_ignore_remain_flow( mmt_smp_sec_handler_t *handler, uint64_t flow_id ){
+	int i;
+	for( i=0; i<handler->threads_count; i++ ){
+		bool ret = mmt_single_is_ignore_remain_flow( handler->mmt_single_sec_handlers[ i ], flow_id );
+		if( ! ret )
+			return false;
+	}
+	return true;
 }
 
 /**
  * Public API
  */
-void mmt_smp_sec_process( const mmt_smp_sec_handler_t *handler, message_t *msg ){
-	_mmt_smp_sec_handler_t *_handler;
+void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 	int ret;
 	lock_free_spsc_ring_t *ring;
-	size_t total, i;
+	size_t total_retain = 0, i;
+	//TODO: this limit 64 threads of mmt_smp_sec
+	uint64_t mask;
 
 #ifdef DEBUG_MODE
 	mmt_assert( handler != NULL, "handler cannot be null");
 #endif
 
-	_handler = (_mmt_smp_sec_handler_t *)handler;
+	//TODO: remove this
+//	if( msg != NULL ){
+//		free_message_t( msg );
+//		return;
+//	}
 
-	//retain message for each thread
-	//-1 since msg was cloned from message -> it has ref_count = 1
-	//=> we need to increase ref_count only ( _handler->threads_count - 1)
-	if( likely( _handler->threads_count > 1 && msg != NULL ))
-		msg = mmt_mem_retains( msg,  _handler->threads_count - 1 );
+	//all threads does not receive receive message: turn on the first #threads_count bits
+	mask =  (1LL << handler->threads_count) - 1;
 
-	//all threads have not been yet put the message
-//	memset( _handler->hash_array, 0, _handler->threads_count );
-	for( i=0; i<_handler->threads_count; i++ )
-		_handler->hash_array[ i ] = 0;
+	if( likely( msg != NULL )){
+		//	mmt_debug("%"PRIu64" verify rule", msg->counter );
+		for( i=0; i<handler->threads_count; i++ ){
+			//the message does not concern to any rules handled by this thread
+			//==> do not need to push the message into the queue of this thread
+			if( (msg->hash & handler->mmt_single_sec_handlers[i]->hash) == 0 )
+				BIT_CLEAR( mask, i );
+			else
+				total_retain ++;
+		}
 
-	total = 0;
-	while( total < _handler->threads_count ){
-		for( i=0; i<_handler->threads_count; i++ ){
+		//no thread requires this message ?
+		if( unlikely( total_retain == 0 )){
+			free_message_t( msg );
+			return;
+		}
+
+		//retain message for each thread
+		//-1 since msg was cloned from message -> it has ref_count = 1
+		//=> we need to increase ref_count only ( handler->threads_count - 1)
+		msg = mmt_mem_retains( msg,  total_retain - 1 );
+	}
+
+
+
+
+
+	//still have one threads is not received msg
+	while( mask != 0 ){
+		for( i=0; i<handler->threads_count; i++ ){
+
 			//if ring i-th has been put the message
-			if( unlikely( _handler->hash_array[ i ] == 1 ))
+			if( unlikely( BIT_CHECK( mask, i ) == 0 ))
 				continue;
 
-			//insert msg to a buffer
-			// if we cannot insert (e.g., ring is full), we omit the current ring and continue for next rules
-			// then, go back to the current one after processing the last rule
-			if( ring_push( _handler->messages_buffers[ i ], msg ) == RING_SUCCESS ){
-				total ++;
-				_handler->hash_array[ i ] = 1;
-			}
+			//insert msg to a ring
+			// if we cannot insert to the current ring (e.g., ring is full), we omit it and continue for next ring
+			// then, go back to the current one after processing the last ring
+			if( ring_push( handler->rings[ i ], msg ) == RING_SUCCESS )
+				BIT_CLEAR( mask, i );
+//#ifdef DEBUG_MODE
+//			else
+//				ring_wait_for_poping( handler->rings[ i ] );
+//#endif
 		}
+		//mmt_debug("ring full %"PRIu64, hash_index );
 	}
 }
 
+
+#ifdef MODULE_ADD_OR_RM_RULES_RUNTIME
+
+void mmt_smp_sec_add_rules( mmt_smp_sec_handler_t *handler, const char*rules_mask ){
+	int i;
+	size_t add_rules_count;
+	uint32_t *new_rules_arr;
+	size_t ret;
+	for( i=0; i<handler->threads_count; i++ ){
+		new_rules_arr = NULL;
+		//get all rules if for this thread
+		add_rules_count = get_special_rules_for_thread( i+1, rules_mask, &new_rules_arr);
+		if( add_rules_count == 0 ){
+			if( handler->verbose )
+				mmt_info("- Added %zu rule(s) to thread %d", add_rules_count, (i+1));
+			mmt_mem_free( new_rules_arr );
+			continue;
+		}
+
+		ret = mmt_single_sec_add_rules(handler->mmt_single_sec_handlers[ i ], add_rules_count, new_rules_arr);
+		if( handler->verbose )
+			mmt_info("- Added %zu/%zu rule(s) to thread %d", ret, add_rules_count, (i+1));
+
+		//#get_special_rules_for_thread create a new memory => we need to free it
+		mmt_mem_free( new_rules_arr );
+	}
+}
+void mmt_smp_sec_remove_rules( mmt_smp_sec_handler_t *handler ){
+	int i;
+	size_t rm_rules_count, old_rules_count;
+	for( i=0; i<handler->threads_count; i++ ){
+		old_rules_count = handler->mmt_single_sec_handlers[i]->rules_count;
+
+		if( handler->verbose)
+			mmt_info( "- Removing rules from thread %d", (i+1) );
+		rm_rules_count = mmt_single_sec_remove_rules( handler->mmt_single_sec_handlers[i] );
+
+		if( handler->verbose)
+			printf( " => %zu/%zu rule(s) being removed\n", rm_rules_count, old_rules_count);
+	}
+}
+
+#endif

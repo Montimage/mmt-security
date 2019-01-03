@@ -35,11 +35,20 @@ static inline int compare_uint16_t( const void *a, const void *b){
 }
 static inline int compare_uint32_t( const void *a, const void *b){
 	//mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint32_t function %s:%d", __FILE__, __LINE__ );
-	return *(uint32_t *)a - *(uint32_t *)b;
+	//return
+	if( *(uint32_t *)a  ==  *(uint32_t *)b )
+		return 0;
+	else if( *(uint32_t *)a  >  *(uint32_t *)b )
+		return 1;
+	else return -1;
 }
 static inline int compare_uint64_t( const void *a, const void *b){
 	//mmt_assert( a != NULL && b != NULL, "NULL values in compare_uint64_t function %s:%d", __FILE__, __LINE__ );
-	return *(uint64_t *)a - *(uint64_t *)b;
+	if( *(uint64_t *)a  ==  *(uint64_t *)b )
+		return 0;
+	else if( *(uint64_t *)a  >  *(uint64_t *)b )
+		return 1;
+	else return -1;
 }
 
 /**
@@ -151,4 +160,5 @@ mmt_map_t* mmt_map_clone( const mmt_map_t *map );
 mmt_map_t* mmt_map_clone_key_and_data( const mmt_map_t *map, void* (*clone_key_fn)( void *), void* (*clone_data_fn)( void *)  );
 
 mmt_array_t *mmt_map_convert_to_array( const mmt_map_t *map );
+
 #endif /* SRC_LIB_MMT_MAP_T_H_ */

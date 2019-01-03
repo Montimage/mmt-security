@@ -25,13 +25,10 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
-#include "dpi/types_defs.h"
-#include "dpi/mmt_dpi.h"
-#include "lib/config.h"
-#include "lib/mmt_lib.h"
+#include "lib/dpi_message_t.h"
 #include "lib/mmt_smp_security.h"
-#include "lib/system_info.h"
 
 #define MAX_RULE_MASK_SIZE 100000
 //maximum length of a report sent from mmt-probe
@@ -39,27 +36,18 @@
 //maximum length of file name storing alerts
 #define MAX_FILENAME_SIZE 500
 
-#define STRING 1
-#define VOID   2
+#define MMT_SEC_MSG_DATA_TYPE_STRING 1
+#define MMT_SEC_MSG_DATA_TYPE_BINARY   2
 
 #ifndef __FAVOR_BSD
 #define __FAVOR_BSD
 #endif
 
-typedef struct _sec_handler_struct{
-	void *handler;
-
-	void (*process_fn)( const void *, message_t *);
-
-	int threads_count;
-}_sec_handler_t;
-
 //print out detailed message
 static bool verbose                     = NO;
-static _sec_handler_t _sec_handler;
-static const rule_info_t **rules_arr    = NULL;
+static mmt_sec_handler_t *sec_handler   = NULL;
 static size_t proto_atts_count          = 0;
-static message_element_t *proto_atts    = NULL;
+const proto_attribute_t *const *proto_atts    = NULL;
 //id of socket
 static int socket_server                = 0;
 
@@ -70,7 +58,6 @@ static char output_redis_string[MAX_FILENAME_SIZE + 1] = {0};
 static size_t reports_count = 0;
 static size_t clients_count = 0;
 static struct timeval start_time, end_time;
-static size_t rules_count = 0;
 
 static inline double time_diff(struct timeval t1, struct timeval t2) {
 	return (double)(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)/1000000.0;
@@ -83,6 +70,7 @@ void usage(const char * prg_name) {
 	fprintf(stderr, "\t-p <number/string> : If p is a number, it indicates port number of internet domain socket otherwise it indicates name of unix domain socket. Default: 5000\n");
 	fprintf(stderr, "\t-n <number> : Number of threads per process. Default = 1\n");
 	fprintf(stderr, "\t-c <string> : Gives the range of logical cores to run on, e.g., \"1,3-8,16\"\n");
+	fprintf(stderr, "\t-x <string> : Gives the range of rules id to be excluded from verification, e.g., \"1,3-8,16\"\n");
 	fprintf(stderr, "\t-m <string> : Attributes special rules to special threads e.g., \"(1:10-13)(2:50)(4:1007-1010)\"\n");
 	fprintf(stderr, "\t-f <string> : Output results to file, e.g., \"/home/tata/:5\" => output to folder /home/tata and each file contains reports during 5 seconds \n");
 	fprintf(stderr, "\t-r <string> : Output results to redis, e.g., \"localhost:6379\"\n");
@@ -92,11 +80,12 @@ void usage(const char * prg_name) {
 	exit(1);
 }
 
-size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, char *unix_domain, size_t *threads_count,
-		size_t *cores_count, uint32_t **core_mask, char *rule_mask, bool *verbose ) {
+size_t parse_options(int argc, char ** argv, uint16_t *port_no, char *unix_domain, size_t *threads_count,
+		size_t *cores_count, uint32_t **core_mask, char *excluded_rules_mask, char *rule_mask, bool *verbose ) {
 	int opt, optcount = 0, x;
-
-	while ((opt = getopt(argc, argv, "p:n:f:r:c:m:vlh")) != EOF) {
+	excluded_rules_mask[0] = '\0';
+	rule_mask[0]           = '\0';
+	while ((opt = getopt(argc, argv, "p:n:f:r:c:m:x:vlbh")) != EOF) {
 		switch (opt) {
 		case 'p':
 			optcount++;
@@ -130,6 +119,10 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 			optcount++;
 			strncpy( rule_mask, optarg, MAX_RULE_MASK_SIZE );
 			break;
+		case 'x':
+			optcount++;
+			strncpy( excluded_rules_mask, optarg, MAX_RULE_MASK_SIZE );
+			break;
 		case 'c':
 			optcount++;
 			*cores_count = expand_number_range( optarg, core_mask );
@@ -137,8 +130,14 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 				usage(argv[0]);
 			break;
 		case 'l':
+			mmt_sec_init( excluded_rules_mask );
 			mmt_sec_print_rules_info();
+			mmt_sec_close();
 			exit( 0 );
+		case 'b':
+			optcount++;
+			//Keep for future use
+			break;
 		case 'v':
 			optcount++;
 			*verbose = YES;
@@ -151,11 +150,11 @@ size_t parse_options(int argc, char ** argv, uint16_t *rules_id, int *port_no, c
 }
 
 
-static inline int _get_data_type( uint32_t proto_id, uint32_t att_id ){
+static inline int _get_dpi_data_type( uint32_t proto_id, uint32_t att_id ){
 	size_t i;
 	for( i=0; i<proto_atts_count; i++ )
-		if( proto_atts[ i ].proto_id == proto_id && proto_atts[ i ].att_id == att_id ){
-			return proto_atts[ i ].data_type;
+		if( proto_atts[ i ]->proto_id == proto_id && proto_atts[ i ]->att_id == att_id ){
+			return proto_atts[ i ]->dpi_type;
 		}
 
 #ifdef DEBUG_MODE
@@ -176,9 +175,9 @@ static inline size_t receiving_reports( int sock ) {
 
 	uint32_t length_of_report = 0;
 	message_t *msg;
-	message_element_t *el_ptr;
-	uint16_t el_data_length;
-	int el_data_type;
+	uint32_t proto_id, att_id;
+	uint16_t data_length;
+	int dpi_data_type;
 	size_t counter;
 	size_t elements_count;
 
@@ -195,10 +194,6 @@ static inline size_t receiving_reports( int sock ) {
 			mmt_warn("Overflow: length_of_report = %d", length_of_report );
 			length_of_report = REPORT_SIZE;
 		}
-		else if( unlikely( length_of_report < 0 )){
-			mmt_info( "Impossible len = %d", length_of_report );
-			continue;
-		}
 
 		n = recv( sock, buffer, length_of_report-4, MSG_WAITALL );
 
@@ -212,51 +207,46 @@ static inline size_t receiving_reports( int sock ) {
 		elements_count = (uint8_t) buffer[ index ];
 		index += 1;
 
-		msg = create_message_t( elements_count );
+		msg = create_message_t();
 
 		msg->timestamp = mmt_sec_encode_timeval( ( struct timeval * ) &( buffer[index] ) );
 		index += sizeof (struct timeval);//16
 
 		msg->counter = reports_count; //TODO
 
-		for(counter = 0; counter < msg->elements_count; counter ++){
-			el_ptr = &msg->elements[ counter ];
+		for(counter = 0; counter < elements_count; counter ++){
 			//protocol ID
-			el_ptr->proto_id = *(uint32_t *) &buffer[index];
+			//proto_id = *(uint32_t *) &buffer[index];
+			memcpy( &proto_id, &buffer[index], 4 );
 			index += 4;
 
 			//attribute ID
-			el_ptr->att_id = *(uint32_t*) &buffer[index];
+			//att_id = *(uint32_t*) &buffer[index];
+			memcpy( &att_id, &buffer[index], 4 );
 			index += 4;
 
 			//data length
-			el_data_length = *(uint16_t *) &buffer[index];
+			//data_length = *(uint16_t *) &buffer[index];
+			memcpy( &data_length, &buffer[index], 2 );
 			index += 2;
 
 			//data
-			el_data_type = _get_data_type( el_ptr->proto_id, el_ptr->att_id );
+			dpi_data_type = _get_dpi_data_type( proto_id, att_id );
 
 			//special processing for these data types
-			switch( el_data_type ){
+			switch( dpi_data_type ){
 			case MMT_STRING_DATA_POINTER:
 			case MMT_GENERIC_HEADER_LINE :
 			case MMT_HEADER_LINE :
-				set_data_of_one_element_message_t( msg, el_ptr,  &buffer[index], el_data_length );
-				el_ptr->data_type = STRING;
+				set_element_data_message_t( msg, proto_id, att_id,  &buffer[index], MMT_SEC_MSG_DATA_TYPE_STRING, data_length );
 				break;
-			case MMT_DATA_POINTER :
-				set_data_of_one_element_message_t( msg, el_ptr,  &buffer[index], el_data_length );
-				el_ptr->data_type = VOID;
-				break;
-			case -1:
-				el_ptr->data      = NULL;
-				el_ptr->data_type = VOID;
+			case MMT_DATA_POINTER:
+				set_element_data_message_t( msg, proto_id, att_id,  &buffer[index], MMT_SEC_MSG_DATA_TYPE_BINARY, data_length );
 				break;
 			default:
-				set_dpi_data_to_one_element_message_t( &buffer[index], el_data_type, msg, el_ptr );
+				dpi_message_set_dpi_data( &buffer[index], dpi_data_type, msg, proto_id, att_id );
 			}
-
-			index += el_data_length;
+			index += data_length;
 
 			//http.method
 //			if( el_ptr->proto_id == 153 && el_ptr->att_id == 1 ){
@@ -271,7 +261,7 @@ static inline size_t receiving_reports( int sock ) {
 
 		reports_count ++;
 		//call mmt_security
-		_sec_handler.process_fn( _sec_handler.handler, msg );
+		mmt_sec_process( sec_handler, msg );
 	}
 
 	return reports_count;
@@ -279,19 +269,12 @@ static inline size_t receiving_reports( int sock ) {
 
 static inline size_t termination(){
 	size_t alerts_count = 0;
-	if( _sec_handler.handler == NULL )
-		return 0;
+	if( sec_handler != NULL ){
+		alerts_count = mmt_sec_unregister( sec_handler );
+	}
+	sec_handler = NULL;
 
-	if( _sec_handler.threads_count > 1 )
-		alerts_count = mmt_smp_sec_unregister( _sec_handler.handler, NO );
-	else
-		alerts_count = mmt_sec_unregister( _sec_handler.handler );
-
-	_sec_handler.handler = NULL;
-
-	mmt_mem_free( proto_atts );
-	mmt_mem_free( rules_arr );
-
+	mmt_sec_close();
 	return alerts_count;
 }
 
@@ -338,9 +321,6 @@ void signal_handler(int signal_type) {
 		//mmt_info("Process %d generated %zu alerts", pid, alerts_count );
 	}
 
-	if( alerts_count != 0 )
-		mmt_sec_print_verdict( NULL, 0, 0, rules_count, NULL, NULL );
-
 	//parent waits for all children
 	if( parent_pid == pid ) wait( &status );
 
@@ -359,11 +339,9 @@ void register_signals(){
 
 
 int main( int argc, char** argv ) {
-	uint32_t port_number = 5000; //port on that the program listens
+	uint16_t port_number = 5000; //port on that the program listens
 	size_t threads_count = 1;    //number of threads for each process
 
-	uint16_t *rules_id_filter;
-	const proto_attribute_t **p_atts;
 	int client_socket, pid, i;
 
 	char str_buffer[256];
@@ -373,7 +351,7 @@ int main( int argc, char** argv ) {
 	struct sockaddr_un un_server_addr, un_cli_addr;
 
 	char un_domain_name[ MAX_FILENAME_SIZE + 1 ];
-	bool is_unix_socket = NO;
+	bool is_unix_socket;
 
 	socklen_t socklen;
 	size_t size, cores_count = 0, alerts_count = 0;
@@ -381,11 +359,12 @@ int main( int argc, char** argv ) {
 
 	mmt_sec_callback _print_output;
 
-	char rule_mask[ 100000 ];
+	char rule_mask[ MAX_RULE_MASK_SIZE ], excluded_rules_mask[ MAX_RULE_MASK_SIZE ];
 
 	parent_pid = getpid();
 
-	parse_options(argc, argv, rules_id_filter, &port_number, un_domain_name, &threads_count, &cores_count, &core_mask, rule_mask, &verbose );
+	parse_options(argc, argv, &port_number, un_domain_name, &threads_count,
+			&cores_count, &core_mask, excluded_rules_mask, rule_mask, &verbose );
 
 	is_unix_socket = (port_number == 0);
 
@@ -393,20 +372,19 @@ int main( int argc, char** argv ) {
 
 	mmt_assert( threads_count > 0 && cores_count % threads_count == 0, "Number of lcores must be multiple of %zu", threads_count );
 
-	//get all available rules
-	rules_count = mmt_sec_get_rules_info( &rules_arr );
+	mmt_sec_init( excluded_rules_mask );
 
-	mmt_assert( rules_count > 0, "No rule to verify.");
-
+	proto_atts_count = mmt_sec_get_unique_protocol_attributes( & proto_atts );
 	//init mmt-sec to verify the rules
-	_sec_handler.threads_count = threads_count;
 
 	if( verbose ){
 		//TODO: uncomment this after testing
+//		mmt_info(" MMT-Security version %s verifies %zu rule(s) using %zu thread(s).",
+//						mmt_sec_get_version_info(), rules_count, threads_count );
 //		if( is_unix_socket == NO )
-//			mmt_info(" MMT-Security is listening on port %d\n", port_number );
+//			mmt_info(" It is listening on port %d\n", port_number );
 //		else
-//			mmt_info(" MMT-Security is listening on \"%s\"\n", un_domain_name );
+//			mmt_info(" It is listening on \"%s\"\n", un_domain_name );
 	}
 
 	/* create internet socket */
@@ -517,32 +495,15 @@ int main( int argc, char** argv ) {
 			//do not need output
 			if( output_file_string[0] == '\0' &&  output_redis_string[0] == '\0' )
 				_print_output = NULL;
-			else
+			else{
+				//init output
+				verdict_printer_init( output_file_string, output_redis_string );
 				_print_output = mmt_sec_print_verdict;
+			}
 
 			//init mmt-sec to verify the rules
-			if( _sec_handler.threads_count == 1 ){
-				_sec_handler.handler    = mmt_sec_register( rules_arr, rules_count, verbose, _print_output, NULL );
-				_sec_handler.process_fn = &mmt_sec_process;
-				size = mmt_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
-			}else if( _sec_handler.threads_count > 1 ){
-				_sec_handler.handler    = mmt_smp_sec_register( rules_arr, rules_count, threads_count - 1, core_mask_ptr, rule_mask, verbose && clients_count == 1, _print_output, NULL );
-				_sec_handler.process_fn = &mmt_smp_sec_process;
-				size = mmt_smp_sec_get_unique_protocol_attributes( _sec_handler.handler, &p_atts );
-			}
+			sec_handler = mmt_sec_register( threads_count, core_mask_ptr, rule_mask, verbose, _print_output, NULL );
 
-			//Remember proto_id/att_id to get data_type for each report element receveived from mmt-probe
-			proto_atts_count = size;
-			proto_atts = mmt_mem_alloc( size * sizeof( message_element_t ));
-			for( i=0; i<size; i++ ){
-				proto_atts[i].proto_id  = p_atts[i]->proto_id;
-				proto_atts[i].att_id    = p_atts[i]->att_id;
-				proto_atts[i].data_type = get_attribute_data_type( p_atts[i]->proto_id, p_atts[i]->att_id );
-				mmt_debug("p_atts[i]->proto_id = %u, p_atts[i]->att_id = %u, proto_atts[i].data_type = %d", p_atts[i]->proto_id, p_atts[i]->att_id, proto_atts[i].data_type);
-			}
-
-			//init output
-			verdict_printer_init( output_file_string, output_redis_string );
 
 			//mark the starting moment
 			if( verbose )

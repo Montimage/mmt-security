@@ -24,7 +24,7 @@ static inline int em_check_max_proto_len(const void *data){
 ]]></embedded_functions>
 <!-- Property 73: Protocol hierarchy length is 16 -->
 <property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="73" type_property="ATTACK" 
-     description="The maximum protocol hierarchy length exceeded" >
+     description="Exceeded the maximum protocol hierarchy length" >
    <event event_id="1" value="COMPUTE" 
            description="Print out IP addresses"
            boolean_expression="(ip.src != ip.dst)"/>

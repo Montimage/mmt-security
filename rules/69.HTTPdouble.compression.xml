@@ -39,6 +39,6 @@ static inline int em_check_double_compression_http(const char *str){
            boolean_expression="((ip.packet_count != 0) &amp;&amp; (ip.src != ip.dst))"/>
    <event event_id="2" value="COMPUTE" 
            description="HTTP double compression"
-           boolean_expression="(#em_check_double_compression_http(http.p_payload)==1)"/>
+           boolean_expression="(#em_check_double_compression_http(tcp.p_payload)==1)"/>
  </property>
 </beginning>

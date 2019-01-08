@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) 2014-->
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int em_check_double_encoding_http(const char *str){
+   
+   
+   const char* c = str;
+   while( *c != '\0' ){
+      if (*c=='T' && c[1]=='r' && c[2]=='a' && c[3]=='n' && c[4]=='s'){
+      	if (strstr(c, "Transfer-Encoding") != NULL) {
+      		while( *c != '\0' ){
+      			if (*c=='T' && c[1]=='r' && c[2]=='a' && c[3]=='n' && c[4]=='s'){
+     			 	if (strstr(c, "Transfer-Encoding") != NULL) return 1;
+     			 	break;
+     			 	}
+     			 if (*c=='C' && c[1]=='o' && c[2]=='n' && c[3]=='t' && c[4]=='e'){
+     			 	if (strstr(c, "Content-length") != NULL) return 1;
+     			 	break;
+     			 	}
+      		c++;
+      		}
+      	}
+      	break;
+      	} 
+      c ++;
+   }
+   return 0;
+}
+]]></embedded_functions>
+<!-- Property 70: Detect HTTP double transfer encoding -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="70" type_property="ATTACK" 
+     description="Detect HTTP double transfer encoding" >
+   <event event_id="1" value="COMPUTE" 
+           description="IP addresses"
+           boolean_expression="((ip.packet_count != 0) &amp;&amp; (ip.src != ip.dst))"/>
+   <event event_id="2" value="COMPUTE" 
+           description="HTTP double transfer encoding"
+           boolean_expression="(#em_check_double_encoding_http(tcp.p_payload)==1)"/>
+ </property>
+</beginning>

@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 75: IP fragmentation : fragments with non-homogeneous TTL (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="100" property_id="75" type_property="EVASION" 
+    description="IP fragmentation : fragments with  with non-homogeneous TTL (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment with offset=0"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.proto_ttl != 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and different TTL value"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.proto_ttl != ip.proto_ttl.1)&amp;&amp;(ip.src != ip.dst)))"/>
+</property>
+</beginning>

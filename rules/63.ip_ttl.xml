@@ -3,13 +3,13 @@
 <!--              according to: 
 					https://en.wikipedia.org/wiki/Time_to_live
 -->
-<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="63" type_property="EVASION" 
-    description="Not recommended TTL value">
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="100" property_id="63" type_property="EVASION" 
+    description="TTL non-homogeneous in IP packets in the same session">
       <event value="COMPUTE" event_id="1" 
-             description="IP packet with non-recommended IP TTL"
-             boolean_expression="(ip.proto_ttl &gt; 64)"/>
+             description="IP packet with addresses"
+             boolean_expression="((ip.proto_ttl != 0)&amp;&amp;((ip.session_id != 0)&amp;&amp;(ip.src != ip.dst)))"/>
       <event value="COMPUTE" event_id="2" 
-             description="Print source and destination of IP"
-             boolean_expression="(ip.src != ip.dst)"/>
+             description="Another IP packet in the same session but has different TTL value"
+             boolean_expression="((ip.proto_ttl != ip.proto_ttl.1)&amp;&amp;((ip.session_id == ip.session_id.1)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))))"/>
 </property>
 </beginning>

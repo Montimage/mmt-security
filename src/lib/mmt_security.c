@@ -471,17 +471,22 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 			str_ptr += size;
 
+			//do not forget ]
+			size = snprintf( str_ptr, total_len, "%s[\"%s.%s\",", //[key, value]
+					(is_first? "":","),
+					pro_ptr->proto,
+					pro_ptr->att);
+
+			str_ptr   += size;
+			total_len -= size;
+
 			//pro_ptr->data_type;
 			switch( me->data_type ){
 			case MMT_SEC_MSG_DATA_TYPE_NUMERIC:
 				double_val = *(double *)me->data;
 
 				//do not forget }
-				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":%.2f",
-							(is_first? "":","),
-							pro_ptr->proto,
-							pro_ptr->att,
-							double_val );
+				size = snprintf( str_ptr, total_len, "%.2f", double_val );
 
 				c_ptr = str_ptr + size;
 				//remove zero at the end, e.g., 10.00 ==> 10
@@ -498,14 +503,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				break;
 
 			default:
-				//do not forget }
-				size = snprintf( str_ptr, total_len, "%s{\"%s.%s\":",
-						(is_first? "":","),
-						pro_ptr->proto,
-						pro_ptr->att);
 
-				str_ptr   += size;
-				total_len -= size;
 
 				u8_ptr = NULL;
 
@@ -546,9 +544,9 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 			}//end of switch( me->data_type )
 
-			//close } here
+			//close ] here
 			str_ptr += size;
-			*str_ptr = '}';
+			*str_ptr = ']';
 			*(str_ptr + 1 ) = '\0';
 
 			size = 1;

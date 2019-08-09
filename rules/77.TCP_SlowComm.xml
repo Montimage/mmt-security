@@ -1,0 +1,49 @@
+<beginning>
+  <!-- Property 77: SlowComm DDos attack
+-->
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+#include <stdio.h>
+#include <stdint.h>
+#include <sys/time.h>
+
+static inline int em_check_delta_request(uint64_t sessionId){
+  printf("session ID: %lu\n", sessionId);
+  //struct timeval * ts = (struct timeval *) utime;
+  //printf("session ID: %lu, timestamp: %lu.%lu\n", sessionId, ts->tv_sec, ts->tv_usec);
+  return true;
+}
+]]></embedded_functions>
+  <property value="THEN" delay_units="s" delay_min="0+" delay_max="100" property_id="77" type_property="ATTACK" description="SlowComm DDos attack">
+    <!-- <event value="COMPUTE" event_id="1" description="Every packet" boolean_expression="(ip.session_id != 0)"/> -->
+    <operator value="OR" delay_units="s" delay_min="0" delay_max="0">
+      <!-- The packet to detect the TCP handshake -->
+      <event
+        value="COMPUTE"
+        event_id="1"
+        description="SYN, ACK packet"
+        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len == 0)&amp;&amp;(meta.direction==1)&amp;&amp;(tcp.ack == 1)&amp;&amp;(tcp.syn == 1))"/>
+      <!-- The data packet which has been sent from the attacker to the victim -->
+      <event
+        value="COMPUTE"
+        event_id="2"
+        description="Data packet"
+        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0))"/>
+    </operator>
+    <operator value="OR" delay_units="s" delay_min="0" delay_max="0">
+      <!-- The first data packet which has been sent from the attacker to the victim -->
+      <event
+        value="COMPUTE"
+        event_id="3"
+        description="First data packet"
+        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0)&amp;&amp;((ip.session_id==ip.session_id.1))&amp;&amp;(#em_check_delta_request(ip.session_id, meta.utime))"/>
+      <!-- The follow data packet which has been sent from the attacker to the victim -->
+      <event
+        value="COMPUTE"
+        event_id="4"
+        description="Following data packet"
+        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0)&amp;&amp;((ip.session_id==ip.session_id.2))&amp;&amp;(#em_check_delta_request(ip.session_id, meta.utime))"/>
+    </operator>
+
+  </property>
+</beginning>

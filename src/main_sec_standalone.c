@@ -63,7 +63,6 @@ void usage(const char * prg_name) {
 	exit(1);
 }
 
-static bool can_ignore_remain_flow = false;
 size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t *rules_id,
 		size_t *threads_count, uint32_t **core_mask, char *excludes_rules_mask, char *rule_mask, bool *is_ignore, bool *verbose ) {
 	int opt, optcount = 0, x;
@@ -74,6 +73,7 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 	rule_mask[0]           = '\0';
 
 	*verbose = NO;
+	*is_ignore = NO;
 	filename[0] = '\0';
 	while ((opt = getopt(argc, argv, "t:i:f:r:c:m:x:lhvg")) != EOF) {
 		switch (opt) {
@@ -117,7 +117,6 @@ size_t parse_options(int argc, char ** argv, char *filename, int *type, uint16_t
 		case 'g':
 			optcount++;
 			*is_ignore = true;
-			can_ignore_remain_flow = true;
 			//Do nothing. Keep for future use.
 			break;
 		case 'v':
@@ -385,6 +384,7 @@ static inline bool _rand_bool(){
 
 
 
+static bool can_ignore_remain_flow = false;
 /**
  * This function is called by mmt-dpi for each incoming packet containing registered proto/att.
  * It gets interested information from the #ipkacet to a message then sends the
@@ -536,14 +536,14 @@ int main(int argc, char** argv) {
 	uint32_t *core_mask = NULL;
 	int type;
 	size_t threads_count = 0;
-	bool verbose, is_ignore_remain_flow = false;
+	bool verbose;
 	struct pkthdr header;
 	char rule_mask[ MAX_RULE_MASK_SIZE ], excludes_rules_mask[ MAX_RULE_MASK_SIZE ];
 	size_t i, j, size;
 	uint16_t *rules_id_filter = NULL;
 
 	parse_options( argc, argv, filename, &type, rules_id_filter, &threads_count,
-			&core_mask, excludes_rules_mask, rule_mask, &is_ignore_remain_flow, &verbose );
+			&core_mask, excludes_rules_mask, rule_mask, &can_ignore_remain_flow, &verbose );
 
 	register_signals();
 
@@ -555,7 +555,7 @@ int main(int argc, char** argv) {
 
 	sec_handler =  mmt_sec_register( threads_count, core_mask, rule_mask, verbose, _print_output, NULL );
 
-	mmt_sec_set_ignore_remain_flow(sec_handler, is_ignore_remain_flow, 100000);
+	mmt_sec_set_ignore_remain_flow(sec_handler, can_ignore_remain_flow, 100000);
 
 	if( core_mask != NULL ){
 		//main thread on the last core

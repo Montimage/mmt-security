@@ -7,8 +7,8 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-static inline int em_check_delta_request(uint64_t sessionId){
-  printf("session ID: %lu\n", sessionId);
+static inline int em_check_delta_request(uint64_t sessionId, const char *utime){
+  //printf("session ID: %lu\n", sessionId);
   //struct timeval * ts = (struct timeval *) utime;
   //printf("session ID: %lu, timestamp: %lu.%lu\n", sessionId, ts->tv_sec, ts->tv_usec);
   return true;
@@ -36,13 +36,13 @@ static inline int em_check_delta_request(uint64_t sessionId){
         value="COMPUTE"
         event_id="3"
         description="First data packet"
-        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0)&amp;&amp;((ip.session_id==ip.session_id.1))&amp;&amp;(#em_check_delta_request(ip.session_id))"/>
+        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0)&amp;&amp;((ip.session_id==ip.session_id.1))&amp;&amp;(#em_check_delta_request(ip.session_id, meta.utime))"/>
       <!-- The follow data packet which has been sent from the attacker to the victim -->
       <event
         value="COMPUTE"
         event_id="4"
         description="Following data packet"
-        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0)&amp;&amp;((ip.session_id==ip.session_id.2))&amp;&amp;(#em_check_delta_request(ip.session_id))"/>
+        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0)&amp;&amp;((ip.session_id==ip.session_id.2))&amp;&amp;(#em_check_delta_request(ip.session_id, meta.utime))"/>
     </operator>
 
   </property>

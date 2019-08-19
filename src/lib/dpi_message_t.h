@@ -244,23 +244,40 @@ static inline int dpi_message_set_dpi_data( const void *data, int dpi_data_type,
 		new_data_len  = 4;
 		break;
 
-//	case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
-//	case MMT_DATA_PATH: /**< protocol path constant value */
-//	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
-//	case MMT_DATA_BUFFER: /**< binary buffer content */
-//	case MMT_DATA_POINT: /**< point constant value */
-//	case MMT_DATA_PORT_RANGE: /**< tcp/udp port range constant value */
-//	case MMT_DATA_DATE: /**< date constant value */
-//	case MMT_DATA_TIMEARG: /**< time argument constant value */
-//	case MMT_DATA_STRING_INDEX: /**< string index constant value (an association between a string and an integer) */
-//	case MMT_DATA_LAYERID: /**< Layer ID value */
-//	case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
-//	case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
-//	case MMT_STATS: /**< pointer to MMT Protocol statistics */
-//	case MMT_BINARY_DATA: /**< binary constant value */
-//		break;
-//
+	case MMT_DATA_TIMEVAL: /**< number of seconds and microseconds constant value */
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
+		new_data      = data;
+		new_data_len  = sizeof( struct timeval );
+		break;
+
+    //special cases: pointer is processed separately
+	//case MMT_DATA_POINTER: /**< pointer constant value (size is void *) */
+
+	case MMT_DATA_BUFFER: /**< binary buffer content */
+	case MMT_DATA_POINT: /**< point constant value */
+	case MMT_DATA_PORT_RANGE: /**< tcp/udp port range constant value */
+	case MMT_DATA_DATE: /**< date constant value */
+	case MMT_DATA_TIMEARG: /**< time argument constant value */
+	case MMT_DATA_STRING_INDEX: /**< string index constant value (an association between a string and an integer) */
+	case MMT_DATA_LAYERID: /**< Layer ID value */
+	case MMT_DATA_FILTER_STATE: /**< (filter_id: filter_state) */
+	case MMT_DATA_PARENT: /**< (filter_id: filter_state) */
+	case MMT_STATS: /**< pointer to MMT Protocol statistics */
+		printf("WARN: does not support MMT-DPI data type %d\n", dpi_data_type );
+		break;
+
+	case MMT_BINARY_DATA: /**< binary constant value */
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
+		new_data      = data;
+		new_data_len  = BINARY_64DATA_TYPE_LEN;
+		break;
+
 	case MMT_BINARY_VAR_DATA: /**< binary constant value with variable size given by function getExtractionDataSizeByProtocolAndFieldIds */
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
+		new_data      = data;
+		new_data_len  = BINARY_1024DATA_TYPE_LEN;
+		break;
+
 	case MMT_STRING_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum BINARY_64DATA_LEN long */
 	case MMT_STRING_LONG_DATA: /**< text string data constant value. Len plus data. Data is expected to be '\0' terminated and maximum STRING_DATA_LEN long */
 		new_data_type = MMT_SEC_MSG_DATA_TYPE_STRING;
@@ -282,10 +299,12 @@ static inline int dpi_message_set_dpi_data( const void *data, int dpi_data_type,
 		new_data_len  = strlen( (char*) data);
 		break;
 
-	case MMT_DATA_PATH:
+	case MMT_DATA_PATH: /**< protocol path constatn value */
 		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
 		new_data      = data;
 		new_data_len  = sizeof( proto_hierarchy_t );
+		break;
+
 	default:
 		break;
 	}

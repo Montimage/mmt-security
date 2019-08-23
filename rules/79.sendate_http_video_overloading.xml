@@ -8,8 +8,8 @@
 *   true if yes, otherwise false
 */
 static inline int em_video_request(const char *method, const char *uri){
-   mmt_debug("method: %s, uri: %s", method, uri);
-
+   //mmt_debug("method: %s, uri: %s", method, uri);
+   
    //must be a GET
    if( strcmp( method, "GET") != 0 )
       return false;
@@ -27,11 +27,11 @@ static inline int em_video_request(const char *method, const char *uri){
 */
 static inline int em_video_response(const char *response, const char *content_type){
    int code = atoi( response );
-   mmt_debug("reponse_code: %d, content_type: %s", code, content_type);
+   //mmt_debug("reponse_code: %d, content_type: %s", code, content_type);
 
-   //must be a valid response 2XX
-   if( code < 200 || code >= 300 )
-      return false;
+   //must be a valid response
+   if( code >= 100 || code <= 600 )
+      return true;
 
    //content type of the response must be a video
    if( strstr( content_type, "video") )
@@ -42,8 +42,8 @@ static inline int em_video_response(const char *response, const char *content_ty
 ]]></embedded_functions>
 
 <!-- Property : Detect whether a video server is overloading: response is too slow-->
-<property value="THEN" delay_units="ms" delay_min="0" delay_max="10" property_id="79" type_property="SECURITY" 
-     description="Detect overloading: latency of response to a video request is too big" >
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="100" property_id="79" type_property="SECURITY" 
+     description="Overloading: video response latency must not be bigger than 100ms" >
    <event event_id="1" value="COMPUTE" 
            description="A video request"
            boolean_expression="(#em_video_request(http.method, http.uri) &amp;&amp; (ip.src != ip.dst))"/>

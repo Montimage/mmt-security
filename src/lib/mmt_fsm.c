@@ -82,11 +82,11 @@ static inline enum fsm_handle_event_value _update_fsm( fsm_t *fsm, const fsm_sta
 	const fsm_state_t *previous_state;
 	enum fsm_handle_event_value ret;
 
-#ifdef DEBUG_MODE
-	if( unlikely( fsm->current_event_id == 0 )){
-		mmt_halt( "Not possible");
-	}
-#endif
+//#ifdef DEBUG_MODE
+//	if( unlikely( fsm->current_event_id == 0 )){
+//		mmt_halt( "Not possible");
+//	}
+//#endif
 
 	//mmt_debug( "fsm_id = %d (%p), ref = %zu, event_id: %d", fsm->id, fsm, mmt_mem_reference_count( event_data), tran->event_type );
 
@@ -172,7 +172,7 @@ static inline enum fsm_handle_event_value _update_fsm( fsm_t *fsm, const fsm_sta
  * Public API
  */
 enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_index, message_t *message, fsm_t **new_fsm ) {
-	const fsm_transition_t *tran;
+	const fsm_transition_t *current_transition, *timeout_transition;
 	const fsm_state_t *state;
 	//uint64_t timer, counter;
 
@@ -193,34 +193,44 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 	if( unlikely( message->timestamp < fsm->time_min ))
 		return FSM_NO_STATE_CHANGE;
 
-	//event_type = FSM_EVENT_TYPE_TIMEOUT when this function is called by #_fire_a_tran
-	//e.g., when no real-transition can be fired
-	//in such a case, event_id will be the last transition that can not be fired
-	if( fsm->current_state->transitions[ transition_index ].event_type != FSM_EVENT_TYPE_TIMEOUT )
-		fsm->current_event_id = fsm->current_state->transitions[ transition_index ].event_type;
+	current_transition = &fsm->current_state->transitions[ transition_index ];// _get_transition(fsm, state, event);
 
 	//check if timeout or not (even we are checking a real event)
-	//check only for the state other than init_state
+	//check only if:
+	// - the current state is not temporary (temporary = fire its next transition immediately = zero timeout)
+	// - the current state other than init_state
+	// - timeout
 	if( !fsm->current_state->is_temporary
 			&& fsm->current_state != fsm->init_state
 			&& message->timestamp > fsm->time_max  ){
-		tran = &fsm->current_state->transitions[ 0 ];//timeout transition must be the first in the array
-		if( likely( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ))
-			//fire timeout transition
-			return _update_fsm( fsm, tran->target_state, tran, message );
+		timeout_transition = &fsm->current_state->transitions[ 0 ];
+		//timeout transition should be the first in the array
+		if( likely( timeout_transition->event_type == FSM_EVENT_TYPE_TIMEOUT )){
+			const fsm_state_t *target_state = timeout_transition->target_state;
+
+			//if we reach the final state => need to store this timeout event to the execution trace
+			if( target_state->transitions_count == 0 )
+				fsm->current_event_id = current_transition->event_type;
+
+			//fire the timeout transition
+			return _update_fsm( fsm, target_state, timeout_transition, message );
+		}
 	}
 
-	tran = &fsm->current_state->transitions[ transition_index ];// _get_transition(fsm, state, event);
 
-	//if we intend to check TIMEOUT but transition is not a timeout one => stop checking
-	if( unlikely( tran->event_type == FSM_EVENT_TYPE_TIMEOUT ))
+	//We reach here => the fsm is not timed out
+	//if we intend to check TIMEOUT, but transition is not a timeout one => stop checking
+	if( unlikely( current_transition->event_type == FSM_EVENT_TYPE_TIMEOUT ))
 		return FSM_NO_STATE_CHANGE;
+
+	//in such a case, event_id will be the last transition that can not be fired
+	fsm->current_event_id = current_transition->event_type;
 
 	//must not be null
 //	if( tran == NULL ) return FSM_NO_STATE_CHANGE;
 
 	/* If transition is guarded, ensure that the condition is held: */
-	if (tran->guard != NULL && tran->guard( message, fsm )  == NO )
+	if (current_transition->guard != NULL && current_transition->guard( message, fsm )  == NO )
 		return FSM_NO_STATE_CHANGE;
 
 	/* A transition must have a next _state defined
@@ -229,14 +239,14 @@ enum fsm_handle_event_value fsm_handle_event( fsm_t *fsm, uint16_t transition_in
 
 //	mmt_debug( "Exit action: %d", fsm->current_state->exit_action );
 	//Create a new instance, then update its data
-	if ( tran->action == FSM_ACTION_CREATE_INSTANCE && tran->target_state->transitions_count > 0 ){
+	if ( current_transition->action == FSM_ACTION_CREATE_INSTANCE && current_transition->target_state->transitions_count > 0 ){
 		//mmt_debug( " new FSM");
 		*new_fsm = _fsm_clone( fsm );
-		return _update_fsm( *new_fsm, tran->target_state, tran, message );
+		return _update_fsm( *new_fsm, current_transition->target_state, current_transition, message );
 	}
 
 	//add event to execution trace
-	return _update_fsm( fsm, tran->target_state, tran, message );
+	return _update_fsm( fsm, current_transition->target_state, current_transition, message );
 }
 
 bool fsm_is_verifying_single_packet( const fsm_t *fsm ){
@@ -311,7 +321,8 @@ enum fsm_handle_event_value fsm_handle_single_packet( fsm_t *fsm, message_t *mes
    else
       state = tran->target_state;
 
-	fsm->execution_trace->data[ 2 ] = message;
+	//if(likely( fsm->execution_trace->elements_count > 2 ))
+		fsm->execution_trace->data[ 2 ] = message;
 
 	if (state == fsm->error_state){
 		//mmt_debug("FSM_ERROR_STATE_REACHED" );

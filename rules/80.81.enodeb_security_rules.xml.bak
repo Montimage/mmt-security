@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) Montimage-->
+
+<beginning>
+
+<!-- Property 101: Attach response time 10ms-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="10" property_id="80" type_property="SECURITY"
+     description="Attach response time is more than 10ms " >
+   <event event_id="1" value="COMPUTE"
+           description="attach request"
+           boolean_expression="((ip.session_id != 0) &amp;&amp; ((ip.src != ip.dst) &amp;&amp; ( (s1ap.procedure_code == 12) &amp;&amp; ( s1ap.ue_ipv4 != '' ) )))"/>
+   <event event_id="2" value="COMPUTE"
+           description="attach response"
+           boolean_expression="((ip.session_id==ip.session_id.1)&amp;&amp;(s1ap.procedure_code == 9))"/>
+ </property>
+
+<!-- Property 110: TEID non homologous-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="1" property_id="81" type_property="ATTACK"
+     description="TEID non homologous" >
+   <event event_id="1" value="COMPUTE"
+           description="first teid"
+           boolean_expression="((ip.session_id != 0) &amp;&amp; ((ip.src != ip.dst) &amp;&amp; (s1ap.gtp_teid != 0)))"/>
+   <event event_id="2" value="COMPUTE"
+           description="second teid - non homologous"
+           boolean_expression="((ip.session_id==ip.session_id.1)&amp;&amp;(s1ap.gtp_teid != s1ap.gtp_teid.1))"/>
+ </property>
+</beginning>

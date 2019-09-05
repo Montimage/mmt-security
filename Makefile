@@ -30,10 +30,10 @@ VERSION     := 1.2.9
 CACHE_LINESIZE := 64 #$(shell getconf LEVEL1_DCACHE_LINESIZE)
 
 #set of library
-LIBS     = -ldl -lpthread -lxml2
+LIBS     += -ldl -lpthread -lxml2
 
-CFLAGS   = -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=$(CACHE_LINESIZE) -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include  
-CLDFLAGS = -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib
+CFLAGS   += -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=$(CACHE_LINESIZE) -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include  
+CLDFLAGS += -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib
 
 #a specific flag for each .o file
 CFLAGS += $(CFLAGS-$@)
@@ -379,7 +379,16 @@ _print.%:
 _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 	$(QUIET) $(RM) /tmp/mmt-security*.csv
 	$(QUIET) bash -c "$(VALGRIND) ./$(MAIN_STAND_ALONE) -t check/pcap/$*.pcap -f /tmp/"
-	$(QUIET) bash -c "diff --ignore-all-space <(cut -c 20- check/expect/$*.csv) <(cut -c 20- /tmp/mmt-security*.csv) || (echo \"====================execution log:\" && cat /tmp/$*.log)"
+#starting by rule id (rm timestamp, filename, probe-id)
+	$(QUIET) bash -c "cut -d, -f5- /tmp/mmt-security*.csv  > /tmp/mmt-security-res.csv"
+	$(QUIET) bash -c "cut -d, -f5- check/expect/$*.csv     > /tmp/mmt-security-expect.csv"
+#get set of rules
+	$(QUIET) bash -c "cut -d, -f1 /tmp/mmt-security-expect.csv | sort | uniq > /tmp/mmt-security-expect-rule-id.csv"
+#get only verdicts of the rules
+	$(QUIET) bash -c 'while read ruleId; do grep "^$ruleId" /tmp/mmt-security-res.csv; done < /tmp/mmt-security-expect-rule-id.csv > /tmp/mmt-security-result.csv || echo "" '
+	$(QUIET) wc -l /tmp/mmt-security-expect.csv
+	$(QUIET) wc -l /tmp/mmt-security-result.csv
+	$(QUIET) bash -c "diff --ignore-all-space /tmp/mmt-security-expect.csv /tmp/mmt-security-result.csv || (echo \"====================execution log:\" && cat /tmp/$*.log)"
 	@echo '  => OK'
 	
 check: _prepare $(patsubst %,_check.%,$(NAMES))

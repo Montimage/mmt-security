@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C)-->
+<beginning>
+<embedded_functions><![CDATA[
+/**
+* Whether a video request via HTTP
+* Return:
+*   true if yes, otherwise false
+*/
+static inline int em_video_request(const char *method, const char *uri){
+   //mmt_debug("method: %s, uri: %s", method, uri);
+
+   //must be a GET
+   if( strcmp( method, "GET") != 0 )
+      return false;
+
+   if( strstr( uri, ".mp4") )
+      return true;
+
+   return false;
+}
+]]></embedded_functions>
+
+<!-- Property : Detect if an IP is trying to issue video request via HTTP to a server very frequently -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="200" property_id="78" type_property="ATTACK" 
+     description="DDoS attack: one IP issues more than one request each 200 ms" >
+   <event event_id="1" value="COMPUTE" 
+           description="A video request"
+           boolean_expression="(#em_video_request(http.method, http.uri))"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Another video request from the same IP source"
+           boolean_expression="(#em_video_request(http.method, http.uri) &amp;&amp; ((ip.src == ip.src.1) ))"/>
+ </property>
+</beginning>

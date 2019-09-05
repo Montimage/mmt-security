@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C)-->
+<beginning>
+<embedded_functions><![CDATA[
+/**
+* Whether a video request via HTTP
+* Return:
+*   true if yes, otherwise false
+*/
+static inline int em_video_request(const char *method, const char *uri){
+   //mmt_debug("method: %s, uri: %s", method, uri);
+   
+   //must be a GET
+   if( strcmp( method, "GET") != 0 )
+      return false;
+
+   if( strstr( uri, ".mp4") )
+      return true;
+
+   return false;
+}
+
+/**
+* Whether a video response via HTTP
+* Return:
+*   true if yes, otherwise false
+*/
+static inline int em_video_response(const char *response, const char *content_type){
+   int code = atoi( response );
+   //mmt_debug("reponse_code: %d, content_type: %s", code, content_type);
+
+   //must be a valid response
+   if( code >= 100 || code <= 600 )
+      return true;
+
+   //content type of the response must be a video
+   if( strstr( content_type, "video") )
+      return true;
+
+   return false;
+}
+]]></embedded_functions>
+
+<!-- Property : Detect whether a video server is overloading: response is too slow-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="100" property_id="79" type_property="SECURITY" 
+     description="Overloading: video response latency must not be bigger than 100ms" >
+   <event event_id="1" value="COMPUTE" 
+           description="A video request"
+           boolean_expression="(#em_video_request(http.method, http.uri) &amp;&amp; (ip.src != ip.dst))"/>
+   <event event_id="2" value="COMPUTE" 
+           description="The response in the same IP flow"
+           boolean_expression="(#em_video_response(http.response, http.content_type) &amp;&amp; ((ip.session_id == ip.session_id.1) ))"/>
+ </property>
+</beginning>

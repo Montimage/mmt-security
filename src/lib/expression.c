@@ -202,7 +202,7 @@ static inline size_t _jump_space( const char *string, size_t str_size ){
 }
 
 
-size_t _parse_a_name( char **name, const char *string, size_t str_size ){
+size_t _parse_a_proto_name( char **name, const char *string, size_t str_size, bool is_allow_number_prefix ){
 	size_t i = 0, index = 0;
 	const char *temp;
 	*name = NULL;
@@ -216,9 +216,11 @@ size_t _parse_a_name( char **name, const char *string, size_t str_size ){
 
 	temp = string + index;
 
-	//first character must be an alphabet
-	if( ! (isalpha(*temp ) || *temp == '_') )
-		return index;
+	//whether allow a name start by: number/alphabet/_
+	if( !is_allow_number_prefix )
+		//first character must be an alphabet
+		if( ! (isalpha(*temp ) || *temp == '_') )
+			return index;
 
 	//the next characters can be alphabet or digit
 	while( (isalnum( *(temp+i) ) || *(temp +i) == '_' ) && index < str_size ){
@@ -231,6 +233,10 @@ size_t _parse_a_name( char **name, const char *string, size_t str_size ){
 	return index;
 }
 
+
+size_t _parse_a_name( char **name, const char *string, size_t str_size ){
+	return _parse_a_proto_name( name, string, str_size, false );
+}
 /**
  * Parse a string that is put inside by ' ' or " "
  */
@@ -360,7 +366,8 @@ size_t _parse_constant( constant_t **expr, const char *string, size_t str_size )
  * Parse a variable that is in format: proto.att[.index], e.g., TCP.SRC or TCP.SRC.1
  */
 size_t _parse_variable( variable_t **expr, const char *string, size_t str_size ){
-	size_t index;
+	size_t index, old_index;
+	bool is_start_by_number;
 	char *str_1 = NULL, *str_2 = NULL;
 	uint16_t ref_index = UNKNOWN;
 	char const *temp;
@@ -373,14 +380,20 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 		return index;
 
 	temp = string + index;
-	index = _parse_a_name( &str_1, temp, str_size );
+
+	//mark: if started by a number => must be PROTO.ATT
+	is_start_by_number = isdigit( *temp );
+	old_index = index;
+
+	index = _parse_a_proto_name( &str_1, temp, str_size, true );
+
 	//has proto?
 	if( str_1 != NULL ){
 		//must have a dot
 		if( string[ index ] == '.' ){
 			index ++; //jump over this dot
 			temp = string + index ;
-			index += _parse_a_name( &str_2, temp,  str_size - index );
+			index += _parse_a_proto_name( &str_2, temp,  str_size - index, true );
 			//has att ?
 			if( str_2 != NULL ){
 				//has index ?
@@ -397,6 +410,13 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 			}
 			else
 				mmt_free_and_assign_to_null( str_1 );
+		} else {
+			//this is not a proto.att
+			//=> do not allow to start by a number
+			if( is_start_by_number ){
+				mmt_free_and_assign_to_null( str_1 );
+				return old_index;
+			}
 		}
 	}
 
@@ -464,28 +484,43 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
 		expr->operation->params_size ++;
 		_parse_a_boolean_expression(NO, expr, temp + index);
-	} else if (isalpha(*temp) || *temp == '_') {
+	} else if (isdigit(*temp) || isalpha(*temp) || *temp == '_') {
+
 		//a variable: PROTO.FIELD.EVENT
 		index = _parse_variable( &new_var, temp, MAX_STR_SIZE );
 
 		//not a variable
-		//=> give one more chance to check constant
+		//=> give one more chance to check constant: (1) a number or (2) an id (true/false)
 		if( new_var == NULL ){
-			index = _parse_a_name( &new_string, temp, MAX_STR_SIZE );
-			new_number = mmt_mem_alloc( sizeof( double ) );
-			if( strcmp( new_string, "true") == 0 ){
-				*new_number = true;
-			}else if( strcmp( new_string, "false") == 0 ){
-				*new_number = false;
-			}else {
-				mmt_mem_free( new_number );
-				mmt_halt("Error 37c: Illegal name:\"%s\".\nExpected either \"true\", \"false\", or proto.att or proto.att.ref", temp + 1 );
+			//(1) check number
+			if( isdigit( *temp )){
+				//a number 1.0
+				index = _parse_a_number( &new_number, temp, MAX_STR_SIZE );
+				//found a number
+				//create a new expression
+				new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
+				new_expr->father = expr;
+				//append new_expr to expr->params_list
+				expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
+				expr->operation->params_size ++;
+			} else {
+				//(2) check id
+				index = _parse_a_name( &new_string, temp, MAX_STR_SIZE );
+				new_number = mmt_mem_alloc( sizeof( double ) );
+				if( strcmp( new_string, "true") == 0 ){
+					*new_number = true;
+				}else if( strcmp( new_string, "false") == 0 ){
+					*new_number = false;
+				}else {
+					mmt_mem_free( new_number );
+					mmt_halt("Error 37c: Illegal name:\"%s\".\nExpected either \"true\", \"false\", or proto.att or proto.att.ref", temp + 1 );
+				}
+				new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
+				new_expr->father = expr;
+				//append new_expr to expr->params_list
+				expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
+				expr->operation->params_size ++;
 			}
-			new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
-			new_expr->father = expr;
-			//append new_expr to expr->params_list
-			expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
-			expr->operation->params_size ++;
 		}else{
 			new_expr = expr_create_an_expression( VARIABLE, new_var );
 			new_expr->father = expr;
@@ -511,16 +546,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		//parse the parameters of this function
 		_parse_a_boolean_expression(NO, new_expr, temp + index );
 	} else if (isdigit(*temp)) {
-		//a number 1.0
-		index = _parse_a_number( &new_number, temp, MAX_STR_SIZE );
-		//found a number
-		//create a new expression
-		new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
-		new_expr->father = expr;
-		//append new_expr to expr->params_list
-		expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
-		expr->operation->params_size ++;
-		_parse_a_boolean_expression(NO, expr, temp + index);
+
 	} else if (*temp == '&' && *(temp + 1) == '&') {
 		// &&
 		temp2 = temp + 2;
@@ -686,9 +712,9 @@ size_t expr_stringify_variable( char **string, const variable_t *var){
 	}
 
 	if( var->ref_index != (uint16_t)UNKNOWN ){
-		size = snprintf(buff, sizeof( buff ), "%s_%s_%d", var->proto, var->att, var->ref_index);
+		size = snprintf(buff, sizeof( buff ), "_%s_%s_%d", var->proto, var->att, var->ref_index);
 	}else{
-		size = snprintf(buff, sizeof( buff ), "%s_%s", var->proto, var->att );
+		size = snprintf(buff, sizeof( buff ), "_%s_%s", var->proto, var->att );
 	}
 	*string = mmt_mem_dup( buff, size );
 	return size;

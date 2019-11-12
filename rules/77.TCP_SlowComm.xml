@@ -1,49 +1,513 @@
 <beginning>
   <!-- Property 77: SlowComm DDos attack
 -->
-<embedded_functions><![CDATA[
+  <embedded_functions><![CDATA[
 //each function name should be prefixed by em_
-#include <stdio.h>
+#ifndef __DETECTION_H__
+#define __DETECTION_H__
+
 #include <stdint.h>
+#include <stddef.h>
 #include <sys/time.h>
 
-static inline int em_check_delta_request(uint64_t sessionId, const char *utime){
-  //printf("session ID: %lu\n", sessionId);
-  //struct timeval * ts = (struct timeval *) utime;
-  //printf("session ID: %lu, timestamp: %lu.%lu\n", sessionId, ts->tv_sec, ts->tv_usec);
-  return true;
-}
-]]></embedded_functions>
-  <property value="THEN" delay_units="s" delay_min="0+" delay_max="100" property_id="77" type_property="ATTACK" description="SlowComm DDos attack">
-    <!-- <event value="COMPUTE" event_id="1" description="Every packet" boolean_expression="(ip.session_id != 0)"/> -->
-    <operator value="OR" delay_units="s" delay_min="0" delay_max="0">
-      <!-- The packet to detect the TCP handshake -->
-      <event
-        value="COMPUTE"
-        event_id="1"
-        description="SYN, ACK packet"
-        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len == 0)&amp;&amp;(meta.direction==1)&amp;&amp;(tcp.ack == 1)&amp;&amp;(tcp.syn == 1))"/>
-      <!-- The data packet which has been sent from the attacker to the victim -->
-      <event
-        value="COMPUTE"
-        event_id="2"
-        description="Data packet"
-        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0))"/>
-    </operator>
-    <operator value="OR" delay_units="s" delay_min="0" delay_max="0">
-      <!-- The first data packet which has been sent from the attacker to the victim -->
-      <event
-        value="COMPUTE"
-        event_id="3"
-        description="First data packet"
-        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0)&amp;&amp;((ip.session_id==ip.session_id.1))&amp;&amp;(#em_check_delta_request(ip.session_id, meta.utime))"/>
-      <!-- The follow data packet which has been sent from the attacker to the victim -->
-      <event
-        value="COMPUTE"
-        event_id="4"
-        description="Following data packet"
-        boolean_expression="((meta.packet_count != 0)&amp;&amp;(tcp.payload_len != 0)&amp;&amp;(meta.direction==0)&amp;&amp;((ip.session_id==ip.session_id.2))&amp;&amp;(#em_check_delta_request(ip.session_id, meta.utime))"/>
-    </operator>
+#define SLOWCOMM_PAYLOAD_INSPECTION	0
+#define SLOWCOMM_DEBUG_OUTPUT 		1
+#define SLOWCOMM_DEBUG_FILE_OUTPUT	1
 
+#if SLOWCOMM_DEBUG_OUTPUT
+#if SLOWCOMM_DEBUG_FILE_OUTPUT
+#define slowcomm_print(...)		fprintf(output, __VA_ARGS__)
+#else
+#define slowcomm_print(...)		printf(__VA_ARGS__)
+#endif // file output
+#else
+#define slowcomm_print(...)
+#endif
+
+/*
+ * This structure represents a row of the table
+ * States:
+ * 0: STARTED
+ * 1: IN_REQ
+ * 2: END_REQ
+ * 3: IN_RESP
+ * 4: END_RESP
+ * 5: CLOSING
+ * 6: CLOSED
+ */
+
+#define STARTED		0
+#define IN_REQ		1
+#define END_REQ		2
+#define IN_RESP		3
+#define END_RESP	4
+#define CLOSING		5
+#define CLOSED		6
+
+// Thresholds to be checked (in ms)
+#define MAX_DELTA_START		1000
+#define MAX_DELTA_REQ		200
+#define MAX_DELTA_DELAY		500
+#define MAX_DELTA_RESP		10000
+#define MAX_DELTA_NEXT		5000000
+
+// Return values (to identify the violation)
+#define INVALID_PKG		-1
+#define NO_DETECTION		0
+#define INVAL_DELTA_START	2
+#define INVAL_DELTA_REQ		3
+#define INVAL_DELTA_DELAY	4
+#define INVAL_DELTA_RESP	5
+#define INVAL_DELTA_NEXT	6
+#define UNKNOWN_VIOLATION	127
+
+struct table_entry{
+	// General fields of the flow
+	uint64_t session_id;
+	uint32_t num_pkgs;
+	uint8_t state;
+	uint8_t prev_state;
+	// Last package receieved for this flow
+	uint8_t last_flags;
+	char *last_payload;
+	uint32_t last_payload_size;
+	int last_direction;
+	//uint16_t last_seq_num;
+	// Circular buffer to reconstruct the \r\n\r\n
+	char buffer[5];
+	uint8_t first; // The first to read
+	uint8_t last; // The first to override
+	// Deltas and timestamps
+	struct timeval t_st_conn;
+	float delta_start;
+	struct timeval t_st_req;
+	float delta_req;
+	struct timeval t_end_req;
+	float delta_delay;
+	struct timeval t_st_resp;
+	float delta_resp;
+	struct timeval t_end_resp;
+	float delta_next;
+	struct timeval last_tstamp;
+	// A pointer to the next entry
+	struct table_entry *next;
+};
+
+// Payload_size MIGHT be an int (tcp.payload_len)
+int em_check_delta_request(
+		uint64_t sessionId,
+		const char *utime,
+		const uint8_t flagsB,
+		const char *payloadB,
+		const uint32_t payload_sizeB,
+		const int directionB,
+		const int p_orig,
+		const int p_dest
+		);
+
+
+#endif
+
+struct table_entry *flows = NULL;
+
+#if SLOWCOMM_DEBUG_FILE_OUTPUT
+FILE *output = NULL;
+int out_init = 0;
+#endif
+
+// Utility function to free the remainings of the list
+int free_table(struct table_entry *table){
+	// We reached the end of the table; just return
+	if(table == NULL){
+		return 0;
+	}
+	// Recursive call, then free this node.
+	free_table(table->next);
+	free(table->last_payload);
+	free(table);
+	return 0;
+}
+
+// When MMT-Security is being closed, simply free the table
+void on_unload(){
+	free_table(flows);
+}
+
+/*
+ * This function registers the packet in the given session ID.
+ * It returns 0 if the flow is OK, 1 if not.
+ */
+int em_check_delta_request(
+		uint64_t sessionId,
+		const char *utime,
+		const uint8_t flagsB,
+		const char *payloadB,
+		const uint32_t payload_sizeB,
+		const int directionB,
+		const int p_orig,
+		const int p_dest
+){
+
+	struct table_entry *current, *last;
+	struct timeval diff;
+	char str[5];
+	int i, return_val;
+
+	memset(str, 0, 5);
+	return_val = NO_DETECTION;
+#if SLOWCOMM_DEBUG_FILE_OUTPUT
+	if(!out_init){
+		output = fopen("/tmp/slowcomm-debug.txt", "w");
+		out_init = 1;
+	}
+#endif
+
+	slowcomm_print("> args: p_orig = %d, p_dest = %d, sessionID = %d, flagsB = 0x%x, payload_sizeB = %d, directionB =%d\n", p_orig, p_dest, sessionId, flagsB, payload_sizeB, directionB);
+
+	// First, check if the flows table is not empty
+	if(flows == NULL){
+		// Create the first entry of the table
+		flows = (struct table_entry *) malloc(sizeof(struct table_entry));
+		memset(flows, 0, sizeof(struct table_entry));
+		current = flows;
+initialize_node:
+		slowcomm_print("create new\n");
+		// Fill the basic data of the flow
+		current->session_id = sessionId;
+		current->num_pkgs = 1;
+		current->state = STARTED; // This is the first packet of the flow; the session started;
+		// Keep track of the received packet
+		current->last_flags = flagsB;
+		current->last_payload = malloc(2500); // 2500 bytes for the last payload
+		memset(current->last_payload, 0, 2500);
+		memcpy(current->last_payload, payloadB, payload_sizeB);
+		current->last_direction = directionB;
+		// Initialize the circular buffer
+		memset(current->buffer, 0, 5);
+		current->first = current->last = 0; // Pinters within the circular buffer
+		memcpy(&current->last_tstamp, (struct timeval *) utime, sizeof(struct timeval));
+		// Initialize the values of the deltas
+		current->delta_start = 0.0;
+		current->delta_req = 0.0;
+		current->delta_delay = 0.0;
+		current->delta_resp = 0.0;
+		current->delta_next = 0.0;
+		current->next = NULL;
+		// Nothing was detected
+		slowcomm_print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+		return return_val;
+	}
+	// Look for the node
+	current = last = flows;
+	do{
+		if(current->session_id != sessionId){
+			// This is not the node, skip it
+			continue;
+		}
+		// We found the node: update the fields
+		slowcomm_print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+		slowcomm_print("*********\nFound! State = %d\nflagsA = 0x%x, payload_sizeA = %d, directionA = %d\nflagsB = 0x%x, payload_sizeB = %d, directionB = %d\n**********\n", current->state, current->last_flags, current->last_payload_size, current->last_direction, flagsB, payload_sizeB, directionB);
+		// 7. Check if the packet finishes the connection
+		if((flagsB & 0x1) == 0x1 || ((current->last_flags & 0x1) == 0x1 && (flagsB & 0x11) == 0x11)){
+			slowcomm_print("7\n");
+			// pkgB holds FIN *OR* pkgA holds FIN and pkgB holds FIN+ACK
+			current->prev_state = current->state;
+			// Change the status of the connection
+			current->state = CLOSING;
+			// The connection is not fully closed until server sends final ACK to the FIN+ACK
+			// This case will be handled in case #8
+			// Nothing else to do here
+			goto check_violations;
+		}
+		// 8. Check if these are the last two packages of the connection
+		if((current->last_flags & 0x11) == 0x11 && (flagsB & 0x10) == 0x10){
+			slowcomm_print("8\n");
+			// Change the status of the connection
+			current->state = CLOSED;
+			// Update the deltas depending on the last state
+update_last_delta:
+			slowcomm_print("last state = %d\n", current->prev_state);
+			switch(current->prev_state){
+				case STARTED:
+					memcpy(&current->t_st_req, (struct timeval *) utime, sizeof(struct timeval));
+					timersub(&current->t_st_req, &current->t_st_conn, &diff);
+					current->delta_start = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+					break;
+				case IN_REQ:
+					memcpy(&current->t_end_req, (struct timeval *) utime, sizeof(struct timeval));
+					timersub(&current->t_end_req, &current->t_st_req, &diff);
+					current->delta_req = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+					break;
+				case END_REQ:
+					memcpy(&current->t_st_resp, (struct timeval *) utime, sizeof(struct timeval));
+					timersub(&current->t_st_resp, &current->t_end_req, &diff);
+					current->delta_delay = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+					break;
+				case IN_RESP:
+					memcpy(&current->t_end_resp, (struct timeval *) utime, sizeof(struct timeval));
+					timersub(&current->t_end_resp, &current->t_st_resp, &diff);
+					current->delta_resp = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+					break;
+				case END_RESP:
+					memcpy(&current->t_st_req, (struct timeval *) utime, sizeof(struct timeval));
+					timersub(&current->t_st_req, &current->t_end_resp, &diff);
+					current->delta_next = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+					break;
+				default:
+					// State is CLOSING or CLOSED: nothing to do here.
+					break;
+			}
+			// Check if there is a violation in the deltas:
+			goto check_violations;
+		}
+		// 9. Somebody resetted the connection
+		if((flagsB & 0x4) == 0x4){
+			slowcomm_print("9\n");
+			current->prev_state = current->state;
+			// Change the status of the connection
+			current->state = CLOSED;
+			goto update_last_delta;
+		}
+		// 1. Check if the trigger packet is part of the  3-way handshake
+		if(((current->last_flags & 0x2) == 0x2 && (flagsB & 0x12) == 0x12) || ((current->last_flags & 0x12) == 0x12 && (flagsB & 0x10) == 0x10)){
+			slowcomm_print("1\n");
+			// pkgA is SYN and pkgB is SYN+ACK *OR* pkgA is SYN+ACK and pkgB is ACK
+			// The flow has been created (when detected SYN and SYN-ACK)
+			// Set the t_start_connection timer, since in this case we detected the end of the handshake
+			memcpy(&current->t_st_conn, (struct timeval *) utime, sizeof(struct timeval));
+			// Nothing else has to be done
+			goto check_violations;
+		}
+		// 2. Check if the trigger is the first data packet
+		if(current->state == STARTED && payload_sizeB > 0 && directionB == 0){
+			slowcomm_print("2\n");
+			// pkgA is an ACK and pkgB_size > 0 and goes from client to server
+			// We go to the next state of the connection
+			current->state = IN_REQ;
+			// Update the t_start_request
+			memcpy(&current->t_st_req, (struct timeval *) utime, sizeof(struct timeval));
+			// Update the delta start
+			timersub(&current->t_st_req, &current->t_st_conn, &diff);
+			current->delta_start = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+			// Handle this packet as if it was in the middle of a request
+			goto mid_req_pkg;
+		}
+		// 3. Check if the packet belongs to a request
+		if(current->state == IN_REQ){ // No constrains on the flags of the packets
+			slowcomm_print("3\n");
+			// This is a normal packet or an ACK, part of the request
+mid_req_pkg:
+			// Update the partial delta_req
+			timersub((struct timeval *) utime, &current->t_st_req, &diff);
+			current->delta_req = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+			// If there is payload on the last packet, we still need to wait for its ACK
+			if(payload_sizeB > 0){
+				// There is payload, we need to (at least) wait for its ACK
+				// before changing the state of the connection
+				// so, we only go to check delta violations
+				goto check_violations;
+			}
+#if SLOWCOMM_PAYLOAD_INSPECTION
+			// Analyze the payload:
+			// NOTE: We analyze the payload of the old packet, in order to
+			// change the state once we recieved the corresponding ACK for(i=0; i<current->last_payload_size; i++){
+				// FIXME - This code can be optimized to avoid copying the whole payload
+				// Copy the byte and update the pointer to the last.
+				current->buffer[current->last] = current->last_payload[i];
+				current->last = (current->last + 1) % 5;
+				// Check if last and first are equals, if so, I need to update the first
+				if(current->last == current->first){
+					// I'll step on my own queue: make space for the new char
+					current->first = (current->first + 1) % 5;
+				}
+			}
+			// Reconstruct the buffer for(i=0; i<4; i++){
+				str[i] = current->buffer[(current->first + i) % 5];
+			}
+			// Detect if "\r\n\r\n" is present in the buffer
+			if(strncmp(str, "\r\n\r\n", 4) == 0){
+				// The "end of request" string was found
+				// In this case, we move certainly to the next state
+#else
+			// Use the properties of the flow to change the state of the connection
+			if((flagsB & 0x10) == 0x10 && directionB == 1){
+				// pkgB is an ACK and pkgB goes from server to client
+				// pkgB MIGHT end the request... preemptively move to the next state
+#endif
+				// Change the state of the connection
+				current->state = END_REQ;
+				// Update the t_end_request
+				memcpy(&current->t_end_req, (struct timeval *) utime, sizeof(struct timeval));
+				// Compute the delta_req
+				timersub(&current->t_end_req, &current->t_st_req, &diff);
+				current->delta_req = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+			}
+			// Check if there is any violation in the delta values
+			goto check_violations;
+		}
+		// 4. Check if the packet starts the response or continues the request
+		if(current->state == END_REQ){
+			// The connection is in state END_REQ
+			slowcomm_print("4\n");
+			if(directionB == 0 && payload_sizeB > 0){ //(flagsB & 0x17) == 0x0 && 
+				// pkg goes from client to server(*, it has no FIN, SYN, RST or ACK flags*) and has payload
+				// We move to the wrong state: fix it
+				current->delta_req = 0.0;
+				current->state = IN_REQ;
+				goto mid_req_pkg;
+			}
+			current->state = IN_RESP;
+			// Update the t_start_resp
+			memcpy(&current->t_st_resp, (struct timeval *) utime, sizeof(struct timeval));
+			// Compute the delta_delay
+			timersub(&current->t_st_resp, &current->t_end_req, &diff);
+			current->delta_delay = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+			// Handle this packet as if it was in the middle of a response
+			goto mid_resp_pkg;
+		}
+		// 5. Check if the packet belongs to the reponse
+		if(current->state == IN_RESP){
+			slowcomm_print("5\n");
+			//This is normal packet or an ACK, part of the response
+mid_resp_pkg:
+			// Update the partial delta_req
+			timersub((struct timeval *) utime, &current->t_st_resp, &diff);
+			current->delta_resp = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+			// If there is payload on the last packet, we still need to wait for its ACK
+			if(payload_sizeB > 0){
+				// There is payload, we need to (at least) wait for its ACK
+				// before changing the state of the connection
+				// so, we only go to check delta violations
+				goto check_violations;
+			}
+#if SLOWCOMM_PAYLOAD_INSPECTION
+			// Analyze the payload
+			// NOTE: We analyze the payload of the old packet, in order to
+			// change the state once we recieved the corresponsing ACK for(i=0; i<current->last_payload_size; i++){
+				// FIXME - This code can be optimized to avoid copying the whole payload
+				// Copy the byte and update the pointer to the last.
+				current->buffer[current->last] = current->last_payload[i];
+				current->last = (current->last + 1) % 5;
+				// Check if last and first are equals, if so, I need to update the first
+				if(current->last == current->first){
+					// I'll step on my own queue: make space for the new char
+					current->first = (current->first + 1) % 5;
+				}
+			}
+			// Reconstruct the buffer for(i=0; i<4; i++){
+				str[i] = current->buffer[(current->first + i) % 5];
+			}
+			// Detect if "\r\n\r\n" is present in the buffer
+			if(strncmp(str, "\r\n\r\n", 4) == 0){
+				// The "end of request" string was found
+				// In this case, we move certainly to the next state
+#else
+			// Use the properties of the flow to change the state of the connection
+			if((flagsB & 0x10) == 0x10 && directionB == 0){
+				// pkgB is an ACK and pkgB goes from client to server
+				// pkgB MIGHT end the response... preemptively move to the next state
+#endif
+				// In this case, this pkg is also the wnd of teh response
+				// Change the status of the connection
+				current->state = END_RESP;
+				// Update the t_end_response
+				memcpy(&current->t_end_resp, (struct timeval *) utime, sizeof(struct timeval));
+				// Compute the delta_resp
+				timersub(&current-> t_end_resp, &current->t_st_resp, &diff);
+				current->delta_resp = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+			}
+			// Check if there is any violation in the delta values
+			goto check_violations;
+			slowcomm_print("should not be called\n");
+		}
+		// 6. Check if the packet starts a new request or continues the response
+		if(current->state == END_RESP){
+			// The conneciton is in state END_RESP
+			slowcomm_print("6\n");
+			if(directionB == 1 && payload_sizeB > 0){ //(flagsB & 0x17) == 0x0 && 
+				// pkg goes from server to client(*, it has no FIN, SYN, RST or ACK flags*) and has payload
+				// We move to the wrong state: fix it
+				current->delta_resp = 0.0;
+				current->state = IN_RESP;
+				goto mid_resp_pkg;
+			}
+			current->state = IN_REQ;
+			// Update the t_start_request
+			memcpy(&current->t_st_req, (struct timeval *) utime, sizeof(struct timeval));
+			// Update the delta start
+			timersub(&current->t_st_req, &current->t_end_resp, &diff);
+			current->delta_next = (float) diff.tv_sec * 1000.0 + (float) diff.tv_usec / 1000.0;
+			// Handle this packet as if it was in the middle of a request
+			goto mid_req_pkg;
+
+		}
+
+		// 10. Found and not matched: there is an error here
+		slowcomm_print("pkg not matched\n");
+	} while((last = current) && (current = current->next) != NULL);
+	// We reached the end of the list, create a new node
+	// Bugfix: Create the new node only if the packet is contains the SYN flag
+	if((flagsB & 0x2) == 0x2){
+		last->next = (struct table_entry *) malloc(sizeof(struct table_entry));
+		memset(last->next, 0, sizeof(struct table_entry));
+		current = last->next;
+		// ... and initialize it
+		goto initialize_node;
+	} else {
+		// In case we arrive here, we found an "orphan" pkg, simply ignore it
+		return INVALID_PKG;
+	}
+check_violations:
+	slowcomm_print("delta_start = %f\n", current->delta_start);
+	slowcomm_print("delta_req = %f\n", current->delta_req);
+	slowcomm_print("delta_delay = %f\n", current->delta_delay);
+	slowcomm_print("delta_resp = %f\n", current->delta_resp);
+	slowcomm_print("delta_next = %f\n", current->delta_next);
+
+	// Check the delta values in the current node
+	if(current->delta_start > MAX_DELTA_START){
+		return_val = INVAL_DELTA_START;
+	}
+	if(current->delta_req > MAX_DELTA_REQ){
+		return_val = INVAL_DELTA_REQ;
+	}
+	if(current->delta_delay > MAX_DELTA_DELAY){
+		return_val = INVAL_DELTA_DELAY;
+	}
+	if(current->delta_resp > MAX_DELTA_RESP){
+		return_val = INVAL_DELTA_RESP;
+	}
+	if(current->delta_next > MAX_DELTA_NEXT){
+		return_val = INVAL_DELTA_NEXT;
+	}
+	// Leave a register of the packet we just processed
+	current->last_flags = flagsB;
+	memset(current->last_payload, 0, 2500);
+	memcpy(current->last_payload, payloadB, payload_sizeB);
+	current->last_payload_size = payload_sizeB;
+	current->last_direction = directionB;
+	// Save the last timestamp
+	memcpy(&current->last_tstamp, (struct timeval *) utime, sizeof(struct timeval));
+	current->num_pkgs++;
+	// If the flow was closed, simply free the memory
+	if(current->state == CLOSED){
+		last->next = current->next;
+		if(current == flows){
+			// We are deleting the first node... update flows
+			flows = current->next;
+		}
+		free(current->last_payload);
+		free(current);
+	}
+	slowcomm_print("Detected %d\n", return_val);
+	slowcomm_print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+	return return_val;
+}
+]]>  </embedded_functions>
+  <property value="THEN" delay_units="mms" delay_min="0" delay_max="+0" property_id="77" type_property="ATTACK" description="SlowComm DDos attack">
+    <!-- Detect any TCP packet as declared in the IP headers -->
+    <event value="COMPUTE" event_id="1" description="Any TCP packet" boolean_expression="((#is_exist(tcp.p_payload) != 2) &amp;&amp; (ip.proto_id == 6) &amp;&amp; (ip.src != ip.dst))"/>
+    <!-- Evaluate the values of the deltas using teh data form the last event -->
+    <event value="COMPUTE" event_id="2" description="Evaluate deltas" boolean_expression="(#em_check_delta_request(ip.session_id.1, meta.utime.1, tcp.flags.1, tcp.p_payload.1, tcp.payload_len.1, meta.direction.1, tcp.src_port.1, tcp.dest_port.1))"/>
   </property>
 </beginning>

@@ -1,3 +1,58 @@
+## Version 1.2.10
+
+1. support protocol names starting by a number, such as, `8021q`
+2. add timeout event to trace when verifying type=SECURITY
+
+## Version 1.2.9
+
+1. support new data type of mmt-sdk: datetime and binary
+2. fix bugs when ignoring the rest of flow
+
+## Version 1.2.8
+
+1. support `proto_hierarchy_t` data type
+2. change output format of alert from `{key:val}` to `[key,val]`
+
+
+## Version 1.2.7
+
+1. remove warning when compiling using gcc 7.3
+
+## Version 1.2.6
+
+1. fix bug when add/rm rules at runtime, add user_data to message_t
+2. to be able to stop verifying the rest of a flow when obtaining an alert on it
+3. fix bugs that blocks mmt-security in multi-threading mode
+4. allow setting `buffer_size` when enabling `ignore_remain_flow`
+
+## Version 1.2.5
+
+1. allow compiling to obtain static linkage
+2. continue even not found any rules folders to load static linkage rules
+3. fix a bug preventing visualization
+4. improvement to ICMP rule
+
+
+## Version 1.2.4
+
+1. use `MMT_BASE` instead of `INSTALL_DIR`
+2. resolve conflict of data type names with mmt-sdk
+
+
+## Version 1.2.2
+
+1. add `MMT_DPI_DIR` as parameter when doing `make` to indicate the folder containing mmt-sdk
+2. limit 255 characters when reporting value of an attribute
+
+## Version 1.2.1
+
+1. add `INSTALL_DIR` as parameter when doing `make` to indicate target folder to be installed
+2. disable by default the feature add/remove rules at runtime
+
+## Version 1.2.0
+
+1. Add or remove rules at runtime
+
 ## Version 1.1.5
 
 1. implement `if_satisfied` function allowing user to perform some task when a rule is satisfied  

@@ -5,7 +5,7 @@ This repository contains the following folders:
 - `src` : C code of mmt-security
 - `rules`: set of XML rules. An encoded version (*.so) of these rules will be distributed with mmt-sec when using `make deb`
 - `check`: sample pcap files and expected results to validate mmt-security
-- `doc`: documentation
+- `doc`: [documentation](doc/_index.md)
 - `test`: diversity of testing code
 
 The repository contains mmt-security toolset:
@@ -24,7 +24,6 @@ Suppose on your machine, you have:
 - *libxml2-dev, libpcap-dev, libconfuse-dev* :  `sudo apt-get install libxml2-dev libpcap-dev libconfuse-dev`
 
 - Optional: *hiredis*
-
 ```bash
 git clone https://github.com/redis/hiredis.git
 cd hiredis
@@ -33,9 +32,14 @@ sudo make install
 ldconfig
 ```
 
-- mmt-sdk: https://bitbucket.org/montimage/mmt-sdk/wiki/Compilation%20and%20Installation%20Instructions
+- `mmt-sdk`: https://bitbucket.org/montimage/mmt-sdk/wiki/Compilation%20and%20Installation%20Instructions
 
 - source code of mmt-security: `git clone https://YOUR_USERNAME@bitbucket.org/montimage/mmt-security.git`
+
+## Clean
+
+- Do `make clean` to clean compiled objects of mmt-security
+- Do `make clean-all` to clean all compiled objects of mmt-security and the ones being generated from mmt-sdk. Thus do this when mmt-sdk has been updated.
 
 
 ## Compile
@@ -47,8 +51,8 @@ ldconfig
 
 - enable some modules use: `make [MODULE_NAME=1]+`. Currently `MODULE_NAME` is one of the followings:
 
-   - `REDIS`: this module allows to output to redis. Consequently `hiredis` library must be installed. 
-   - `UPDATE_RULES`: this module allows to add or remove rules at runtime. This is enabled by default. To disable this, e.g., in the case we do not need this feature: `MODULE_NAME=0`
+    - `REDIS`: this module allows to output to redis. Consequently `hiredis` library must be installed. 
+    - `UPDATE_RULES`: this module allows to add or remove rules at runtime. This is enabled by default. To disable this, e.g., in the case we do not need this feature: `MODULE_NAME=0`
 
 - compile mmt-security to get .deb file in order to re-distribute its binary: `make deb`  
    You will get a .deb file, e.g., `mmt-security_1.0.1_8d5d7ea_Linux_x86_64.deb`, containing everything mmt-security needs in order to be able to execute on a fresh machine.  
@@ -102,7 +106,7 @@ This application prints information of rules encoded in a binary file (.so).
 ./rule_info rules/40.TCP_SYN_scan.so
 ```
 
-## `mmt_sec_standalone`
+## mmt_sec_standalone
 
 This application can analyze
  
@@ -132,7 +136,7 @@ Option:
 
 ```
 
-## `mmt_sec_server`
+## mmt_sec_server
 
 This application receives meta-data, calling `messages`, from mmt-probe via internet or Unix sockets and then analyse them.
 

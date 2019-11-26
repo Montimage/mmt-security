@@ -64,18 +64,18 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 					var->proto, var->att
 	);
 
-	//TODO: not need to check before validate the guard's boolean expression ?
-	//YES, still need to check NULL in the case 2 events occurs in the same time
-	//in such a case, the hash function can ensure only the first event is not NULL
-	//NO, this will be check before calling this guard
-	//fprintf( fd, "\n\t if( unlikely( data == NULL )) return 0;" );
-
-	//TODO: what happen if a proto's name starts by a number
-	fprintf( fd, "\n\t %s%s = %s data;",
-			((var->data_type == MMT_SEC_MSG_DATA_TYPE_NUMERIC)? "double " : ((var->data_type == MMT_SEC_MSG_DATA_TYPE_STRING)? "const char *" : "const void *") ),
-			str,
-			((var->data_type == MMT_SEC_MSG_DATA_TYPE_NUMERIC)? "*(double*) " : ((var->data_type == MMT_SEC_MSG_DATA_TYPE_STRING)? "(char *)" : "") )
-	);
+	switch( var->data_type ){
+	case MMT_SEC_MSG_DATA_TYPE_STRING:
+		fprintf( fd, "\n\t const char *%s = (char *) data;", str );
+		break;
+	case MMT_SEC_MSG_DATA_TYPE_NUMERIC:
+		fprintf( fd, "\n\t double %s = 0;", str );
+		fprintf( fd, "\n\t if (data != NULL)  %s = *(double*) data;", str );
+		break;
+	default:
+		fprintf( fd, "\n\t const void *%s = data;", str );
+		break;
+	}
 
 	mmt_mem_free( str );
 }

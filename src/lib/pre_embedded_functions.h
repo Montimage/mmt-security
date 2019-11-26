@@ -23,9 +23,7 @@
  * 	- 1 if proto_att exists
  * 	- 0 if proto_att does not exist
  */
-static inline int is_exist( const void *proto_att ){
-	return (proto_att != NULL);
-}
+#define is_exist( x ) (x != 0)
 
 /**
  * The function checks if a proto.att exists or not.

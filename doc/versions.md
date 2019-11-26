@@ -1,6 +1,7 @@
 ## Version 1.2.11
 
 1. fix bug when using embedded function `is_exist` to verify empty of attribute having numeric value. 
+2. fix bug in boolean_expr when fun param is another function
 
 ## Version 1.2.10
 

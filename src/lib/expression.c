@@ -450,22 +450,17 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		if ( is_first_time == YES) {
 			_parse_a_boolean_expression(NO, expr, temp2);
 		} else {
-			if( expr->type == OPERATION && expr->operation->operator == FUNCTION ){
-				_parse_a_boolean_expression(NO, expr, temp2);
-			}else{
+			//create new_expr
+			//we have not known yet the operator of new_op
+			//it will be determined after
+			new_op = expr_create_an_operation(NULL, UNKNOWN );
+			new_expr = expr_create_an_expression( OPERATION, new_op );
+			new_expr->father = expr;
+			//append new_expr to expr->params_list
+			expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
+			expr->operation->params_size ++;
 
-				//create new_expr
-				//we have not known yet the operator of new_op
-				//it will be determined after
-				new_op = expr_create_an_operation(NULL, UNKNOWN );
-				new_expr = expr_create_an_expression( OPERATION, new_op );
-				new_expr->father = expr;
-				//append new_expr to expr->params_list
-				expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
-				expr->operation->params_size ++;
-
-				_parse_a_boolean_expression(NO, new_expr, temp2);
-			}
+			_parse_a_boolean_expression(NO, new_expr, temp2);
 		}
 	} else if (*temp == ')') {
 		mmt_assert( expr->father != NULL || _get_the_next_char(temp + 1) == '\0', "Error 37d: Unexpected: %s", temp + 1 );
@@ -544,7 +539,7 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
 		expr->operation->params_size ++;
 		//parse the parameters of this function
-		_parse_a_boolean_expression(NO, new_expr, temp + index );
+		_parse_a_boolean_expression(YES, new_expr, temp + index );
 	} else if (isdigit(*temp)) {
 
 	} else if (*temp == '&' && *(temp + 1) == '&') {

@@ -1,3 +1,7 @@
+## Version 1.2.11
+
+1. fix bug when using embedded function `is_exist` to verify empty of attribute having numeric value. 
+
 ## Version 1.2.10
 
 1. support protocol names starting by a number, such as, `8021q`

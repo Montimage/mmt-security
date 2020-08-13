@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 83: IEEE 802.15.4 node failure detection-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="20" property_id="83" type_property="SECURITY" 
+    description="One node reports the measurements every 10 seconds. Otherwise, it might be down">
+   <event value="COMPUTE" event_id="1" 
+           description="The last time the node was seen reporting data"
+           boolean_expression="(ieee802154.src_address_extended != ieee802154.dst_address_extended)"/>
+   <event value="COMPUTE" event_id="2" 
+           description="Trigger: There must be another report 10 seconds after that"
+		   boolean_expression="((ieee802154.src_address_extended == ieee802154.src_address_extended.1)&amp;&amp;(ieee802154.dst_address_extended == ieee802154.dst_address_extended.1))"/>
+</property>
+</beginning>

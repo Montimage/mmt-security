@@ -1,0 +1,23 @@
+<beginning>
+<!-- Property 82: Probable DoS attack: 4 messages in less than 1s coming from the same node
+-->
+	<property value="THEN" delay_units="s" delay_min="0+" delay_max="1" property_id="82" type_property="ATTACK" 
+    description="Probable DoS attack: 4 messages in less than 1s coming from the same node">
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+      <event value="COMPUTE" event_id="1" 
+             description="1st message"
+             boolean_expression="(ieee802154.src_address_extended != ieee802154.dst_address_extended)"/>
+      <event value="COMPUTE" event_id="2" 
+             description="2nd message"
+             boolean_expression="((ieee802154.src_address_extended == ieee802154.src_address_extended.1)&amp;&amp;(ieee802154.dst_address_extended == ieee802154.dst_address_extended.1))"/>
+    </operator>
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="1">
+      <event value="COMPUTE" event_id="3" 
+             description="3rd message"
+             boolean_expression="((ieee802154.src_address_extended == ieee802154.src_address_extended.1)&amp;&amp;(ieee802154.dst_address_extended == ieee802154.dst_address_extended.1))"/>
+      <event value="COMPUTE" event_id="4" 
+             description="4th message"
+             boolean_expression="((ieee802154.src_address_extended == ieee802154.src_address_extended.1)&amp;&amp;(ieee802154.dst_address_extended == ieee802154.dst_address_extended.1))"/>
+    </operator>
+</property>
+</beginning>

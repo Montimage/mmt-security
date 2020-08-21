@@ -395,6 +395,30 @@ static inline size_t _copy_plein_text( char *dst, int len, const char* src ){
 	return size;
 }
 
+//specical attribute format
+#define PROTO_IEEE802154 800
+#define IEEE802154_DST_ADDRESS_EXTENDED 10
+#define IEEE802154_SRC_ADDRESS_EXTENDED 13
+static int _process_ieee802154_src_dst( char *msg, int length, uint32_t proto_id, uint32_t att_id, const void *data ){
+	if( proto_id != PROTO_IEEE802154 )
+		return 0;
+	if( att_id != IEEE802154_SRC_ADDRESS_EXTENDED && att_id != IEEE802154_DST_ADDRESS_EXTENDED)
+		return 0;
+	//no data => use empty string
+	if( data == NULL ){
+		msg[0] = '"';
+		msg[1] = '"';
+		return 2; //2 characters have been added to msg
+	}
+
+	uint8_t *add = (uint8_t *) data;
+
+	int len = snprintf( msg , length, "\"%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\"",
+			add[7], add[6], add[5], add[4], add[3], add[2], add[1], add[0] );
+
+	return len;
+}
+
 #define MAX_STR_SIZE 10000
 
 static const char* _convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
@@ -480,6 +504,11 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			str_ptr   += size;
 			total_len -= size;
 
+			//special processing for ieee_802154 attributes
+			size = _process_ieee802154_src_dst( str_ptr, total_len, pro_ptr->proto_id, pro_ptr->att_id, me->data );
+			//no attributes of iee 802154 has been processed?
+			//=> continue the processing of other proto/att
+			if( size == 0 )
 			//pro_ptr->data_type;
 			switch( me->data_type ){
 			case MMT_SEC_MSG_DATA_TYPE_NUMERIC:

@@ -21,7 +21,7 @@ static inline int em_check_eicar_virus(const char *str){
       	} 
       c ++;
    }
-   return 1;
+   return 0;
 }
 ]]></embedded_functions>
 <!-- Property 54: Detect EICAR virus test file within the payload-->

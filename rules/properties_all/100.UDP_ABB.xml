@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) 2014-->
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int em_check_sql_injection(const char *str){
+   //Signature based dection begin here. 
+   //(using  pattern matching techniques against signatures and 
+   //keyword-based stores to identify potentially malicious requests)
+	
+	
+            
+    int data_type =  (unsigned char)(str[4]) << 24 |
+            (unsigned char)(str[5]) << 16 |
+            (unsigned char)(str[6]) << 8 |
+            (unsigned char)(str[7]);
+
+    int nb_markers = (unsigned char)(str[24]) << 24 |
+            (unsigned char)(str[25]) << 16 |
+            (unsigned char)(str[26]) << 8 |
+            (unsigned char)(str[27]);
+    
+    printf ("%d\n", data_type); 
+    printf ("%d\n", nb_markers); 
+	
+	
+    if (data_type == 7 && nb_markers == 3) {
+      return 1;
+    }
+
+   return 0;
+}
+]]></embedded_functions>
+<!-- Property: SQL Injection detection.-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="100" type_property="ATTACK" 
+    description="SQL Injection detected"
+    >
+   <event value="COMPUTE" event_id="1" 
+           description="Context: Here it is a TCP packet (it can be regrouped from IP segments)"
+           boolean_expression="(udp.len &gt; 0)"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Trigger: SQL Injection in the payload"
+           boolean_expression="((#em_check_sql_injection(udp.p_payload) == 1) &amp;&amp; (ip.src != ip.dst))"/>
+</property>
+</beginning>
+
+

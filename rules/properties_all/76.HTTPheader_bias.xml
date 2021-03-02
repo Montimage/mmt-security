@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) 2014-->
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int em_check_header_http(const char *str){
+   
+   const char* c = str;
+   while( *c != '\0' ){
+      if (*c=='T' && c[1]=='r' && c[2]=='a' && c[3]=='n'){
+      	if (strstr(c, "Transfer-Encoding::chunked") != NULL) return 1;
+      	// "\\" represents "\"
+      	break;
+      	} 
+      c ++;
+   }
+   return 0;
+}
+]]></embedded_functions>
+<!-- Property 76: Detect special characters inserted into HTTP header-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="76" type_property="ATTACK" 
+     description="Detect special characters inserted into HTTP header (::chunked)" >
+   <event event_id="1" value="COMPUTE" 
+           description="An IP packet"
+           boolean_expression="((ip.packet_count != 0) &amp;&amp; (ip.src != ip.dst))"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Special characters inserted into HTTP header (::chunked)"
+           boolean_expression="(#em_check_header_http(tcp.p_payload)==1)"/>
+ </property>
+</beginning>

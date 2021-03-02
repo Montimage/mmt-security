@@ -1,6 +1,6 @@
 <beginning>
 <!-- Property 10: HTTP using a port different from 80 and 8080.-->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1" type_property="EVASION" 
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="10" type_property="EVASION" 
     description="HTTP using a port different from 80 and 8080.">
     <event value="COMPUTE" event_id="1" 
         description="HTTP packet using a port different from 80 and 8080"

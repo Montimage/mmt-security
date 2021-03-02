@@ -1,0 +1,13 @@
+<beginning>
+<!-- Property 65: Non-zero IP reserved flag -->
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="65" type_property="EVASION" 
+    description="Non-zero IP reserved flag">
+      <event value="COMPUTE" event_id="1" 
+             description="IP packet with non-zero reserved flag"
+             boolean_expression="(ip.rf_flag != 0)"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Print source and destination of IP"
+             boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

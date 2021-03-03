@@ -3,7 +3,7 @@
 This repository contains the following folders:
 
 - `src` : C code of mmt-security
-- `rules`: set of XML rules. An encoded version (*.so) of these rules will be distributed with mmt-sec when using `make deb`
+- `rules`: set of official XML rules. An encoded version (*.so) of these rules will be distributed with mmt-sec when using `make deb`. All rules (official and for testing purposes) are stored in rules/properties_all 
 - `check`: sample pcap files and expected results to validate mmt-security
 - `doc`: [documentation](doc/_index.md)
 - `test`: diversity of testing code

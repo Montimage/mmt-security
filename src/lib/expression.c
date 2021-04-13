@@ -205,6 +205,7 @@ static inline size_t _jump_space( const char *string, size_t str_size ){
 size_t _parse_a_proto_name( char **name, const char *string, size_t str_size, bool is_allow_number_prefix ){
 	size_t i = 0, index = 0;
 	const char *temp;
+	char *p;
 	*name = NULL;
 	if( string == NULL || str_size == 0 )
 		return 0;
@@ -230,6 +231,10 @@ size_t _parse_a_proto_name( char **name, const char *string, size_t str_size, bo
 
 	//duplicate the name
 	*name = mmt_mem_dup( temp, i );
+	//change name to lower case
+	for( p = *name; *p != '\0'; p ++)
+		*p = tolower( *p );
+
 	return index;
 }
 

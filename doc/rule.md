@@ -232,7 +232,29 @@ Found 1 rule.
 	- version         : 1.1.5 (70a367f - 2017-6-8 12:42:28), dpi version 1.6.8.0 (b3e727b)
 ```
  
-# 5. Write a high performance rule
+# 5. Default values
+
+In the XML file of a rule, if an attribute is absent then its value is set by default:
+
+- `property`, `operator`:
+   + `value` : `COMPUTE` (=> only one `<event>` is required. Thus `delay_min` and `delay_max` must be 0)
+   + `delay_units`: `s`
+   + `delay_min`: 0
+   + `delay_max`: 0
+   
+An example of `COMPUTE`rule:
+
+```XML
+<property property_id="11" type_property="EVASION" 
+    description="IP packet size incorrect">
+    <event value="COMPUTE" event_id="1" 
+           description="Packet size incorrect"
+           boolean_expression="((meta.packet_len &lt; 34)"/>
+</property>
+```
+
+ 
+# 6. Write a high performance rule
  
  To write a rule having a high performance one need to:
  

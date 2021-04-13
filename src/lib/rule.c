@@ -187,6 +187,11 @@ rule_delay_t *_parse_rule_delay( const xmlNode *xml_node ){
 	}
 
 	if( has_delay ){
+		mmt_assert( (delay->time_min <= delay->time_max),
+				"Error 13da: delay_min must not be greater than delay_max");
+		mmt_assert( (delay->counter_min <= delay->counter_max),
+				"Error 13db: counter_min must not be greater than counter_max");
+
 		_update_delay_to_micro_second( delay, delay_time_unit );
 
 		delay->time_min += time_min_sign;
@@ -264,7 +269,7 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 	xmlChar *xml_attr_value;
 
 	//init default values
-	operator.value        = RULE_VALUE_THEN;
+	operator.value        = RULE_VALUE_COMPUTE;
 	operator.description  = NULL;
 	operator.repeat_times = 1;
 	operator.context      = NULL;
@@ -304,6 +309,19 @@ static rule_operator_t *_parse_an_operator( const xmlNode *xml_node ){
 		xml_node = xml_node->next;
 	}
 
+	//when rule type = "COMPUTE", no need the second <event>
+	if (operator.value == RULE_VALUE_COMPUTE ){
+		mmt_assert( (operator.trigger == NULL),
+			"Error 13g: Do not expect trigger for operator COMPUTE. Only one <event> is required.");
+		mmt_assert( (operator.delay->counter_max == 0 && operator.delay->time_max == 0),
+			"Error 13g: Do not expect delay for operator COMPUTE");
+	}
+	else {
+		//when rule type != COMPUTE, we need 2 events: context and trigger
+		mmt_assert( (operator.context != NULL && operator.trigger != NULL ),
+			"Error 13g: Require 2 <event> for context and trigger for operator " );
+	}
+
 	ret = mmt_mem_dup( &operator, sizeof( rule_operator_t ));
 	return ret;
 }
@@ -339,7 +357,7 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 
 	//init default values
 	rule.id               = UNKNOWN;
-	rule.value            = RULE_VALUE_THEN;
+	rule.value            = RULE_VALUE_COMPUTE;
 	rule.type             = RULE_TYPE_SECURITY;
 	rule.description      = NULL;
 	rule.if_satisfied     = NULL;
@@ -403,10 +421,17 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 		xml_node = xml_node->next;
 	}
 
-	mmt_assert( (rule.value == RULE_VALUE_COMPUTE || rule.trigger != NULL ),
-				"Error 13g: Require trigger for rule %d", rule.id );
-	mmt_assert( (rule.value != RULE_VALUE_COMPUTE || (rule.context != NULL && rule.trigger != NULL )),
-			"Error 13g: Require context and trigger for rule %d", rule.id );
+	//when rule type = "COMPUTE", no need the second <event>
+	if( rule.value == RULE_VALUE_COMPUTE ){
+		mmt_assert( (rule.trigger == NULL ),
+			"Error 13g: Do not expect trigger for rule %d. Only one <event> is required.", rule.id );
+		mmt_assert( (rule.delay->counter_max == 0 && rule.delay->time_max == 0),
+			"Error 13g: Do not expect delay for operator COMPUTE for rule %d", rule.id );
+	} else {
+	//when rule type != COMPUTE, we need 2 events: context and trigger
+		mmt_assert( (rule.context != NULL && rule.trigger != NULL ),
+			"Error 13g: Require 2 <event> for context and trigger for rule %d", rule.id );
+	}
 
 	ret = mmt_mem_dup( &rule, sizeof( rule_t));
 	return ret;

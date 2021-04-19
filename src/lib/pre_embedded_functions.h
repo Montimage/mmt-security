@@ -42,4 +42,32 @@ static inline int is_null( const void *proto_att ){
 static inline int is_empty( const void *proto_att ){
 	return (proto_att == NULL || ((char *)proto_att)[0] == '\0' );
 }
+
+
+/**
+ * Get data value in
+ * @param proto_id
+ * @param att_id
+ * @param event_id
+ * @param trace
+ */
+static inline const void* get_value_from_trace(uint32_t proto_id, uint32_t att_id, int event_id,
+		const mmt_array_t *const trace) {
+	const message_t *msg;
+	const message_element_t *me;
+	uint64_t value = 0;
+	int j;
+	if( event_id >= trace->elements_count )
+		return NULL;
+	msg = trace->data[event_id];
+	if( !msg )
+		return NULL;
+	for (j = 0; j < msg->elements_count; j++) {
+		me = &msg->elements[j];
+		if (me && me->proto_id == proto_id && me->att_id == att_id)
+			return me->data;
+	}
+	return NULL;
+}
+
 #endif /* SRC_LIB_PRE_EMBEDDED_FUNCTIONS_H_ */

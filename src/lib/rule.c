@@ -387,6 +387,11 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 				rule.type = RULE_TYPE_EVASION;
 			else if( str_equal( xml_attr_value, "TEST" ) )
 				rule.type = RULE_TYPE_TEST;
+			//mmt-5greplay
+			else if( str_equal( xml_attr_value, "DROP" ) )
+				rule.type = RULE_TYPE_DROP;
+			else if( str_equal( xml_attr_value, "FORWARD" ) )
+				rule.type = RULE_TYPE_FORWARD;
 			else
 				mmt_halt( "Error 13c: Unexpected type_property: %s", xml_attr_value );
 		}else if( str_equal( xml_attr_name, "description" ) )

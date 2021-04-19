@@ -82,9 +82,18 @@ constant_t *expr_create_a_constant( enum data_type type, size_t data_size, void 
 	return cont;
 }
 
+static inline void _to_lower( char *str){
+	char *p;
+	//change name to lower case
+	for( p = str; *p != '\0'; p ++)
+		*p = tolower( *p );
+}
+
 /** Public API */
 variable_t *expr_create_a_variable( char *proto, char *attr, uint16_t ref_index ){
 	variable_t *var = mmt_mem_alloc( sizeof( variable_t ));
+	//_to_lower( proto );
+	//_to_lower( attr );
 	var->proto = proto;
 	var->att   = attr;
 	var->ref_index = ref_index;
@@ -231,9 +240,6 @@ size_t _parse_a_proto_name( char **name, const char *string, size_t str_size, bo
 
 	//duplicate the name
 	*name = mmt_mem_dup( temp, i );
-	//change name to lower case
-	for( p = *name; *p != '\0'; p ++)
-		*p = tolower( *p );
 
 	return index;
 }
@@ -506,16 +512,12 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 			} else {
 				//(2) check id
 				index = _parse_a_name( &new_string, temp, MAX_STR_SIZE );
-				new_number = mmt_mem_alloc( sizeof( double ) );
-				if( strcmp( new_string, "true") == 0 ){
-					*new_number = true;
-				}else if( strcmp( new_string, "false") == 0 ){
-					*new_number = false;
-				}else {
+				//an identification: starting by a [a-z,A-Z,_]
+				if(new_string == NULL || ! ( isalpha(new_string[0]) || new_string[0] == '_') ){
 					mmt_mem_free( new_number );
-					mmt_halt("Error 37c: Illegal name:\"%s\".\nExpected either \"true\", \"false\", or proto.att or proto.att.ref", temp + 1 );
+					mmt_halt("Error 37c: Illegal name: %s (\"%s\").\nExpected either \"true\", \"false\", or proto.att or proto.att.ref", new_string, temp );
 				}
-				new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
+				new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_STRING, strlen(new_string)+1, new_string) );
 				new_expr->father = expr;
 				//append new_expr to expr->params_list
 				expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
@@ -664,7 +666,6 @@ int parse_expression( expression_t **expr, const char *string, size_t str_size )
 	*expr  = ret;
 	return _parse_a_boolean_expression( YES, ret, string );
 }
-
 
 /**
  * public API

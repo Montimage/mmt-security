@@ -12,10 +12,20 @@
 #USER=root
 #IP=192.168.0.36
 
-TARGET=/home/mmt/mmt-security
+TARGET=hn/mmt-security
 USER=mmt
 IP=localhost
 PORT=2222
+
+#TARGET=mmt/mmt-security
+#USER=epc
+#IP=192.168.0.163
+#PORT=2222
+#
+#TARGET=mmt/mmt-security
+#USER=montimage
+#IP=192.168.0.235
+#PORT=2003
 
 
 #centos
@@ -50,11 +60,17 @@ RUN="make clean; make $DEBUG"
 #RUN="make clean ; make test.spsc $DEBUG"
 #RUN="make perf.hash && ./perf.hash"
 
-#RUN="rm rules/36.*.so ; make rules/36.robot_user_agent.so"
+#RUN=""
+#RUN="$RUN rules/78.sendate_http_video_ddos.so"
+#RUN="$RUN rules/79.sendate_http_video_overloading.so"
+#RUN="rm rules/*.so; make $RUN"
 
 #RUN="make $DEBUG && valgrind --leak-check=full  ./mmt_sec_standalone -t /media/sf_share_vbox/pcap/smallFlows.pcap"
 #RUN="rm rules/10.*.so ; make $DEBUG ; ./compile_rule rules/10.http.port.so rules/10.http.port.xml; ./mmt_sec_standalone -t /media/sf_share_vbox/pcap/smallFlows.pcap -v"
 
+RUN="make clean; make $DEBUG; ./compile_rule a.so test/embedded_rules.xml"
+
+#RUN=""
 
 echo "Compiling `pwd` ... on $USER@$IP:$TARGET"
 echo "Run: $RUN"

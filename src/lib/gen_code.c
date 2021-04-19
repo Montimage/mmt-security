@@ -14,14 +14,12 @@
 #include "version.h"
 
 #define STR_BUFFER_SIZE 10000
-#define _gen_comment( fd, format, ... ) fprintf( fd, "\n /** %d\n  * " format "\n  */\n ", __LINE__, ##__VA_ARGS__ )
+#define _gen_comment( fd, format, ... ) fprintf( fd, "\n/** %d\n * " format "\n */\n", __LINE__, ##__VA_ARGS__ )
 #define _gen_comment_line( fd, format, ... ) fprintf( fd, "/** %d " format "*/", __LINE__, ##__VA_ARGS__ )
 #define _gen_code_line( fd ) fprintf( fd, "/* %d */", __LINE__ )
 #define _val( x ) (x==NULL? "NULL": x)
 #define _num( x ) (x==NULL? 0: x)
 #define _string( v, a,b,c, x,y,z  ) (v==NULL? a:x), (v==NULL? b:y), (v==NULL? c:z)
-
-static FILE * code_file = NULL;
 
 struct _user_data{
 	uint16_t uint16_val;
@@ -566,12 +564,52 @@ void _iterate_variables_to_init_structure( void *key, void *data, void *user_dat
 	}
 }
 
+static inline size_t _alnumify( uint16_t rule_id, const char *fn_name, char *buffer, size_t buffer_size ){
+	int i;
+	//add rule_id at the end to get an unique
+	if( buffer_size == 0 || fn_name == NULL )
+		return 0;
+
+	buffer_size = snprintf( buffer, buffer_size, "%s_rule_%d", fn_name, rule_id );
+	//fix the first character, e.g., a function name must be started by [a-z,A-Z,_]
+	buffer[0] = '_';
+	//replace all non-alnum characters by _
+	for( i=1; i<buffer_size; i++ ){
+		if( ! isalnum( buffer[i] ))
+			buffer[i] = '_';
+	}
+
+	return buffer_size;
+}
+
+static inline void _get_if_statisfied_function_name( uint16_t rule_id, const char *fn_name, char *buffer, size_t buffer_size ){
+	mmt_assert( buffer_size >= 5, "Need at least 5 characters to contain if_satisified name (must not happen)" );
+	if( fn_name == NULL ){
+		strncpy( buffer, "NULL", 5 );
+		return;
+	}
+	//a function name to be called
+	if( fn_name[0] != '#' ){
+		if( buffer_size > strlen( fn_name ))
+			buffer_size = strlen( fn_name ) + 1; //+1: the \0 character at the end
+
+		snprintf( buffer, buffer_size, "%s", fn_name );
+		return;
+	}
+	//an embedded function, e.g., #update_data( PROTO_S1AP, RAN_UE_ID, s1ap.ran_ue_id.1 + 1 )
+	//=> we need to create a function having a name contain only alnum characters
+	_alnumify( rule_id, fn_name, buffer, buffer_size );
+
+	return;
+}
+
 /**
  * Generate general informations of rules
  */
 static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t count ){
 	size_t i;
 	char *string;
+	char new_fn_name[255];
 
 	_gen_comment(fd, "Moment the rules being encoded\n  * PUBLIC API");
 	fprintf( fd, "\nstatic const rule_version_info_t version = {.created_date=%ld, .hash = \"%s\", .number=\"%s\", .index=%d, .dpi=\"%s\"};",
@@ -591,6 +629,7 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 	fprintf( fd, "size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){");
 	fprintf( fd, "\n\t  static const rule_info_t rules[] = (rule_info_t[]){");
 	for( i=0; i<count; i++ ){
+		_get_if_statisfied_function_name( rules[i]->id, rules[i]->if_satisfied, new_fn_name, sizeof( new_fn_name));
 		fprintf( fd, "\n\t\t {");
 		fprintf( fd, "\n\t\t\t .id               = %d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .type_id          = %d,", rules[i]->type );
@@ -599,8 +638,7 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 		fprintf( fd, "\n\t\t\t .description      = %c%s%c,",
 				_string( rules[i]->description, 'N', "UL", 'L', '"', rules[i]->description, '"') );
 
-		fprintf( fd, "\n\t\t\t .if_satisfied     = %c%s%c,",
-				_string( rules[i]->if_satisfied, 'N', "UL", 'L', '&', rules[i]->if_satisfied, ' ') );
+		fprintf( fd, "\n\t\t\t .if_satisfied     = %s,", new_fn_name );
 		fprintf( fd, "\n\t\t\t .if_not_satisfied = %c%s%c,",
 				_string( rules[i]->if_not_satisfied, 'N', "UL", 'L', '"', rules[i]->if_not_satisfied, '"') );
 
@@ -911,6 +949,28 @@ static inline bool _hash_function( const char*fn_name, const char *code ){
 	return false;
 }
 
+void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rule ){
+	char new_fn_name[255];
+	const char *fn_string = rule->if_satisfied;
+	char *new_fn_string;
+	_get_if_statisfied_function_name( rule->id, fn_string, new_fn_name, sizeof( new_fn_name));
+
+	fprintf(fd, "\n");
+
+	_gen_comment( fd, "Rule %d - Generated embedded function: %s", rule->id, fn_string );
+	fprintf(fd, "static void %s (\n"
+			"      const rule_info_t *rule, int verdict, uint64_t timestamp, \n"
+			"      uint64_t counter, const mmt_array_t * const trace ){\n", new_fn_name );
+	//fprintf(fd, )
+	expression_t *fn_expr = NULL;
+	parse_expression( &fn_expr, fn_string, strlen(fn_string) );
+
+	expr_stringify_expression( &new_fn_string, fn_expr );
+	fprintf( fd, "   %s;\n", new_fn_string );
+
+	fprintf(fd, "} //end of %s\n", new_fn_name); //close
+}
+
 /**
  * Public API
  */
@@ -926,7 +986,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, con
 	mmt_mem_free( str_ptr );
 
 	//include
-	fprintf( fd, "#include <string.h>\n #include <stdio.h>\n #include <stdlib.h>\n #include \"plugin_header.h\"\n #include \"mmt_fsm.h\"\n #include \"mmt_lib.h\"\n #include \"pre_embedded_functions.h\"\n");
+	fprintf( fd, "#include <string.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include \"plugin_header.h\"\n#include \"mmt_fsm.h\"\n#include \"mmt_lib.h\"\n#include \"pre_embedded_functions.h\"\n");
 
 	//this part allows user add a suffix when compile rule.
 	//This will be helpful when linking statically rules into a program.
@@ -967,6 +1027,11 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, con
 
 	for( i=0; i<count; i++ )
 		_gen_fsm_for_a_rule( fd, rules[i] );
+
+	//embedded functions for if_satisfied
+	for( i=0; i<count; i++ )
+		if( rules[i]->if_satisfied && rules[i]->if_satisfied[0] == '#' )
+			_gen_if_satisfied_embedded_function_for_a_rule( fd, rules[i] );
 
 	//information of rules
 	_gen_rule_information( fd, rules, count );

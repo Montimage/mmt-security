@@ -1,0 +1,30 @@
+<beginning>
+<embedded_functions><![CDATA[
+static void em_print_out(
+      const rule_info_t *rule, int verdict, uint64_t timestamp, 
+      uint64_t counter, const mmt_array_t * const trace ){
+   const char* trace_str = mmt_convert_execution_trace_to_json_string( trace, rule );
+   printf( "Detect rule %d\n%s\n", rule->id, trace_str );
+}
+
+void on_load(){
+	printf("Loaded successfully rule 1");
+}
+
+void on_unload(){
+	printf("Unloaded successfully rule 1");
+}
+
+]]></embedded_functions>
+
+<!-- Property 10: HTTP using a port different from 80 and 8080.-->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1" type_property="TEST" 
+    description="Detect HTTP protocol" if_satisfied="em_print_out">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP packet"
+           boolean_expression="(http.method != '')"/>
+    <event value="COMPUTE" event_id="2" 
+           description="Get IP information"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

@@ -3,6 +3,9 @@
  *
  *  Created on: 20 sept. 2016
  *  Created by: Huu Nghia NGUYEN <huunghia.nguyen@montimage.com>
+ *  Modified 19 apr 2021:
+ *    + support embedded function in if_satisfied
+ *    + add DROP, FORWARD rules to support mmt-5greplay
  *
  *  Parse .xml property file
  */
@@ -92,7 +95,8 @@ typedef struct rule_operator_struct{
 } rule_operator_t;
 
 static const char *rule_type_string[] = {
-		"attack", "security", "evasion", "test"
+		"ATTACK", "SECURITY", "EVASION", "TEST",
+		"DROP", "FORWARD"
 };
 
 typedef struct rule_struct{
@@ -105,7 +109,7 @@ typedef struct rule_struct{
 	 * Indicates that the property specifies a potential attack (or abnormal behavior)
 	 * or that the property specifies a security rule that needs to be respected.
 	 */
-	enum {RULE_TYPE_ATTACK, RULE_TYPE_SECURITY, RULE_TYPE_EVASION, RULE_TYPE_TEST} type;
+	enum {RULE_TYPE_ATTACK, RULE_TYPE_SECURITY, RULE_TYPE_EVASION, RULE_TYPE_TEST, RULE_TYPE_DROP, RULE_TYPE_FORWARD} type;
 
 	enum value value;
 	/**

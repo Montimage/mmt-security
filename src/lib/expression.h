@@ -144,6 +144,7 @@ int parse_expression( expression_t **expr, const char *string, size_t size );
  */
 size_t expr_stringify_constant( char **string, const constant_t *expr);
 size_t expr_stringify_variable( char **string, const variable_t *var);
+size_t expr_stringify_operation( char **string, const operation_t *opt );
 size_t expr_stringify_expression( char **string, const expression_t *expr);
 
 

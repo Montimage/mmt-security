@@ -949,26 +949,132 @@ static inline bool _hash_function( const char*fn_name, const char *code ){
 	return false;
 }
 
+
+
+static void _iterate_variable_if_satisified_to_print( void *key, void *data, void *user_data, size_t index, size_t total ){
+	char *str = NULL;
+	struct _user_data *_u_data = (struct _user_data *)user_data;
+	FILE *fd          = _u_data->file;
+	uint32_t rule_id  = _u_data->uint32_val;
+	size_t size;
+	variable_t *var = (variable_t *) data;
+
+	//init for the first element
+	size = expr_stringify_variable( &str, var );
+	if( size == 0 ) return;
+
+
+	//TODO: for now, ignore any variable without ref
+	if( var->ref_index == (uint16_t)UNKNOWN )
+		return;
+
+	_gen_code_line( fd );
+
+	fprintf( fd, "\n\n\t data = get_value_from_trace( %"PRIu32", %"PRIu32", %d, trace );",
+			var->proto_id, var->att_id, var->ref_index
+	);
+	_gen_comment_line(fd, "%s.%s.%d", var->proto, var->att, var->ref_index );
+
+	switch( var->data_type ){
+	case MMT_SEC_MSG_DATA_TYPE_STRING:
+		fprintf( fd, "\n\t const char *%s = (char *) data;", str );
+		break;
+	case MMT_SEC_MSG_DATA_TYPE_NUMERIC:
+		fprintf( fd, "\n\t double %s = 0;", str );
+		fprintf( fd, "\n\t if( likely( data != NULL ))  %s = *(double*) data;", str );
+		break;
+	default:
+		fprintf( fd, "\n\t const void *%s = data;", str );
+		break;
+	}
+
+	mmt_mem_free( str );
+}
+
 void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rule ){
 	char new_fn_name[255];
 	const char *fn_string = rule->if_satisfied;
-	char *new_fn_string;
+	char *string;
 	_get_if_statisfied_function_name( rule->id, fn_string, new_fn_name, sizeof( new_fn_name));
 
 	fprintf(fd, "\n");
 
 	_gen_comment( fd, "Rule %d - Generated embedded function: %s", rule->id, fn_string );
 	fprintf(fd, "static void %s (\n"
-			"      const rule_info_t *rule, int verdict, uint64_t timestamp, \n"
-			"      uint64_t counter, const mmt_array_t * const trace ){\n", new_fn_name );
+			"\t\t const rule_info_t *rule, int verdict, uint64_t timestamp, \n"
+			"\t\t uint64_t counter, const mmt_array_t * const trace ){\n", new_fn_name );
 	//fprintf(fd, )
 	expression_t *fn_expr = NULL;
 	parse_expression( &fn_expr, fn_string, strlen(fn_string) );
 
-	expr_stringify_expression( &new_fn_string, fn_expr );
-	fprintf( fd, "   %s;\n", new_fn_string );
+	mmt_assert( fn_expr->type == OPERATION && fn_expr->operation->params_size == 1,
+			"Error: expect an embedded function in if_satisifed of rule %d", rule->id );
 
-	fprintf(fd, "} //end of %s\n", new_fn_name); //close
+	//fn_expr is in format (function)
+	const expression_t *expr = fn_expr->operation->params_list->data;
+	mmt_assert( expr->type == OPERATION && expr->operation->operator == FUNCTION,
+			"Error: expect an embedded function in if_satisifed of rule %d", rule->id );
+
+	const operation_t *op = expr->operation;
+	if( strcmp( op->name, "update" ) == 0 ){
+		mmt_assert( op->params_size == 2, "Error in if_satisifed function of rule %d: require 2 parameters in 'update' function. "
+				"For example: #update( ngap.ran_ue_id, (ngap.ran_ue_id.1 + 3))", rule->id );
+		//first parameter
+		expr = op->params_list->data;
+		mmt_assert( expr->type == VARIABLE, "Error in if_satisifed function of rule %d: "
+				"first parameter of #update function must be an variable in format proto.att", rule->id );
+
+		variable_t *var = expr->variable;
+		//mmt_assert( var->ref_index == 0, "Error in if_satisifed function of rule %d: "
+		//		"First parameter of #update function must be in format proto.att, not proto.att.ref", rule->id);
+
+		expr_stringify_variable(&string, var);
+
+		//define 2 variables: first is an object, second is a pointer points to the first one
+		fprintf( fd, "\t proto_attribute_t _%s = {.proto = \"%s\", .proto_id = %"PRIu32", .att = \"%s\", .att_id = %"PRIu32", .data_type = %d, .dpi_type = %d};",
+					string,
+					var->proto, var->proto_id,
+					var->att, var->att_id,
+					var->data_type,
+					var->dpi_type);
+		_gen_code_line( fd );
+		//the pointer will be used in the update function
+		fprintf( fd, "\n\t const proto_attribute_t *%s = &_%s;\n", string, string );
+		mmt_mem_free( string );
+	}
+	//else mmt_halt("Error: Support only 'update' embedded function");
+	//generate variables
+	mmt_map_t *map;
+	//set of variables
+	size_t var_count = get_unique_variables_of_expression( fn_expr, &map, YES );
+	if( var_count != 0 ){
+			fprintf(fd, "\n\t if( unlikely( trace == NULL )) return;" );
+			fprintf(fd, "\n\t const void *data;\n");
+			struct _user_data user_data = {.file = fd};
+			mmt_map_iterate( map, _iterate_variable_if_satisified_to_print, &user_data );
+	}
+	mmt_map_free(map, NO);
+
+	expr_stringify_operation( &string, op );
+
+	if( strcmp( op->name, "update" ) == 0 )
+		fprintf( fd, "\n\n\t _set_number_%s;", string ); //change the function name to
+	else
+		fprintf( fd, "\n\n\t %s;", string ); //does not change the function name
+	_gen_comment_line( fd, "main function");
+
+	fprintf(fd, "\n} //end of %s\n", new_fn_name); //close
+	expr_free_an_expression(fn_expr, YES);
+}
+
+static void _gen_update_attribute_function( FILE *fd ){
+	fprintf( fd, "\n\nextern void set_attribute_number_value(uint32_t, uint32_t, uint64_t);");
+	_gen_comment_line(fd, "this function must be implemeted inside mmt-probe" );
+
+	//gen a static function to call the extern above
+	fprintf( fd, "\n\nstatic inline void _set_number_update( const proto_attribute_t *proto, double new_val){\n"
+		"\t set_attribute_number_value( proto->proto_id, proto->att_id, new_val);\n"
+		"}");
 }
 
 /**
@@ -1028,6 +1134,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, con
 	for( i=0; i<count; i++ )
 		_gen_fsm_for_a_rule( fd, rules[i] );
 
+	_gen_update_attribute_function(fd);
 	//embedded functions for if_satisfied
 	for( i=0; i<count; i++ )
 		if( rules[i]->if_satisfied && rules[i]->if_satisfied[0] == '#' )

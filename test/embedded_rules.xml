@@ -18,8 +18,8 @@ void on_unload(){
 ]]></embedded_functions>
 
 <!-- Property 10: HTTP using a port different from 80 and 8080.-->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1" type_property="DROP" 
-    description="Detect HTTP protocol" if_satisfied="#update( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, (ngap.ran_ue_id.1 + 1))">
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1" type_property="FORWARD" 
+    description="Detect HTTP protocol" if_satisfied="#update( ngap.ran_ue_id, (ngap.ran_ue_id.1 + 1 + 3))">
     <event value="COMPUTE" event_id="1" 
         description="HTTP packet"
            boolean_expression="(http.method != '')"/>

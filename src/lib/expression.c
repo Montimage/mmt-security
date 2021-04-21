@@ -512,12 +512,16 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 			} else {
 				//(2) check id
 				index = _parse_a_name( &new_string, temp, MAX_STR_SIZE );
-				//an identification: starting by a [a-z,A-Z,_]
-				if(new_string == NULL || ! ( isalpha(new_string[0]) || new_string[0] == '_') ){
+				new_number = mmt_mem_alloc( sizeof( double ) );
+				if( strcmp( new_string, "true") == 0 ){
+					*new_number = true;
+				}else if( strcmp( new_string, "false") == 0 ){
+					*new_number = false;
+				}else {
 					mmt_mem_free( new_number );
-					mmt_halt("Error 37c: Illegal name: %s (\"%s\").\nExpected either \"true\", \"false\", or proto.att or proto.att.ref", new_string, temp );
+					mmt_halt("Error 37c: Illegal name:\"%s\".\nExpected either \"true\", \"false\", or proto.att or proto.att.ref", temp );
 				}
-				new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_STRING, strlen(new_string)+1, new_string) );
+				new_expr = expr_create_an_expression( CONSTANT, expr_create_a_constant(MMT_SEC_MSG_DATA_TYPE_NUMERIC, sizeof( double), new_number) );
 				new_expr->father = expr;
 				//append new_expr to expr->params_list
 				expr->operation->params_list = append_node_to_link_list( expr->operation->params_list, new_expr );
@@ -551,13 +555,20 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 
 	} else if (*temp == '&' && *(temp + 1) == '&') {
 		// &&
+		//must no change operator: either unknown for the first element in the list or the same
+		//=> to explain: a && b || c
+		//   need ((a && b) || c)
+		mmt_assert( (expr->type == OPERATION && (expr->operation->operator == AND || expr->operation->operator == UNKNOWN)),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 2;
 		expr->type = OPERATION;
 		expr->operation->operator = AND;
 		expr->operation->name = mmt_mem_dup( "&&", 2);
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '|' && *(temp + 1) == '|') {
-		// &&
+		// ||
+		mmt_assert( (expr->type == OPERATION && (expr->operation->operator == OR || expr->operation->operator == UNKNOWN)),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 2;
 		expr->type = OPERATION;
 		expr->operation->operator = OR;
@@ -565,6 +576,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '=' && *(temp + 1) == '=') {
 		// ==
+		mmt_assert( (expr->type == OPERATION && expr->operation->operator == UNKNOWN ),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 2;
 		// set value
 		expr->type = OPERATION;
@@ -574,6 +587,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '!' && *(temp + 1) == '=') {
 		// !=
+		mmt_assert( (expr->type == OPERATION && expr->operation->operator == UNKNOWN ),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 2;
 		expr->type = OPERATION;
 		expr->operation->operator = NEQ;
@@ -581,6 +596,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '>' && *(temp + 1) != '=') {
 		// >
+		mmt_assert( (expr->type == OPERATION && expr->operation->operator == UNKNOWN ),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 1;
 		expr->type = OPERATION;
 		expr->operation->operator = GT;
@@ -588,6 +605,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '>' && *(temp + 1) == '=') {
 		// >=
+		mmt_assert( (expr->type == OPERATION && expr->operation->operator == UNKNOWN ),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 2;
 		expr->type = OPERATION;
 		expr->operation->operator = GTE;
@@ -595,6 +614,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '<' && *(temp + 1) != '=') {
 		// <
+		mmt_assert( (expr->type == OPERATION && expr->operation->operator == UNKNOWN ),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 1;
 		expr->type = OPERATION;
 		expr->operation->operator = LT;
@@ -602,6 +623,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '<' && *(temp + 1) == '=') {
 		// <=
+		mmt_assert( (expr->type == OPERATION && expr->operation->operator == UNKNOWN ),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 2;
 		expr->type = OPERATION;
 		expr->operation->operator = LTE;
@@ -609,6 +632,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '+') {
 		// +
+		mmt_assert( (expr->type == OPERATION && (expr->operation->operator == ADD || expr->operation->operator == UNKNOWN) ),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 1;
 		expr->type = OPERATION;
 		expr->operation->operator = ADD;
@@ -616,6 +641,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '-') {
 		// -
+		mmt_assert( (expr->type == OPERATION && (expr->operation->operator == SUB || expr->operation->operator == UNKNOWN)),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 1;
 		expr->type = OPERATION;
 		expr->operation->operator = SUB;
@@ -623,6 +650,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '*') {
 		// *
+		mmt_assert( (expr->type == OPERATION && (expr->operation->operator == MUL || expr->operation->operator == UNKNOWN)),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 1;
 		expr->type = OPERATION;
 		expr->operation->operator = MUL;
@@ -630,6 +659,8 @@ static inline bool _parse_a_boolean_expression( bool is_first_time, expression_t
 		_parse_a_boolean_expression(NO, expr, temp2);
 	} else if (*temp == '/') {
 		// '/'
+		mmt_assert( (expr->type == OPERATION && (expr->operation->operator == DIV || expr->operation->operator == UNKNOWN)),
+						"Error 39a: Unexpect \"%s\"\n", temp );
 		temp2 = temp + 1;
 		expr->type = OPERATION;
 		expr->operation->operator = DIV;
@@ -755,7 +786,7 @@ static inline bool _is_string_param( const operation_t *opt ){
 /**
  * Public API
  */
-size_t expr_stringify_operation( char **string, operation_t *opt ){
+size_t expr_stringify_operation( char **string, const operation_t *opt ){
 	char *tmp = NULL;
 	const char *delim;
 	link_node_t *node;

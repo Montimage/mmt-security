@@ -21,6 +21,8 @@
 #define _num( x ) (x==NULL? 0: x)
 #define _string( v, a,b,c, x,y,z  ) (v==NULL? a:x), (v==NULL? b:y), (v==NULL? c:z)
 
+
+
 struct _user_data{
 	uint16_t uint16_val;
 	uint32_t uint32_val;
@@ -57,7 +59,7 @@ static void _iterate_variable( void *key, void *data, void *user_data, size_t in
 	_gen_code_line( fd );
 
 	fprintf( fd, "\n\n\t data = get_element_data_message_t( %s, _m%"PRIu32"._%s_%s );",
-					( var->ref_index == (uint16_t)UNKNOWN )? "msg" : "his_msg",
+					( var->ref_index == UNKNOWN_REF_INDEX )? "msg" : "his_msg",
 					rule_id,
 					var->proto, var->att
 	);
@@ -582,6 +584,12 @@ static inline size_t _alnumify( uint16_t rule_id, const char *fn_name, char *buf
 	return buffer_size;
 }
 
+static inline bool _is_embedded_function_name( const char *str ){
+	if( str && str[0] == '#' )
+		return true;
+	return false;
+}
+
 static inline void _get_if_statisfied_function_name( uint16_t rule_id, const char *fn_name, char *buffer, size_t buffer_size ){
 	mmt_assert( buffer_size >= 5, "Need at least 5 characters to contain if_satisified name (must not happen)" );
 	if( fn_name == NULL ){
@@ -589,7 +597,7 @@ static inline void _get_if_statisfied_function_name( uint16_t rule_id, const cha
 		return;
 	}
 	//a function name to be called
-	if( fn_name[0] != '#' ){
+	if( ! _is_embedded_function_name( fn_name ) ){
 		if( buffer_size > strlen( fn_name ))
 			buffer_size = strlen( fn_name ) + 1; //+1: the \0 character at the end
 
@@ -779,7 +787,7 @@ static inline void _iterate_variable_to_add_to_a_new_map_2( void *key, void *dat
 	mmt_map_t *map;
 
 	//in a case, variable does not reference to any event => it belongs to the current event
-	if( ref == (uint16_t)UNKNOWN )
+	if( ref == UNKNOWN_REF_INDEX )
 		ref = _u_data->uint16_val;
 
 	map = mmt_map_get_data( _u_data->map, &ref );
@@ -965,7 +973,7 @@ static void _iterate_variable_if_satisified_to_print( void *key, void *data, voi
 
 
 	//TODO: for now, ignore any variable without ref
-	if( var->ref_index == (uint16_t)UNKNOWN )
+	if( var->ref_index == UNKNOWN_REF_INDEX )
 		return;
 
 	_gen_code_line( fd );
@@ -991,6 +999,42 @@ static void _iterate_variable_if_satisified_to_print( void *key, void *data, voi
 	mmt_mem_free( str );
 }
 
+/**
+ * Generate code C for an embedded function in if_satisfied
+ * @param fd
+ * @param rule
+ *
+ * Example: if a rule having if_satisfied="update( ngap.ran_ue_id, (ngap.ran_ue_id.1 + 1 + 3))"
+ * Then the following code will be generated:
+ *
+
+//this function must be implemented inside mmt-probe
+extern void set_attribute_number_value(uint32_t, uint32_t, uint64_t);
+
+static inline void _set_number_update( const proto_attribute_t *proto, double new_val){
+    set_attribute_number_value( proto->proto_id, proto->att_id, new_val);
+}
+
+static void _update__ngap_ran_ue_id___ngap_ran_ue_id_1___1___3___rule_1 (
+       const rule_info_t *rule, int verdict, uint64_t timestamp,
+       uint64_t counter, const mmt_array_t * const trace ){
+    proto_attribute_t __ngap_ran_ue_id = {.proto = "ngap", .proto_id = 903, .att = "ran_ue_id", .att_id = 4, .data_type = 0, .dpi_type = 2};
+    const proto_attribute_t *_ngap_ran_ue_id = &__ngap_ran_ue_id;
+
+    if( unlikely( trace == NULL )) return;
+    const void *data;
+
+    data = get_value_from_trace( 903, 4, 1, trace );
+    double _ngap_ran_ue_id_1 = 0;
+    if( likely( data != NULL ))  _ngap_ran_ue_id_1 = *(double*) data;
+
+    _set_number_update(_ngap_ran_ue_id , (_ngap_ran_ue_id_1 + 1 + 3));
+}
+
+ *
+ * Finally when the rule is satisfied, MMT will call _update__ngap_ran_ue_id___ngap_ran_ue_id_1___1___3___rule_1
+ *
+ */
 void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rule ){
 	char new_fn_name[255];
 	const char *fn_string = rule->if_satisfied;
@@ -1025,8 +1069,14 @@ void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rul
 				"first parameter of #update function must be an variable in format proto.att", rule->id );
 
 		variable_t *var = expr->variable;
-		//mmt_assert( var->ref_index == 0, "Error in if_satisifed function of rule %d: "
-		//		"First parameter of #update function must be in format proto.att, not proto.att.ref", rule->id);
+		//no ref_index: we need proto.att, not proto.att.ref
+		mmt_assert( var->ref_index == UNKNOWN_REF_INDEX, "Error in if_satisifed function of rule %d: "
+				"First parameter of #update function must be in format proto.att, not proto.att.ref", rule->id);
+
+		//TODO: support numeric value for now
+		mmt_assert( var->data_type == MMT_SEC_MSG_DATA_TYPE_NUMERIC,
+				"Error in if_satisifed function of rule %d: "
+				"Support only attributes having numeric values for now.", rule->id );
 
 		expr_stringify_variable(&string, var);
 
@@ -1137,7 +1187,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, con
 	_gen_update_attribute_function(fd);
 	//embedded functions for if_satisfied
 	for( i=0; i<count; i++ )
-		if( rules[i]->if_satisfied && rules[i]->if_satisfied[0] == '#' )
+		if( _is_embedded_function_name( rules[i]->if_satisfied) )
 			_gen_if_satisfied_embedded_function_for_a_rule( fd, rules[i] );
 
 	//information of rules

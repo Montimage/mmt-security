@@ -98,7 +98,9 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint16_t ref_index 
 	var->att   = attr;
 	var->ref_index = ref_index;
 	var->proto_id  = get_protocol_id_by_name( var->proto );
+	mmt_assert( var->proto_id != ((uint32_t)-1), "Error: Unknown protocol \"%s\".", proto );
 	var->att_id    = get_attribute_id_by_protocol_id_and_attribute_name( var->proto_id, var->att );
+	mmt_assert( var->att_id != ((uint32_t)-1), "Error: Unknown attribute \"%s\" of protocol \"%s\".", attr, proto );
 	var->dpi_type  = get_attribute_data_type( var->proto_id, var->att_id  );
 	var->data_type = convert_data_type( var->dpi_type );
 
@@ -380,7 +382,7 @@ size_t _parse_variable( variable_t **expr, const char *string, size_t str_size )
 	size_t index, old_index;
 	bool is_start_by_number;
 	char *str_1 = NULL, *str_2 = NULL;
-	uint16_t ref_index = UNKNOWN;
+	uint16_t ref_index = UNKNOWN_REF_INDEX;
 	char const *temp;
 	double *num = NULL;
 
@@ -743,7 +745,7 @@ size_t expr_stringify_variable( char **string, const variable_t *var){
 		return 0;
 	}
 
-	if( var->ref_index != (uint16_t)UNKNOWN ){
+	if( var->ref_index != UNKNOWN_REF_INDEX ){
 		size = snprintf(buff, sizeof( buff ), "_%s_%s_%d", var->proto, var->att, var->ref_index);
 	}else{
 		size = snprintf(buff, sizeof( buff ), "_%s_%s", var->proto, var->att );

@@ -19,6 +19,8 @@
 #include "mmt_log.h"
 #include "message_t.h"
 
+#define UNKNOWN_REF_INDEX ((uint16_t)UNKNOWN)
+
 /**
  * Constant
  */

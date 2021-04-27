@@ -812,7 +812,11 @@ size_t expr_stringify_operation( char **string, const operation_t *opt ){
 
 	//parameters
 	node = opt->params_list;
-	while( node != NULL ){
+	//no parameter
+	if( node == NULL ){
+		index += snprintf( &str[ index ], MAX_STR_SIZE - index, ")");
+	}
+	else while( node != NULL ){
 		expr = (expression_t *) node->data;
 		(void) expr_stringify_expression( &tmp, expr );
 		//the last parameter ==> no need delimiter but a close-bracket

@@ -1092,6 +1092,12 @@ void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rul
 		fprintf( fd, "\n\t const proto_attribute_t *%s = &_%s;\n", string, string );
 		mmt_mem_free( string );
 	}
+	//drop(): no parameter
+	else if( strcmp( op->name, "drop") == 0 ){
+		mmt_assert( op->params_size == 0, "Error in if_satisifed function of rule %d: Do not require any parameter in 'drop' function.",
+				rule->id );
+	}
+
 	//else mmt_halt("Error: Support only 'update' embedded function");
 	//generate variables
 	mmt_map_t *map;
@@ -1109,6 +1115,8 @@ void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rul
 
 	if( strcmp( op->name, "update" ) == 0 )
 		fprintf( fd, "\n\n\t _set_number_%s;", string ); //change the function name to
+	else if( strcmp( op->name, "drop" ) == 0 )
+		fprintf( fd, "\n\n\t mmt_probe_do_not_forward_packet();" ); //change the function name to
 	else
 		fprintf( fd, "\n\n\t %s;", string ); //does not change the function name
 	_gen_comment_line( fd, "main function");
@@ -1117,13 +1125,25 @@ void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rul
 	expr_free_an_expression(fn_expr, YES);
 }
 
-static void _gen_update_attribute_function( FILE *fd ){
-	fprintf( fd, "\n\nextern void set_attribute_number_value(uint32_t, uint32_t, uint64_t);");
+/**
+ * Declare extern functions that must be implemeted in mmt-probe
+ * @param fd
+ */
+
+static void _gen_static_functions_to_forward_packets( FILE *fd ){
+	//drop packet
+
+	fprintf( fd, "\n\nextern void mmt_probe_do_not_forward_packet();");
+	_gen_comment_line(fd, "this function must be implemeted inside mmt-probe" );
+
+	//update attributes of a packet
+
+	fprintf( fd, "\n\nextern void mmt_probe_set_attribute_number_value(uint32_t, uint32_t, uint64_t);");
 	_gen_comment_line(fd, "this function must be implemeted inside mmt-probe" );
 
 	//gen a static function to call the extern above
 	fprintf( fd, "\n\nstatic inline void _set_number_update( const proto_attribute_t *proto, double new_val){\n"
-		"\t set_attribute_number_value( proto->proto_id, proto->att_id, new_val);\n"
+		"\t mmt_probe_set_attribute_number_value( proto->proto_id, proto->att_id, new_val);\n"
 		"}");
 }
 
@@ -1184,7 +1204,7 @@ int generate_fsm( const char* file_name, rule_t *const* rules, size_t count, con
 	for( i=0; i<count; i++ )
 		_gen_fsm_for_a_rule( fd, rules[i] );
 
-	_gen_update_attribute_function(fd);
+	_gen_static_functions_to_forward_packets(fd);
 	//embedded functions for if_satisfied
 	for( i=0; i<count; i++ )
 		if( _is_embedded_function_name( rules[i]->if_satisfied) )

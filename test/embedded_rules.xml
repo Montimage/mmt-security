@@ -17,14 +17,36 @@ void on_unload(){
 
 ]]></embedded_functions>
 
-<!-- Property 10: HTTP using a port different from 80 and 8080.-->
-<property value="THEN" delay_units="s" delay_min="0" delay_max="0" property_id="1" type_property="FORWARD" 
-    description="Detect HTTP protocol" if_satisfied="#xupdate( ngap.p_payload, (ngap.ran_ue_id.1 + 1 + 3))">
+<property value="THEN" property_id="102" type_property="FORWARD" 
+    description="5G testing" if_satisfied="#update(ngap.procedure_code, (ngap.procedure_code.1 + 10)">
     <event value="COMPUTE" event_id="1" 
-        description="HTTP packet"
-           boolean_expression="(http.method != '')"/>
+        description="Authentication response, Uplink NAS Transport"
+           boolean_expression="((ngap.procedure_code == 46) &amp;&amp;  (nas_5g.message_type == 87))"/>
     <event value="COMPUTE" event_id="2" 
-           description="Get IP information"
-           boolean_expression="(ip.src != ip.dst)"/>
+           description="Nothing"
+           boolean_expression="(ngap.ran_ue_id != 1)"/>
 </property>
+
+<property value="COMPUTE" property_id="103" type_property="FORWARD" 
+    description="Drop no-5G traffic" if_satisfied="#drop()">
+    <event description="registration request"
+           boolean_expression="(ethernet.proto == 16393"/>
+</property>
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="1" property_id="104" type_property="ATTACK" 
+    description="5G UE authentication hijack: UE IDs in Authentication Response is different with the one of Authetication Request">
+    <event value="COMPUTE" event_id="1" 
+        description="Authentication request, Downlink NAS Transport"
+           boolean_expression="((ngap.procedure_code == 4) &amp;&amp;  (nas_5g.message_type == 86))"/>
+    
+    <event value="COMPUTE" event_id="2" 
+        description="In Authentication Response of the same SCTP stream, same AMF-UE-ID but different RAN-UE-ID"
+           boolean_expression="((sctp_data.data_stream == sctp_data.data_stream.1) 
+           &amp;&amp; ((((ngap.procedure_code == 46) 
+           &amp;&amp;  (((nas_5g.message_type == 87) 
+           &amp;&amp;  ((ngap.amf_ue_id == ngap.amf_ue_id.1)
+           &amp;&amp;   (ngap.ran_ue_id != ngap.ran_ue_id.1) )))))))"/>
+</property>
+
+
 </beginning>

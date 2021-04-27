@@ -109,7 +109,7 @@ typedef struct rule_struct{
 	 * Indicates that the property specifies a potential attack (or abnormal behavior)
 	 * or that the property specifies a security rule that needs to be respected.
 	 */
-	enum {RULE_TYPE_ATTACK, RULE_TYPE_SECURITY, RULE_TYPE_EVASION, RULE_TYPE_TEST, RULE_TYPE_DROP, RULE_TYPE_FORWARD} type;
+	enum {RULE_TYPE_ATTACK, RULE_TYPE_SECURITY, RULE_TYPE_EVASION, RULE_TYPE_TEST, RULE_TYPE_FORWARD} type;
 
 	enum value value;
 	/**

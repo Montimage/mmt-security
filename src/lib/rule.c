@@ -73,6 +73,7 @@ static inline void _update_delay_to_micro_second( rule_delay_t *delay, int delay
 	case YEAR:
 		delay->time_max *= 12;
 		delay->time_min *= 12;
+		/* No break are required in the "cases" */
 	case MONTH:
 		delay->time_max *= 30;
 		delay->time_min *= 30;
@@ -388,8 +389,6 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 			else if( str_equal( xml_attr_value, "TEST" ) )
 				rule.type = RULE_TYPE_TEST;
 			//mmt-5greplay
-			else if( str_equal( xml_attr_value, "DROP" ) )
-				rule.type = RULE_TYPE_DROP;
 			else if( str_equal( xml_attr_value, "FORWARD" ) )
 				rule.type = RULE_TYPE_FORWARD;
 			else

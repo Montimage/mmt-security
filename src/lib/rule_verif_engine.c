@@ -107,6 +107,18 @@ static inline enum verdict_type _get_verdict( int rule_type, enum fsm_handle_eve
 			return VERDICT_UNKNOWN;
 		}
 		break;
+
+	case RULE_TYPE_FORWARD:
+		switch( result ){
+		case FSM_ERROR_STATE_REACHED:
+			return VERDICT_UNKNOWN; //VERDICT_NOT_DETECTED;
+		case FSM_FINAL_STATE_REACHED:
+			return VERDICT_DETECTED;
+		default:
+			return VERDICT_UNKNOWN;
+		}
+		break;
+
 	default:
 		mmt_halt("Error 22: Property type should be a security rule or an attack.\n");
 	}//end of switch

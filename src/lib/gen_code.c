@@ -590,10 +590,17 @@ static inline bool _is_embedded_function_name( const char *str ){
 	return false;
 }
 
-static inline void _get_if_statisfied_function_name( uint16_t rule_id, const char *fn_name, char *buffer, size_t buffer_size ){
-	mmt_assert( buffer_size >= 5, "Need at least 5 characters to contain if_satisified name (must not happen)" );
+static inline void _get_if_statisfied_function_name( const rule_t *rule, char *buffer, size_t buffer_size ){
+	uint16_t rule_id = rule->id;
+	const char*fn_name = rule->if_satisfied;
+
+	mmt_assert( buffer_size >= 50, "Need at least 5 characters to contain if_satisified name (must not happen)" );
 	if( fn_name == NULL ){
-		strncpy( buffer, "NULL", 5 );
+		//when FORWARD, default function name is _forward_packet to forward packet
+		if( rule->type == RULE_TYPE_FORWARD )
+			snprintf( buffer, buffer_size, "_forward_packet" );
+		else
+			snprintf( buffer, buffer_size, "NULL" );
 		return;
 	}
 	//a function name to be called
@@ -637,7 +644,7 @@ static inline void _gen_rule_information( FILE *fd, rule_t *const* rules, size_t
 	fprintf( fd, "size_t mmt_sec_get_plugin_info( const rule_info_t **rules_arr ){");
 	fprintf( fd, "\n\t  static const rule_info_t rules[] = (rule_info_t[]){");
 	for( i=0; i<count; i++ ){
-		_get_if_statisfied_function_name( rules[i]->id, rules[i]->if_satisfied, new_fn_name, sizeof( new_fn_name));
+		_get_if_statisfied_function_name( rules[i], new_fn_name, sizeof( new_fn_name));
 		fprintf( fd, "\n\t\t {");
 		fprintf( fd, "\n\t\t\t .id               = %d,", rules[i]->id );
 		fprintf( fd, "\n\t\t\t .type_id          = %d,", rules[i]->type );
@@ -1039,7 +1046,7 @@ void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rul
 	char new_fn_name[255];
 	const char *fn_string = rule->if_satisfied;
 	char *string;
-	_get_if_statisfied_function_name( rule->id, fn_string, new_fn_name, sizeof( new_fn_name));
+	_get_if_statisfied_function_name( rule, new_fn_name, sizeof( new_fn_name));
 
 	fprintf(fd, "\n");
 
@@ -1113,9 +1120,11 @@ void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rul
 
 	expr_stringify_operation( &string, op );
 
-	if( strcmp( op->name, "update" ) == 0 )
+	if( strcmp( op->name, "update" ) == 0 ){
+		//explicitly require to forward packet
+		fprintf( fd, "\n\n\t  mmt_probe_forward_packet();" );
 		fprintf( fd, "\n\n\t _set_number_%s;", string ); //change the function name to
-	else if( strcmp( op->name, "drop" ) == 0 )
+	} else if( strcmp( op->name, "drop" ) == 0 )
 		fprintf( fd, "\n\n\t mmt_probe_do_not_forward_packet();" ); //change the function name to
 	else
 		fprintf( fd, "\n\n\t %s;", string ); //does not change the function name
@@ -1131,20 +1140,29 @@ void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rul
  */
 
 static void _gen_static_functions_to_forward_packets( FILE *fd ){
-	//drop packet
-
+	//drop packet: This function will be used by #drop
 	fprintf( fd, "\n\nextern void mmt_probe_do_not_forward_packet();");
-	_gen_comment_line(fd, "this function must be implemeted inside mmt-probe" );
+	_gen_comment_line(fd, "this function must be implemented inside mmt-probe" );
+
+	//this funciton will be used by the one just after, or the one #update
+	fprintf( fd, "\n\nextern void mmt_probe_forward_packet();");
+	_gen_comment_line(fd, "this function must be implemented inside mmt-probe" );
+	fprintf(fd, "\nstatic void _forward_packet(\n"
+			"\t\t const rule_info_t *rule, int verdict, uint64_t timestamp, \n"
+			"\t\t uint64_t counter, const mmt_array_t * const trace ){\n"
+			"\t\t\t mmt_probe_forward_packet();}");
 
 	//update attributes of a packet
 
 	fprintf( fd, "\n\nextern void mmt_probe_set_attribute_number_value(uint32_t, uint32_t, uint64_t);");
-	_gen_comment_line(fd, "this function must be implemeted inside mmt-probe" );
+	_gen_comment_line(fd, "this function must be implemented inside mmt-probe" );
 
 	//gen a static function to call the extern above
 	fprintf( fd, "\n\nstatic inline void _set_number_update( const proto_attribute_t *proto, double new_val){\n"
 		"\t mmt_probe_set_attribute_number_value( proto->proto_id, proto->att_id, new_val);\n"
 		"}");
+
+
 }
 
 /**

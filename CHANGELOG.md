@@ -1,0 +1,2 @@
+- Support `COMPUTE` rules which have only one event
+- Support embedded functions in `if_satisfied` attribute

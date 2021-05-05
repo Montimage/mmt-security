@@ -7,9 +7,9 @@ static void em_forward(
       uint64_t counter, const mmt_array_t * const trace ){
    const char* trace_str = mmt_convert_execution_trace_to_json_string( trace, rule );
    //old ran_ue_id
-   uint64_t ran_ue_id = get_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, 2, trace );
-   for( int i=0; i<1000; i++ ){
-      set_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, ran_ue_id + i );
+   uint64_t ran_ue_id = get_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, 1, trace );
+   for( int i=0; i<100; i++ ){
+      set_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, ran_ue_id + 100 );
       forward_packet();
    }
 }
@@ -35,15 +35,15 @@ void on_unload(){
            boolean_expression="(nas_5g.security_type != 3)"/>
 </property>
  -->
- 
+
+<!-- 
 <property value="COMPUTE" property_id="101" type_property="FORWARD" 
     description="5G testing" if_satisfied="#update(ngap.procedure_code, (ngap.procedure_code.1 + 40)">
     <event value="COMPUTE" event_id="1" 
         description="Authentication response, Uplink NAS Transport"
            boolean_expression="((ngap.procedure_code == 46) &amp;&amp;  (nas_5g.message_type == 87))"/>
 </property>
-
-<!-- 
+ -->
 
 <property value="THEN" property_id="102" type_property="FORWARD" 
     description="5G testing" if_satisfied="em_forward">
@@ -52,8 +52,10 @@ void on_unload(){
            boolean_expression="((ngap.procedure_code == 46) &amp;&amp;  (nas_5g.message_type == 87))"/>
     <event value="COMPUTE" event_id="2" 
            description="Nothing"
-           boolean_expression="(ngap.ran_ue_id == 0)"/>
+           boolean_expression="(ngap.ran_ue_id != 0)"/>
 </property>
+
+<!-- 
 
 <property value="COMPUTE" property_id="103" type_property="FORWARD" 
     description="Drop no-5G traffic" if_satisfied="#drop()">

@@ -193,9 +193,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 						execution_trace );
 
 			//call user-callback function
-			if( handler->callback != NULL
-					//do not trigger handler callback when forwarding packets in mmt-5greplay
-					&& ( handler->rules_array[i]->type_id != RULE_TYPE_FORWARD )){
+			if( handler->callback != NULL ){
 				handler->callback(
 					handler->rules_array[i],
 					verdict,

@@ -598,7 +598,7 @@ static inline void _get_if_statisfied_function_name( const rule_t *rule, char *b
 	if( fn_name == NULL ){
 		//when FORWARD, default function name is _forward_packet to forward packet
 		if( rule->type == RULE_TYPE_FORWARD )
-			snprintf( buffer, buffer_size, "_forward_packet" );
+			snprintf( buffer, buffer_size, "forward_packet" );
 		else
 			snprintf( buffer, buffer_size, "NULL" );
 		return;
@@ -1122,8 +1122,9 @@ void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rul
 
 	if( strcmp( op->name, "update" ) == 0 ){
 		//explicitly require to forward packet
-		fprintf( fd, "\n\n\t  mmt_probe_forward_packet();" );
-		fprintf( fd, "\n\n\t _set_number_%s;", string ); //change the function name to
+		fprintf( fd, "\n\n\t mmt_probe_forward_packet();" );
+		//here we call set_number_update in pre_embedded_functions
+		fprintf( fd, "\n\n\t set_number_%s;", string ); //change the function name to
 	} else if( strcmp( op->name, "drop" ) == 0 )
 		fprintf( fd, "\n\n\t mmt_probe_do_not_forward_packet();" ); //change the function name to
 	else
@@ -1140,29 +1141,6 @@ void _gen_if_satisfied_embedded_function_for_a_rule( FILE *fd, const rule_t *rul
  */
 
 static void _gen_static_functions_to_forward_packets( FILE *fd ){
-	//drop packet: This function will be used by #drop
-	fprintf( fd, "\n\nextern void mmt_probe_do_not_forward_packet();");
-	_gen_comment_line(fd, "this function must be implemented inside mmt-probe" );
-
-	//this funciton will be used by the one just after, or the one #update
-	fprintf( fd, "\n\nextern void mmt_probe_forward_packet();");
-	_gen_comment_line(fd, "this function must be implemented inside mmt-probe" );
-	fprintf(fd, "\nstatic void _forward_packet(\n"
-			"\t\t const rule_info_t *rule, int verdict, uint64_t timestamp, \n"
-			"\t\t uint64_t counter, const mmt_array_t * const trace ){\n"
-			"\t\t\t mmt_probe_forward_packet();}");
-
-	//update attributes of a packet
-
-	fprintf( fd, "\n\nextern void mmt_probe_set_attribute_number_value(uint32_t, uint32_t, uint64_t);");
-	_gen_comment_line(fd, "this function must be implemented inside mmt-probe" );
-
-	//gen a static function to call the extern above
-	fprintf( fd, "\n\nstatic inline void _set_number_update( const proto_attribute_t *proto, double new_val){\n"
-		"\t mmt_probe_set_attribute_number_value( proto->proto_id, proto->att_id, new_val);\n"
-		"}");
-
-
 }
 
 /**

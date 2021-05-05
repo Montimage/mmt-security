@@ -70,4 +70,24 @@ static inline const void* get_value_from_trace(uint32_t proto_id, uint32_t att_i
 	return NULL;
 }
 
+
+/**The following functions are used for FORWARD packets**/
+//drop packet: This function will be used by #drop
+extern void mmt_probe_do_not_forward_packet(); //this function must be implemented inside mmt-probe
+extern void mmt_probe_forward_packet(); //this function must be implemented inside mmt-probe
+extern void mmt_probe_set_attribute_number_value(uint32_t, uint32_t, uint64_t); //this function must be implemented inside mmt-probe
+static inline void set_number_update( const proto_attribute_t *proto, double new_val ){
+	mmt_probe_set_attribute_number_value( proto->proto_id, proto->att_id, new_val);
+}
+
+/**
+ * This is default if_satisfied function in FORWARD rules when if_satisfied is not defined
+ * It format is mmt_sec_handler_t
+ */
+static inline void forward_packet( const rule_info_t *rule, int verdict, uint64_t timestamp,
+		uint64_t counter, const mmt_array_t * const trace ){
+	mmt_probe_forward_packet();
+}
+
+
 #endif /* SRC_LIB_PRE_EMBEDDED_FUNCTIONS_H_ */

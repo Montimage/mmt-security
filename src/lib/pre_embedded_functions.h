@@ -70,12 +70,26 @@ static inline const void* get_value_from_trace(uint32_t proto_id, uint32_t att_i
 	return NULL;
 }
 
+static inline uint64_t get_numeric_value(uint32_t proto_id, uint32_t att_id, int event_id, const mmt_array_t *const trace ){
+	const double *val = get_value_from_trace( proto_id, att_id, event_id, trace );
+	if( val == NULL )
+		return 0;
+	else
+		return (uint64_t) (*val);
+}
+
 
 /**The following functions are used for FORWARD packets**/
 //drop packet: This function will be used by #drop
 extern void mmt_probe_do_not_forward_packet(); //this function must be implemented inside mmt-probe
 extern void mmt_probe_forward_packet(); //this function must be implemented inside mmt-probe
 extern void mmt_probe_set_attribute_number_value(uint32_t, uint32_t, uint64_t); //this function must be implemented inside mmt-probe
+//alias
+#define set_numeric_value mmt_probe_set_attribute_number_value
+#define forward_packet mmt_probe_forward_packet
+/**
+ * This function will be called by #update() if_satisfied function
+ */
 static inline void set_number_update( const proto_attribute_t *proto, double new_val ){
 	mmt_probe_set_attribute_number_value( proto->proto_id, proto->att_id, new_val);
 }
@@ -84,7 +98,7 @@ static inline void set_number_update( const proto_attribute_t *proto, double new
  * This is default if_satisfied function in FORWARD rules when if_satisfied is not defined
  * It format is mmt_sec_handler_t
  */
-static inline void forward_packet( const rule_info_t *rule, int verdict, uint64_t timestamp,
+static inline void forward_packet_if_satisfied( const rule_info_t *rule, int verdict, uint64_t timestamp,
 		uint64_t counter, const mmt_array_t * const trace ){
 	mmt_probe_forward_packet();
 }

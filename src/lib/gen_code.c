@@ -308,6 +308,17 @@ static inline void _gen_transition_before( _meta_state_t *s_init,  _meta_state_t
 }
 
 /**
+ * COMPUTE a
+ */
+static inline void _gen_transition_compute( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
+		link_node_t *states_list, const  rule_node_t *context, const  rule_node_t *trigger,
+		size_t *index, const rule_operator_t *operator, const rule_t *rule, int tran_action ){
+
+	//if context is satisfied => goto #s_pass
+	_gen_transition_rule( s_init, s_pass, s_incl, s_fail, states_list, context, index, rule, FSM_ACTION_CREATE_INSTANCE );
+}
+
+/**
  * Generate a fsm of a rule
  */
 static inline void _gen_transition_rule( _meta_state_t *s_init,  _meta_state_t *s_pass,  _meta_state_t *s_fail, _meta_state_t *s_incl,
@@ -401,6 +412,7 @@ static void _gen_fsm_state_for_a_rule( FILE *fd, const rule_t *rule ){
 		_gen_transition_not(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
 		break;
 	case RULE_VALUE_COMPUTE:
+		_gen_transition_compute(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
 		break;
 	case RULE_VALUE_BEFORE:
 		_gen_transition_before(s_init, s_pass, s_fail, s_incl, states_list, rule->context, rule->trigger, &states_count, NULL, rule, FSM_ACTION_DO_NOTHING);
@@ -598,7 +610,7 @@ static inline void _get_if_statisfied_function_name( const rule_t *rule, char *b
 	if( fn_name == NULL ){
 		//when FORWARD, default function name is _forward_packet to forward packet
 		if( rule->type == RULE_TYPE_FORWARD )
-			snprintf( buffer, buffer_size, "forward_packet" );
+			snprintf( buffer, buffer_size, "forward_packet_if_satisfied" );
 		else
 			snprintf( buffer, buffer_size, "NULL" );
 		return;

@@ -6,10 +6,11 @@ static void em_forward(
       const rule_info_t *rule, int verdict, uint64_t timestamp, 
       uint64_t counter, const mmt_array_t * const trace ){
    const char* trace_str = mmt_convert_execution_trace_to_json_string( trace, rule );
+   forward_packet();
    //old ran_ue_id
    uint64_t ran_ue_id = get_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, 1, trace );
    for( int i=0; i<100; i++ ){
-      set_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, ran_ue_id + 100 );
+      set_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, ran_ue_id + i );
       forward_packet();
    }
 }
@@ -22,11 +23,15 @@ void on_unload(){
 	printf("Unloaded successfully rule 1");
 }
 
+
 ]]></embedded_functions>
 
 <!-- 
-<property value="THEN"  delay_units="ms" counter_min="1" counter_max="1" property_id="100" type_property="FORWARD" 
-    description="Forwarding NAS security mode COMPLETE that answers to NAS security mode COMMAND ">
+<property value="THEN"  delay_units="s" delay_min="0+" delay_max="1" property_id="100" type_property="FORWARD" 
+    description="Forwarding NAS security mode COMPLETE that answers to NAS security mode COMMAND "
+    _if_satisfied="#update(ngap.procedure_code, (ngap.procedure_code.1 + 40)"
+    if_satisfied="em_forward"
+    >
     <event value="COMPUTE" event_id="1" 
            description="NAS Security mode COMMAND"
            boolean_expression="(nas_5g.message_type == 93)"/>
@@ -35,6 +40,13 @@ void on_unload(){
            boolean_expression="(nas_5g.security_type != 3)"/>
 </property>
  -->
+
+<property property_id="103" type_property="FORWARD" 
+    description="Inject only packet from UE -> Core but not inversed direction">
+    <event description="From UE and NAS-5G packets"
+           boolean_expression="( #is_same_ipv4(ip.src, '127.0.0.1') )"/>
+</property>
+
 
 <!-- 
 <property value="COMPUTE" property_id="101" type_property="FORWARD" 
@@ -45,6 +57,7 @@ void on_unload(){
 </property>
  -->
 
+<!-- 
 <property value="THEN" property_id="102" type_property="FORWARD" 
     description="5G testing" if_satisfied="em_forward">
     <event value="COMPUTE" event_id="1" 
@@ -54,6 +67,7 @@ void on_unload(){
            description="Nothing"
            boolean_expression="(ngap.ran_ue_id != 0)"/>
 </property>
+ -->
 
 <!-- 
 

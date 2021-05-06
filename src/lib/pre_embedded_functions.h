@@ -7,7 +7,7 @@
 
 #ifndef SRC_LIB_PRE_EMBEDDED_FUNCTIONS_H_
 #define SRC_LIB_PRE_EMBEDDED_FUNCTIONS_H_
-
+#include <arpa/inet.h>
 #include "mmt_lib.h"
 #include "mmt_security.h"
 
@@ -43,6 +43,28 @@ static inline int is_empty( const void *proto_att ){
 	return (proto_att == NULL || ((char *)proto_att)[0] == '\0' );
 }
 
+/**
+ * Compare if 2 IPs are the same.
+ * Usage: #is_same_ip_v4( ip.src, '127.0.0.1')
+ * @param ip_mmt
+ * @param ip
+ * @return
+ */
+static inline bool is_same_ipv4( const char *ip_mmt, const char *ip ){
+	struct in_addr addr;
+	uint32_t val, val1;
+	if( ip_mmt == NULL )
+		return false;
+	val = *(uint32_t *)ip_mmt;
+
+	//convert ip string to uint32_t
+	if( inet_aton( ip, &addr ) == 0 ){
+		mmt_error( "Invalide IP address: %s", ip );
+		return false;
+	}
+	val1 =  addr.s_addr;
+	return (val == val1);
+}
 
 /**
  * Get data value in

@@ -1,5 +1,6 @@
 <beginning>
 <embedded_functions><![CDATA[
+#include <unistd.h>
 #include <mobile/mmt_mobile.h>
 
 static void em_forward(
@@ -9,8 +10,8 @@ static void em_forward(
    forward_packet();
    //old ran_ue_id
    uint64_t ran_ue_id = get_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, 1, trace );
-   for( int i=0; i<100; i++ ){
-      set_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, ran_ue_id + i );
+   for( int i=0; i<1; i++ ){
+      set_numeric_value( PROTO_NGAP, NGAP_ATT_RAN_UE_ID, ran_ue_id + i + 100 );
       forward_packet();
    }
 }
@@ -21,6 +22,12 @@ void on_load(){
 
 void on_unload(){
 	printf("Unloaded successfully rule 1");
+}
+
+bool em_check(){
+	sleep(1);
+	printf("sleep 1 second");
+	return true;
 }
 
 
@@ -41,12 +48,21 @@ void on_unload(){
 </property>
  -->
 
+
+  
 <property property_id="103" type_property="FORWARD" 
     description="Inject only packet from UE -> Core but not inversed direction">
     <event description="From UE and NAS-5G packets"
-           boolean_expression="( #is_same_ipv4(ip.src, '127.0.0.1') )"/>
+           boolean_expression="( ( #is_same_ipv4(ip.src, '127.0.0.1') ) &amp;&amp; ((sctp.dest_port == 38412 ) &amp;&amp;(sctp.ch_type == 0)) )"/>
 </property>
 
+<!-- 
+<property property_id="104" type_property="FORWARD" 
+    description="SCTP INIT">
+    <event description="From UE and NAS-5G packets"
+           boolean_expression="( #is_same_ipv4(ip.src, '10.1.0.3') &amp;&amp; #em_check())"/>
+</property>
+ -->
 
 <!-- 
 <property value="COMPUTE" property_id="101" type_property="FORWARD" 
@@ -56,7 +72,7 @@ void on_unload(){
            boolean_expression="((ngap.procedure_code == 46) &amp;&amp;  (nas_5g.message_type == 87))"/>
 </property>
  -->
-
+ 
 <!-- 
 <property value="THEN" property_id="102" type_property="FORWARD" 
     description="5G testing" if_satisfied="em_forward">

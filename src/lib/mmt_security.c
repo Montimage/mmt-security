@@ -486,16 +486,18 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				double_val = *(double *)me->data;
 
 				//do not forget }
-				size = snprintf( str_ptr, total_len, "%.2f", double_val );
+				size = snprintf( str_ptr, total_len, "%.5f", double_val );
 
 				c_ptr = str_ptr + size;
 				//remove zero at the end, e.g., 10.00 ==> 10
 				while( *c_ptr == '0' || *c_ptr == '\0' ){
 					c_ptr --;
-					size --;
+					//avoid cutting the last number != 0
+					if( *c_ptr == '0')
+						size --;
 
 					if( *c_ptr == '.'){
-						//size --;
+						size --;
 						break;
 					}
 				}

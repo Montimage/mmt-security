@@ -1,0 +1,7 @@
+<beginning>
+<property value="COMPUTE" property_id="101" type_property="FORWARD" 
+    description="Drop Ethernet.proto=16393 traffic" if_satisfied="#drop()">
+    <event description="registration request"
+           boolean_expression="(ethernet.proto == 16393"/>
+</property>
+</beginning>

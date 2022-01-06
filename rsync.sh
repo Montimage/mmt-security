@@ -17,6 +17,11 @@ USER=mmt
 IP=localhost
 PORT=2222
 
+#PORT=22
+#IP=192.168.0.80
+#USER=mmt
+#TARGET=hn/mmt-security
+
 #TARGET=mmt/mmt-security
 #USER=epc
 #IP=192.168.0.163
@@ -40,7 +45,7 @@ PORT=2222
 
 rsync -e "ssh -i /Users/nhnghia/.ssh/id_rsa -p $PORT" -rca ./* .git $USER@$IP:$TARGET
 
-DEBUG="DEBUG=1 VALGRIND=1 UPDATE_RULES=1"
+DEBUG="DEBUG=1 UPDATE_RULES=1"
 #DEBUG="DEBUG=1 VALGRIND=1"
 
 
@@ -68,7 +73,8 @@ RUN="make clean; make $DEBUG"
 #RUN="make $DEBUG && valgrind --leak-check=full  ./mmt_sec_standalone -t /media/sf_share_vbox/pcap/smallFlows.pcap"
 #RUN="rm rules/10.*.so ; make $DEBUG ; ./compile_rule rules/10.http.port.so rules/10.http.port.xml; ./mmt_sec_standalone -t /media/sf_share_vbox/pcap/smallFlows.pcap -v"
 
-RUN="make clean; make $DEBUG; ./compile_rule a.so test/embedded_rules.xml"
+#RUN="make clean; make $DEBUG; ./compile_rule ../mmt-probe/rules/forward.so test/forward/forward-packets.xml"
+RUN="$RUN; sudo make install"
 
 #RUN=""
 

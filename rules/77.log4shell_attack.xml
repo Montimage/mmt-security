@@ -4,7 +4,7 @@
     description="Detect Log4Shell attack that exploits a vulnerability of log4j, CVE-2021-44832, to get a remote code execution">
       <event value="COMPUTE" event_id="1" 
              description="HTTP request URI containing a malicious request"
-             boolean_expression="(#em_check_log4shell(http.uri) )"/>
+             boolean_expression="(((#em_check_log4shell(http.uri) ) || (#em_check_log4shell( http.user_agent ) )) )"/>
       <event value="COMPUTE" event_id="2" 
              description="Print IP source and destination addresses"
              boolean_expression="(ip.src != ip.dst)"/>
@@ -59,6 +59,14 @@ static inline void em_to_lower( char *p ){
 		*p = tolower(*p);
 }
 
+static inline void em_remove_spaces( char* s ){
+	char *d = s;
+	do{
+		while (*d == ' ' || *d == '\t')
+			++d;
+	}while( *s++ = *d++ );
+}
+
 static int em_check_log4shell( const char *uri ){
 	//https://github.com/nhnghia/log4shell-pcaps
 	const char *signatures[] = {
@@ -74,8 +82,8 @@ static int em_check_log4shell( const char *uri ){
 		"${${lower:j}${upper:n}${lower:d}${upper:i}:${lower:r}m${lower:i}://",
 		"${j${env:DOESNOTEXIST:-}ndi:ldap://",
 		"${j${env:DOESNOTEXIST:-}ndi:rmi://",
-		"${${: : : : ::: :: :: : :::-j}ndi:ldap://",
-		"${${: : : : ::: :: :: : :::-j}ndi:rmi://",
+		"${${:::::::::::::::-j}ndi:ldap://",
+		"${${:::::::::::::::-j}ndi:rmi://",
 		"${${::::::::::::::-j}ndi:ldap://",
 		"${${::::::::::::::-j}ndi:rmi://"
 	};
@@ -91,6 +99,9 @@ static int em_check_log4shell( const char *uri ){
 		return 0; //empty or null uri
 	
 	em_to_lower( decoded_uri );
+	
+	em_remove_spaces( decoded_uri );
+	
 	for( i=0; i<length; i++ )
 		//whether the uri contains a signature
 		if( strstr( decoded_uri, signatures[i] ))

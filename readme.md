@@ -32,7 +32,7 @@ sudo make install
 ldconfig
 ```
 
-- [`mmt-dpi`](/montimage/mmt-dpi)
+- [`mmt-dpi`](//github.com/montimage/mmt-dpi)
 
 - source code of mmt-security
 

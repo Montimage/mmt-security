@@ -5,7 +5,7 @@ This repository contains the following folders:
 - `src` : C code of mmt-security
 - `rules`: set of official XML rules. An encoded version (*.so) of these rules will be distributed with mmt-sec when using `make deb`. All rules (official and for testing purposes) are stored in rules/properties_all 
 - `check`: sample pcap files and expected results to validate mmt-security
-- `doc`: [documentation](doc/_index.md)
+- `doc`: [documentation](doc/)
 - `test`: diversity of testing code
 
 The repository contains mmt-security toolset:
@@ -32,9 +32,9 @@ sudo make install
 ldconfig
 ```
 
-- `mmt-sdk`: https://bitbucket.org/montimage/mmt-sdk/wiki/Compilation%20and%20Installation%20Instructions
+- [`mmt-dpi`](//github.com/montimage/mmt-dpi)
 
-- source code of mmt-security: `git clone https://YOUR_USERNAME@bitbucket.org/montimage/mmt-security.git`
+- source code of mmt-security
 
 ## Clean
 

@@ -55,6 +55,8 @@ inline int convert_data_type( int type ){
 	case MMT_DATA_FILTER_STATE:
 	case MMT_DATA_PARENT:
 	case MMT_STATS:
+	case MMT_U32_ARRAY:
+	case MMT_U64_ARRAY:
 		return MMT_SEC_MSG_DATA_TYPE_BINARY;
 	default:
 		return UNKNOWN;
@@ -89,7 +91,9 @@ variable_t *expr_create_a_variable( char *proto, char *attr, uint16_t ref_index 
 	var->att   = attr;
 	var->ref_index = ref_index;
 	var->proto_id  = get_protocol_id_by_name( var->proto );
+	mmt_assert( var->proto_id != UNKNOWN, "Error 2: Protocol %s has not implemented yet.", proto );
 	var->att_id    = get_attribute_id_by_protocol_id_and_attribute_name( var->proto_id, var->att );
+	mmt_assert( var->att_id != UNKNOWN, "Error 2: Attribute %s.%s has not implemented yet.", proto, attr );
 	var->dpi_type  = get_attribute_data_type( var->proto_id, var->att_id  );
 	var->data_type = convert_data_type( var->dpi_type );
 

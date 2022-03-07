@@ -1,3 +1,8 @@
+## Version 1.2.12
+
+1. support `MMT_U32_ARRAY` and `MMT_U64_ARRAY` data type
+2. check unknown protocol and attribute names when compiling rules
+
 ## Version 1.2.11
 
 1. fix bug when using embedded function `is_exist` to verify empty of attribute having numeric value. 

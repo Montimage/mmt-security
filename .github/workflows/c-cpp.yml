@@ -28,7 +28,7 @@ jobs:
       run: |
          wget -O mmt-dpi.deb https://github.com/Montimage/mmt-dpi/releases/download/v1.7.2/mmt-dpi_1.7.2.0_6bdca06_Linux_x86_64.deb
          sudo dpkg -i mmt-dpi.deb
-         sudo apt-get update-y && install -y libxml2-dev libpcap-dev libconfuse-dev
+         sudo apt-get update -y && sudo apt-get install -y libxml2-dev libpcap-dev libconfuse-dev libpcap-dev
          make clean-all && make && sudo make install && make deb
 
     #The following steps are executed only on new tag

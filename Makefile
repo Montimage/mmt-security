@@ -25,7 +25,7 @@ MMT_DPI_DIR := $(MMT_BASE)/dpi
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
-VERSION     := 1.2.12
+VERSION     := 1.2.13
 
 CACHE_LINESIZE := 64 #$(shell getconf LEVEL1_DCACHE_LINESIZE)
 

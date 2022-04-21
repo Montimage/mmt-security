@@ -11,3 +11,4 @@ gen_dpi_header
 .settings
 .project
 .cproject
+rsync.sh

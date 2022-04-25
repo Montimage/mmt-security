@@ -29,6 +29,7 @@
 #include "mmt_smp_security.h"
 
 #include "../dpi/mmt_dpi.h"
+#include "mmt_bit.h"
 
 //maximal number of rules we support
 // this value can be freely changed.
@@ -39,7 +40,7 @@
 
 //maximal number of protocol attributes we support
 #ifndef MAX_PROTO_ATTS_COUNT
-#define MAX_PROTO_ATTS_COUNT  64 //currently limited by BIT operation on an uint64_t
+#define MAX_PROTO_ATTS_COUNT  MMT_BIT_LENGTH //currently limited by 256
 #endif
 
 #ifdef MODULE_ADD_OR_RM_RULES_RUNTIME

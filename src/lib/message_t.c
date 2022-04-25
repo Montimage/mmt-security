@@ -45,7 +45,7 @@ static inline message_t* _create_local_message_t(){
 		msg->elements[i].att_id   = INIT_ID_VALUE;
 	}
 
-	msg->hash         = 0;
+	mmt_bit_init( &msg->hash );
 	msg->_data_index  = 0;
 	msg->_data        = &((uint8_t *) msg)[ sizeof( message_t ) + sizeof( message_element_t) * elements_length ];
 	msg->_data_length = data_length;
@@ -78,7 +78,7 @@ message_t *create_message_t(){
 	//update data pointers
 	msg->elements = (message_element_t *)( msg + 1 );
 	msg->_data    = &((uint8_t *) msg)[ sizeof( message_t ) + sizeof( message_element_t) * msg->elements_count ];
-	msg->hash     = 0;
+	mmt_bit_init( &msg->hash );
 	return msg;
 #endif
 }
@@ -169,7 +169,7 @@ int set_element_data_message_t( message_t *msg, uint32_t proto_id, uint32_t att_
 #endif
 
 	//update hash to mark the present of elem->data
-	BIT_SET( msg->hash, index );
+	mmt_bit_set( &msg->hash, index );
 
 	el = & msg->elements[ index ];
 

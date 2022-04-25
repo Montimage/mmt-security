@@ -379,8 +379,9 @@ enum verdict_type _process_single_packet( rule_engine_t *engine, message_t *mess
 	size_t i;
 
 	//check if message contains enough data to verify 2 consecutive events of the rule
-	if( (message->hash & engine->events_hash[ 1 ]) != engine->events_hash[ 1 ] ||
-		 (message->hash & engine->events_hash[ 2 ]) != engine->events_hash[ 2 ] ){
+	if( ( !mmt_bit_is_contain( &message->hash, &engine->events_hash[ 1 ]) ) ||
+		! mmt_bit_is_contain( &message->hash,  &engine->events_hash[ 2 ]) ){
+
 //		mmt_debug("Filtered out %"PRIu64" verify rule %d", message->counter, engine->rule_info->id );
 		return VERDICT_UNKNOWN;
 	}
@@ -433,7 +434,7 @@ enum verdict_type _process_multi_packets( rule_engine_t *engine, message_t *mess
 	for( event_id=0; event_id<engine->events_count; event_id++ ){
 
 		//message does not contain enough data required by this event
-		if( (message->hash & engine->events_hash[ event_id ] ) != engine->events_hash[ event_id ] )
+		if( !mmt_bit_is_contain( &message->hash, &engine->events_hash[ event_id ] ))
 			continue;
 
 //		mmt_debug( "Event_id : %d", event_id );
@@ -523,7 +524,7 @@ static inline void _calculate_hash_number( rule_engine_t *_engine ){
 	const proto_attribute_t *p;
 	bool is_in_excluded_list;
 	for( i=0; i<_engine->events_count; i++ ){
-		_engine->events_hash[i] = 0;
+		mmt_bit_init( &_engine->events_hash[i] );
 		ev = &( rule->proto_atts_events[i] );
 
 		//for each proto.att
@@ -549,7 +550,7 @@ static inline void _calculate_hash_number( rule_engine_t *_engine ){
 				index = mmt_sec_hash_proto_attribute( p->proto_id, p->att_id );
 #endif
 
-				BIT_SET( _engine->events_hash[i], index );
+				mmt_bit_set( &_engine->events_hash[i], index );
 			}
 		}
 
@@ -591,7 +592,7 @@ rule_engine_t* rule_engine_init( const rule_info_t *rule_info, size_t max_instan
 
 	_engine->valid_execution_trace = mmt_array_init( _engine->events_count );
 
-	_engine->events_hash = mmt_mem_alloc( sizeof( uint64_t) * _engine->events_count );
+	_engine->events_hash = mmt_mem_alloc( sizeof( mmt_bit_t ) * _engine->events_count );
 	_calculate_hash_number( _engine );
 	fsm_set_user_data( _engine->fsm_bootstrap, _engine );
 

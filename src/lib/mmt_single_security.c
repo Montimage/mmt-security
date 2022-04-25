@@ -46,8 +46,8 @@ mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t *const*rule
 	handler->user_data_for_callback = user_data;
 	handler->alerts_count = mmt_mem_alloc( sizeof (size_t ) * rules_count );
 	handler->verbose      = verbose;
-	handler->hash         = 0;
-	handler->rules_hash   = mmt_mem_alloc( sizeof( uint64_t ) * rules_count );
+	mmt_bit_init( &handler->hash );
+	handler->rules_hash   = mmt_mem_alloc( sizeof( mmt_bit_t ) * rules_count );
 	handler->flow_ids_to_ignore = NULL;
 	//one fsm for one rule
 	handler->engines = mmt_mem_alloc( sizeof( void *) * rules_count );
@@ -59,13 +59,13 @@ mmt_single_sec_handler_t *mmt_single_sec_register( const rule_info_t *const*rule
 		handler->alerts_count[i] = 0;
 
 		//hash of a rule is combination of hashes of its events
-		handler->rules_hash[i]   = 0;
+		mmt_bit_init( &handler->rules_hash[i] );
 		engine = handler->engines[i];
 		for( j=0; j<engine->events_count; j++ )
-			handler->rules_hash[i] |= engine->events_hash[ j ];
+			mmt_bit_or( &handler->rules_hash[i], &engine->events_hash[ j ] );
 
 		//a combination of #rules_hash
-		handler->hash |= handler->rules_hash[i];
+		mmt_bit_or( &handler->hash, &handler->rules_hash[i] );
 	}
 
 	handler->messages_count = 0;
@@ -156,7 +156,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 
 	//the message does not concern to any rules handled by this #handler
 	//as it does not contain any proto.att required by the handler
-	if( unlikely((msg->hash & handler->hash) == 0 ))
+	if( unlikely( mmt_bit_is_zero_and( &msg->hash, &handler->hash) ))
 		goto _finish;
 
 	//if the message can be ignored as it is in a flow that has been detected an alert
@@ -169,7 +169,7 @@ void mmt_single_sec_process( mmt_single_sec_handler_t *handler, message_t *msg )
 	for( i=0; i<handler->rules_count; i++){
 
 		//msg does not contain any proto.att for i-th rule
-		if( (msg->hash & handler->rules_hash[i]) == 0 )
+		if( mmt_bit_is_zero_and( &msg->hash, &handler->rules_hash[i]))
 			continue;
 
 //		mmt_debug("%"PRIu64" verify rule %d", msg->counter, handler->rules_array[i]->id );
@@ -239,7 +239,7 @@ static inline void _swap_rule( mmt_single_sec_handler_t *handler, int i, int j )
 	rule_engine_t *engine;
 
 	size_t tmp;
-	uint64_t hash;
+	mmt_bit_t hash;
 
 	if( i==j )
 		return;
@@ -325,9 +325,9 @@ size_t mmt_single_sec_remove_rules( mmt_single_sec_handler_t *handler){
 
 	//update global hash if need
 	if( removed_rules_count > 0 ){
-		handler->hash = 0;
+		mmt_bit_init( & handler->hash );
 		for( i=0; i<handler->rules_count; i++ )
-			handler->hash |= handler->rules_hash[i];
+			mmt_bit_or( &handler->hash, &handler->rules_hash[i] );
 	}
 
 	UNLOCK_IF_ADD_OR_RM_RULES_RUNTIME( &handler->spin_lock_to_add_or_rm_rules )
@@ -349,7 +349,7 @@ size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_r
 	const rule_info_t **old_rules_array, *rule;
 	rule_engine_t **old_engines;
 	size_t *old_alerts_count;
-	uint64_t *old_rules_hash;
+	mmt_bit_t *old_rules_hash;
 
 	//global rules set
 	rule_info_t const*const*global_rules_set;
@@ -401,7 +401,7 @@ size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_r
 	handler->rules_array  = mmt_mem_alloc( sizeof( void *)    * ( handler->rules_count + add_rules_count ));
 	handler->engines      = mmt_mem_alloc( sizeof( void *)    * ( handler->rules_count + add_rules_count ));
 	handler->alerts_count = mmt_mem_alloc( sizeof( size_t )   * ( handler->rules_count + add_rules_count ));
-	handler->rules_hash   = mmt_mem_alloc( sizeof( uint64_t ) * ( handler->rules_count + add_rules_count ));
+	handler->rules_hash   = mmt_mem_alloc( sizeof( mmt_bit_t ) * ( handler->rules_count + add_rules_count ));
 
 	//retake the old values
 	for( i=0; i<handler->rules_count; i++ ){
@@ -426,13 +426,13 @@ size_t mmt_single_sec_add_rules( mmt_single_sec_handler_t *handler, size_t new_r
 		handler->rules_array[ i ]  = rules_set_to_be_add[ j ];
 		handler->engines[ i ]      = rule_engine_init( handler->rules_array[ i ], max_instances_count );
 		handler->alerts_count[ i ] = 0;
-		handler->rules_hash[ i ]   = 0;
+		mmt_bit_init( &handler->rules_hash[ i ] );
 		//hash number for this rule
 		for( k=0; k<handler->engines[i]->events_count; k++ )
-			handler->rules_hash[i] |= handler->engines[i]->events_hash[ k ];
+			mmt_bit_or( &handler->rules_hash[i], &handler->engines[i]->events_hash[ k ] );
 
 		//update global hash
-		handler->hash |= handler->rules_hash[i];
+		mmt_bit_or( &handler->hash, &handler->rules_hash[i] );
 
 		j++;
 	}

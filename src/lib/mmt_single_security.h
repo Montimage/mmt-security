@@ -39,10 +39,10 @@ typedef struct mmt_single_sec_handler_struct{
 
 	//an array of #rules_count elements having type of uint64_t
 	//each element represents required data of one rule
-	uint64_t *rules_hash;
+	mmt_bit_t *rules_hash;
 
 	//a hash number is combination of #rules_hash
-	uint64_t hash;
+	mmt_bit_t hash;
 
 	//number of messages processed
 	size_t messages_count;

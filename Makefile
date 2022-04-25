@@ -384,8 +384,10 @@ _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 	$(QUIET) bash -c "cut -d, -f5- check/expect/$*.csv     > /tmp/mmt-security-expect.csv"
 #get set of rules
 	$(QUIET) bash -c "cut -d, -f1 /tmp/mmt-security-expect.csv | sort | uniq > /tmp/mmt-security-expect-rule-id.csv"
+	$(QUIET) cat /tmp/mmt-security-expect-rule-id.csv
 #get only verdicts of the rules
-	$(QUIET) bash -c 'while read ruleId; do grep "^$ruleId" /tmp/mmt-security-res.csv; done < /tmp/mmt-security-expect-rule-id.csv > /tmp/mmt-security-result.csv || echo "" '
+# the first -e "" is used to avoid hanging when mmt-security-res.csv is empty
+	$(QUIET) bash -c 'grep -e "" $$(while read ruleId; do echo "-e ^$$ruleId"; done < /tmp/mmt-security-expect-rule-id.csv) /tmp/mmt-security-res.csv > /tmp/mmt-security-result.csv || echo "" '
 	$(QUIET) wc -l /tmp/mmt-security-expect.csv
 	$(QUIET) wc -l /tmp/mmt-security-result.csv
 	$(QUIET) bash -c "diff --ignore-all-space /tmp/mmt-security-expect.csv /tmp/mmt-security-result.csv || (echo \"====================execution log:\" && cat /tmp/$*.log)"

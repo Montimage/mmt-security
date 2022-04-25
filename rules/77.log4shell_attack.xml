@@ -94,19 +94,23 @@ static int em_check_log4shell( const char *uri ){
 	// +1 for \0 at the end
 	char *decoded_uri = malloc( (strlen( uri ) + 1) * sizeof( char) );
 	int i;
+	int ret = 0;
 	
-	if( decode_url( decoded_uri, uri ) == 0 )
-		return 0; //empty or null uri
+	if( decode_url( decoded_uri, uri ) != 0 ){
 	
-	em_to_lower( decoded_uri );
+		em_to_lower( decoded_uri );
 	
-	em_remove_spaces( decoded_uri );
+		em_remove_spaces( decoded_uri );
 	
-	for( i=0; i<length; i++ )
-		//whether the uri contains a signature
-		if( strstr( decoded_uri, signatures[i] ))
-			return 1;
-	return 0;
+		for( i=0; i<length; i++ )
+			//whether the uri contains a signature
+			if( strstr( decoded_uri, signatures[i] )){
+				ret = 1;
+				break;
+			}
+	}
+	free( decoded_uri );
+	return ret;
 }
 ]]></embedded_functions>
 </beginning>

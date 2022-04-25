@@ -313,7 +313,7 @@ void mmt_smp_sec_process( mmt_smp_sec_handler_t *handler, message_t *msg ){
 		for( i=0; i<handler->threads_count; i++ ){
 			//the message does not concern to any rules handled by this thread
 			//==> do not need to push the message into the queue of this thread
-			if( (msg->hash & handler->mmt_single_sec_handlers[i]->hash) == 0 )
+			if( mmt_bit_is_zero_and(&msg->hash, & handler->mmt_single_sec_handlers[i]->hash))
 				BIT_CLEAR( mask, i );
 			else
 				total_retain ++;

@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include "mmt_lib.h"
+#include "mmt_bit.h"
 
 
 enum data_type{
@@ -45,7 +46,7 @@ typedef struct message_struct{
 	//a hash number represents the present of its elements
 	// bit i-th of the number is 1 if data of i-th element is not null,
 	// otherwise, the data is null
-	uint64_t hash;
+	mmt_bit_t hash;
 
 	//for internal usage
 	uint8_t *_data;

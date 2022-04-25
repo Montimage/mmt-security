@@ -44,7 +44,7 @@ typedef struct rule_engine_struct{
 	 * An array of n elements having type of uint64_t.
 	 * Each element represents required data for one event of the rule
 	 */
-	uint64_t *events_hash;
+	mmt_bit_t *events_hash;
 
 	//timestamp and counter of the last message being verified timeout
 	uint64_t last_msg_timestamp_timeout;

@@ -37,7 +37,7 @@ jobs:
       env:
         TAG_NAME: ${{ github.ref }}
       run: |
-        make STATIC_LINK=1 dist
+        make deb
         #get name of distribution tar file
         ARTIFACT_PATHNAME=$(ls *.deb | head -n 1)
         ARTIFACT_NAME=$(basename $ARTIFACT_PATHNAME)

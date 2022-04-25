@@ -94,7 +94,7 @@ static int em_check_log4shell( const char *uri ){
 	// +1 for \0 at the end
 	char *decoded_uri = malloc( (strlen( uri ) + 1) * sizeof( char) );
 	int i;
-	ret = 0;
+	int ret = 0;
 	
 	if( decode_url( decoded_uri, uri ) != 0 ){
 	
@@ -108,6 +108,7 @@ static int em_check_log4shell( const char *uri ){
 				ret = 1;
 				break;
 			}
+	}
 	free( decoded_uri );
 	return ret;
 }

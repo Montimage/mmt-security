@@ -1,0 +1,40 @@
+<beginning>
+
+<embedded_functions><![CDATA[
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/types.h>
+
+static void em_call_ex_python(
+      const rule_info_t *rule, int verdict, uint64_t timestamp, 
+      uint64_t counter, const mmt_array_t * const trace ){
+
+   pid_t pid;
+   const char* trace_str = mmt_convert_execution_trace_to_json_string( trace, rule );
+   char rule_id[11];
+   snprintf( rule_id, 10, "%d", rule->id );
+   //execute "training.py" that is located at "/tmp/"
+   char *const args[] = { "/tmp/training.py", rule_id, (char *)trace_str, NULL};
+
+   // try to fork the current process
+   if ((pid = fork()) == -1)
+      perror("fork error");
+   // call the python program on a sub process
+   else if (pid == 0)
+      execv( args[0], args );
+}
+]]></embedded_functions>
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="0"
+	property_id="201" type_property="ATTACK"
+	description="Test: Call external program when this rule is satisfied"
+	if_satisfied="em_call_ex_python">
+	<event value="COMPUTE" event_id="1"
+		description="HTTP packet"
+		boolean_expression="(http.method != '')" />
+	<event value="COMPUTE" event_id="2" description="HTTP packet"
+		boolean_expression="(ip.src != ip.dst)" />
+</property>
+
+
+</beginning>

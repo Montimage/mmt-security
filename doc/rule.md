@@ -173,7 +173,7 @@ MMT-Security provides a compiler to do the such of task. Its source code is in [
 
    `./compile_rule rules/1.so rules/1.ssh.xml`
    
-   The program uses 3 parameters in form: `./compile_rule output_file property_file [gcc parameters]`
+   The program uses 3 parameters in form: `./compile_rule output_file property_file "[gcc parameters]"`
 
    where:
 

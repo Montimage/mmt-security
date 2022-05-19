@@ -562,18 +562,26 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					u8_ptr = (uint8_t *) me->data;
 					//group the  numbers in [ and ]
 					*str_ptr = '[';
-					size = 1;
+					str_ptr  ++;
 					n     = _get_u( u8_ptr, 4 ); //first 4 bytes is length of the array
 					e_len = _get_len( pro_ptr->dpi_type ); //data length of each element in the array
-					j = 4;
-					for( i=0; i<n; i++ ){
-						size += snprintf( str_ptr, total_len - size, (i == 0 ? "%zu": ",%zu"),
-								_get_u( &u8_ptr[j], e_len) );
-						j += e_len;
+					total_len --;
 
+					for( j=0; j<n; j++ ){
+						if( total_len < 3 )
+							break;
+						size = snprintf( str_ptr, total_len, (j == 0 ? "%zu": ",%zu"),
+								//+4 bytes for the array length
+								_get_u( &u8_ptr[j * e_len + 4], e_len) );
+						//exclude the last '\0' character
+						total_len -= size;
+						str_ptr   += size;
 					}
 					*str_ptr = ']';
-					size    += 1;
+					str_ptr ++;
+
+					//whe reset size to zero so that str_ptr will not increase in line 603
+					size = 0;
 					break;
 				}// end of switch( pro_ptr->proto_id ){
 

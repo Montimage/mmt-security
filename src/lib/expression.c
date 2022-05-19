@@ -55,6 +55,7 @@ inline int convert_data_type( int type ){
 	case MMT_DATA_FILTER_STATE:
 	case MMT_DATA_PARENT:
 	case MMT_STATS:
+	case MMT_U16_ARRAY:
 	case MMT_U32_ARRAY:
 	case MMT_U64_ARRAY:
 		return MMT_SEC_MSG_DATA_TYPE_BINARY;

@@ -305,6 +305,11 @@ static inline int dpi_message_set_dpi_data( const void *data, int dpi_data_type,
 		new_data_len  = sizeof( proto_hierarchy_t );
 		break;
 
+	case MMT_U16_ARRAY:
+		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
+		new_data      = data;
+		new_data_len  = U16_ARRAY_TYPE_LEN;
+		break;
 	case MMT_U32_ARRAY:
 		new_data_type = MMT_SEC_MSG_DATA_TYPE_BINARY;
 		new_data      = data;

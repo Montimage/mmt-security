@@ -55,10 +55,11 @@ static const char *data_type_name[] = {
 		"MMT_HEADER_LINE",  " /**< string pointer value with a variable size. The string is not necessary null terminating */",
 		"MMT_GENERIC_HEADER_LINE",  " /**< structure representing an RFC2822 header line with null terminating field and value elements. */",
 		"MMT_STRING_DATA_POINTER",  " /**< pointer constant value (size is void *). The data pointed to is of type string with null terminating character included */",
+		"MMT_U16_ARRAY", "/**< array of uint16_t */",
 		"MMT_U32_ARRAY", "/**< array of uint32_t */",
 		"MMT_U64_ARRAY", "/**< array of uint64_t */",
 };
-const uint16_t data_type_count = 34;
+const uint16_t data_type_count = sizeof( data_type_name ) / sizeof(data_type_name[0]) / 2;
 
 
 void attributes_iterator(attribute_metadata_t * attribute, uint32_t proto_id,

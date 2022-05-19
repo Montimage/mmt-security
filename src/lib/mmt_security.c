@@ -398,10 +398,36 @@ static inline size_t _copy_plein_text( char *dst, int len, const char* src ){
 
 #define MAX_STR_SIZE 10000
 
+static size_t _get_u( const uint8_t *data, int data_len ){
+	switch( data_len ){
+	case 2:
+		return *((uint16_t *) data);
+	case 4:
+		return *((uint32_t *) data);
+	case 8:
+		return *((uint64_t *) data);
+	default:
+		return 0;
+	}
+}
+
+static uint16_t _get_len( int dpi_type ){
+	switch( dpi_type ){
+	case MMT_U16_ARRAY:
+		return 2;
+	case MMT_U32_ARRAY:
+		return 4;
+	case MMT_U64_ARRAY:
+		return 8;
+	default:
+		return 0;
+	}
+}
+
 static const char* _convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
 	static __thread_scope char buffer[ MAX_STR_SIZE + 1 ];
 	char *str_ptr, *c_ptr;
-	size_t size, i, j, index;
+	size_t size, i, j, index, n, e_len;
 	int total_len;
 	const message_t *msg;
 	const message_element_t *me;
@@ -529,6 +555,25 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 						u8_ptr = (uint8_t *) me->data;
 						size   = snprintf(str_ptr, total_len, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
 								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
+					break;
+				case MMT_U16_ARRAY:
+				case MMT_U32_ARRAY:
+				case MMT_U64_ARRAY:
+					u8_ptr = (uint8_t *) me->data;
+					//group the  numbers in [ and ]
+					*str_ptr = '[';
+					size = 1;
+					n     = _get_u( u8_ptr, 4 ); //first 4 bytes is length of the array
+					e_len = _get_len( pro_ptr->dpi_type ); //data length of each element in the array
+					j = 4;
+					for( i=0; i<n; i++ ){
+						size += snprintf( str_ptr, total_len - size, (i == 0 ? "%zu": ",%zu"),
+								_get_u( &u8_ptr[j], e_len) );
+						j += e_len;
+
+					}
+					*str_ptr = ']';
+					size    += 1;
 					break;
 				}// end of switch( pro_ptr->proto_id ){
 

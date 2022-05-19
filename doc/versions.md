@@ -1,3 +1,7 @@
+## Version 1.2.14
+1. support `MMT_U16_ARRAY` data type
+2. Inspire5G+: add rule 79 to ensure DTLS traffic is in v1.2 or v1.3 and its ciphersuite is in a given list giving by `MMT_SEC_DTLS_CIPHER_ALLOWLIST` environment variable
+
 ## Version 1.2.12
 
 1. support `MMT_U32_ARRAY` and `MMT_U64_ARRAY` data type

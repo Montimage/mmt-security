@@ -1,0 +1,29 @@
+<beginning>
+
+<embedded_functions><![CDATA[
+#include<stdlib.h>
+#include<string.h>
+#include <inttypes.h>
+
+int em_call_ex_python(double trolley_pos, double hoist_pos, int no_of_marker, int m1_x, int m1_y, 
+                 int m2_x, int m2_y, int m3_x, int m3_y)
+{
+    int result;
+    char cmd[2560];
+    snprintf(cmd, sizeof(cmd), "python3 /home/zujany/ml_classifier.py %f %f %d %d %d %d %d %d %d", trolley_pos, hoist_pos, no_of_marker, m1_x, m1_y, m2_x, m2_y, m3_x, m3_y);
+    result = system(cmd);
+    return result;
+}
+
+]]></embedded_functions>
+
+
+<property property_id="117" type_property="ATTACK" value="THEN" 
+    description="Marker 1 is in a suspicious position, verification with ML">
+    <event event_id="1" description="M1 is in a suspicious position" 
+           boolean_expression="( ((lps_data.m1_x > 55000) &amp;&amp; (lps_data.m1_x &lt; 70000)) &amp;&amp; (( lps_data.m1_y > 127469 ) || (lps_data.m1_y &lt; 2936)))"/>
+    <event event_id="2" description="M1 coordinate is in a suspicious position - verified with ML" 
+           boolean_expression="( ( #em_call_ex_python(lps_data.trolley_pos,lps_data.hoist_pos, lps_data.no_of_marker, lps_data.m1_x, lps_data.m1_y,lps_data.m2_x, lps_data.m2_y, lps_data.m3_x, lps_data.m3_y) == 256 ))"/>
+</property>
+
+</beginning>

@@ -6,7 +6,7 @@
     Example MMT_SEC_DTLS_CIPHER_ALLOWLIST='0xc0a4,0xc0a5' will allow TLS_PSK_WITH_AES_128_CCM and TLS_PSK_WITH_AES_256_CCM ciphers">
       <event value="COMPUTE" event_id="1" 
              description="DTLS packet"
-             boolean_expression="( dtls.packet_count > 0 )"/>
+             boolean_expression="( ( dtls.packet_count > 0 ) &amp;&amp; #em_print(ip.client_addr, ip.server_addr, ip.client_port, ip.server_port))"/>
       <event value="COMPUTE" event_id="2" 
              description="DTLS version and ciphersuites in client hello handshake messages"
              boolean_expression="(( #em_is_strong_version( dtls.version )  
@@ -18,6 +18,9 @@
 #include <mmt_core.h>
 #include <tcpip/mmt_tcpip.h>
 
+static inline bool em_print( const void * data, ...){
+	return true;
+}
 
 static inline bool em_is_strong_version( double version ){
 	return (version == DTLS_VERSION_1_2 ) || (version == DTLS_VERSION_1_3 );

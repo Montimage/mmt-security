@@ -1,0 +1,21 @@
+<beginning>
+
+<!--
+This rule detects whether a malformed NGAP packet is present. The signature is:
+- IF: The upper protocol, SCTP, indicates that its payload is NGAP protocol
+- THEN: NGAP must be decoded correctly
+-->
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="93" type_property="SECURITY" 
+    description="SCTP Protocol Identifier indicates that its payload is NGAP but the payload is not effectually NGAP">
+    <event value="COMPUTE" event_id="1" 
+        description="SCTP Protocol Identifier is 60 to indicate its payload is NGAP"
+           boolean_expression="(sctp_data.data_ppid == 60)"/>
+           
+   <event value="COMPUTE" event_id="2" 
+      description="No NGAP is available or correctly decoded"
+         boolean_expression="(#is_exist(ngap.procedure_code))"/>
+</property>
+</beginning>
+
+

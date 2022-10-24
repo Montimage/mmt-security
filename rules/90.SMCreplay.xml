@@ -7,6 +7,6 @@
 	           boolean_expression="(nas_5g.security_type == 4)"/>
 	    <event value="COMPUTE" event_id="2" 
 	            description="NAS Security mode COMPLETE msg, coming from the same UE but with different payload"
-           		boolean_expression="((ngap.amf_ue_id == ngap.amf_ue_id.1)&amp;&amp;(nas_5g.message_authentication_code == nas_5g.message_authentication_code.1)&amp;&amp;(nas_5g.security_type == 4)&amp;&amp;(nas_5g.sequence_number == nas_5g.sequence_number.1)&amp;&amp;(ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)&amp;&amp;(nas_5g.p_data != nas_5g.p_data.1)&amp;&amp;(sctp_data.data_tsn != sctp_data.data_tsn.1))"/>
+	            boolean_expression="((ngap.amf_ue_id == ngap.amf_ue_id.1)&amp;&amp;(nas_5g.message_authentication_code == nas_5g.message_authentication_code.1)&amp;&amp;(nas_5g.security_type == 4)&amp;&amp;(nas_5g.sequence_number == nas_5g.sequence_number.1)&amp;&amp;(ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)&amp;&amp;(nas_5g.p_data != nas_5g.p_data.1)&amp;&amp;(sctp_data.data_tsn != sctp_data.data_tsn.1))"/>
 </property>
 </beginning>

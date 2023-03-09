@@ -36,8 +36,15 @@ ldconfig
 
 - source code of mmt-security
 
+```bash
+git clone https://github.com/Montimage/mmt-security.git
+```
+
 ## Clean
 
+```bash
+cd mmt-security
+```
 - Do `make clean` to clean compiled objects of mmt-security
 - Do `make clean-all` to clean all compiled objects of mmt-security and the ones being generated from mmt-sdk. Thus do this when mmt-sdk has been updated.
 
@@ -47,7 +54,7 @@ ldconfig
 
 - compile MMT-Security on its local directory: `make`
 
-- compile sample rules existing in `rules` folder: `make sample_rule`
+- compile sample rules existing in `rules` folder: `make sample_rules`
 
 - enable some modules use: `make [MODULE_NAME=1]+`. Currently `MODULE_NAME` is one of the followings:
 

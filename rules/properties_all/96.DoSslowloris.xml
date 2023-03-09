@@ -1,0 +1,23 @@
+<beginning>
+<!-- Property 96: Probable HTTP Slowloris DoS attack.
+-->
+	<property value="THEN" delay_units="ms" delay_min="0+" delay_max="20" property_id="96" type_property="ATTACK" 
+    description="Probable HTTP Slowloris DoS attack- 4 TCP connections consecutive opened in less than 20ms">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="1" 
+             description="TCP PSH ACK packet - Sender keeps established connection 1 alive"
+             boolean_expression="((tcp.flags == 24)&amp;&amp;((ip.src != ip.dst)&amp;&amp;(ip.session_id != 0)))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="TCP PSH ACK packet - Sender keeps established connection 2 alive"
+             boolean_expression="((tcp.flags == 24)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.session_id != ip.session_id.1))))"/>
+    </operator>
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="10">
+      <event value="COMPUTE" event_id="3" 
+             description="TCP PSH ACK packet - Sender keeps established connection 3 alive"
+             boolean_expression="((tcp.flags == 24)&amp;&amp;((ip.src != ip.dst)&amp;&amp;(ip.session_id != 0)))"/>
+      <event value="COMPUTE" event_id="4" 
+             description="TCP PSH ACK packet - Sender keeps established connection 4 alive"
+             boolean_expression="((tcp.flags == 24)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;((ip.dst == ip.dst.1)&amp;&amp;(ip.session_id != ip.session_id.1))))"/>
+    </operator>
+</property>
+</beginning>

@@ -18,7 +18,7 @@ void on_load(){
 	const char *str = getenv("MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT");
 	if( str == NULL ){
 		mmt_info("Rule 96: no value of MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT" );
-		limit_5g_dos_http2_initialuemessage_per_ms=200;
+		limit_5g_dos_http2_initialuemessage_per_ms=100;
 		
 	}
 	else
@@ -50,6 +50,8 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
 	}
 	
 	counter ++;
+	if(counter >= limit_5g_dos_http2_initialuemessage_per_ms)
+		printf("Rule 96 Dos recognized\n");
 	return (counter >= limit_5g_dos_http2_initialuemessage_per_ms);
 }
 ]]></embedded_functions>

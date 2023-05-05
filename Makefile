@@ -30,10 +30,10 @@ VERSION     := 1.2.16
 CACHE_LINESIZE := 64 #$(shell getconf LEVEL1_DCACHE_LINESIZE)
 
 #set of library
-LIBS     += -ldl -lpthread -lxml2 -l:libnghttp2.so -l:libmmt_tcpip.so -lnghttp2 -L/usr/lib/x86_64-linux-gnu/libnghttp2.so # -l:libmmt_http2.so
+LIBS     += -ldl -lpthread -lxml2  -l:libmmt_tcpip.so   # -l:libmmt_http2.so
 
-CFLAGS   += -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=$(CACHE_LINESIZE) -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include    -I/usr/include/nghttp2 -lnghttp2
-CLDFLAGS += -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib -I/usr/include/nghttp2 -lnghttp2
+CFLAGS   += -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=$(CACHE_LINESIZE) -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include    #-I/usr/include/nghttp2 -lnghttp2
+CLDFLAGS += -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib #-I/usr/include/nghttp2 -lnghttp2
 
 #a specific flag for each .o file
 CFLAGS += $(CFLAGS-$@)

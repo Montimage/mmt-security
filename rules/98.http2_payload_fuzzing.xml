@@ -1,0 +1,53 @@
+<beginning>
+<embedded_functions><![CDATA[
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "mmt_lib.h"
+#include "tcpip/mmt_tcpip_protocols.h"
+#include "pre_embedded_functions.h"
+
+void on_load(){
+	printf("loading rule 98\n");
+}
+
+static bool em_check_fuzzing(  int payload_length,const char* payload, double packet_id){	
+
+	//char*data;
+	//data=(char*)payload_data;
+
+
+   	bool result=false;
+
+   	
+   	for (int i = 9; i < payload_length+9; i++) {
+   		//printf("  %02hhX ",payload[i]);
+    		  if((payload[i]=='\\')|| payload[i]=='#' || (payload[i]=='%')){
+    		  	result=true;
+    		  	 printf( " Rule 98:Recognized suspect packet. Length %d  %f\n",payload_length,packet_id);
+    		  	 break;
+    		  	}
+
+  	 }
+   	    		  //printf("\n");
+
+	return result;
+  
+	}
+
+
+]]></embedded_functions>
+
+<property value="THEN"  property_id="98" type_property="ATTACK" 
+    description="5G Http2 fuzzing Recognition">
+     <event value="COMPUTE" event_id="1" 
+           description="Nothing"
+           boolean_expression=" true"/>  
+    <event value="COMPUTE" event_id="2" 
+        description="HTTP2 fuzzing"
+           boolean_expression="(  ( http2.header_method == 131)  &amp;&amp; #em_check_fuzzing(http2.payload_length , http2.p_payload,meta.packet_index)  &amp;&amp;(2800>meta.packet_len))"/>
+
+
+</property>
+</beginning>

@@ -29,9 +29,9 @@ static bool em_check_fuzzing(  int payload_length,const char* payload, double pa
     		  	 break;
     		  	}
 
-  	 }
+  	 }  
    	    		  //printf("\n");
-
+   
 	return result;
   
 	}

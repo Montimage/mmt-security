@@ -25,7 +25,7 @@ static bool em_check_fuzzing(  int payload_length,const char* payload, double pa
    		//printf("  %02hhX ",payload[i]);
     		  if((payload[i]=='\\')|| payload[i]=='#' || (payload[i]=='%')){
     		  	result=true;
-    		  	 printf( " Rule 98:Recognized suspect packet. Length %d  %f\n",payload_length,packet_id);
+    		  	 printf( " Rule 98:Recognized suspect fuzzing. Length %d  %f\n",payload_length,packet_id);
     		  	 break;
     		  	}
 

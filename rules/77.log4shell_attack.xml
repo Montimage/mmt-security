@@ -1,0 +1,116 @@
+<beginning>
+<!-- Detect Log4Shell attack: https://github.com/nhnghia/log4shell-pcaps -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="77" type_property="ATTACK" 
+    description="Detect Log4Shell attack that exploits a vulnerability of log4j, CVE-2021-44832, to get a remote code execution">
+      <event value="COMPUTE" event_id="1" 
+             description="HTTP request URI containing a malicious request"
+             boolean_expression="(((#em_check_log4shell(http.uri) ) || (#em_check_log4shell( http.user_agent ) )) )"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Print IP source and destination addresses"
+             boolean_expression="(ip.src != ip.dst)"/>
+</property>
+
+<embedded_functions><![CDATA[
+/**
+ * Decode URL percentage value
+ * return the length of dst
+ */
+static inline size_t decode_url(char *dst, const char *src) {
+	char a, b;
+	size_t len = 0;
+	//whether the destination is null or not
+	int not_null = (dst != NULL);
+	
+	//increase len and assign to dst if it is not null
+	#define ASSIGN_DST(val) do{ len++; if( not_null ) *dst++ = val;  } while(0)
+	
+	while (*src) {
+		if ((*src == '%') &&
+				((a = src[1]) && (b = src[2])) &&
+				(isxdigit(a) && isxdigit(b))) {
+			if (a >= 'a')
+				a -= 'a'-'A';
+			if (a >= 'A')
+				a -= ('A' - 10);
+			else
+				a -= '0';
+			if (b >= 'a')
+				b -= 'a'-'A';
+			if (b >= 'A')
+				b -= ('A' - 10);
+			else
+				b -= '0';
+			ASSIGN_DST( 16*a+b );
+			src+=3;
+		} else if (*src == '+') {
+			ASSIGN_DST( ' ' );
+			src++;
+		} else {
+			ASSIGN_DST( *src++ );
+		}
+	}
+	ASSIGN_DST( '\0' );
+	return len;
+}
+
+//change string to lower cases
+static inline void em_to_lower( char *p ){
+	for ( ; *p; ++p)
+		*p = tolower(*p);
+}
+
+static inline void em_remove_spaces( char* s ){
+	char *d = s;
+	do{
+		while (*d == ' ' || *d == '\t')
+			++d;
+	}while( *s++ = *d++ );
+}
+
+static int em_check_log4shell( const char *uri ){
+	//https://github.com/nhnghia/log4shell-pcaps
+	const char *signatures[] = {
+		"${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}${::-a}${::-p}://",
+		"${${::-j}${::-n}${::-d}${::-i}:${::-r}${::-m}${::-i}://",
+		"${${lower:jndi}:${lower:ldap}://",
+		"${${::-j}ndi:rmi://",
+		"${${lower:${lower:jndi}}:${lower:ldap}://",
+		"${${lower:jndi}:${lower:rmi}://",
+		"${${lower:j}${lower:n}${lower:d}i:${lower:ldap}://",
+		"${${lower:${lower:jndi}}:${lower:rmi}://",
+		"${${lower:j}${upper:n}${lower:d}${upper:i}:${lower:l}d${lower:a}p://",
+		"${${lower:j}${upper:n}${lower:d}${upper:i}:${lower:r}m${lower:i}://",
+		"${j${env:DOESNOTEXIST:-}ndi:ldap://",
+		"${j${env:DOESNOTEXIST:-}ndi:rmi://",
+		"${${:::::::::::::::-j}ndi:ldap://",
+		"${${:::::::::::::::-j}ndi:rmi://",
+		"${${::::::::::::::-j}ndi:ldap://",
+		"${${::::::::::::::-j}ndi:rmi://"
+	};
+	
+	//number of signatures
+	const int length = sizeof( signatures ) / sizeof( signatures[0] );
+	//length of the decoded uri is always lower than the one of uri
+	// +1 for \0 at the end
+	char *decoded_uri = malloc( (strlen( uri ) + 1) * sizeof( char) );
+	int i;
+	int ret = 0;
+	
+	if( decode_url( decoded_uri, uri ) != 0 ){
+	
+		em_to_lower( decoded_uri );
+	
+		em_remove_spaces( decoded_uri );
+	
+		for( i=0; i<length; i++ )
+			//whether the uri contains a signature
+			if( strstr( decoded_uri, signatures[i] )){
+				ret = 1;
+				break;
+			}
+	}
+	free( decoded_uri );
+	return ret;
+}
+]]></embedded_functions>
+</beginning>

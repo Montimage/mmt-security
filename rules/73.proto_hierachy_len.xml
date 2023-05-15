@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) 2014-->
+<beginning>
+<embedded_functions><![CDATA[
+#include <mmt_core.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+
+//each function name should be prefixed by em_
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int em_check_max_proto_len(const void *data){
+    proto_hierarchy_t * p = (proto_hierarchy_t *) data;
+    if (p->len >14) return 1; 
+   return 0;
+}
+]]></embedded_functions>
+<!-- Property 73: Protocol hierarchy length is 16 -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="73" type_property="ATTACK" 
+     description="The maximum protocol hierarchy length exceeded" >
+   <event event_id="1" value="COMPUTE" 
+           description="Print out IP addresses"
+           boolean_expression="(ip.src != ip.dst)"/>
+   <event event_id="2" value="COMPUTE" 
+           description="Maximum protocol hierarchy length exceeded"
+           boolean_expression="(#em_check_max_proto_len(meta.proto_hierarchy)==1)"/>
+ </property>
+</beginning>

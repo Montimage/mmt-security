@@ -1,0 +1,12 @@
+<beginning>
+<!-- Property 25: Overlapping unordered IP fragmentation : difference in offset of concomitant fragments < fragment length (allowed but could be an evasion).-->
+<property value="THEN" delay_units="ms" delay_min="0+" delay_max="10" property_id="25" type_property="EVASION" 
+    description="Overlapping unordered IP fragmentation : difference in offset of concomitant fragments less than fragment length (allowed but could be an evasion).">
+      <event value="COMPUTE" event_id="1" 
+             description="IP fragment followed by another"
+             boolean_expression="((ip.identification &gt; 0)&amp;&amp;((ip.mf_flag == 1)&amp;&amp;((ip.frag_offset &gt;= 0)&amp;&amp;(ip.src != ip.dst))))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="IP fragment with same identification and differences in offsets less than length"
+             boolean_expression="((ip.identification == ip.identification.1)&amp;&amp;((ip.frag_offset &lt; ip.frag_offset.1)&amp;&amp;(((ip.frag_offset.1 - ip.frag_offset) &lt; ip.tot_len)&amp;&amp;(ip.src != ip.dst))))"/>
+</property>
+</beginning>

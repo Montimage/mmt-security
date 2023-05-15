@@ -18,7 +18,7 @@ void on_load(){
 	const char *str = getenv("MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT");
 	if( str == NULL ){
 		mmt_info("Rule 96: no value of MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT" );
-		limit_5g_dos_http2_initialuemessage_per_ms=100;
+		limit_5g_dos_http2_initialuemessage_per_ms=80;
 		
 	}
 	else
@@ -59,7 +59,7 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
     description="5G Http2 DoS attack Recognition">
     <event value="COMPUTE" event_id="1" 
         description="HTTP2 InitialUEMessage"
-           boolean_expression="(( http2.header_method == 131) || (http2.header_method==130)  || (http2.type==4))"/>
+           boolean_expression="((( http2.header_method == 131) || (http2.header_method==130)  || (http2.type==8)))"/>
 
    <event value="COMPUTE" event_id="2" 
         description="Calculate total"

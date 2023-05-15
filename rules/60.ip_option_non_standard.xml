@@ -1,0 +1,58 @@
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+static inline int em_check_ip_opt(int i){
+  //printf("IP option number:%d\n", i);
+  switch (i) {
+    case 0:
+    case 1:
+    case 130:
+    case 131:
+    case 68:
+    case 133:
+    case 134:
+    case 7:
+    case 136:
+    case 137:
+    case 10:
+    case 11:
+    case 12:
+    case 205:
+    case 142:
+    case 15:
+    case 144:
+    case 145:
+    case 82:
+    case 147:
+    case 148:
+    case 149:
+    case 150:
+    case 151:
+    case 152:
+    case 25:
+    case 30:
+    case 94:
+    case 158:
+    case 222:
+      return 0;
+    default:
+  		return 1;    
+  }
+}
+]]></embedded_functions>
+
+<!-- Property 60: Non standard IP option number -->
+<!--              according to: 
+                       https://www.iana.org/assignments/ip-parameters/ip-parameters.xhtml
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="60" type_property="EVASION" 
+    description="Non standard IP option number">
+      <event value="COMPUTE" event_id="1" 
+             description="IP packet with non-standard IP option number."
+             boolean_expression="(#em_check_ip_opt(ip.opts_type) == 1)"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Print source and destination of IP"
+             boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

@@ -1,0 +1,27 @@
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+
+static inline int em_check_ip_proto_id(int i){
+  //printf("IP proto ID:%d\n", i);
+  
+  if(i>143 && i<252) return 1;
+  if (i==255) return 1;
+  return 0;
+}
+]]></embedded_functions>
+
+<!-- Property 62: Non standard IP type of service value -->
+<!--              according to: 
+					https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="62" type_property="EVASION" 
+    description="Non standard IP protocol number">
+      <event value="COMPUTE" event_id="1" 
+             description="IP packet with non-standard IP protocol ID (unassigned yet or reserved for extra)"
+             boolean_expression="(#em_check_ip_proto_id(ip.proto_id) == 1)"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Print source and destination of IP"
+             boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

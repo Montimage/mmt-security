@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- MMT_Security Copyright (C) 2014-->
+<beginning>
+<embedded_functions><![CDATA[
+//each function name should be prefixed by em_
+/**
+* Return:
+* - 0: ok
+* - 1: invalid
+* - 2: NULL
+*/
+static inline int em_check_eicar_virus_http(const char *str){
+   // X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+   
+   const char* c = str;
+   while( *c != '\0' ){
+      if (*c=='X' && c[1]=='5' && c[2]=='O' && c[3]=='!' && c[4]=='P'){
+      	if (strstr(c, "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*") != NULL) return 1;
+      	// "\\" represents "\"
+      	break;
+      	} 
+      c ++;
+   }
+   return 0;
+}
+]]></embedded_functions>
+<!-- Property 68: Detect EICAR virus test file within the HTTP payload-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="68" type_property="ATTACK" 
+     description="Detect EICAR virus test file within the HTTP payload" >
+   <event event_id="1" value="COMPUTE" 
+           description="An IP packet"
+           boolean_expression="((ip.packet_count != 0) &amp;&amp; (ip.src != ip.dst))"/>
+   <event event_id="2" value="COMPUTE" 
+           description="EICAR virus test file in the HTTP payload"
+           boolean_expression="(#em_check_eicar_virus_http(tcp.p_payload)==1)"/>
+ </property>
+</beginning>

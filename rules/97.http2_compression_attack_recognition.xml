@@ -1,4 +1,7 @@
 <beginning>
+<!-- 
+COmpression attack involve the use of the compression in order to put a great amount of data in a single packet, in order to use a huge amount of computational resources by the server after the decompression. In this case the rule checks the length of the packet. Since http2 tends to merge multiple packets, an upper limit is also set so as not to confuse the attack with the coalescing operated by the protocol
+-->
 <embedded_functions><![CDATA[
 
 #include <string.h>

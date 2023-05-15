@@ -53,7 +53,7 @@ static inline size_t dpi_get_payload_len(const ipacket_t * ipacket, uint32_t pro
 
 		if ( ipacket->proto_hierarchy->proto_path[i] == proto_id ){
 			//get header offset of the proto after #proto_id
-			if ( (i+1) < ipacket->proto_hierarchy->len){
+			if ( (i+1) <= ipacket->proto_hierarchy->len){
 				offset +=ipacket->proto_headers_offset->proto_path[i+1];
 				length = ipacket->p_hdr->caplen - offset;
 

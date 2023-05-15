@@ -8,9 +8,7 @@
 #include "tcpip/mmt_tcpip_protocols.h"
 #include "pre_embedded_functions.h"
 
-void on_load(){
-	printf("loading rule 98\n");
-}
+
 
 static bool em_check_fuzzing(  int payload_length,const char* payload, double packet_id){	
 

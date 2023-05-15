@@ -1,7 +1,6 @@
 <beginning>
 
-<!--
-This rule counts how many packets arrive in interval of time include in [0,100] milliseconds. If the amount of packets that come in that time goes over a threshold decided by the user, then an alert is raised. Note that in order to set the threshold an environment variable called  MMT_SEC_5G_DOS_HTTP2_MS_LIMIT must be declared and set.
+<!--This rule counts how many packets arrive in interval of time include in [0,100] milliseconds. If the amount of packets that come in that time goes over a threshold decided by the user, then an alert is raised. Note that in order to set the threshold an environment variable called  MMT_SEC_5G_DOS_HTTP2_MS_LIMIT must be declared and set.
 If that variable is not declared a default value will be given.
 
 
@@ -32,7 +31,7 @@ void on_load(){
 }
 
 /*
-To detect DoS, we group the InitialUEMessage by windows of millissecond,
+To detect DoS, we group messages by windows of millissecond,
 that is, all messages having the same millisecond number will be in the same window.
 We then check the number of message in a window to ensure that it is less than the given limit. 
 */
@@ -63,7 +62,7 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
     description="5G Http2 DoS attack Recognition">
     <event value="COMPUTE" event_id="1" 
         description="HTTP2 InitialUEMessage"
-           boolean_expression="((( http2.header_method == 131) || (http2.header_method==130)  || (http2.type==8)))"/>
+           boolean_expression="((( http2.header_method == 131) || (http2.header_method==130)  || (http2.type==8)) &amp;&amp;(2800>meta.packet_len))"/>
 
    <event value="COMPUTE" event_id="2" 
         description="Calculate total"

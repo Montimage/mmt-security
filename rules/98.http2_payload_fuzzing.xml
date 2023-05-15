@@ -1,4 +1,9 @@
 <beginning>
+<!--
+This rule analizes char by char in order to find unusual characters in the payload of the packet that can indicate a possible fuzzing attack.Note that the format of the payload is json, and only post requests have a body,so there is a check on the header method.
+
+-->
+
 <embedded_functions><![CDATA[
 
 #include <string.h>
@@ -23,7 +28,7 @@ static bool em_check_fuzzing(  int payload_length,const char* payload, double pa
    		//printf("  %02hhX ",payload[i]);
     		  if((payload[i]=='\\')|| payload[i]=='#' || (payload[i]=='%')){
     		  	result=true;
-    		  	 printf( " Rule 98:Recognized suspect fuzzing. Length %d  %f\n",payload_length,packet_id);
+//    		  	 printf( " Rule 98:Recognized suspect fuzzing. Length %d  %f\n",payload_length,packet_id);
     		  	 break;
     		  	}
 

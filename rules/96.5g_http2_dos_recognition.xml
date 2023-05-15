@@ -15,19 +15,19 @@ If that variable is not declared a default value will be given.
 
 #include<math.h>
 
-static unsigned long int limit_5g_dos_http2_initialuemessage_per_ms = 0;
+static unsigned long int limit_5g_dos_http2_per_ms = 0;
 
 void on_load(){
 	const char *str = getenv("MMT_SEC_5G_DOS_HTTP2_MS_LIMIT");
 	if( str == NULL ){
 		mmt_info("Rule 96: no value of MMT_SEC_5G_DOS_HTTP2_MS_LIMIT" );
-		limit_5g_dos_http2_initialuemessage_per_ms=80;
+		limit_5g_dos_http2_per_ms=80;
 		
 	}
 	else
-		limit_5g_dos_http2_initialuemessage_per_ms = strtoul( str, NULL, 0 );
+		limit_5g_dos_http2_per_ms = strtoul( str, NULL, 0 );
 	mmt_info("Rule 96: set MMT_SEC_5G_DOS_HTTP2_MS_LIMIT=%ld", 
-		limit_5g_dos_http2_initialuemessage_per_ms );
+		limit_5g_dos_http2_per_ms );
 }
 
 /*
@@ -41,7 +41,7 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
 	
 	struct timeval *time = (struct timeval *) data;
 	// no limit
-	if( limit_5g_dos_http2_initialuemessage_per_ms == 0 )
+	if( limit_5g_dos_http2_per_ms == 0 )
 		return true;
 
 	int millisecond = round( time->tv_usec / 1000.0 ); //microsecond to millisecond
@@ -53,9 +53,9 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
 	}
 	
 	counter ++;
-	//if(counter >= limit_5g_dos_http2_initialuemessage_per_ms)
+	//if(counter >= limit_5g_dos_http2_per_ms)
 		//printf("Rule 96 Dos recognized\n");
-	return (counter >= limit_5g_dos_http2_initialuemessage_per_ms);
+	return (counter >= limit_5g_dos_http2_per_ms);
 }
 ]]></embedded_functions>
 <property value="THEN" delay_units="ms" delay_min="0" delay_max="100" property_id="96" type_property="ATTACK" 

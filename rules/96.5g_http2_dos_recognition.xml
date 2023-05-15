@@ -53,8 +53,8 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
 	}
 	
 	counter ++;
-	if(counter >= limit_5g_dos_http2_initialuemessage_per_ms)
-		printf("Rule 96 Dos recognized\n");
+	//if(counter >= limit_5g_dos_http2_initialuemessage_per_ms)
+		//printf("Rule 96 Dos recognized\n");
 	return (counter >= limit_5g_dos_http2_initialuemessage_per_ms);
 }
 ]]></embedded_functions>

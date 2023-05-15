@@ -17,7 +17,7 @@ Since http2 tends to merge multiple packets, an upper limit is also set so as no
 static int em_check(
 	   double header_length,double packet_id){	
 
-   	printf( " Rule 97:Recognized suspect packet. Length %f , packet id %d\n",header_length,(int)packet_id);
+ //  	printf( " Rule 97:Recognized suspect packet. Length %f , packet id %d\n",header_length,(int)packet_id);
 	return 0;
      	
 	}

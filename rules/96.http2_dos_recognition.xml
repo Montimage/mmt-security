@@ -3,10 +3,6 @@
 <!--This rule counts how many packets arrive in interval of time include in [0,100] milliseconds. If the amount of packets that come in that time goes over a threshold decided by the user, then an alert is raised. Note that in order to set the threshold an environment variable called  MMT_SEC_5G_DOS_HTTP2_MS_LIMIT must be declared and set.
 If that variable is not declared a default value will be given.
 
-
-
-
-
 -->
 <embedded_functions><![CDATA[
 #include <stdlib.h>

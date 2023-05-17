@@ -1,0 +1,2 @@
+10,0,"",1684319174,96,"detected","attack","5G Http2 DoS attack Recognition",{"event_1":{"timestamp":1684318641.927697,"counter":402,"attributes":[["http2.type",1],["http2.header_method",130]]},"event_2":{"timestamp":1684318642.027226,"counter":437,"attributes":[["meta.utime","..dd"]]}}
+10,0,"",1684319174,96,"detected","attack","5G Http2 DoS attack Recognition",{"event_1":{"timestamp":1684318643.676586,"counter":842,"attributes":[["http2.type",1],["http2.header_method",130]]},"event_2":{"timestamp":1684318643.698159,"counter":848,"attributes":[["meta.utime","..dd"]]}}

@@ -8,6 +8,18 @@ If that variable is not declared a default value will be given.
 
 
 -->
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="100" property_id="96" type_property="ATTACK" 
+    description="5G Http2 DoS attack Recognition">
+    <event value="COMPUTE" event_id="1" 
+        description="HTTP2 check on the methods/ types that can realize a flooding:window_update/get/post"
+           boolean_expression="((( http2.header_method == 131) || (http2.header_method==130)  || (http2.type==8)) )"/>
+
+   <event value="COMPUTE" event_id="2" 
+        description="Calculate total"
+           boolean_expression="( #em_5g_check_msg_throughput( meta.utime ) )"/>
+          
+</property>
 <embedded_functions><![CDATA[
 #include <stdlib.h>
 #include <mmt_core.h>
@@ -58,14 +70,4 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
 	return (counter >= limit_5g_dos_http2_per_ms);
 }
 ]]></embedded_functions>
-<property value="THEN" delay_units="ms" delay_min="0" delay_max="100" property_id="96" type_property="ATTACK" 
-    description="5G Http2 DoS attack Recognition">
-    <event value="COMPUTE" event_id="1" 
-        description="HTTP2 check on the methods/ types that can realize a flooding"
-           boolean_expression="((( http2.header_method == 131) || (http2.header_method==130)  || (http2.type==8)) )"/>
-
-   <event value="COMPUTE" event_id="2" 
-        description="Calculate total"
-           boolean_expression="( #em_5g_check_msg_throughput( meta.utime ) )"/>
-</property>
 </beginning>

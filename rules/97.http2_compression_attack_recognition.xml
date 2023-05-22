@@ -29,7 +29,7 @@ static int em_check(
     description="5G Http2 Compression Attack" if_satisfied="">
     <event value="COMPUTE" event_id="1" 
         description="Rule checks the dimension of the header length. If it is greater then a threshold an alert is launched"
-           boolean_expression="( (http2.header_length>350) &amp;&amp; (16384>http2.header_length ) &amp;&amp; ( http2.header_method == 131)  )"/>
+           boolean_expression="( (http2.header_length>350) &amp;&amp; (16384>http2.header_length ) &amp;&amp; ( http2.header_method == 131) &amp;&amp;( ip.src != ip.dst ) )"/>
 
  <event value="COMPUTE" event_id="2" 
            description="Nothing"

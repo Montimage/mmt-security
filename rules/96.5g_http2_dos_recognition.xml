@@ -9,7 +9,7 @@ If that variable is not declared a default value will be given.
     description="5G Http2 DoS attack Recognition">
     <event value="COMPUTE" event_id="1" 
         description="This rule checks on the methods/ types that can realize a flooding:post/get/window update"
-           boolean_expression="((( http2.header_method == 131) || (http2.header_method==130)  || (http2.type==8))&amp;&amp;( ip.src != ip.dst ) )"/>
+           boolean_expression="((( http2.header_method == 131) || (http2.header_method==130)  || (http2.type==8))||( ip.src != ip.dst ) )"/>
 
    <event value="COMPUTE" event_id="2" 
         description="Calculate total"

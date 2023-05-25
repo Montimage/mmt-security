@@ -28,7 +28,8 @@ static bool em_check_fuzzing(  int payload_length,const char* payload, double pa
    		//printf("  %02hhX ",payload[i]);
     		  if((payload[i]=='\\')|| payload[i]=='#' || (payload[i]=='%')){
     		  	result=true;
-//    		  	 printf( " Rule 98:Recognized suspect fuzzing. Length %d  %f\n",payload_length,packet_id);
+    		  	printf("payload %c\n",payload[i]);
+   		  	 printf( " Rule 98:Recognized suspect fuzzing. Length %d  %f\n",payload_length,packet_id);
     		  	 break;
     		  	}
 
@@ -49,7 +50,7 @@ static bool em_check_fuzzing(  int payload_length,const char* payload, double pa
            boolean_expression=" true"/>  
     <event value="COMPUTE" event_id="2" 
         description="HTTP2 fuzzing"
-           boolean_expression="(  ( http2.header_method == 131)  &amp;&amp; #em_check_fuzzing(http2.payload_length , http2.p_payload,meta.packet_index)  &amp;&amp;(2800>meta.packet_len)&amp;&amp;( ip.src != ip.dst ))"/>
+           boolean_expression="(  (( http2.header_method == 131)  &amp;&amp; #em_check_fuzzing(http2.payload_length , http2.p_payload,meta.packet_index)  &amp;&amp;(2800>meta.packet_len))||( ip.src != ip.dst ))"/>
 
 
 </property>

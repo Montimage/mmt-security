@@ -58,7 +58,7 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
     description="5G Http2 DoS attack Recognition">
     <event value="COMPUTE" event_id="1" 
         description="HTTP2 check on the methods/ types that can realize a flooding"
-           boolean_expression="((( http2.header_method == 131) || (http2.header_method==130)  || (http2.type==8)) )"/>
+           boolean_expression="(((( http2.header_method == 131) || (http2.header_method==130))  || (http2.type==8)) &amp;&amp; (ip.src != ip.dst) )"/>
 
    <event value="COMPUTE" event_id="2" 
         description="Calculate total"

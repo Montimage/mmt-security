@@ -2,7 +2,7 @@
 
 <!--
 This rule detects whether 5G traffic in control plane overpasses the following limit:
-- total number of NGAP InitialUEMessage per millisecond >= 5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT  
+- total number of NGAP InitialUEMessage per millisecond >= MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT  
 
 Note: in the boolean_expression below, we use: 
 - ngap.procedure_code == 15: indicate InitialUEMessage
@@ -13,7 +13,7 @@ Note: in the boolean_expression below, we use:
 
 
 <property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="95" type_property="ATTACK" 
-    description="5G DoS attack in the control plane: total number of InitialUEMessage is greater than the limit fixed by the 5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT environment variable">
+    description="5G DoS attack in the control plane: total number of InitialUEMessage is greater than the limit fixed by the MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT environment variable">
     <event value="COMPUTE" event_id="1" 
         description="NGAP InitialUEMessage"
            boolean_expression="(( ngap.procedure_code == 15) &amp;&amp; ((sctp.dest_port == 38412) &amp;&amp;( ip.src != ip.dst )) )"/>
@@ -32,13 +32,13 @@ Note: in the boolean_expression below, we use:
 static unsigned long int limit_5g_dos_ngap_initialuemessage_per_ms = 0;
 
 void on_load(){
-	const char *str = getenv("5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT");
+	const char *str = getenv("MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT");
 	if( str == NULL ){
-		mmt_info("Rule 95: no value of 5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT" );
+		mmt_info("Rule 95: no value of MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT" );
 		return;
 	}
 	limit_5g_dos_ngap_initialuemessage_per_ms = strtoul( str, NULL, 0 );
-	mmt_info("Rule 95: set 5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT=%ld", 
+	mmt_info("Rule 95: set MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT=%ld", 
 		limit_5g_dos_ngap_initialuemessage_per_ms );
 }
 

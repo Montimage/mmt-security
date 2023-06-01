@@ -25,15 +25,15 @@ MMT_DPI_DIR := $(MMT_BASE)/dpi
 
 #get git version abbrev
 GIT_VERSION := $(shell git log --format="%h" -n 1)
-VERSION     := 1.2.15
+VERSION     := 1.2.17
 
 CACHE_LINESIZE := 64 #$(shell getconf LEVEL1_DCACHE_LINESIZE)
 
 #set of library
-LIBS     += -ldl -lpthread -lxml2
+LIBS     += -ldl -lpthread -lxml2  -l:libmmt_tcpip.so   # -l:libmmt_http2.so
 
-CFLAGS   += -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=$(CACHE_LINESIZE) -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include  
-CLDFLAGS += -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib
+CFLAGS   += -fPIC -Wall -DINSTALL_DIR=\"$(INSTALL_DIR)\" -DVERSION_NUMBER=\"$(VERSION)\" -DGIT_VERSION=\"$(GIT_VERSION)\" -DLEVEL1_DCACHE_LINESIZE=$(CACHE_LINESIZE) -Wno-unused-variable -Wno-unused-function -Wuninitialized -I/usr/include/libxml2/  -I$(MMT_DPI_DIR)/include    #-I/usr/include/nghttp2 -lnghttp2
+CLDFLAGS += -I$(MMT_DPI_DIR)/include -L$(MMT_DPI_DIR)/lib -L/usr/local/lib #-I/usr/include/nghttp2 -lnghttp2
 
 #a specific flag for each .o file
 CFLAGS += $(CFLAGS-$@)
@@ -127,7 +127,7 @@ perf.%: $(LIB_OBJS) test/perf/%.o
 
 compile_rule: $(LIB_OBJS) $(SRCDIR)/main_gen_plugin.o
 	@echo "[COMPILE] $(MAIN_GEN_PLUGIN)"
-	$(QUIET) $(CC) -o $(MAIN_GEN_PLUGIN) $(CLDFLAGS) $^ $(LIBS)
+	$(QUIET) $(CC) -o $(MAIN_GEN_PLUGIN) $(CLDFLAGS) $^ $(LIBS) 
 	
 sec_server: $(LIB_OBJS)  $(SRCDIR)/main_sec_server.o
 	@echo "[COMPILE] $@"
@@ -135,7 +135,7 @@ sec_server: $(LIB_OBJS)  $(SRCDIR)/main_sec_server.o
 	
 standalone:  $(MMT_DPI_DIR) $(LIB_OBJS)  $(SRCDIR)/main_sec_standalone.o $(RULE_OBJS) --refresh-plugin-engine
 	@echo "[COMPILE] $@"
-	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(CLDFLAGS) $(LIB_OBJS)  $(RULE_OBJS)  $(SRCDIR)/main_sec_standalone.o $(LIBS) -lpcap  -l:libmmt_core.so
+	$(QUIET) $(CC) -Wl,--export-dynamic -o $(MAIN_STAND_ALONE) $(CLDFLAGS) $(LIB_OBJS)  $(RULE_OBJS)  $(SRCDIR)/main_sec_standalone.o $(LIBS) -lpcap  -l:libmmt_core.so 
 
 rule_info: $(LIB_OBJS) $(SRCDIR)/main_plugin_info.o
 	@echo "[COMPILE] $(MAIN_PLUGIN_INFO)"

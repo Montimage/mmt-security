@@ -1,4 +1,4 @@
-/* This code is generated automatically on 2023-05-16 16:12:54 using MMT-DPI v1.7.7 (). */
+/* This code is generated automatically on 2023-06-02 12:19:50 using MMT-DPI v1.7.8 (68bd7d93). */
 /* If you want to modify something, goto /home/frank/mmt-security/src/main_gen_dpi.c */
  #ifndef __MMT_SEC_DPI_H_
  #define __MMT_SEC_DPI_H_
@@ -9783,6 +9783,6 @@ static inline long get_attribute_index( uint32_t p_id, uint32_t a_id ){
 	return -1;
 }
  static inline const char* mmt_version(){
-    return "1.7.7 ()";
+    return "1.7.8 (68bd7d93)";
 }
 #endif //__MMT_SEC_DPI_H_

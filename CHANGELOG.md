@@ -1,3 +1,8 @@
+# Version 1.2.18 (03 June 2023)
+- Add security rule 98 to detect attacks concerning HTTP2
+- Add warning messages when DPI payload points to outside of packet data
+- Print timeval in alert messages
+
 # Version 1.2.17 (17 May 2023)
 - Add 2 security rules, 96, 97 to detect attacks concerning HTTP2
 

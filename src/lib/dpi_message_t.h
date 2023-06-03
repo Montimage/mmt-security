@@ -55,8 +55,17 @@ static inline size_t dpi_get_payload_len(const ipacket_t * ipacket, uint32_t pro
 			//get header offset of the proto after #proto_id
 			if ( (i+1) <= ipacket->proto_hierarchy->len){
 				offset +=ipacket->proto_headers_offset->proto_path[i+1];
+				//this condition occurs only when we have bug in DPI
+				// as it indicates that the header of the next protocol is outside of the packet data
+				//However we check it anyway to ensure no error in mmt-security
+				//We  also raise an alert
+				if( offset > ipacket->p_hdr->caplen ){
+					mmt_warn("In %"PRIu64"-th packet: incorrect header of %d-th protocol which has ID=%"PRIu32" is at %"PRIu32". "
+							"It is outside of packet as packet length=%"PRIu32".",
+							ipacket->packet_id, (i+1), proto_id, offset, ipacket->p_hdr->caplen );
+					return 0;
+				}
 				length = ipacket->p_hdr->caplen - offset;
-
 				return length;
 			}
 			return 0;
@@ -81,8 +90,18 @@ static inline size_t dpi_get_data_len( const ipacket_t * ipacket, uint32_t proto
 	for (i = 1; i < ipacket->proto_hierarchy->len; i++){
 		offset +=ipacket->proto_headers_offset->proto_path[i];
 		if ( ipacket->proto_hierarchy->proto_path[i] == proto_id ){
-			length = ipacket->p_hdr->caplen - offset;
+			//this condition occurs only when we have bug in DPI
+			// as it indicates that the header of the next protocol is outside of the packet data
+			//However we check it anyway to ensure no error in mmt-security
+			//We  also raise an alert
+			if( offset > ipacket->p_hdr->caplen ){
+				mmt_warn("In %"PRIu64"-th packet: incorrect header of %d-th protocol which has ID=%"PRIu32" is at %"PRIu32". "
+						"It is outside of packet as packet length=%"PRIu32".",
+						ipacket->packet_id, (i), proto_id, offset, ipacket->p_hdr->caplen );
+				return 0;
+			}
 
+			length = ipacket->p_hdr->caplen - offset;
 			return length;
 		}
 	}

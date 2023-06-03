@@ -60,7 +60,7 @@ static inline size_t dpi_get_payload_len(const ipacket_t * ipacket, uint32_t pro
 				//However we check it anyway to ensure no error in mmt-security
 				//We  also raise an alert
 				if( offset > ipacket->p_hdr->caplen ){
-					mmt_warn("In %"PRIu64"-th packet: incorrect header of %d-th protocol which has ID=%"PRIu32" is at %"PRIu32". "
+					mmt_warn("In %"PRIu64"-th packet: incorrect header of %d-th protocol which is after the protocol having ID=%"PRIu32" is at %"PRIu32". "
 							"It is outside of packet as packet length=%"PRIu32".",
 							ipacket->packet_id, (i+1), proto_id, offset, ipacket->p_hdr->caplen );
 					return 0;

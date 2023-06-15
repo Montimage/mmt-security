@@ -432,7 +432,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 	const message_t *msg;
 	const message_element_t *me;
 	bool is_first;
-	struct timeval time;
+	struct timeval time, *ptime;
 	const mmt_array_t *proto_atts_event; //proto_att of an event
 	const proto_attribute_t *pro_ptr;
 	double double_val;
@@ -535,6 +535,12 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				u8_ptr = NULL;
 
 				switch( pro_ptr->dpi_type ){
+				case MMT_DATA_TIMEVAL:
+					u8_ptr = (uint8_t *) me->data;
+					ptime  = (struct timeval *) me->data;
+					size   = snprintf(str_ptr, total_len, "%ld.%06ld",
+							ptime->tv_sec, ptime->tv_usec );
+					break;
 				case MMT_DATA_IP_NET: /**< ip network address constant value */
 				case MMT_DATA_IP_ADDR: /**< ip address constant value */
 						u8_ptr = (uint8_t *) me->data;

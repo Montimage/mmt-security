@@ -14,7 +14,7 @@ Note:
  - the condition (ip.src != ip.dst) is used just to collect the IP addresses to show on MMT-Operator 
 -->
 
-<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="93" type_property="SECURITY" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="103" type_property="SECURITY" 
     description="SCTP Protocol Identifier indicates that its payload is NGAP but the payload is not effectually NGAP">
     <event value="COMPUTE" event_id="1" 
         description="SCTP Protocol Identifier is 60 to indicate its payload is NGAP"

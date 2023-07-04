@@ -10,7 +10,7 @@ Note: in the boolean_expression below, we use:
 - ngap.ran_ue_id == ngap.ran_ue_id.1: the two events have the same ngap.ran_ue_id
 -->
 
-<property value="THEN" delay_units="mms" delay_min="0" delay_max="100" property_id="94" type_property="ATTACK" 
+<property value="THEN" delay_units="mms" delay_min="0" delay_max="100" property_id="104" type_property="ATTACK" 
     description="5G DoS attack in the control plane: two consecutive InitialUEMessage from a single UE during 0.1 millisecond">
     <event value="COMPUTE" event_id="1" 
         description="NGAP InitialUEMessage"

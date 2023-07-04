@@ -33,7 +33,7 @@ static bool em_check_fuzzing(int payload_length, const char* payload, double pac
 
 ]]></embedded_functions>
 
-<property value="THEN"  property_id="98" type_property="ATTACK" 
+<property value="THEN"  property_id="108" type_property="ATTACK" 
     description="5G Http2 fuzzing Payload Recognition">
      <event value="COMPUTE" event_id="1" 
         description="Nothing"

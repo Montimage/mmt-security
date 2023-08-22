@@ -1,0 +1,63 @@
+<beginning>
+
+<!--
+It counts how many registration packets are sent. If the number of these packets is greater then 10 then an alert is raised. The threashold if always manually configurable by the user
+-->
+<embedded_functions><![CDATA[
+#include <stdlib.h>
+#include<math.h>
+
+static unsigned long int limit_5g_suci_requests_per_ms = 10;
+
+void on_load(){
+	const char *str = getenv("MMT_SEC_SUCI_REQUESTS_MS_LIMIT");
+	if( str == NULL ){
+		mmt_info("Rule 80: no value of MMT_SEC_5G_DOS_HTTP2_MS_LIMIT" );
+		limit_5g_suci_requests_per_ms=10;
+		
+	}
+	else
+		limit_5g_suci_requests_per_ms = 10;
+	mmt_info("Rule 80: set MMT_SEC_SUCI_REQUESTS_MS_LIMIT=%ld", 
+		limit_5g_suci_requests_per_ms );
+}
+
+/*
+To detect DoS, we group messages by windows of millissecond,
+that is, all messages having the same millisecond number will be in the same window.
+We then check the number of message in a window to ensure that it is less than the given limit. 
+*/
+static inline bool em_5g_check_msg_throughput( const void *data ){
+	static int last_ms = 0; //current ms window
+	static unsigned long int counter = 0; //number of msg in the current ms window
+	
+	struct timeval *time = (struct timeval *) data;
+	// no limit
+	if( limit_5g_suci_requests_per_ms == 0 )
+		return true;
+
+	int millisecond = round( time->tv_usec / 1000.0 ); //microsecond to millisecond
+	
+	//new window => reset the counter
+	if( last_ms != millisecond ){
+		counter = 0;
+		last_ms = millisecond;
+	}
+	
+	counter ++;
+	//if(counter >= limit_5g_suci_requests_per_ms)
+		//printf("Rule 80 SUCI\n");
+	return (counter >= limit_5g_suci_requests_per_ms);
+}
+]]></embedded_functions>
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="1000" property_id="80" type_property="ATTACK" 
+    description="5G SUCI attack recognition">
+    <event value="COMPUTE" event_id="1" 
+        description="Detected SUCI attack"
+        boolean_expression="((  nas_5g.message_type == 65)  &amp;&amp; (ip.src != ip.dst) )"/>
+
+   <event value="COMPUTE" event_id="2" 
+        description="Calculate total"
+        boolean_expression="( #em_5g_check_msg_throughput( meta.utime ) )"/>
+</property>
+</beginning>

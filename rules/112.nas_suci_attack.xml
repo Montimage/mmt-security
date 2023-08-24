@@ -50,7 +50,7 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
 	return (counter >= limit_5g_suci_requests_per_ms);
 }
 ]]></embedded_functions>
-<property value="THEN" delay_units="ms" delay_min="0" delay_max="1000" property_id="80" type_property="ATTACK" 
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="1000" property_id="112" type_property="ATTACK" 
     description="5G SUCI attack recognition">
     <event value="COMPUTE" event_id="1" 
         description="Detected SUCI attack"

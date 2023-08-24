@@ -15,19 +15,19 @@ static bool em_check_fuzzing(int payload_length, const char* payload, double pac
 
 	//char*data;
 	//data=(char*)payload_data;
-	printf("payload length %d \n",payload_length);
+	//printf("payload length %d \n",payload_length);
 	bool result=false;
 	for (int i = 9; i < payload_length + 9 ; i++) {
 		//printf("  %02hhX ",payload[i]);
-		printf("  %c",payload[i]);
+		//printf("  %c",payload[i]);
 		if((payload[i]=='\\')|| payload[i]=='#' || (payload[i]=='%') || (payload[i]=='$')){
 			result=true;
 
-			 printf( " Rule 98:Recognized suspect fuzzing. Length %d  %f\n",payload_length,packet_id);
+			// printf( " Rule 98:Recognized suspect fuzzing. Length %d  %f\n",payload_length,packet_id);
 			 break;
 			}
 	}
-	printf("\n");
+	//printf("\n");
 	return result;
 }
 

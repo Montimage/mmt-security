@@ -12,13 +12,13 @@ static unsigned long int limit_5g_suci_requests_per_ms = 10;
 void on_load(){
 	const char *str = getenv("MMT_SEC_SUCI_REQUESTS_MS_LIMIT");
 	if( str == NULL ){
-		mmt_info("Rule 80: no value of MMT_SEC_5G_DOS_HTTP2_MS_LIMIT" );
+		mmt_info("Rule 112: no value of MMT_SEC_5G_DOS_HTTP2_MS_LIMIT" );
 		limit_5g_suci_requests_per_ms=10;
 		
 	}
 	else
 		limit_5g_suci_requests_per_ms = 10;
-	mmt_info("Rule 80: set MMT_SEC_SUCI_REQUESTS_MS_LIMIT=%ld", 
+	mmt_info("Rule 112: set MMT_SEC_SUCI_REQUESTS_MS_LIMIT=%ld", 
 		limit_5g_suci_requests_per_ms );
 }
 
@@ -46,7 +46,7 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
 	
 	counter ++;
 	//if(counter >= limit_5g_suci_requests_per_ms)
-		//printf("Rule 80 SUCI\n");
+		//printf("Rule 112 SUCI\n");
 	return (counter >= limit_5g_suci_requests_per_ms);
 }
 ]]></embedded_functions>

@@ -34,11 +34,11 @@ static unsigned long int limit_5g_dos_ngap_initialuemessage_per_ms = 0;
 void on_load(){
 	const char *str = getenv("MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT");
 	if( str == NULL ){
-		mmt_info("Rule 95: no value of MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT" );
+		mmt_info("Rule 105: no value of MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT" );
 		return;
 	}
 	limit_5g_dos_ngap_initialuemessage_per_ms = strtoul( str, NULL, 0 );
-	mmt_info("Rule 95: set MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT=%ld", 
+	mmt_info("Rule 105: set MMT_SEC_5G_DOS_NGAP_INITIALUEMESSAGE_MS_LIMIT=%ld", 
 		limit_5g_dos_ngap_initialuemessage_per_ms );
 }
 

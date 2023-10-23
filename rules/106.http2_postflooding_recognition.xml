@@ -49,8 +49,18 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
 	}
 	
 	counter ++;
-	//if(counter >= limit_5g_dos_http2_per_ms)
-		//printf("Rule 96 Dos recognized\n");
+	if(counter >= limit_5g_dos_http2_per_ms){
+		 struct timeval current_time;
+		 gettimeofday(&current_time, NULL);
+
+		// Extract seconds and microseconds from the timeval structure
+		long seconds = current_time.tv_sec;
+		long milliseconds = current_time.tv_usec / 1000;
+
+		printf("Security Timestamp: %ld.%03ld\n", seconds, milliseconds);
+
+	}
+
 	return (counter >= limit_5g_dos_http2_per_ms);
 }
 ]]></embedded_functions>

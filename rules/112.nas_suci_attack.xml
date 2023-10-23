@@ -6,18 +6,16 @@ It counts how many registration packets are sent. If the number of these packets
 <embedded_functions><![CDATA[
 #include <stdlib.h>
 #include<math.h>
-
-static unsigned long int limit_5g_suci_requests_per_ms = 10;
-
+static unsigned long int limit_5g_suci_requests_per_ms = 20;
 void on_load(){
 	const char *str = getenv("MMT_SEC_SUCI_REQUESTS_MS_LIMIT");
 	if( str == NULL ){
 		mmt_info("Rule 112: no value of MMT_SEC_5G_DOS_HTTP2_MS_LIMIT" );
-		limit_5g_suci_requests_per_ms=10;
+		limit_5g_suci_requests_per_ms=20;
 		
 	}
 	else
-		limit_5g_suci_requests_per_ms = 10;
+		limit_5g_suci_requests_per_ms = strtoul( str, NULL, 0 );
 	mmt_info("Rule 112: set MMT_SEC_SUCI_REQUESTS_MS_LIMIT=%ld", 
 		limit_5g_suci_requests_per_ms );
 }
@@ -45,16 +43,16 @@ static inline bool em_5g_check_msg_throughput( const void *data ){
 	}
 	
 	counter ++;
-	//if(counter >= limit_5g_suci_requests_per_ms)
-		//printf("Rule 112 SUCI\n");
+
 	return (counter >= limit_5g_suci_requests_per_ms);
 }
 ]]></embedded_functions>
 <property value="THEN" delay_units="ms" delay_min="0" delay_max="1000" property_id="112" type_property="ATTACK" 
-    description="5G SUCI attack recognition">
+    description="5G SUCI attack: The SUCI-Catcher attack exploits authentication mechanism. It fetches an authentication challenge associated 
+    with the searched-for subscriber’s identity .Then, it sends this Authentication Request to all connecting UEs.">
     <event value="COMPUTE" event_id="1" 
-        description="Detected SUCI attack"
-        boolean_expression="((  nas_5g.message_type == 65)  &amp;&amp; (ip.src != ip.dst) )"/>
+        description="5G SUCI attack"
+        boolean_expression="((  nas_5g.message_type == 86)  &amp;&amp; (ip.src != ip.dst) )"/>
 
    <event value="COMPUTE" event_id="2" 
         description="Calculate total"

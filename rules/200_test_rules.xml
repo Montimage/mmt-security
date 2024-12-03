@@ -1,0 +1,61 @@
+<beginning>
+<!--
+This rule analyses the OCPPFlowMeter data then predict if a packet sent resembles an attacks.
+
+-->
+
+<embedded_functions><![CDATA[
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "mmt_lib.h"
+
+static char* python_script_path = "";
+static char* data_path = "";
+static char* model_path = "";
+
+static bool em_predict_attack(int total_flow_packets) {
+    char command[512];
+    int result;
+
+    // Command to call the Python script
+    snprintf(command, sizeof(command),
+             "python3 %s %s %s",
+             python_script_path, data_path, model_path);
+
+    result = system(command);
+    return result;
+
+    /**
+    FILE *fp = popen(command, "r");
+    if (fp == NULL) {
+        fprintf(stderr, "Failed to run Python script.\n");
+        return -1;
+    }
+
+    if (fgets(result, sizeof(result), fp) != NULL) {
+        prediction = atoi(result);  // Convert string to integer
+    } else {
+        fprintf(stderr, "Failed to read prediction.\n");
+        pclose(fp);
+        return -1;
+    }
+
+    pclose(fp);
+    return prediction;
+    **/
+}
+
+]]></embedded_functions>
+
+<property value="THEN"  property_id="200" type_property="ATTACK" 
+    description="OCPPFlowMeter Attack Dectection">
+    <event value="COMPUTE" event_id="1" 
+        description="Suspiciously high number of packets flowing"
+        boolean_expression="( ocpp_data.total_flow_packets>1000 )"/>
+    <event value="COMPUTE" event_id="2" 
+        description="OCPPFlowMeter Attack Detected"
+        boolean_expression="( (#em_predict_attack(ocpp_data.total_flow_packets) == 1 ) )"/>
+</property>
+</beginning>

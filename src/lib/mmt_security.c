@@ -396,7 +396,7 @@ static inline size_t _copy_plein_text( char *dst, int len, const char* src ){
 	return size;
 }
 
-#define MAX_STR_SIZE 10000
+#define MAX_STR_SIZE 50000
 
 static size_t _get_u( const uint8_t *data, int data_len ){
 	switch( data_len ){

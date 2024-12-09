@@ -1,4 +1,4 @@
-/* This code is generated automatically on 2024-12-03 12:58:19 using MMT-DPI v1.7.10 (49dde9f9). */
+/* This code is generated automatically on 2024-12-09 09:57:36 using MMT-DPI v1.7.10 (c13c3533). */
 /* If you want to modify something, goto /home/pqv/Documents/mmt-test/mmt-security/src/main_gen_dpi.c */
  #ifndef __MMT_SEC_DPI_H_
  #define __MMT_SEC_DPI_H_
@@ -9527,8 +9527,8 @@ enum data_types {
 	 { .gid =  7296, .id =    1, .data_type = MMT_U32_DATA           , .name = "level_0"},
 	 { .gid =  7297, .id =    2, .data_type = MMT_U32_DATA           , .name = "index"},
 	 { .gid =  7298, .id =    3, .data_type = MMT_STRING_DATA        , .name = "flow_id"},
-	 { .gid =  7299, .id =    4, .data_type = MMT_DATA_IP_ADDR       , .name = "src_ip"},
-	 { .gid =  7300, .id =    5, .data_type = MMT_DATA_IP_ADDR       , .name = "dst_ip"},
+	 { .gid =  7299, .id =    4, .data_type = MMT_STRING_DATA        , .name = "src_ip"},
+	 { .gid =  7300, .id =    5, .data_type = MMT_STRING_DATA        , .name = "dst_ip"},
 	 { .gid =  7301, .id =    6, .data_type = MMT_U32_DATA           , .name = "src_port"},
 	 { .gid =  7302, .id =    7, .data_type = MMT_U32_DATA           , .name = "dst_port"},
 	 { .gid =  7303, .id =    8, .data_type = MMT_U32_DATA           , .name = "total_flow_packets"},
@@ -9544,8 +9544,8 @@ enum data_types {
 	 { .gid =  7313, .id =   18, .data_type = MMT_U32_DATA           , .name = "flow_total_CWE_flag"},
 	 { .gid =  7314, .id =   19, .data_type = MMT_U32_DATA           , .name = "flow_total_ECE_flag"},
 	 { .gid =  7315, .id =   20, .data_type = MMT_U32_DATA           , .name = "flow_total_FIN_flag"},
-	 { .gid =  7316, .id =   21, .data_type = MMT_DATA_TIMEVAL       , .name = "flow_start_timestamp"},
-	 { .gid =  7317, .id =   22, .data_type = MMT_DATA_TIMEVAL       , .name = "flow_end_timestamp"},
+	 { .gid =  7316, .id =   21, .data_type = MMT_STRING_DATA        , .name = "flow_start_timestamp"},
+	 { .gid =  7317, .id =   22, .data_type = MMT_STRING_DATA        , .name = "flow_end_timestamp"},
 	 { .gid =  7318, .id =   23, .data_type = MMT_U32_DATA           , .name = "flow_total_http_get_packets"},
 	 { .gid =  7319, .id =   24, .data_type = MMT_U32_DATA           , .name = "flow_total_http_2xx_packets"},
 	 { .gid =  7320, .id =   25, .data_type = MMT_U32_DATA           , .name = "flow_total_http_4xx_packets"},
@@ -9862,6 +9862,6 @@ static inline long get_attribute_index( uint32_t p_id, uint32_t a_id ){
 	return -1;
 }
  static inline const char* mmt_version(){
-    return "1.7.10 (49dde9f9)";
+    return "1.7.10 (c13c3533)";
 }
 #endif //__MMT_SEC_DPI_H_

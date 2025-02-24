@@ -11,8 +11,11 @@ This rule analyses the OCPPFlowMeter data then predict if a packet sent resemble
 #include <stdlib.h>
 #include "mmt_lib.h"
 
-static char* python_script_path = "/home/pqv/Documents/ocpp/detection_PPC_OCPPFLOWMETER_line_by_line.py";
-static char* model_path = "/home/pqv/Documents/ocpp/detection_PPC_OCPPFLOWMETER_20240918_YES_IP.pkl";
+static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/detection_PPC_OCPPFLOWMETER_line_by_line.py";
+static char* model_path = "/opt/mmt/security/python_scripts_and_models/detection_PPC_OCPPFLOWMETER_20240918_YES_IP.pkl";
+
+//static char* python_script_path = "/home/pqv/Documents/ocpp/detection_PPC_OCPPFLOWMETER_line_by_line.py";
+//static char* model_path = "/home/pqv/Documents/ocpp/detection_PPC_OCPPFLOWMETER_20240918_YES_IP.pkl";
 
 static bool em_predict_attack
 
@@ -52,15 +55,19 @@ int flow_avg_ocpp16_metervalues_wh_diff, int flow_max_ocpp16_metervalues_wh_diff
     int prediction;
 
     // Command to call the Python script
+    //snprintf(command, sizeof(command),
+    //         "bash -c 'cd /home/pqv/Documents/ocpp/ && source .venv/bin/activate && python3 %s %s \"%s\"'",
+    //         python_script_path, model_path, buffer);
+
     snprintf(command, sizeof(command),
-             "bash -c 'cd /home/pqv/Documents/ocpp/ && source .venv/bin/activate && python3 %s %s \"%s\"'",
+             "bash -c 'python3 %s %s \"%s\"'",
              python_script_path, model_path, buffer);
 
 
     FILE *fp = popen(command, "r");
     if (fp == NULL) {
         fprintf(stderr, "Failed to run Python script.\n");
-        return -1;
+        return -5;
     }
 
     // Read the output line by line
@@ -91,8 +98,8 @@ int flow_avg_ocpp16_metervalues_wh_diff, int flow_max_ocpp16_metervalues_wh_diff
 
 ]]></embedded_functions>
 
-<property value="THEN"  property_id="200" type_property="ATTACK" 
-    description="OCPPFlowMeter Attack Dectection">
+<property value="THEN"  property_id="201" type_property="ATTACK" 
+    description="OCPPFlowMeter Attack Detection">
     <event value="COMPUTE" event_id="1" 
         description="Suspiciously high number of packets flowing"
         boolean_expression="( ocpp_data.total_flow_packets>100 )"/>

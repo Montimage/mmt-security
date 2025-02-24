@@ -239,6 +239,9 @@ endif
 	$(QUIET) $(CP)    $(MAIN_GEN_PLUGIN)  $(MAIN_PLUGIN_INFO)  $(TMP_DIR)/bin
 	$(QUIET) $(CP)    $(MAIN_STAND_ALONE) $(TMP_DIR)/bin/mmt_security
 	$(QUIET) $(CP)    $(MAIN_SEC_SERVER)  $(TMP_DIR)/bin/
+
+	$(QUIET) $(MKDIR) $(TMP_DIR)/python_scripts_and_models
+	$(QUIET) $(CP)    python_scripts_and_models/* $(TMP_DIR)/python_scripts_and_models/
 	
 	$(QUIET) $(MKDIR) $(TMP_DIR)/lib
 	$(QUIET) $(MV)    $(LIB_NAME).so      $(TMP_DIR)/lib/$(LIB_NAME).so.$(VERSION)

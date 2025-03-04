@@ -11,11 +11,11 @@ This rule analyses the OCPPFlowMeter data then predict if a packet sent resemble
 #include <stdlib.h>
 #include "mmt_lib.h"
 
-static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/detection_PPC_OCPPFLOWMETER_line_by_line.py";
-static char* model_path = "/opt/mmt/security/python_scripts_and_models/detection_PPC_OCPPFLOWMETER_20240918_YES_IP.pkl";
+//static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/detection_PPC_OCPPFLOWMETER_line_by_line.py";
+//static char* model_path = "/opt/mmt/security/python_scripts_and_models/detection_PPC_OCPPFLOWMETER_20240918_YES_IP.pkl";
 
-//static char* python_script_path = "/home/pqv/Documents/ocpp/detection_PPC_OCPPFLOWMETER_line_by_line.py";
-//static char* model_path = "/home/pqv/Documents/ocpp/detection_PPC_OCPPFLOWMETER_20240918_YES_IP.pkl";
+static char* python_script_path = "/home/pqv/Documents/ocpp/detection_PPC_OCPPFLOWMETER_line_by_line.py";
+static char* model_path = "/home/pqv/Documents/ocpp/detection_PPC_OCPPFLOWMETER_20240918_YES_IP.pkl";
 
 static bool em_predict_attack
 
@@ -55,13 +55,13 @@ int flow_avg_ocpp16_metervalues_wh_diff, int flow_max_ocpp16_metervalues_wh_diff
     int prediction;
 
     // Command to call the Python script
-    //snprintf(command, sizeof(command),
-    //         "bash -c 'cd /home/pqv/Documents/ocpp/ && source .venv/bin/activate && python3 %s %s \"%s\"'",
-    //         python_script_path, model_path, buffer);
-
     snprintf(command, sizeof(command),
-             "bash -c 'python3 %s %s \"%s\"'",
+             "bash -c 'cd /home/pqv/Documents/ocpp/ && source .venv/bin/activate && python3 %s %s \"%s\"'",
              python_script_path, model_path, buffer);
+
+    //snprintf(command, sizeof(command),
+    //         "bash -c 'python3 %s %s \"%s\"'",
+    //         python_script_path, model_path, buffer);
 
 
     FILE *fp = popen(command, "r");
@@ -104,7 +104,7 @@ int flow_avg_ocpp16_metervalues_wh_diff, int flow_max_ocpp16_metervalues_wh_diff
         description="Suspiciously high number of packets flowing"
         boolean_expression="( ocpp_data.total_flow_packets>100 )"/>
     <event value="COMPUTE" event_id="2" 
-        description="OCPPFlowMeter Attack Detected"
+        description="Detection of a potential DDoS attack by the ML algorithm"
         boolean_expression="( 
         (#em_predict_attack(ocpp_data.level_0, ocpp_data.index, ocpp_data.flow_id, ocpp_data.src_ip, ocpp_data.dst_ip, 
                             ocpp_data.src_port, ocpp_data.dst_port, ocpp_data.total_flow_packets, ocpp_data.total_fw_packets, 

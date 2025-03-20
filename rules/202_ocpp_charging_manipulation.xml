@@ -1,0 +1,19 @@
+<beginning>
+
+<!--
+This rule detects whether an attempt for charging manipulation is present.
+-->
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="93" type_property="SECURITY" 
+    description="Charging manipulation attempt detected">
+    <event value="COMPUTE" event_id="1" 
+        description="A charging profile is presented"
+           boolean_expression="( ocpp_data.flow_max_ocpp16_setchargingprofile_limit > 0 )"/>
+           
+   <event value="COMPUTE" event_id="2" 
+      description="An abnormal charging profile with high limit value"
+         boolean_expression="( ocpp_data.flow_max_ocpp16_setchargingprofile_limit > 32 )"/>
+</property>
+</beginning>
+
+

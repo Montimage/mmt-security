@@ -1,6 +1,6 @@
 <beginning>
 <!--
-This rule analyses the OCPPFlowMeter data then predict if a packet sent resembles an attacks.
+This rule is for UC4 lockbit case in the project DYNAVIC.
 
 -->
 
@@ -11,8 +11,7 @@ This rule analyses the OCPPFlowMeter data then predict if a packet sent resemble
 #include <stdlib.h>
 #include "mmt_lib.h"
 
-//static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/detection_PPC_OCPPFLOWMETER_line_by_line.py";
-//static char* model_path = "/opt/mmt/security/python_scripts_and_models/detection_PPC_OCPPFLOWMETER_20240918_YES_IP.pkl";
+//static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/uc4.py";
 
 static char* python_script_path = "/home/pqv/Documents/ocpp/uc4.py";
 
@@ -40,8 +39,8 @@ int length, const char* tcp_flags, int payload_size)
              python_script_path, buffer);
 
     //snprintf(command, sizeof(command),
-    //         "bash -c 'python3 %s %s \"%s\"'",
-    //         python_script_path, model_path, buffer);
+    //         "bash -c 'python3 %s \"%s\"'",
+    //         python_script_path, buffer);
 
 
     FILE *fp = popen(command, "r");
@@ -79,12 +78,12 @@ int length, const char* tcp_flags, int payload_size)
 ]]></embedded_functions>
 
 <property value="THEN"  property_id="204" type_property="ATTACK" 
-    description="Attack Detection for UC HES in DYNABIC Project">
+    description="Lockbit Attack Detection for UC HES in DYNABIC Project">
     <event value="COMPUTE" event_id="1" 
         description="Suspiciously high length"
         boolean_expression="( dynabic_hes_data.length>1 )"/>
     <event value="COMPUTE" event_id="2" 
-        description="Attack Detected"
+        description="Detection of a potential Lockbit attack by the ML algorithm"
         boolean_expression="( 
         (#em_predict_attack(dynabic_hes_data.timestamp, dynabic_hes_data.protocol, dynabic_hes_data.src_ip,
                             dynabic_hes_data.dst_ip, dynabic_hes_data.src_port, dynabic_hes_data.dst_port,

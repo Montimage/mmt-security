@@ -14,3 +14,4 @@ gen_dpi_header
 rsync.sh
 
 .venv
+*.deb

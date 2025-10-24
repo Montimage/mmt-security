@@ -10,7 +10,7 @@ This rule detects whether an attempt for charging manipulation is present.
 #include <stdlib.h>
 
 static bool em_check_manipulation (int flow_max_ocpp16_setchargingprofile_limit, const char* src_ip, const char* dst_ip){
-   printf("%d\n", flow_max_ocpp16_setchargingprofile_limit);
+   // printf("%d\n", flow_max_ocpp16_setchargingprofile_limit);
    if (flow_max_ocpp16_setchargingprofile_limit > 32 ) {
       return 1;
    }
@@ -21,7 +21,7 @@ static bool em_check_manipulation (int flow_max_ocpp16_setchargingprofile_limit,
 
 
 <property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="202" type_property="ATTACK" 
-    description="Charging manipulation attempt detected">
+    description="Charging manipulation attempt detected in OCPPFlowMeter">
     <event value="COMPUTE" event_id="1" 
         description="A charging profile is presented"
            boolean_expression="( ocpp_data.flow_max_ocpp16_setchargingprofile_limit > 0 )"/>

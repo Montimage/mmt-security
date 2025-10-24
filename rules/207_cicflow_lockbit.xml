@@ -148,7 +148,7 @@ const char* id)
 ]]></embedded_functions>
 
 <property value="THEN"  property_id="207" type_property="ATTACK" 
-    description="CICFLOWFlowMeter Attack Detection">
+    description="Detection of a Lockbit attack in Cicflow traffic">
     <event value="COMPUTE" event_id="1" 
         description="There are packets flowing"
         boolean_expression="( cicflow_data.Flow_Duration>0 )"/>

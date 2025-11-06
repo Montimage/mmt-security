@@ -11,8 +11,8 @@ This rule analyses the Cicflow data then predict if a packet sent resembles an a
 #include <stdlib.h>
 #include "mmt_lib.h"
 
-static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/uc4_cicflow_lockbit.py";
-//static char* python_script_path = "/home/pqv/Documents/ocpp/uc4_cicflow_lockbit.py";
+//static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/detection_FERRO_CicflowMeter.py";
+static char* python_script_path = "/home/pqv/Documents/ocpp/detection_FERRO_CicflowMeter.py";
 
 #include <stdbool.h>
 
@@ -41,7 +41,10 @@ int Fwd_Bulk_Rate_Avg, int Subflow_Fwd_Packets, int Subflow_Fwd_Bytes,
 int Subflow_Bwd_Packets, int Subflow_Bwd_Bytes, int FWD_Init_Win_Bytes, 
 int Bwd_Init_Win_Bytes, int Fwd_Act_Data_Pkts, int Fwd_Seg_Size_Min, 
 float Active_Mean, float Active_Std, float Active_Max, float Active_Min, 
-float Idle_Mean, float Idle_Std, float Idle_Max, float Idle_Min) 
+float Idle_Mean, float Idle_Std, float Idle_Max, float Idle_Min, 
+int Bwd_Act_Data_Pkts, int Bwd_RST_Flags, int Bwd_Seg_Size_Min, int Bwd_TCP_Retrans_dot_Count, 
+int Fwd_RST_Flags, int Fwd_TCP_Retrans_dot_Count, int ICMP_Code, int ICMP_Type,
+float Total_Connection_Flow_Time, int Total_TCP_Retrans_dot_Count) 
 
 {
     char buffer[4096];
@@ -69,7 +72,10 @@ float Idle_Mean, float Idle_Std, float Idle_Max, float Idle_Min)
             "Subflow_Fwd_Packets=%d,Subflow_Fwd_Bytes=%d,Subflow_Bwd_Packets=%d,Subflow_Bwd_Bytes=%d,"
             "FWD_Init_Win_Bytes=%d,Bwd_Init_Win_Bytes=%d,Fwd_Act_Data_Pkts=%d,Fwd_Seg_Size_Min=%d,"
             "Active_Mean=%f,Active_Std=%f,Active_Max=%f,Active_Min=%f,"
-            "Idle_Mean=%f,Idle_Std=%f,Idle_Max=%f,Idle_Min=%f",
+            "Idle_Mean=%f,Idle_Std=%f,Idle_Max=%f,Idle_Min=%f,Bwd_Act_Data_Pkts=%d,"
+            "Bwd_RST_Flags=%d,Bwd_Seg_Size_Min=%d,Bwd_TCP_Retrans_dot_Count=%d,"
+            "Fwd_RST_Flags=%d,Fwd_TCP_Retrans_dot_Count=%d,ICMP_Code=%d,ICMP_Type=%d,"
+            "Total_Connection_Flow_Time=%f,Total_TCP_Retrans_dot_Count=%d",
             id, Src_IP, Src_Port, Dst_IP, Dst_Port, Protocol, Timestamp, 
             Flow_Duration, Total_Fwd_Packet, Total_Bwd_packets, 
             Total_Length_of_Fwd_Packet, Total_Length_of_Bwd_Packet, 
@@ -92,23 +98,24 @@ float Idle_Mean, float Idle_Std, float Idle_Max, float Idle_Min)
             Subflow_Fwd_Bytes, Subflow_Bwd_Packets, Subflow_Bwd_Bytes, 
             FWD_Init_Win_Bytes, Bwd_Init_Win_Bytes, Fwd_Act_Data_Pkts, 
             Fwd_Seg_Size_Min, Active_Mean, Active_Std, Active_Max, Active_Min, 
-            Idle_Mean, Idle_Std, Idle_Max, Idle_Min);
-
-    //printf("buffer is %s\n", buffer);
+            Idle_Mean, Idle_Std, Idle_Max, Idle_Min, Bwd_Act_Data_Pkts, 
+            Bwd_RST_Flags, Bwd_Seg_Size_Min, Bwd_TCP_Retrans_dot_Count, Fwd_RST_Flags, 
+            Fwd_TCP_Retrans_dot_Count, ICMP_Code, ICMP_Type, Total_Connection_Flow_Time, Total_TCP_Retrans_dot_Count);
 
     
     char result[128];
-    char last_result[20000] = "";
+    char last_result[128] = "";
     int prediction;
 
     // Command to call the Python script
+    snprintf(command, sizeof(command),
+             "bash -c 'cd /home/pqv/Documents/ocpp/ && source .venv/bin/activate && python3 %s \"%s\"'",
+             python_script_path, buffer);
+
     //snprintf(command, sizeof(command),
-    //         "bash -c 'cd /home/pqv/Documents/ocpp/ && source .venv/bin/activate && python3 %s \"%s\"'",
+    //         "bash -c 'python3 %s \"%s\"'",
     //         python_script_path, buffer);
 
-    snprintf(command, sizeof(command),
-             "bash -c 'python3 %s \"%s\"'",
-             python_script_path, buffer);
 
     FILE *fp = popen(command, "r");
     if (fp == NULL) {
@@ -146,13 +153,13 @@ float Idle_Mean, float Idle_Std, float Idle_Max, float Idle_Min)
 
 ]]></embedded_functions>
 
-<property value="THEN"  property_id="207" type_property="ATTACK" 
-    description="Detection of a Lockbit attack in Cicflow traffic">
+<property value="THEN"  property_id="203" type_property="ATTACK" 
+    description="Detection of a DDoS attack in Cicflow traffic">
     <event value="COMPUTE" event_id="1" 
         description="There are packets flowing"
-        boolean_expression="( cicflow_data.Flow_Duration==0 )"/>
+        boolean_expression="( cicflow_data.Flow_Duration>0 )"/>
     <event value="COMPUTE" event_id="2" 
-        description="Detection of a potential Lockbit attack by the ML algorithm"
+        description="Detection of a potential DDoS attack by the ML algorithm"
         boolean_expression="( 
         (#em_predict_attack(cicflow_data.id, cicflow_data.Src_IP, cicflow_data.Src_Port, cicflow_data.Dst_IP, 
                             cicflow_data.Dst_Port, cicflow_data.Protocol, cicflow_data.Timestamp, cicflow_data.Flow_Duration, 
@@ -175,7 +182,10 @@ float Idle_Mean, float Idle_Std, float Idle_Max, float Idle_Min)
                             cicflow_data.Bwd_Bulk_Rate_Avg, cicflow_data.Subflow_Fwd_Packets, cicflow_data.Subflow_Fwd_Bytes, cicflow_data.Subflow_Bwd_Packets, 
                             cicflow_data.Subflow_Bwd_Bytes, cicflow_data.FWD_Init_Win_Bytes, cicflow_data.Bwd_Init_Win_Bytes, cicflow_data.Fwd_Act_Data_Pkts, 
                             cicflow_data.Fwd_Seg_Size_Min, cicflow_data.Active_Mean, cicflow_data.Active_Std, cicflow_data.Active_Max, cicflow_data.Active_Min, 
-                            cicflow_data.Idle_Mean, cicflow_data.Idle_Std, cicflow_data.Idle_Max, cicflow_data.Idle_Min) == 1 ) )"/>
+                            cicflow_data.Idle_Mean, cicflow_data.Idle_Std, cicflow_data.Idle_Max, cicflow_data.Idle_Min, 
+                            cicflow_data.Bwd_Act_Data_Pkts, cicflow_data.Bwd_RST_Flags, cicflow_data.Bwd_Seg_Size_Min, cicflow_data.Bwd_TCP_Retrans_dot_Count, 
+                            cicflow_data.Fwd_RST_Flags, cicflow_data.Fwd_TCP_Retrans_dot_Count, cicflow_data.ICMP_Code, cicflow_data.ICMP_Type,
+                            cicflow_data.Total_Connection_Flow_Time, cicflow_data.Total_TCP_Retrans_dot_Count) == 1 ) )"/>
 </property>
 </beginning>
 

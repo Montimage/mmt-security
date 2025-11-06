@@ -18,7 +18,7 @@ static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/u
 
 static bool em_predict_attack
 
-(const char* Flow_ID, const char* Src_IP, int Src_Port, const char* Dst_IP, 
+(const char* id, const char* Src_IP, int Src_Port, const char* Dst_IP, 
 int Dst_Port, int Protocol, const char* Timestamp, float Flow_Duration, 
 int Total_Fwd_Packet, int Total_Bwd_packets, float Total_Length_of_Fwd_Packet, 
 float Total_Length_of_Bwd_Packet, float Fwd_Packet_Length_Max, float Fwd_Packet_Length_Min, 
@@ -41,15 +41,14 @@ int Fwd_Bulk_Rate_Avg, int Subflow_Fwd_Packets, int Subflow_Fwd_Bytes,
 int Subflow_Bwd_Packets, int Subflow_Bwd_Bytes, int FWD_Init_Win_Bytes, 
 int Bwd_Init_Win_Bytes, int Fwd_Act_Data_Pkts, int Fwd_Seg_Size_Min, 
 float Active_Mean, float Active_Std, float Active_Max, float Active_Min, 
-float Idle_Mean, float Idle_Std, float Idle_Max, float Idle_Min, const char* Label, 
-const char* id) 
+float Idle_Mean, float Idle_Std, float Idle_Max, float Idle_Min) 
 
 {
     char buffer[4096];
     char command[8192];
 
     snprintf(buffer, sizeof(buffer),
-            "Flow_ID=%s,Src_IP=%s,Src_Port=%d,Dst_IP=%s,Dst_Port=%d,Protocol=%d,"
+            "id=%s,Src_IP=%s,Src_Port=%d,Dst_IP=%s,Dst_Port=%d,Protocol=%d,"
             "Timestamp=%s,Flow_Duration=%f,Total_Fwd_Packet=%d,Total_Bwd_packets=%d,"
             "Total_Length_of_Fwd_Packet=%f,Total_Length_of_Bwd_Packet=%f,Fwd_Packet_Length_Max=%f,"
             "Fwd_Packet_Length_Min=%f,Fwd_Packet_Length_Mean=%f,Fwd_Packet_Length_Std=%f,"
@@ -70,8 +69,8 @@ const char* id)
             "Subflow_Fwd_Packets=%d,Subflow_Fwd_Bytes=%d,Subflow_Bwd_Packets=%d,Subflow_Bwd_Bytes=%d,"
             "FWD_Init_Win_Bytes=%d,Bwd_Init_Win_Bytes=%d,Fwd_Act_Data_Pkts=%d,Fwd_Seg_Size_Min=%d,"
             "Active_Mean=%f,Active_Std=%f,Active_Max=%f,Active_Min=%f,"
-            "Idle_Mean=%f,Idle_Std=%f,Idle_Max=%f,Idle_Min=%f,Label=%s,id=%s",
-            Flow_ID, Src_IP, Src_Port, Dst_IP, Dst_Port, Protocol, Timestamp, 
+            "Idle_Mean=%f,Idle_Std=%f,Idle_Max=%f,Idle_Min=%f",
+            id, Src_IP, Src_Port, Dst_IP, Dst_Port, Protocol, Timestamp, 
             Flow_Duration, Total_Fwd_Packet, Total_Bwd_packets, 
             Total_Length_of_Fwd_Packet, Total_Length_of_Bwd_Packet, 
             Fwd_Packet_Length_Max, Fwd_Packet_Length_Min, Fwd_Packet_Length_Mean, 
@@ -93,7 +92,7 @@ const char* id)
             Subflow_Fwd_Bytes, Subflow_Bwd_Packets, Subflow_Bwd_Bytes, 
             FWD_Init_Win_Bytes, Bwd_Init_Win_Bytes, Fwd_Act_Data_Pkts, 
             Fwd_Seg_Size_Min, Active_Mean, Active_Std, Active_Max, Active_Min, 
-            Idle_Mean, Idle_Std, Idle_Max, Idle_Min, Label, id);
+            Idle_Mean, Idle_Std, Idle_Max, Idle_Min);
 
     
     char result[128];
@@ -150,11 +149,11 @@ const char* id)
     description="Detection of a DDoS attack in Cicflow traffic">
     <event value="COMPUTE" event_id="1" 
         description="There are packets flowing"
-        boolean_expression="( cicflow_data.Flow_Duration>0 )"/>
+        boolean_expression="( cicflow_data.Flow_Duration==0 )"/>
     <event value="COMPUTE" event_id="2" 
         description="Detection of a potential DDoS attack by the ML algorithm"
         boolean_expression="( 
-        (#em_predict_attack(cicflow_data.Flow_ID, cicflow_data.Src_IP, cicflow_data.Src_Port, cicflow_data.Dst_IP, 
+        (#em_predict_attack(cicflow_data.id, cicflow_data.Src_IP, cicflow_data.Src_Port, cicflow_data.Dst_IP, 
                             cicflow_data.Dst_Port, cicflow_data.Protocol, cicflow_data.Timestamp, cicflow_data.Flow_Duration, 
                             cicflow_data.Total_Fwd_Packet, cicflow_data.Total_Bwd_packets, cicflow_data.Total_Length_of_Fwd_Packet, 
                             cicflow_data.Total_Length_of_Bwd_Packet, cicflow_data.Fwd_Packet_Length_Max, cicflow_data.Fwd_Packet_Length_Min, 
@@ -175,7 +174,7 @@ const char* id)
                             cicflow_data.Bwd_Bulk_Rate_Avg, cicflow_data.Subflow_Fwd_Packets, cicflow_data.Subflow_Fwd_Bytes, cicflow_data.Subflow_Bwd_Packets, 
                             cicflow_data.Subflow_Bwd_Bytes, cicflow_data.FWD_Init_Win_Bytes, cicflow_data.Bwd_Init_Win_Bytes, cicflow_data.Fwd_Act_Data_Pkts, 
                             cicflow_data.Fwd_Seg_Size_Min, cicflow_data.Active_Mean, cicflow_data.Active_Std, cicflow_data.Active_Max, cicflow_data.Active_Min, 
-                            cicflow_data.Idle_Mean, cicflow_data.Idle_Std, cicflow_data.Idle_Max, cicflow_data.Idle_Min, cicflow_data.Label, cicflow_data.id) == 1 ) )"/>
+                            cicflow_data.Idle_Mean, cicflow_data.Idle_Std, cicflow_data.Idle_Max, cicflow_data.Idle_Min) == 1 ) )"/>
 </property>
 </beginning>
 

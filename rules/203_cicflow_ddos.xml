@@ -154,12 +154,12 @@ float Total_Connection_Flow_Time, int Total_TCP_Retrans_dot_Count)
 ]]></embedded_functions>
 
 <property value="THEN"  property_id="203" type_property="ATTACK" 
-    description="Detection of a DDoS attack in Cicflow traffic">
+    description="Detection of a ransomware in Cicflow traffic">
     <event value="COMPUTE" event_id="1" 
         description="There are packets flowing"
         boolean_expression="( cicflow_data.Flow_Duration>0 )"/>
     <event value="COMPUTE" event_id="2" 
-        description="Detection of a potential DDoS attack by the ML algorithm"
+        description="Detection of a potential ransomware by the ML algorithm"
         boolean_expression="( 
         (#em_predict_attack(cicflow_data.id, cicflow_data.Src_IP, cicflow_data.Src_Port, cicflow_data.Dst_IP, 
                             cicflow_data.Dst_Port, cicflow_data.Protocol, cicflow_data.Timestamp, cicflow_data.Flow_Duration, 

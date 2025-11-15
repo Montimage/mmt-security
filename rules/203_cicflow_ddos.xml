@@ -145,9 +145,12 @@ float Total_Connection_Flow_Time, int Total_TCP_Retrans_dot_Count)
         last_result[len - 1] = '\0';
     }
 
+    //printf("buffer is %s\n", buffer);
+
     prediction = atoi(last_result);
-    //printf("Prediction is %d\n", prediction);
-    //printf("last_result is %s\n", last_result);
+    printf("Prediction is %d\n", prediction);
+    printf("last_result is %s\n", last_result);
+    //return 0;
     return prediction;
 }
 
@@ -177,9 +180,9 @@ float Total_Connection_Flow_Time, int Total_TCP_Retrans_dot_Count)
                             cicflow_data.Packet_Length_Variance, cicflow_data.FIN_Flag_Count, cicflow_data.SYN_Flag_Count, cicflow_data.RST_Flag_Count, 
                             cicflow_data.PSH_Flag_Count, cicflow_data.ACK_Flag_Count, cicflow_data.URG_Flag_Count, cicflow_data.CWR_Flag_Count, 
                             cicflow_data.ECE_Flag_Count, cicflow_data.Down_per_Up_Ratio, cicflow_data.Average_Packet_Size, cicflow_data.Fwd_Segment_Size_Avg, 
-                            cicflow_data.Bwd_Segment_Size_Avg, cicflow_data.Fwd_Bytes_per_Bulk_Avg, cicflow_data.Fwd_Packet_per_Bulk_Avg, 
-                            cicflow_data.Fwd_Bulk_Rate_Avg, cicflow_data.Bwd_Bytes_per_Bulk_Avg, cicflow_data.Bwd_Packet_per_Bulk_Avg, 
-                            cicflow_data.Bwd_Bulk_Rate_Avg, cicflow_data.Subflow_Fwd_Packets, cicflow_data.Subflow_Fwd_Bytes, cicflow_data.Subflow_Bwd_Packets, 
+                            cicflow_data.Bwd_Segment_Size_Avg, cicflow_data.Bwd_Bytes_per_Bulk_Avg, cicflow_data.Fwd_Bytes_per_Bulk_Avg, 
+                            cicflow_data.Bwd_Bulk_Rate_Avg, cicflow_data.Fwd_Packet_per_Bulk_Avg, cicflow_data.Bwd_Packet_per_Bulk_Avg, 
+                            cicflow_data.Fwd_Bulk_Rate_Avg, cicflow_data.Subflow_Fwd_Packets, cicflow_data.Subflow_Fwd_Bytes, cicflow_data.Subflow_Bwd_Packets, 
                             cicflow_data.Subflow_Bwd_Bytes, cicflow_data.FWD_Init_Win_Bytes, cicflow_data.Bwd_Init_Win_Bytes, cicflow_data.Fwd_Act_Data_Pkts, 
                             cicflow_data.Fwd_Seg_Size_Min, cicflow_data.Active_Mean, cicflow_data.Active_Std, cicflow_data.Active_Max, cicflow_data.Active_Min, 
                             cicflow_data.Idle_Mean, cicflow_data.Idle_Std, cicflow_data.Idle_Max, cicflow_data.Idle_Min, 

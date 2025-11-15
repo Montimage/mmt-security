@@ -1,4 +1,4 @@
-/* This code is generated automatically on 2025-11-06 14:37:04 using MMT-DPI v1.7.10 (c46dd5ff). */
+/* This code is generated automatically on 2025-11-14 11:45:14 using MMT-DPI v1.7.10 (81172ee0). */
 /* If you want to modify something, goto /home/pqv/Documents/mmt-test/mmt-security/src/main_gen_dpi.c */
  #ifndef __MMT_SEC_DPI_H_
  #define __MMT_SEC_DPI_H_
@@ -9685,8 +9685,8 @@ enum data_types {
 	 { .gid =  7448, .id =   69, .data_type = MMT_U32_DATA           , .name = "Subflow_Fwd_Bytes"},
 	 { .gid =  7449, .id =   70, .data_type = MMT_U32_DATA           , .name = "Subflow_Bwd_Packets"},
 	 { .gid =  7450, .id =   71, .data_type = MMT_U32_DATA           , .name = "Subflow_Bwd_Bytes"},
-	 { .gid =  7451, .id =   72, .data_type = MMT_U32_DATA           , .name = "FWD_Init_Win_Bytes"},
-	 { .gid =  7452, .id =   73, .data_type = MMT_U32_DATA           , .name = "Bwd_Init_Win_Bytes"},
+	 { .gid =  7451, .id =   72, .data_type = MMT_DATA_FLOAT         , .name = "FWD_Init_Win_Bytes"},
+	 { .gid =  7452, .id =   73, .data_type = MMT_DATA_FLOAT         , .name = "Bwd_Init_Win_Bytes"},
 	 { .gid =  7453, .id =   74, .data_type = MMT_U32_DATA           , .name = "Fwd_Act_Data_Pkts"},
 	 { .gid =  7454, .id =   75, .data_type = MMT_U32_DATA           , .name = "Fwd_Seg_Size_Min"},
 	 { .gid =  7455, .id =   76, .data_type = MMT_DATA_FLOAT         , .name = "Active_Mean"},
@@ -9703,8 +9703,8 @@ enum data_types {
 	 { .gid =  7466, .id =   87, .data_type = MMT_U32_DATA           , .name = "Bwd_TCP_Retrans_dot_Count"},
 	 { .gid =  7467, .id =   88, .data_type = MMT_U32_DATA           , .name = "Fwd_RST_Flags"},
 	 { .gid =  7468, .id =   89, .data_type = MMT_U32_DATA           , .name = "Fwd_TCP_Retrans_dot_Count"},
-	 { .gid =  7469, .id =   90, .data_type = MMT_U32_DATA           , .name = "ICMP_Code"},
-	 { .gid =  7470, .id =   91, .data_type = MMT_U32_DATA           , .name = "ICMP_Type"},
+	 { .gid =  7469, .id =   90, .data_type = MMT_DATA_FLOAT         , .name = "ICMP_Code"},
+	 { .gid =  7470, .id =   91, .data_type = MMT_DATA_FLOAT         , .name = "ICMP_Type"},
 	 { .gid =  7471, .id =   92, .data_type = MMT_DATA_FLOAT         , .name = "Total_Connection_Flow_Time"},
 	 { .gid =  7472, .id =   93, .data_type = MMT_U32_DATA           , .name = "Total_TCP_Retrans_dot_Count"},
 	 { .gid =  7473, .id = 4096, .data_type = MMT_DATA_POINTER       , .name = "p_hdr"},
@@ -9987,6 +9987,6 @@ static inline long get_attribute_index( uint32_t p_id, uint32_t a_id ){
 	return -1;
 }
  static inline const char* mmt_version(){
-    return "1.7.10 (c46dd5ff)";
+    return "1.7.10 (81172ee0)";
 }
 #endif //__MMT_SEC_DPI_H_

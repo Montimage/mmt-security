@@ -11,8 +11,8 @@ This rule analyses the Cicflow data then predict if a packet sent resembles an a
 #include <stdlib.h>
 #include "mmt_lib.h"
 
-//static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/detection_FERRO_CicflowMeter.py";
-static char* python_script_path = "/home/pqv/Documents/ocpp/detection_FERRO_CicflowMeter.py";
+static char* python_script_path = "/opt/mmt/security/python_scripts_and_models/detection_FERRO_CicflowMeter.py";
+//static char* python_script_path = "/home/pqv/Documents/ocpp/detection_FERRO_CicflowMeter.py";
 
 #include <stdbool.h>
 
@@ -108,13 +108,13 @@ float Total_Connection_Flow_Time, int Total_TCP_Retrans_dot_Count)
     int prediction;
 
     // Command to call the Python script
-    snprintf(command, sizeof(command),
-             "bash -c 'cd /home/pqv/Documents/ocpp/ && source .venv/bin/activate && python3 %s \"%s\"'",
-             python_script_path, buffer);
-
     //snprintf(command, sizeof(command),
-    //         "bash -c 'python3 %s \"%s\"'",
+    //         "bash -c 'cd /home/pqv/Documents/ocpp/ && source .venv/bin/activate && python3 %s \"%s\"'",
     //         python_script_path, buffer);
+
+    snprintf(command, sizeof(command),
+             "bash -c 'python3 %s \"%s\"'",
+             python_script_path, buffer);
 
 
     FILE *fp = popen(command, "r");
@@ -148,21 +148,23 @@ float Total_Connection_Flow_Time, int Total_TCP_Retrans_dot_Count)
     //printf("buffer is %s\n", buffer);
 
     prediction = atoi(last_result);
-    printf("Prediction is %d\n", prediction);
-    printf("last_result is %s\n", last_result);
-    //return 0;
-    return prediction;
+    //printf("Prediction is %d\n", prediction);
+    //printf("last_result is %s\n", last_result);
+    if (prediction == 1) {
+        return 1;
+    }
+    return 0;
 }
 
 ]]></embedded_functions>
 
 <property value="THEN"  property_id="203" type_property="ATTACK" 
-    description="Detection of a ransomware in Cicflow traffic">
+    description="Detection of a potential PHP intrusion attempt">
     <event value="COMPUTE" event_id="1" 
         description="There are packets flowing"
         boolean_expression="( cicflow_data.Flow_Duration>0 )"/>
     <event value="COMPUTE" event_id="2" 
-        description="Detection of a potential ransomware by the ML algorithm"
+        description="Detection of a potential PHP intrusion attempt by the ML algorithm"
         boolean_expression="( 
         (#em_predict_attack(cicflow_data.id, cicflow_data.Src_IP, cicflow_data.Src_Port, cicflow_data.Dst_IP, 
                             cicflow_data.Dst_Port, cicflow_data.Protocol, cicflow_data.Timestamp, cicflow_data.Flow_Duration, 

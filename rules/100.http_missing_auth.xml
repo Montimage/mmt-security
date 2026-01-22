@@ -1,0 +1,76 @@
+<beginning>
+<!-- Property 100: HTTP Missing Authorization Header Detection
+     Detects HTTP requests to protected endpoints that lack Authorization header.
+     This indicates potential unauthorized access attempts.
+-->
+<embedded_functions><![CDATA[
+#include <string.h>
+#include <ctype.h>
+
+// List of protected URI patterns that require authorization
+static const char *protected_paths[] = {
+    "/anomalies",
+    "/anomaly/",
+    "/api/",
+    "/admin/",
+    "/user/",
+    "/account/",
+    "/dashboard/",
+    "/private/"
+};
+
+// Check if URI matches a protected path
+static inline int em_is_protected_uri(const char *uri) {
+    if (uri == NULL) return 0;
+
+    int i;
+    int num_paths = sizeof(protected_paths) / sizeof(protected_paths[0]);
+
+    for (i = 0; i < num_paths; i++) {
+        if (strstr(uri, protected_paths[i]) != NULL) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Check if payload contains Authorization header
+// Returns 1 if Authorization is MISSING (alert condition)
+static inline int em_check_missing_auth(const char *payload, int payload_len, const char *uri) {
+    if (payload == NULL || payload_len <= 0) return 0;
+    if (uri == NULL) return 0;
+
+    // First check if this is a protected URI
+    if (!em_is_protected_uri(uri)) {
+        return 0;  // Not a protected path, no alert needed
+    }
+
+    // Search for Authorization header (case-insensitive search)
+    const char *p = payload;
+    const char *end = payload + payload_len;
+
+    while (p < end - 13) {  // 13 = strlen("Authorization")
+        // Look for "Authorization:" at start of line
+        if ((*p == 'A' || *p == 'a') &&
+            (strncasecmp(p, "Authorization:", 14) == 0 ||
+             strncasecmp(p, "authorization:", 14) == 0)) {
+            return 0;  // Found Authorization header, no alert
+        }
+        p++;
+    }
+
+    // Authorization header not found on protected endpoint
+    return 1;
+}
+]]></embedded_functions>
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="100" type_property="ATTACK"
+    description="HTTP request to protected endpoint without Authorization header">
+    <event event_id="1" value="COMPUTE"
+           description="HTTP request with payload"
+           boolean_expression="((http.method != '') &amp;&amp; (http.uri != '') &amp;&amp; (tcp.p_payload != 0))"/>
+    <event event_id="2" value="COMPUTE"
+           description="Protected endpoint without Authorization header"
+           boolean_expression="(#em_check_missing_auth(tcp.p_payload, tcp.payload_len, http.uri) == 1)"/>
+</property>
+</beginning>

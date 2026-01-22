@@ -1,0 +1,230 @@
+<beginning>
+<!-- Property 105: HTTP Parameter Injection Detection
+     Detects SQL injection, XSS, and command injection patterns in HTTP URIs.
+     Includes URL-decoded pattern matching.
+-->
+<embedded_functions><![CDATA[
+#include <string.h>
+#include <ctype.h>
+
+// URL decode helper - decodes %XX sequences
+static inline char hex_to_char(char h, char l) {
+    int hi = (h >= 'a') ? (h - 'a' + 10) : ((h >= 'A') ? (h - 'A' + 10) : (h - '0'));
+    int lo = (l >= 'a') ? (l - 'a' + 10) : ((l >= 'A') ? (l - 'A' + 10) : (l - '0'));
+    return (char)((hi << 4) | lo);
+}
+
+static inline int is_hex(char c) {
+    return ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+}
+
+// URL decode into buffer, returns decoded length
+static inline size_t url_decode(const char *src, char *dst, size_t max_len) {
+    if (src == NULL || dst == NULL || max_len == 0) return 0;
+
+    size_t i = 0, j = 0;
+    size_t src_len = strlen(src);
+
+    while (i < src_len && j < max_len - 1) {
+        if (src[i] == '%' && i + 2 < src_len && is_hex(src[i+1]) && is_hex(src[i+2])) {
+            dst[j++] = hex_to_char(src[i+1], src[i+2]);
+            i += 3;
+        } else if (src[i] == '+') {
+            dst[j++] = ' ';
+            i++;
+        } else {
+            dst[j++] = src[i++];
+        }
+    }
+    dst[j] = '\0';
+    return j;
+}
+
+// SQL injection patterns
+static const char *sql_patterns[] = {
+    "' or ",
+    "' and ",
+    "\" or ",
+    "\" and ",
+    "1=1",
+    "1'='1",
+    "'='",
+    "union select",
+    "union all select",
+    "select * from",
+    "drop table",
+    "drop database",
+    "insert into",
+    "delete from",
+    "update set",
+    "exec(",
+    "execute(",
+    "xp_cmdshell",
+    "sp_executesql",
+    "benchmark(",
+    "sleep(",
+    "waitfor delay",
+    "/**/",
+    "--",
+    "#",
+    "@@version",
+    "information_schema",
+    "load_file(",
+    "into outfile",
+    "into dumpfile"
+};
+
+// XSS patterns
+static const char *xss_patterns[] = {
+    "<script",
+    "javascript:",
+    "onerror=",
+    "onload=",
+    "onclick=",
+    "onmouseover=",
+    "onfocus=",
+    "onblur=",
+    "alert(",
+    "document.cookie",
+    "document.location",
+    "eval(",
+    "fromcharcode",
+    "expression(",
+    "vbscript:",
+    "<iframe",
+    "<img src",
+    "<svg",
+    "data:text/html"
+};
+
+// Command injection patterns
+static const char *cmd_patterns[] = {
+    "; cat ",
+    "; ls ",
+    "; pwd",
+    "; whoami",
+    "; id",
+    "| cat ",
+    "| ls ",
+    "| whoami",
+    "`cat ",
+    "`ls ",
+    "`whoami`",
+    "$(cat",
+    "$(ls",
+    "$(whoami)",
+    "../../../",
+    "..\\..\\",
+    "/etc/passwd",
+    "/etc/shadow",
+    "cmd.exe",
+    "powershell"
+};
+
+// Convert string to lowercase for comparison
+static inline void to_lower(char *str) {
+    while (*str) {
+        *str = tolower(*str);
+        str++;
+    }
+}
+
+// Check for SQL injection patterns
+static inline int em_check_sql_injection(const char *uri) {
+    if (uri == NULL) return 0;
+
+    char decoded[2048];
+    url_decode(uri, decoded, sizeof(decoded));
+    to_lower(decoded);
+
+    int i;
+    int num_patterns = sizeof(sql_patterns) / sizeof(sql_patterns[0]);
+
+    for (i = 0; i < num_patterns; i++) {
+        if (strstr(decoded, sql_patterns[i]) != NULL) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Check for XSS patterns
+static inline int em_check_xss(const char *uri) {
+    if (uri == NULL) return 0;
+
+    char decoded[2048];
+    url_decode(uri, decoded, sizeof(decoded));
+    to_lower(decoded);
+
+    int i;
+    int num_patterns = sizeof(xss_patterns) / sizeof(xss_patterns[0]);
+
+    for (i = 0; i < num_patterns; i++) {
+        if (strstr(decoded, xss_patterns[i]) != NULL) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Check for command injection patterns
+static inline int em_check_cmd_injection(const char *uri) {
+    if (uri == NULL) return 0;
+
+    char decoded[2048];
+    url_decode(uri, decoded, sizeof(decoded));
+    to_lower(decoded);
+
+    int i;
+    int num_patterns = sizeof(cmd_patterns) / sizeof(cmd_patterns[0]);
+
+    for (i = 0; i < num_patterns; i++) {
+        if (strstr(decoded, cmd_patterns[i]) != NULL) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Combined check for any injection type
+static inline int em_check_any_injection(const char *uri) {
+    if (uri == NULL) return 0;
+    return (em_check_sql_injection(uri) ||
+            em_check_xss(uri) ||
+            em_check_cmd_injection(uri)) ? 1 : 0;
+}
+]]></embedded_functions>
+
+<!-- Rule 105: Detect SQL injection attempts -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="105" type_property="ATTACK"
+    description="SQL injection attempt detected in HTTP URI">
+    <event event_id="1" value="COMPUTE"
+           description="HTTP request with URI"
+           boolean_expression="((http.method != '') &amp;&amp; (http.uri != ''))"/>
+    <event event_id="2" value="COMPUTE"
+           description="SQL injection pattern detected"
+           boolean_expression="(#em_check_sql_injection(http.uri) == 1)"/>
+</property>
+
+<!-- Rule 106: Detect XSS attempts -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="106" type_property="ATTACK"
+    description="XSS (Cross-Site Scripting) attempt detected in HTTP URI">
+    <event event_id="1" value="COMPUTE"
+           description="HTTP request with URI"
+           boolean_expression="((http.method != '') &amp;&amp; (http.uri != ''))"/>
+    <event event_id="2" value="COMPUTE"
+           description="XSS pattern detected"
+           boolean_expression="(#em_check_xss(http.uri) == 1)"/>
+</property>
+
+<!-- Rule 107: Detect command injection attempts -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="107" type_property="ATTACK"
+    description="Command injection attempt detected in HTTP URI">
+    <event event_id="1" value="COMPUTE"
+           description="HTTP request with URI"
+           boolean_expression="((http.method != '') &amp;&amp; (http.uri != ''))"/>
+    <event event_id="2" value="COMPUTE"
+           description="Command injection pattern detected"
+           boolean_expression="(#em_check_cmd_injection(http.uri) == 1)"/>
+</property>
+</beginning>

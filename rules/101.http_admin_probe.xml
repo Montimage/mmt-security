@@ -1,0 +1,163 @@
+<beginning>
+<!-- Property 101: HTTP Admin URL Probing Detection
+     Detects HTTP requests to well-known admin/CMS URLs that indicate
+     reconnaissance or probing attempts.
+     URLs include: WordPress, PHPMyAdmin, Drupal, Joomla, admin panels, etc.
+-->
+<embedded_functions><![CDATA[
+#include <string.h>
+
+static mmt_hash_t *admin_url_table = NULL;
+
+// List of well-known admin URLs to detect
+static const char *admin_probe_urls[] = {
+    // WordPress
+    "/wp-admin",
+    "/wp-login",
+    "/wp-login.php",
+    "/wp-json",
+    "/wp-content",
+    "/wp-includes",
+    "/xmlrpc.php",
+    "/wp-config.php",
+    "/wp-cron.php",
+
+    // PHPMyAdmin
+    "/phpmyadmin",
+    "/phpMyAdmin",
+    "/pma",
+    "/mysql",
+    "/myadmin",
+    "/sql",
+    "/dbadmin",
+
+    // Drupal
+    "/drupal",
+    "/sites/default",
+    "/misc/drupal.js",
+    "/user/login",
+    "/admin/content",
+
+    // Joomla
+    "/administrator",
+    "/joomla",
+
+    // Generic admin paths
+    "/admin",
+    "/admin.php",
+    "/administrator.php",
+    "/login",
+    "/login.php",
+    "/panel",
+    "/cpanel",
+    "/webadmin",
+    "/siteadmin",
+    "/adminpanel",
+    "/controlpanel",
+    "/backend",
+    "/manage",
+    "/manager",
+    "/console",
+    "/portal",
+
+    // Config/sensitive files
+    "/.env",
+    "/.git",
+    "/.svn",
+    "/.htaccess",
+    "/.htpasswd",
+    "/config.php",
+    "/configuration.php",
+    "/settings.php",
+    "/database.yml",
+    "/web.config",
+    "/server-status",
+    "/server-info",
+
+    // Common CMS/frameworks
+    "/typo3",
+    "/magento",
+    "/laravel",
+    "/symfony",
+    "/craft",
+    "/struts",
+
+    // phpinfo and debug
+    "/phpinfo.php",
+    "/info.php",
+    "/test.php",
+    "/debug",
+
+    // Backup files
+    "/backup",
+    "/.backup",
+    "/db.sql",
+    "/database.sql",
+    "/dump.sql"
+};
+
+static inline int em_check_admin_probe(const char *uri) {
+    if (uri == NULL || admin_url_table == NULL) return 0;
+
+    size_t uri_len = strlen(uri);
+    if (uri_len == 0) return 0;
+
+    // Direct lookup first
+    if (mmt_hash_search(admin_url_table, uri, uri_len) != NULL) {
+        return 1;
+    }
+
+    // Check if URI starts with any of the admin paths
+    int i;
+    int num_urls = sizeof(admin_probe_urls) / sizeof(admin_probe_urls[0]);
+    for (i = 0; i < num_urls; i++) {
+        const char *admin_path = admin_probe_urls[i];
+        size_t admin_len = strlen(admin_path);
+
+        // Check if URI starts with admin path
+        if (uri_len >= admin_len && strncasecmp(uri, admin_path, admin_len) == 0) {
+            // Make sure it's a path match (followed by / or ? or end of string)
+            if (uri_len == admin_len ||
+                uri[admin_len] == '/' ||
+                uri[admin_len] == '?' ||
+                uri[admin_len] == '#') {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+void on_load() {
+    int i;
+    int num_urls = sizeof(admin_probe_urls) / sizeof(admin_probe_urls[0]);
+    const char *url;
+
+    admin_url_table = mmt_hash_create(num_urls * 2);
+    mmt_debug("Rule 101.admin_probe: Created table with %d admin URLs", num_urls);
+
+    for (i = 0; i < num_urls; i++) {
+        url = admin_probe_urls[i];
+        mmt_hash_add(admin_url_table, url, strlen(url), (void *)url, false);
+    }
+}
+
+void on_unload() {
+    if (admin_url_table != NULL) {
+        mmt_hash_free(admin_url_table);
+        admin_url_table = NULL;
+    }
+}
+]]></embedded_functions>
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="101" type_property="ATTACK"
+    description="HTTP admin URL probing detected (reconnaissance attempt)">
+    <event event_id="1" value="COMPUTE"
+           description="HTTP request detected"
+           boolean_expression="((http.method != '') &amp;&amp; (http.uri != ''))"/>
+    <event event_id="2" value="COMPUTE"
+           description="Request to admin/sensitive URL"
+           boolean_expression="(#em_check_admin_probe(http.uri) == 1)"/>
+</property>
+</beginning>

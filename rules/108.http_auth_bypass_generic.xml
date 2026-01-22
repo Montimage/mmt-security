@@ -1,0 +1,75 @@
+<beginning>
+<!-- Property 108: Generic HTTP Authentication Bypass Detection
+
+     This rule detects authentication bypass attempts WITHOUT requiring
+     prior knowledge of protected paths. It works by correlating:
+     - HTTP requests that lack Authorization header
+     - With HTTP 401 Unauthorized responses
+
+     This is more generic than Rule 100 because the SERVER tells us
+     which endpoints require auth (by returning 401).
+-->
+<embedded_functions><![CDATA[
+#include <string.h>
+
+// Check if payload is an HTTP request WITHOUT Authorization header
+// Returns 1 if request lacks auth, 0 otherwise
+static inline int em_is_request_without_auth(const char *payload, int len) {
+    if (payload == NULL || len < 10) return 0;
+
+    // Must be an HTTP request (starts with method)
+    if (strncmp(payload, "GET ", 4) != 0 &&
+        strncmp(payload, "POST ", 5) != 0 &&
+        strncmp(payload, "PUT ", 4) != 0 &&
+        strncmp(payload, "DELETE ", 7) != 0 &&
+        strncmp(payload, "PATCH ", 6) != 0) {
+        return 0;  // Not a request
+    }
+
+    // Search for Authorization header
+    const char *p = payload;
+    const char *end = payload + len;
+
+    while (p < end - 14) {
+        if ((*p == 'A' || *p == 'a') &&
+            strncasecmp(p, "Authorization:", 14) == 0) {
+            return 0;  // Has auth - not an attack
+        }
+        p++;
+    }
+
+    return 1;  // Request without Authorization
+}
+
+// Check if payload is HTTP 401 response
+static inline int em_is_401_response(const char *payload, int len) {
+    if (payload == NULL || len < 12) return 0;
+
+    // Check for "HTTP/1.x 401"
+    if (strncmp(payload, "HTTP/1.", 7) != 0) return 0;
+
+    const char *p = payload + 8;
+    while (*p == ' ' && p < payload + len) p++;
+
+    return (strncmp(p, "401", 3) == 0) ? 1 : 0;
+}
+]]></embedded_functions>
+
+<!--
+     Detection Strategy:
+     Event 1: HTTP request WITHOUT Authorization header
+     Event 2: Server responds with 401 Unauthorized
+
+     This correlates the attack (no auth) with the proof (server rejected it)
+     No need to know protected paths in advance!
+-->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="1000" property_id="108" type_property="ATTACK"
+    description="HTTP authentication bypass attempt - request without auth received 401 response">
+    <event event_id="1" value="COMPUTE"
+           description="HTTP request without Authorization header"
+           boolean_expression="((tcp.p_payload != 0) &amp;&amp; (#em_is_request_without_auth(tcp.p_payload, tcp.payload_len) == 1))"/>
+    <event event_id="2" value="COMPUTE"
+           description="Server responded with 401 Unauthorized"
+           boolean_expression="((tcp.p_payload != 0) &amp;&amp; (#em_is_401_response(tcp.p_payload, tcp.payload_len) == 1))"/>
+</property>
+</beginning>

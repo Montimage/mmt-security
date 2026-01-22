@@ -1,0 +1,80 @@
+<beginning>
+<!-- Property 102-104: HTTP Suspicious Response Code Detection
+     Detects HTTP responses with error codes using TCP payload inspection.
+-->
+<embedded_functions><![CDATA[
+#include <string.h>
+#include <stdlib.h>
+
+// Check if payload starts with HTTP response and extract code
+static inline int em_get_http_response_code(const char *payload, int len) {
+    if (payload == NULL || len < 12) return 0;
+
+    // Check for HTTP/1.x response
+    if (strncmp(payload, "HTTP/1.", 7) != 0) return 0;
+
+    // Find the space after HTTP/1.x
+    const char *p = payload + 8;  // Skip "HTTP/1.x"
+    while (*p == ' ' && p < payload + len) p++;
+
+    if (p >= payload + len) return 0;
+
+    // Extract the status code
+    return atoi(p);
+}
+
+// Check for 401 Unauthorized
+static inline int em_check_401_in_payload(const char *payload, int len) {
+    if (payload == NULL || len < 12) return 0;
+    int code = em_get_http_response_code(payload, len);
+    return (code == 401) ? 1 : 0;
+}
+
+// Check for 404 Not Found
+static inline int em_check_404_in_payload(const char *payload, int len) {
+    if (payload == NULL || len < 12) return 0;
+    int code = em_get_http_response_code(payload, len);
+    return (code == 404) ? 1 : 0;
+}
+
+// Check for 422 Unprocessable Entity or 400 Bad Request
+static inline int em_check_4xx_invalid_in_payload(const char *payload, int len) {
+    if (payload == NULL || len < 12) return 0;
+    int code = em_get_http_response_code(payload, len);
+    return (code == 422 || code == 400) ? 1 : 0;
+}
+]]></embedded_functions>
+
+<!-- Rule 102: Detect 401 Unauthorized responses via payload -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="102" type_property="ATTACK"
+    description="HTTP 401 Unauthorized - Authentication failure detected">
+    <event event_id="1" value="COMPUTE"
+           description="TCP payload exists"
+           boolean_expression="(tcp.p_payload != 0)"/>
+    <event event_id="2" value="COMPUTE"
+           description="Response code is 401 Unauthorized"
+           boolean_expression="(#em_check_401_in_payload(tcp.p_payload, tcp.payload_len) == 1)"/>
+</property>
+
+<!-- Rule 103: Detect 404 Not Found responses via payload -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="103" type_property="EVASION"
+    description="HTTP 404 Not Found - Resource probing detected">
+    <event event_id="1" value="COMPUTE"
+           description="TCP payload exists"
+           boolean_expression="(tcp.p_payload != 0)"/>
+    <event event_id="2" value="COMPUTE"
+           description="Response code is 404 Not Found"
+           boolean_expression="(#em_check_404_in_payload(tcp.p_payload, tcp.payload_len) == 1)"/>
+</property>
+
+<!-- Rule 104: Detect 422/400 responses via payload -->
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="104" type_property="ATTACK"
+    description="HTTP 422/400 - Invalid input detected">
+    <event event_id="1" value="COMPUTE"
+           description="TCP payload exists"
+           boolean_expression="(tcp.p_payload != 0)"/>
+    <event event_id="2" value="COMPUTE"
+           description="Response code is 422 or 400"
+           boolean_expression="(#em_check_4xx_invalid_in_payload(tcp.p_payload, tcp.payload_len) == 1)"/>
+</property>
+</beginning>

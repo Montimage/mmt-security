@@ -1,0 +1,64 @@
+<beginning>
+<!-- Property 116: Detect UR Dashboard command injection (T1059, T1055).
+     Detects TCP data to Universal Robots ports (29999, 30001, 30002) containing
+     known dangerous dashboard commands (load, play, power on, brake release,
+     shutdown, unlock protective stop, etc.).
+-->
+<embedded_functions><![CDATA[
+#include <string.h>
+
+static inline int em_is_ur_port(double port) {
+    int p = (int)port;
+    // UR Dashboard Server port
+    if (p == 29999) return 1;
+    // UR Primary interface port
+    if (p == 30001) return 1;
+    // UR Secondary/Real-time interface port
+    if (p == 30002) return 1;
+    return 0;
+}
+
+static inline int em_check_ur_dashboard_cmd(const char *payload) {
+    if (payload == NULL) return 0;
+
+    // Dangerous UR dashboard commands
+    static const char *commands[] = {
+        "load ",
+        "play\n",
+        "play\r",
+        "power on",
+        "power off",
+        "brake release",
+        "shutdown",
+        "unlock protective stop",
+        "close safety popup",
+        "restart safety",
+        "load installation",
+        "quit\n",
+        "quit\r",
+        "stop\n",
+        "stop\r"
+    };
+    static const int num_commands = sizeof(commands) / sizeof(commands[0]);
+
+    int i;
+    for (i = 0; i < num_commands; i++) {
+        if (strstr(payload, commands[i]) != NULL) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+]]></embedded_functions>
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="116" type_property="ATTACK"
+    description="UR Dashboard command injection detected on UR robot interface port (T1059, T1055). Unauthorized command sent to Universal Robots dashboard or secondary interface.">
+    <event value="COMPUTE" event_id="1"
+           description="TCP PSH packet on UR port with dangerous dashboard command"
+           boolean_expression="((tcp.psh == 1) &amp;&amp; ((#em_is_ur_port(tcp.dest_port) == 1) &amp;&amp; (#em_check_ur_dashboard_cmd(tcp.p_payload) == 1)))"/>
+    <event value="COMPUTE" event_id="2"
+           description="Confirm different source and destination"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

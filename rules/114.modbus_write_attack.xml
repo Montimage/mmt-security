@@ -1,0 +1,50 @@
+<beginning>
+<!-- Property 114: Detect Modbus/TCP write attacks (T1565.001, T1070).
+     Parses MBAP header in TCP payload on port 502, verifies protocol ID (0x0000),
+     and detects write function codes (5, 6, 15, 16, 22, 23).
+-->
+<embedded_functions><![CDATA[
+#include <string.h>
+
+static inline int em_check_modbus_write(const char *payload, double payload_len) {
+    if (payload == NULL) return 0;
+    int len = (int)payload_len;
+
+    // Minimum MBAP header (7 bytes) + function code (1 byte) = 8 bytes
+    if (len < 8) return 0;
+
+    const unsigned char *data = (const unsigned char *)payload;
+
+    // Check Modbus/TCP protocol ID at bytes 2-3 (must be 0x0000)
+    if (data[2] != 0x00 || data[3] != 0x00) return 0;
+
+    // Function code is at byte 7 (after 7-byte MBAP header)
+    unsigned char func_code = data[7];
+
+    // Detect write function codes:
+    //  5 = Write Single Coil
+    //  6 = Write Single Register
+    // 15 = Write Multiple Coils
+    // 16 = Write Multiple Registers
+    // 22 = Mask Write Register
+    // 23 = Read/Write Multiple Registers
+    if (func_code == 5 || func_code == 6 ||
+        func_code == 15 || func_code == 16 ||
+        func_code == 22 || func_code == 23) {
+        return 1;
+    }
+
+    return 0;
+}
+]]></embedded_functions>
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="114" type_property="ATTACK"
+    description="Modbus/TCP write command detected on port 502 (T1565.001, T1070). Possible unauthorized modification of PLC registers or coils.">
+    <event value="COMPUTE" event_id="1"
+           description="TCP PSH packet on Modbus port 502 with write function code"
+           boolean_expression="((tcp.psh == 1) &amp;&amp; ((tcp.dest_port == 502) &amp;&amp; (#em_check_modbus_write(tcp.p_payload, tcp.payload_len) == 1)))"/>
+    <event value="COMPUTE" event_id="2"
+           description="Confirm different source and destination"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

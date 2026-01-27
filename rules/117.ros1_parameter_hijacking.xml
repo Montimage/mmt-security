@@ -1,0 +1,63 @@
+<beginning>
+<!-- Property 117: Detect ROS1 parameter hijacking via setParam (T1565.001, T1036).
+     Detects XML-RPC setParam calls to ROS Master modifying safety-critical parameters
+     such as safety_enabled, max_velocity, max_acceleration, emergency_stop,
+     collision_detection, etc.
+-->
+<embedded_functions><![CDATA[
+#include <string.h>
+
+static inline int em_check_ros1_param_hijack(const char *payload) {
+    if (payload == NULL) return 0;
+
+    // Verify this is an XML-RPC request
+    if (strstr(payload, "<methodCall>") == NULL &&
+        strstr(payload, "<?xml") == NULL) return 0;
+
+    // Must contain setParam method
+    const char *method_start = strstr(payload, "<methodName>");
+    if (method_start == NULL) return 0;
+    if (strstr(method_start, "setParam") == NULL) return 0;
+
+    // Safety-critical parameter names
+    static const char *critical_params[] = {
+        "safety_enabled",
+        "max_velocity",
+        "max_acceleration",
+        "max_speed",
+        "emergency_stop",
+        "collision_detection",
+        "collision_threshold",
+        "speed_limit",
+        "force_limit",
+        "payload_mass",
+        "joint_limit",
+        "workspace_limit",
+        "protective_stop",
+        "speed_scaling",
+        "robot_enabled",
+        "use_sim_time"
+    };
+    static const int num_params = sizeof(critical_params) / sizeof(critical_params[0]);
+
+    int i;
+    for (i = 0; i < num_params; i++) {
+        if (strstr(payload, critical_params[i]) != NULL) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+]]></embedded_functions>
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="117" type_property="ATTACK"
+    description="ROS1 parameter hijacking detected: setParam call modifying safety-critical parameters on ROS Master (T1565.001, T1036).">
+    <event value="COMPUTE" event_id="1"
+           description="TCP PSH packet on ROS Master port 11311 with setParam modifying critical parameters"
+           boolean_expression="((tcp.psh == 1) &amp;&amp; ((tcp.dest_port == 11311) &amp;&amp; (#em_check_ros1_param_hijack(tcp.p_payload) == 1)))"/>
+    <event value="COMPUTE" event_id="2"
+           description="Confirm different source and destination"
+           boolean_expression="(ip.src != ip.dst)"/>
+</property>
+</beginning>

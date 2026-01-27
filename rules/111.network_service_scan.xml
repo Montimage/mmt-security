@@ -1,0 +1,25 @@
+<beginning>
+<!-- Property 111: Detect network service scanning with wider time window than rule 40 (T1046).
+     Detects 4+ SYN packets to different destination ports from the same source within 10 seconds.
+     Catches slower scans that rule 40 (10ms window) would miss.
+-->
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="10" property_id="111" type_property="ATTACK"
+    description="Network service scanning detected: 4+ SYN packets to different ports from same source within 10s (T1046).">
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="10">
+        <event value="COMPUTE" event_id="1"
+               description="TCP SYN packet to a destination port (1)"
+               boolean_expression="((tcp.flags == 2) &amp;&amp; (tcp.syn == 1))"/>
+        <event value="COMPUTE" event_id="2"
+               description="TCP SYN packet to a different destination port from same source (2)"
+               boolean_expression="((tcp.flags == 2) &amp;&amp; ((tcp.syn == 1) &amp;&amp; ((tcp.dest_port != tcp.dest_port.1) &amp;&amp; ((ip.src == ip.src.1) &amp;&amp; (ip.dst == ip.dst.1)))))"/>
+    </operator>
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="10">
+        <event value="COMPUTE" event_id="3"
+               description="TCP SYN packet to a different destination port from same source (3)"
+               boolean_expression="((tcp.flags == 2) &amp;&amp; ((tcp.syn == 1) &amp;&amp; ((tcp.dest_port != tcp.dest_port.1) &amp;&amp; ((tcp.dest_port != tcp.dest_port.2) &amp;&amp; ((ip.src == ip.src.1) &amp;&amp; (ip.dst == ip.dst.1))))))"/>
+        <event value="COMPUTE" event_id="4"
+               description="TCP SYN packet to a different destination port from same source (4)"
+               boolean_expression="((tcp.flags == 2) &amp;&amp; ((tcp.syn == 1) &amp;&amp; ((tcp.dest_port != tcp.dest_port.1) &amp;&amp; ((tcp.dest_port != tcp.dest_port.2) &amp;&amp; ((tcp.dest_port != tcp.dest_port.3) &amp;&amp; ((ip.src == ip.src.1) &amp;&amp; (ip.dst == ip.dst.1)))))))"/>
+    </operator>
+</property>
+</beginning>

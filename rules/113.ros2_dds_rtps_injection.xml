@@ -1,0 +1,49 @@
+<beginning>
+<!-- Property 113: Detect ROS2 DDS/RTPS topic message injection (T1055, T1565.001).
+     Detects repeated RTPS packets (magic bytes 0x52545053) sent to DDS port range
+     (7400-7415) over UDP. Triggers when 4 events from same source occur within 15 seconds.
+-->
+<embedded_functions><![CDATA[
+#include <string.h>
+
+static inline int em_check_rtps_magic(const char *payload) {
+    if (payload == NULL) return 0;
+
+    // RTPS magic bytes: 'R' 'T' 'P' 'S' (0x52 0x54 0x50 0x53)
+    if ((unsigned char)payload[0] == 0x52 &&
+        (unsigned char)payload[1] == 0x54 &&
+        (unsigned char)payload[2] == 0x50 &&
+        (unsigned char)payload[3] == 0x53) {
+        return 1;
+    }
+    return 0;
+}
+
+static inline int em_is_dds_port(double port) {
+    int p = (int)port;
+    // Standard DDS/RTPS discovery and data port range: 7400-7415
+    if (p >= 7400 && p <= 7415) return 1;
+    return 0;
+}
+]]></embedded_functions>
+
+<property value="THEN" delay_units="s" delay_min="0+" delay_max="15" property_id="113" type_property="ATTACK"
+    description="ROS2 DDS/RTPS topic message injection detected: 4+ RTPS packets from same source to DDS ports within 15s (T1055, T1565.001).">
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="15">
+        <event value="COMPUTE" event_id="1"
+               description="RTPS packet to DDS port (1)"
+               boolean_expression="((#em_is_dds_port(udp.dest_port) == 1) &amp;&amp; (#em_check_rtps_magic(udp.p_payload) == 1))"/>
+        <event value="COMPUTE" event_id="2"
+               description="RTPS packet to DDS port from same source (2)"
+               boolean_expression="((#em_is_dds_port(udp.dest_port) == 1) &amp;&amp; ((#em_check_rtps_magic(udp.p_payload) == 1) &amp;&amp; (ip.src == ip.src.1)))"/>
+    </operator>
+    <operator value="THEN" delay_units="s" delay_min="0+" delay_max="15">
+        <event value="COMPUTE" event_id="3"
+               description="RTPS packet to DDS port from same source (3)"
+               boolean_expression="((#em_is_dds_port(udp.dest_port) == 1) &amp;&amp; ((#em_check_rtps_magic(udp.p_payload) == 1) &amp;&amp; (ip.src == ip.src.1)))"/>
+        <event value="COMPUTE" event_id="4"
+               description="RTPS packet to DDS port from same source (4)"
+               boolean_expression="((#em_is_dds_port(udp.dest_port) == 1) &amp;&amp; ((#em_check_rtps_magic(udp.p_payload) == 1) &amp;&amp; (ip.src == ip.src.1)))"/>
+    </operator>
+</property>
+</beginning>

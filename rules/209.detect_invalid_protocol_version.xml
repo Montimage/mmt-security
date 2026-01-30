@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 209: Detect invalid DICOM protocol version (not 1) in A-ASSOCIATE-RQ -->
+<property property_id="209" type_property="ATTACK"
+     description="Detect invalid DICOM protocol version">
+    <event description="DICOM A-ASSOCIATE-RQ or A-ASSOCIATE-AC with protocol version != 1"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type &gt; 0) &amp;&amp; (dicom.pdu_type &lt; 3) &amp;&amp; (dicom.proto_version != 1))"/>
+</property>
+</beginning>

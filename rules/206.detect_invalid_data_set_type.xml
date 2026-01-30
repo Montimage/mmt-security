@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 206: Detect invalid DICOM data set type (not 0x0001 or 0x0101) -->
+<property property_id="206" type_property="ATTACK"
+     description="Detect invalid DICOM data set type">
+    <event description="DICOM command PDV with invalid data_set_type"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.data_set_type != 1) &amp;&amp; (dicom.data_set_type != 257))"/>
+</property>
+</beginning>

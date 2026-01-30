@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 207: Detect DICOM PDU length exceeding 16MB (16777216) -->
+<property property_id="207" type_property="ATTACK"
+     description="Detect DICOM PDU length exceeding 16MB">
+    <event description="DICOM packet with PDU length exceeding 16MB"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_len &gt; 16777216))"/>
+</property>
+</beginning>

@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 210: Detect DICOM PDV length less than 4 bytes -->
+<property property_id="210" type_property="ATTACK"
+     description="Detect DICOM PDV length anomaly (less than 4 bytes)">
+    <event description="DICOM P-DATA-TF with PDV length less than 4"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.pdv_length &lt; 4))"/>
+</property>
+</beginning>

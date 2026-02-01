@@ -1,0 +1,13 @@
+<beginning>
+<!-- Detection Rule 216: Detect A-ASSOCIATE-RQ after P-DATA-TF (re-association mid-transfer) -->
+<!-- Catches fuzz rules 63, 64: PDU type swaps creating out-of-order state machine -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="5" property_id="216" type_property="ATTACK"
+     description="Detect DICOM A-ASSOCIATE-RQ after P-DATA-TF (re-association during transfer)">
+    <event event_id="1" value="COMPUTE"
+        description="P-DATA-TF observed in flow"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4))"/>
+    <event event_id="2" value="COMPUTE"
+        description="A-ASSOCIATE-RQ observed after data transfer started"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 1))"/>
+</property>
+</beginning>

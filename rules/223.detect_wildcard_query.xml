@@ -1,0 +1,36 @@
+<beginning>
+<!-- Detection Rule 223: Detect wildcard enumeration patterns in DICOM Patient Name -->
+<!-- Catches fuzz rules 65, 73-74: C-FIND wildcard enumeration for patient data exfiltration -->
+<embedded_functions><![CDATA[
+static int wildcard_query_count = 0;
+#define WILDCARD_THRESHOLD 5
+
+static int em_check_wildcard_enum(const char *val) {
+    if (val == NULL)
+        return 0;
+    /* Detect wildcard patterns: *, ?, single-char + wildcard */
+    int has_wildcard = 0;
+    const char *p = val;
+    while (*p) {
+        if (*p == '*' || *p == '?') {
+            has_wildcard = 1;
+            break;
+        }
+        p++;
+    }
+    if (has_wildcard) {
+        wildcard_query_count++;
+        /* Alert if we see many wildcard queries (enumeration behavior) */
+        if (wildcard_query_count >= WILDCARD_THRESHOLD)
+            return 1;
+    }
+    return 0;
+}
+]]></embedded_functions>
+
+<property property_id="223" type_property="ATTACK"
+     description="Detect DICOM C-FIND wildcard enumeration (patient data exfiltration attempt)">
+    <event description="Multiple DICOM data PDVs with wildcard patterns in Patient Name"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (#em_check_wildcard_enum(dicom.patient_name) == 1))"/>
+</property>
+</beginning>

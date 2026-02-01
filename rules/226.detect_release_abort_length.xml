@@ -1,0 +1,11 @@
+<beginning>
+<!-- Detection Rule 226: Detect A-RELEASE/A-ABORT PDU with invalid length -->
+<!-- Catches fuzz rule 30: PDU type byte changed to 5/6/7 from a larger PDU -->
+<!-- Real A-RELEASE-RQ (5), A-RELEASE-RP (6), A-ABORT (7) always have pdu_len = 4 -->
+<!-- A retyped PDU retains the original payload size, creating a length mismatch -->
+<property property_id="226" type_property="ATTACK"
+     description="Detect DICOM A-RELEASE or A-ABORT PDU with unexpected length (should be exactly 4)">
+    <event description="DICOM A-RELEASE/A-ABORT with pdu_len != 4 (likely retyped PDU)"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type &gt;= 5) &amp;&amp; (dicom.pdu_type &lt;= 7) &amp;&amp; (dicom.pdu_len != 4))"/>
+</property>
+</beginning>

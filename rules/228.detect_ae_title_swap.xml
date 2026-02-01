@@ -1,0 +1,51 @@
+<beginning>
+<!-- Detection Rule 228: Detect swapped AE titles (calling AE in called position) -->
+<!-- Catches fuzz rule 35: called_ae_title and calling_ae_title swapped -->
+<!-- Records the first A-ASSOCIATE-RQ baseline, flags subsequent reversed pairs -->
+<embedded_functions><![CDATA[
+static char first_called[17] = {0};
+static char first_calling[17] = {0};
+static int baseline_set = 0;
+
+/* Trim trailing spaces from AE title into dst (max 16 chars) */
+static void trim_ae(char *dst, const char *src) {
+    int i;
+    if (src == NULL) { dst[0] = '\0'; return; }
+    for (i = 0; i < 16 && src[i] != '\0'; i++)
+        dst[i] = src[i];
+    dst[i] = '\0';
+    /* Remove trailing spaces */
+    for (i = i - 1; i >= 0 && dst[i] == ' '; i--)
+        dst[i] = '\0';
+}
+
+static int em_check_ae_swap(const char *called, const char *calling) {
+    char c1[17], c2[17];
+    if (called == NULL || calling == NULL) return 0;
+
+    trim_ae(c1, called);
+    trim_ae(c2, calling);
+
+    /* First association: record baseline */
+    if (!baseline_set) {
+        trim_ae(first_called, called);
+        trim_ae(first_calling, calling);
+        baseline_set = 1;
+        return 0;
+    }
+
+    /* Swap: current called matches baseline calling AND vice versa */
+    if (strcmp(c1, first_calling) == 0 && strcmp(c2, first_called) == 0 &&
+        strcmp(c1, c2) != 0)
+        return 1;
+
+    return 0;
+}
+]]></embedded_functions>
+
+<property property_id="228" type_property="ATTACK"
+     description="Detect DICOM AE title role swap (called/calling reversed from first association)">
+    <event description="DICOM A-ASSOCIATE-RQ with AE titles swapped relative to baseline"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 1) &amp;&amp; (#em_check_ae_swap(dicom.called_ae_title, dicom.calling_ae_title) == 1))"/>
+</property>
+</beginning>

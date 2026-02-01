@@ -1,0 +1,11 @@
+<beginning>
+<!-- Detection Rule 227: Detect oversized A-ASSOCIATE PDU -->
+<!-- Catches fuzz rule 32: PDU length field set to 10000 -->
+<!-- Valid A-ASSOCIATE PDUs are typically 200-800 bytes; over 4096 is suspicious -->
+<!-- Complements rule 224 which catches undersized (pdu_len < 68) -->
+<property property_id="227" type_property="ATTACK"
+     description="Detect DICOM A-ASSOCIATE PDU with suspiciously large length (over 4096 bytes)">
+    <event description="DICOM A-ASSOCIATE-RQ/AC with pdu_len exceeding 4096"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type &gt; 0) &amp;&amp; (dicom.pdu_type &lt; 3) &amp;&amp; (dicom.pdu_len &gt; 4096))"/>
+</property>
+</beginning>

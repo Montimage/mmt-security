@@ -2,10 +2,12 @@ name: C/C++ CI
 
 on:
   push:
-    branches: [ main, "*" ]
+    branches: [ main ]
     tags: ["v*"] # Push events to matching v*, i.e. v1.0, v20.15.10
   pull_request:
     branches: [ main ]
+
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,11 +26,15 @@ jobs:
         EOF
 
     - uses: actions/checkout@v2
+    - name: build DPI from source
+      run: |
+         sudo apt update -y && sudo apt install -y libxml2-dev libpcap-dev
+         git clone https://github.com/Montimage/mmt-dpi.git mmt-dpi
+         cd mmt-dpi/sdk/ && make -j2 && sudo make install
+         
     - name: build-from-source
       run: |
-         wget --no-verbose -O mmt-dpi.deb https://github.com/Montimage/mmt-dpi/releases/download/v1.7.7/mmt-dpi_1.7.7_bb5a717_Linux_x86_64.deb
-         sudo dpkg -i mmt-dpi.deb
-         sudo apt-get update -y && sudo apt-get install -y libxml2-dev libpcap-dev libconfuse-dev libpcap-dev
+         sudo apt update -y && sudo apt install -y libxml2-dev libpcap-dev libconfuse-dev libpcap-dev
          make clean-all && make DEBUG=1 && make deb && make check VERBOSE=1  && sudo make install
 
     #The following steps are executed only on new tag

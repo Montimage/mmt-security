@@ -1,6 +1,7 @@
 <beginning>
 <!-- Detection Rule 207: Detect DICOM PDU length exceeding 16MB (16777216) -->
 <embedded_functions><![CDATA[
+#include <mmt_core.h>
 static int em_is_dicom(const void *data) {
     proto_hierarchy_t *p = (proto_hierarchy_t *) data;
     int i;

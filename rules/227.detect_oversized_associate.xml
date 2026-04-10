@@ -4,6 +4,7 @@
 <!-- Valid A-ASSOCIATE PDUs are typically 200-800 bytes; over 4096 is suspicious -->
 <!-- Complements rule 224 which catches undersized (pdu_len < 68) -->
 <embedded_functions><![CDATA[
+#include <mmt_core.h>
 static int em_is_dicom(const void *data) {
     proto_hierarchy_t *p = (proto_hierarchy_t *) data;
     int i;

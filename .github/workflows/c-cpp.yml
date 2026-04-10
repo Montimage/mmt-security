@@ -28,13 +28,13 @@ jobs:
     - uses: actions/checkout@v2
     - name: build DPI from source
       run: |
-         sudo apt-get update-y && install -y libxml2-dev libpcap-dev
+         sudo apt update -y && sudo apt install -y libxml2-dev libpcap-dev
          git clone https://github.com/Montimage/mmt-dpi.git mmt-dpi
          cd mmt-dpi/sdk/ && make -j2 && sudo make install
          
     - name: build-from-source
       run: |
-         sudo apt-get update -y && sudo apt-get install -y libxml2-dev libpcap-dev libconfuse-dev libpcap-dev
+         sudo apt update -y && sudo apt install -y libxml2-dev libpcap-dev libconfuse-dev libpcap-dev
          make clean-all && make DEBUG=1 && make deb && make check VERBOSE=1  && sudo make install
 
     #The following steps are executed only on new tag

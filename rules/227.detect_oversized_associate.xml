@@ -3,9 +3,19 @@
 <!-- Catches fuzz rule 32: PDU length field set to 10000 -->
 <!-- Valid A-ASSOCIATE PDUs are typically 200-800 bytes; over 4096 is suspicious -->
 <!-- Complements rule 224 which catches undersized (pdu_len < 68) -->
+<embedded_functions><![CDATA[
+static int em_is_dicom(const void *data) {
+    proto_hierarchy_t *p = (proto_hierarchy_t *) data;
+    int i;
+    for (i = 0; i < p->len; i++)
+        if (p->proto_path[i] == 701)
+            return 1;
+    return 0;
+}
+]]></embedded_functions>
 <property property_id="227" type_property="ATTACK"
      description="Detect DICOM A-ASSOCIATE PDU with suspiciously large length (over 4096 bytes)">
     <event description="DICOM A-ASSOCIATE-RQ/AC with pdu_len exceeding 4096"
-        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type &gt; 0) &amp;&amp; (dicom.pdu_type &lt; 3) &amp;&amp; (dicom.pdu_len &gt; 4096))"/>
+        boolean_expression="((ip.src != 0) &amp;&amp; (#em_is_dicom(meta.proto_hierarchy) == 1) &amp;&amp; (dicom.pdu_type &gt; 0) &amp;&amp; (dicom.pdu_type &lt; 3) &amp;&amp; (dicom.pdu_len &gt; 4096))"/>
 </property>
 </beginning>

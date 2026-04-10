@@ -12,3 +12,5 @@ gen_dpi_header
 .project
 .cproject
 rsync.sh
+.swp
+.project

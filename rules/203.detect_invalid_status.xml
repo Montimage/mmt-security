@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 203: Detect specific invalid DICOM status 0xDEAD (57005) -->
+<property property_id="203" type_property="ATTACK"
+     description="Detect specific invalid DICOM status 0xDEAD">
+    <event description="DICOM command PDV with status 0xDEAD"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.status == 57005))"/>
+</property>
+</beginning>

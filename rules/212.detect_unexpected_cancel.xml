@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 212: Detect unexpected C-CANCEL command (0x0FFF = 4095) -->
+<property property_id="212" type_property="ATTACK"
+     description="Detect unexpected DICOM C-CANCEL command">
+    <event description="DICOM command PDV with C-CANCEL (0x0FFF)"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.command_field == 4095))"/>
+</property>
+</beginning>

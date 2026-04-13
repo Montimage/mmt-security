@@ -1,0 +1,10 @@
+<beginning>
+<!-- Detection Rule 215: Detect P-DATA-TF PDU with PDV length inconsistent with actual data -->
+<!-- This catches state machine confusion attacks (fuzz rules 62, 64) where non-P-DATA PDUs -->
+<!-- are retyped as P-DATA-TF, resulting in nonsensical PDV length/flags combinations -->
+<property property_id="215" type_property="ATTACK"
+     description="Detect DICOM P-DATA-TF with zero PDV context ID (state machine confusion)">
+    <event description="DICOM P-DATA-TF with PDV context ID of 0 (invalid, must be odd 1-255)"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.pdv_context == 0))"/>
+</property>
+</beginning>

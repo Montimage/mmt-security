@@ -1,0 +1,49 @@
+<beginning>
+<!-- Detection Rule 221: Detect suspicious Called AE Title values indicating C-MOVE redirection -->
+<!-- Catches fuzz rule 68: C-MOVE/C-GET target redirection with rogue AE Titles -->
+<embedded_functions><![CDATA[
+#include <mmt_core.h>
+static int em_is_dicom(const void *data) {
+    proto_hierarchy_t *p = (proto_hierarchy_t *) data;
+    int i;
+    for (i = 0; i < p->len; i++)
+        if (p->proto_path[i] == 701)
+            return 1;
+    return 0;
+}
+
+static int em_check_suspicious_ae(const char *ae) {
+    if (ae == NULL || ae[0] == '\0')
+        return 0;
+    /* Check for known attacker AE Title patterns */
+    const char *suspicious[] = {
+        "ATTACKER", "EVIL", "EXFIL", "ROGUE",
+        "HACKER", "MALICIOUS", "UNKNOWN_DEST"
+    };
+    int n = sizeof(suspicious) / sizeof(suspicious[0]);
+    int i;
+    for (i = 0; i < n; i++) {
+        if (strstr(ae, suspicious[i]) != NULL)
+            return 1;
+    }
+    /* Check for non-alphanumeric characters (invalid per DICOM standard) */
+    const char *p = ae;
+    while (*p) {
+        if (*p != ' ' && *p != '_' &&
+            !(*p >= 'A' && *p <= 'Z') &&
+            !(*p >= 'a' && *p <= 'z') &&
+            !(*p >= '0' && *p <= '9')) {
+            return 1;
+        }
+        p++;
+    }
+    return 0;
+}
+]]></embedded_functions>
+
+<property property_id="221" type_property="ATTACK"
+     description="Detect suspicious DICOM Called AE Title (potential C-MOVE redirection or impersonation)">
+    <event description="DICOM A-ASSOCIATE-RQ with suspicious Called AE Title"
+        boolean_expression="((ip.src != 0) &amp;&amp; (#em_is_dicom(meta.proto_hierarchy) == 1) &amp;&amp; (dicom.pdu_type == 1) &amp;&amp; (#em_check_suspicious_ae(dicom.called_ae_title) == 1))"/>
+</property>
+</beginning>

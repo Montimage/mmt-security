@@ -427,6 +427,19 @@ static rule_t *_parse_a_rule( const xmlNode *xml_node ){
 			"Error 13g: Do not expect trigger for rule %d. Only one <event> is required.", rule.id );
 		mmt_assert( (rule.delay->counter_max == 0 && rule.delay->time_max == 0),
 			"Error 13g: Do not expect delay for operator COMPUTE for rule %d", rule.id );
+
+		//change COMPUTE X rule to (X THEN true)
+		rule.value = RULE_VALUE_THEN;
+
+		rule_event_t *event = mmt_mem_alloc( sizeof( rule_event_t ));
+		event->description = NULL;
+		event->id = 2;
+		parse_expression( &event->expression, "(true)", 6 );
+
+		rule_node_t *rule_node = mmt_mem_alloc( sizeof( rule_node_t ));
+		rule_node->type  = RULE_NODE_TYPE_EVENT;
+		rule_node->event = event;
+		rule.trigger = rule_node;
 	} else {
 	//when rule type != COMPUTE, we need 2 events: context and trigger
 		mmt_assert( (rule.context != NULL && rule.trigger != NULL ),

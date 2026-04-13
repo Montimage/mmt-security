@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 213: Detect response command (bit 15 set, value >= 0x8000 = 32768) sent as request -->
+<property property_id="213" type_property="ATTACK"
+     description="Detect DICOM response command sent as request">
+    <event description="DICOM command PDV with response bit set (command_field at or above 0x8000)"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.command_field &gt;= 32768))"/>
+</property>
+</beginning>

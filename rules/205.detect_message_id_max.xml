@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 205: Detect DICOM message ID at maximum value 0xFFFF (65535) -->
+<property property_id="205" type_property="ATTACK"
+     description="Detect DICOM message ID at maximum value 0xFFFF">
+    <event description="DICOM command PDV with message_id = 0xFFFF"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.message_id == 65535))"/>
+</property>
+</beginning>

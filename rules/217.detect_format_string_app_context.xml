@@ -1,0 +1,29 @@
+<beginning>
+<!-- Detection Rule 217: Detect format string payloads in DICOM Application Context -->
+<!-- Catches fuzz rule 59: CVE-2024-23914 format string attack -->
+<embedded_functions><![CDATA[
+static int em_check_format_string(const char *val) {
+    if (val == NULL || val[0] == '\0')
+        return 0;
+    /* Detect format string specifiers: %s, %x, %n, %p, %d */
+    const char *p = val;
+    while (*p) {
+        if (*p == '%') {
+            char next = *(p + 1);
+            if (next == 's' || next == 'x' || next == 'n' ||
+                next == 'p' || next == 'd' || next == '0' ||
+                next == '.' || next == '-')
+                return 1;
+        }
+        p++;
+    }
+    return 0;
+}
+]]></embedded_functions>
+
+<property property_id="217" type_property="ATTACK"
+     description="Detect format string payload in DICOM Application Context (CVE-2024-23914)">
+    <event description="DICOM packet with format string characters in Application Context"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type &gt; 0) &amp;&amp; (dicom.pdu_type &lt; 3) &amp;&amp; (#em_check_format_string(dicom.application_context) == 1))"/>
+</property>
+</beginning>

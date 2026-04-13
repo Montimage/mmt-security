@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 211: Detect invalid DICOM PDV flags (greater than 3) -->
+<property property_id="211" type_property="ATTACK"
+     description="Detect invalid DICOM PDV flags (greater than 3)">
+    <event description="DICOM P-DATA-TF with PDV flags greater than 3"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.pdv_flags &gt; 3))"/>
+</property>
+</beginning>

@@ -506,7 +506,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					(is_first? "":","),
 					pro_ptr->proto,
 					pro_ptr->att);
-
+			if (size >= remaining_len) size = remaining_len > 0 ? remaining_len - 1 : 0;
 			str_ptr   += size;
 			total_len -= size;
 
@@ -557,7 +557,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					u8_ptr = (uint8_t *) me->data;
 					char ip_string[ INET6_ADDRSTRLEN ];
 					if( inet_ntop(AF_INET6, (void*) u8_ptr, ip_string, INET6_ADDRSTRLEN )){
-						size =  sprintf( str_ptr, "\"%s\"", ip_string );
+						size =  snprintf( str_ptr, remaining_len, "\"%s\"", ip_string );
 					}
 					break;
 					//MAC address
@@ -575,14 +575,14 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					str_ptr  ++;
 					n     = _get_u( u8_ptr, 4 ); //first 4 bytes is length of the array
 					e_len = _get_len( pro_ptr->dpi_type ); //data length of each element in the array
-					total_len --;
-
 					for( j=0; j<n; j++ ){
-						if( total_len < 3 )
+						remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+						if( remaining_len < 3 )
 							break;
-						size = snprintf( str_ptr, total_len, (j == 0 ? "%zu": ",%zu"),
+						size = snprintf( str_ptr, remaining_len, (j == 0 ? "%zu": ",%zu"),
 								//+4 bytes for the array length
 								_get_u( &u8_ptr[j * e_len + 4], e_len) );
+						if (size >= remaining_len) size = remaining_len - 1;
 						//exclude the last '\0' character
 						total_len -= size;
 						str_ptr   += size;
@@ -600,7 +600,8 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					//TODO: limit output length of one proto.att to 255 bytes
 					*str_ptr = '"';
 					str_ptr ++;
-					size = _copy_plein_text(  str_ptr, total_len - 20, (char *) me->data );
+					remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+					size = _copy_plein_text(  str_ptr, remaining_len > 20 ? remaining_len - 20 : 0, (char *) me->data );
 					str_ptr[ size ] = '"';
 					size ++;
 				}
@@ -622,7 +623,8 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		if( unlikely( total_len <= 0 )){
 			mmt_warn("Buffer size is not enough to contain all attributes");
 			//close
-			str_ptr += snprintf( str_ptr, total_len, "]}") ;
+			remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+			str_ptr += snprintf( str_ptr, remaining_len, "]}") ;
 			break;
 		}
 

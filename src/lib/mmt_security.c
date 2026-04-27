@@ -428,6 +428,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 	static __thread_scope char buffer[ MAX_STR_SIZE + 1 ];
 	char *str_ptr, *c_ptr;
 	size_t size, i, j, index, n, e_len;
+	size_t remaining_len;
 	int total_len;
 	const message_t *msg;
 	const message_element_t *me;
@@ -463,7 +464,8 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			*(str_ptr ++) = ',';
 
 		//event 's detail
-		size = snprintf( str_ptr, total_len, "\"event_%zu\":{\"timestamp\":%ld.%06ld,\"counter\":%"PRIu64",\"attributes\":[",
+		remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+		size = snprintf( str_ptr, remaining_len, "\"event_%zu\":{\"timestamp\":%ld.%06ld,\"counter\":%"PRIu64",\"attributes\":[",
 						index,
 						time.tv_sec, //timestamp: second
 						time.tv_usec, //timestamp: microsecond
@@ -499,7 +501,8 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			str_ptr += size;
 
 			//do not forget ]
-			size = snprintf( str_ptr, total_len, "%s[\"%s.%s\",", //[key, value]
+			remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+			size = snprintf( str_ptr, remaining_len, "%s[\"%s.%s\",", //[key, value]
 					(is_first? "":","),
 					pro_ptr->proto,
 					pro_ptr->att);
@@ -513,7 +516,8 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				double_val = *(double *)me->data;
 
 				//do not forget }
-				size = snprintf( str_ptr, total_len, "%.2f", double_val );
+				remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+				size = snprintf( str_ptr, remaining_len, "%.2f", double_val );
 
 				c_ptr = str_ptr + size;
 				//remove zero at the end, e.g., 10.00 ==> 10
@@ -533,18 +537,18 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 
 
 				u8_ptr = NULL;
-
+				remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
 				switch( pro_ptr->dpi_type ){
 				case MMT_DATA_TIMEVAL:
 					u8_ptr = (uint8_t *) me->data;
 					ptime  = (struct timeval *) me->data;
-					size   = snprintf(str_ptr, total_len, "%ld.%06ld",
-							ptime->tv_sec, ptime->tv_usec );
+					size   = snprintf(str_ptr, remaining_len, "%ld.%06ld",
+						ptime->tv_sec, ptime->tv_usec );
 					break;
 				case MMT_DATA_IP_NET: /**< ip network address constant value */
 				case MMT_DATA_IP_ADDR: /**< ip address constant value */
 						u8_ptr = (uint8_t *) me->data;
-						size   = snprintf(str_ptr, total_len, "\"%d.%d.%d.%d\"",
+						size   = snprintf(str_ptr, remaining_len, "\"%d.%d.%d.%d\"",
 											u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
 					break;
 
@@ -559,8 +563,8 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					//MAC address
 				case MMT_DATA_MAC_ADDR:
 						u8_ptr = (uint8_t *) me->data;
-						size   = snprintf(str_ptr, total_len, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
-								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
+						size   = snprintf(str_ptr, remaining_len, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
+							u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
 					break;
 				case MMT_U16_ARRAY:
 				case MMT_U32_ARRAY:

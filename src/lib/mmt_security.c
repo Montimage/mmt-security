@@ -568,8 +568,10 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					u8_ptr = (uint8_t *) me->data;
 					if( inet_ntop(AF_INET6, (void*) u8_ptr, ip_string, INET6_ADDRSTRLEN ) )
 						size = snprintf( str_ptr, remaining_len, "\"%s\"", ip_string );
-					else
-						size = 0;
+					else {
+						truncated = YES;
+						break;
+					}
 					break;
 				}
 					//MAC address
@@ -664,7 +666,6 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			}
 			str_ptr += size;
 			*str_ptr = ']';
-			*(str_ptr + 1 ) = '\0';
 
 			size = 1;
 			is_first = NO;

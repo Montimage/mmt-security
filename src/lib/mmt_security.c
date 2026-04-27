@@ -429,7 +429,6 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 	char *str_ptr, *c_ptr;
 	size_t size, i, j, index, n, e_len;
 	size_t remaining_len;
-	int total_len;
 	const message_t *msg;
 	const message_element_t *me;
 	bool is_first;
@@ -450,8 +449,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			"Impossible: elements_count > events_count (%zu > %d + 1)", trace->elements_count, rule->events_count);
 #endif
 
-	total_len = MAX_STR_SIZE;
-	str_ptr   = buffer+1;
+	str_ptr = buffer + 1;
 
 	for( index=0; index<trace->elements_count; index ++ ){
 		msg = trace->data[ index ];
@@ -460,7 +458,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		mmt_sec_decode_timeval( msg->timestamp, &time );
 
 		//seperator of each event
-		if( total_len != MAX_STR_SIZE )
+		if( str_ptr > buffer + 1 )
 			*(str_ptr ++) = ',';
 
 		//event 's detail
@@ -493,8 +491,7 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			if( j>= proto_atts_event->elements_count )
 				continue;
 
-			total_len -= size;
-			if( unlikely( total_len <= 0 )){
+			if( size >= remaining_len ){
 				break;
 			}
 
@@ -508,7 +505,6 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					pro_ptr->att);
 			if (size >= remaining_len) size = remaining_len > 0 ? remaining_len - 1 : 0;
 			str_ptr   += size;
-			total_len -= size;
 
 			//pro_ptr->data_type;
 			switch( me->data_type ){
@@ -518,16 +514,18 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				//do not forget }
 				remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
 				size = snprintf( str_ptr, remaining_len, "%.2f", double_val );
+				if (size >= remaining_len) size = remaining_len > 0 ? remaining_len - 1 : 0;
 
-				c_ptr = str_ptr + size;
-				//remove zero at the end, e.g., 10.00 ==> 10
-				while( *c_ptr == '0' || *c_ptr == '\0' ){
-					c_ptr --;
-					size --;
+				if (size > 0) {
+					c_ptr = str_ptr + size;
+					//remove zero at the end, e.g., 10.00 ==> 10
+					while( *c_ptr == '0' || *c_ptr == '\0' ){
+						c_ptr --;
+						size --;
 
-					if( *c_ptr == '.'){
-						//size --;
-						break;
+						if( *c_ptr == '.'){
+							break;
+						}
 					}
 				}
 
@@ -553,13 +551,14 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 					break;
 
 					//IPV6 address
-				case MMT_DATA_IP6_ADDR:
-					u8_ptr = (uint8_t *) me->data;
+				case MMT_DATA_IP6_ADDR: {
 					char ip_string[ INET6_ADDRSTRLEN ];
+					u8_ptr = (uint8_t *) me->data;
 					if( inet_ntop(AF_INET6, (void*) u8_ptr, ip_string, INET6_ADDRSTRLEN )){
 						size =  snprintf( str_ptr, remaining_len, "\"%s\"", ip_string );
 					}
 					break;
+				}
 					//MAC address
 				case MMT_DATA_MAC_ADDR:
 						u8_ptr = (uint8_t *) me->data;
@@ -583,8 +582,6 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 								//+4 bytes for the array length
 								_get_u( &u8_ptr[j * e_len + 4], e_len) );
 						if (size >= remaining_len) size = remaining_len - 1;
-						//exclude the last '\0' character
-						total_len -= size;
 						str_ptr   += size;
 					}
 					*str_ptr = ']';
@@ -619,12 +616,9 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			is_first = NO;
 		}
 
-		total_len -= size;
-		if( unlikely( total_len <= 0 )){
+		remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+		if( unlikely( remaining_len < 3 )){
 			mmt_warn("Buffer size is not enough to contain all attributes");
-			//close
-			remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
-			str_ptr += snprintf( str_ptr, remaining_len, "]}") ;
 			break;
 		}
 
@@ -634,8 +628,11 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		*(str_ptr ++) = '}';
 	}
 
-	*(str_ptr++) = '}'; //end of all
-	*(str_ptr++) = '\0';
+	remaining_len = sizeof(buffer) - (str_ptr - buffer);
+	if( likely( remaining_len >= 2 ) ){
+		*(str_ptr++) = '}'; //end of all
+		*str_ptr = '\0';
+	}
 
 	return buffer;
 }

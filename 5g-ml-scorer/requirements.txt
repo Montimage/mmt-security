@@ -1,0 +1,26 @@
+# Pinned to the environment the model was trained in, so joblib.load() of
+# models/rf_event_2core.joblib works without a scikit-learn pickle-version error.
+# (Trained on: Python 3.13.1 — any Python 3.10+ should be fine for these wheels.)
+#
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements-vm.txt
+#
+# If the VM can't install these EXACT versions (e.g. older Python), install the closest
+# available and just RETRAIN on the VM instead — then version matching no longer matters:
+#   python event_pipeline.py train --data-dir ../free5gc-event-csv --out models/rf_event.joblib
+pandas==3.0.3
+numpy==2.4.6
+scikit-learn==1.9.0
+joblib==1.5.3
+
+# Kafka client for the STIX output channel (event_watch.py --kafka).
+# confluent-kafka wraps the SAME librdkafka that mmt-probe's kafka output uses.
+# If no aarch64 wheel is available on the VM, comment it out and uncomment kafka-python
+# instead (pure python, no compiler needed) — stix_kafka.py supports either one.
+confluent-kafka==2.6.1
+# kafka-python==2.0.2
+
+# Explainability (explain_shap.py). Only needed to ANALYSE the model — the detection
+# pipeline (event_watch.py) does not import these, so skip them on a probe-only VM.
+shap==0.52.0
+matplotlib==3.10.7      # only for explain_shap.py --plots

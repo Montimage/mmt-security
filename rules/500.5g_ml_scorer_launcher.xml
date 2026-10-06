@@ -1,0 +1,67 @@
+<beginning>
+<!--
+Launches the 5G multi-class ML scorer (5g-ml-scorer/event_watch.py) when NGAP/NAS traffic is
+seen. The scorer classifies each monitoring window as normal / replay / flooding / malformed
+and, for an attack, publishes a STIX 2.1 bundle (carrying the ML feature vector) to Kafka.
+
+Same embedded-function + system() mechanism as the OCPP launcher rule. The scorer is idempotent
+(its lock-file makes a 2nd launch a no-op) and self-terminating (its idle-timeout), so this rule
+can fire freely on every 5G session.
+
+EDIT the three #define paths below for your install before compiling.
+NOTE: XML comments must not contain a double hyphen, so option names are written without it.
+-->
+<embedded_functions><![CDATA[
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include "mmt_lib.h"
+
+/* ---- EDIT THESE FOR YOUR INSTALL ---- */
+/* Absolute path to the 5g-ml-scorer folder shipped next to this repo's rules/. It must contain
+   a .venv (see its README), the .env with your Kafka settings, and event_watch.py. */
+#define SCORER_DIR       "/home/pqv/Documents/tools/mmt-security/5g-ml-scorer"
+#define SCORER_MODEL     "models/rf_event_multiclass.joblib"   /* relative to SCORER_DIR */
+#define SCORER_WATCH_DIR "/tmp/mmt-events"                     /* = mmt-probe file-output.output-dir */
+#define SCORER_ALERTS    "/home/pqv/Documents/results/replay-alerts.log"   /* mkdir this folder first! */
+/* ------------------------------------- */
+/* Kafka broker + SASL credentials are NOT set here: they live in the .env file inside
+   SCORER_DIR, which stix_kafka.py reads on startup. Nothing to edit in this rule. */
+
+/* Throttle: attempt a (re)launch at most once every 30s. The lock file inside event_watch.py
+   guarantees only one scorer actually runs; this just avoids spawning bash on every packet. */
+static time_t _last_launch = 0;
+
+/* Takes one (ignored) argument: the mmt-security compiler needs >=1 arg for #func(...). */
+static int em_launch_5g_scorer(int nas_msg_type) {
+    (void) nas_msg_type;
+    time_t now = time(NULL);
+    if (now - _last_launch < 30) return 1;   /* already attempted recently */
+    _last_launch = now;
+    system("bash -c '"
+           "cd " SCORER_DIR " && "
+           "source .venv/bin/activate && "               /* the venv with pandas/scikit-learn/joblib */
+           "nohup python3 event_watch.py "
+             "--model " SCORER_MODEL " "                 /* multi-class model: predicts the attack family */
+             "--watch-dir " SCORER_WATCH_DIR " "
+             "--lock-file /tmp/mmt-event-scorer.lock "
+             "--idle-timeout 60 "
+             "--alerts " SCORER_ALERTS " "
+             "--kafka "                                   /* publish each alert as a STIX 2.1 bundle */
+           ">> /home/pqv/Documents/results/scorer.out 2>&1 &'");
+    return 1;
+}
+]]></embedded_functions>
+
+<!-- Fires when a 5G NAS message is present, then (re)launches the scorer. type ATTACK mirrors
+     the OCPP template; the 30s throttle means at most one benign launch per 30s. -->
+<property value="THEN" property_id="500" type_property="ATTACK"
+    description="Ensure the 5G multi-class ML scorer is running when NGAP/NAS traffic is present">
+    <event value="COMPUTE" event_id="1"
+        description="5G NAS traffic seen"
+        boolean_expression="( nas_5g.message_type > 0 )"/>
+    <event value="COMPUTE" event_id="2"
+        description="relaunch the ML scorer if not already running"
+        boolean_expression="( #em_launch_5g_scorer(nas_5g.message_type) == 1 )"/>
+</property>
+</beginning>

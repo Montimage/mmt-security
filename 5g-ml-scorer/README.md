@@ -44,17 +44,28 @@ cp .env.example .env          # then edit .env with your Kafka broker + SASL cre
 Edit the three `#define` paths in `rules/500.5g_ml_scorer_launcher.xml` (SCORER_DIR,
 SCORER_WATCH_DIR, SCORER_ALERTS) to match your install before compiling the rules.
 
+## Alert output modes (choose any combination)
+The STIX bundle is the same regardless of destination (shared serializer), so a JSON file is a
+byte-faithful preview of what Kafka receives:
+- `--kafka` — publish each bundle to Kafka (production / AVA; needs `.env`).
+- `--stix-dir DIR` — write one pretty-printed `.json` per alert (best for testing, no Kafka).
+- `--stix-file FILE` — append every bundle to one NDJSON file.
+- `--alerts FILE` — append the one-line human alerts (independent of the STIX outputs).
+
+In the launcher rule, this is the one-line `SCORER_OUTPUT` macro
+(`--stix-dir ...` for testing vs `--kafka` for production).
+
 ## Run it by hand
-Live (watches a directory, exits after 60s idle):
+Testing — offline on a folder of already-extracted event CSVs, write JSON files (no Kafka):
 ```bash
 source .venv/bin/activate
 python3 event_watch.py --model models/rf_event_multiclass.joblib \
-    --watch-dir /tmp/mmt-events --idle-timeout 60 --kafka
+    --watch-dir /path/to/event-csvs --once --stix-dir ./stix-out
 ```
-Offline on a folder of already-extracted event CSVs (no Kafka; just prints the predictions):
+Live — watch a directory, publish to Kafka, exit after 60s idle:
 ```bash
 python3 event_watch.py --model models/rf_event_multiclass.joblib \
-    --watch-dir /path/to/event-csvs --once
+    --watch-dir /tmp/mmt-events --idle-timeout 60 --kafka
 ```
 
 ## Retrain / evaluate

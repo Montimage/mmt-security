@@ -24,6 +24,12 @@ NOTE: XML comments must not contain a double hyphen, so option names are written
 #define SCORER_MODEL     "models/rf_event_multiclass.joblib"   /* relative to SCORER_DIR */
 #define SCORER_WATCH_DIR "/tmp/mmt-events"                     /* = mmt-probe file-output.output-dir */
 #define SCORER_ALERTS    "/home/pqv/Documents/results/replay-alerts.log"   /* mkdir this folder first! */
+
+/* OUTPUT MODE for the STIX alerts — pick ONE (both emit the identical bundle):
+ *   testing     : "--stix-dir /home/pqv/Documents/results/stix"  one .json file per alert, no Kafka
+ *   production  : "--kafka"                                       publish to Kafka for AVA
+ * --stix-dir is a faithful offline preview of exactly what Kafka would receive. */
+#define SCORER_OUTPUT    "--kafka"
 /* ------------------------------------- */
 /* Kafka broker + SASL credentials are NOT set here: they live in the .env file inside
    SCORER_DIR, which stix_kafka.py reads on startup. Nothing to edit in this rule. */
@@ -47,7 +53,7 @@ static int em_launch_5g_scorer(int nas_msg_type) {
              "--lock-file /tmp/mmt-event-scorer.lock "
              "--idle-timeout 60 "
              "--alerts " SCORER_ALERTS " "
-             "--kafka "                                   /* publish each alert as a STIX 2.1 bundle */
+             SCORER_OUTPUT " "                            /* --stix-dir (test) or --kafka (prod) */
            ">> /home/pqv/Documents/results/scorer.out 2>&1 &'");
     return 1;
 }

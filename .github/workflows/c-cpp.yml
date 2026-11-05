@@ -1,5 +1,7 @@
 name: C/C++ CI
-
+env:
+  # version of MMT-DPI which supports current codebase
+  DPI_VERSION: 6b1c9f5380a4db616c90bec3cfeda72bce5920a0
 on:
   push:
     branches: [ main ]
@@ -30,7 +32,7 @@ jobs:
       run: |
          sudo apt update -y && sudo apt install -y libxml2-dev libpcap-dev
          git clone https://github.com/Montimage/mmt-dpi.git mmt-dpi
-         cd mmt-dpi/sdk/ && make -j2 && sudo make install
+         cd mmt-dpi && git checkout "${DPI_VERSION}" && cd sdk/ && make -j2 && sudo make install
          
     - name: build-from-source
       run: |

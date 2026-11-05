@@ -1,3 +1,7 @@
+# Version 1.2.20 (05 Nov 2026)
+- fixed bugs
+- new rules for DICOM, RDP honepot
+
 # Version 1.2.19 (15 June 2023)
 - minor update in rules 96,97 and 98 concerining HTTP2 attacks detection
 

@@ -1,0 +1,23 @@
+<beginning>
+<!-- Property 98: Probable Remote Desktop Protocol brute force attack.
+-->
+	<property value="THEN" delay_units="ms" delay_min="0+" delay_max="1000" property_id="98" type_property="ATTACK" 
+    description="Probable Remote Desktop Protocol brute force attack">
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="500">
+      <event value="COMPUTE" event_id="1" 
+             description="Login incorrect 1"
+             boolean_expression="((ftp.packet_response_code == 530)&amp;&amp;(ip.src != ip.dst))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="Login incorrect 2"
+             boolean_expression="((ftp.packet_response_code == 530)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))"/>
+    </operator>
+    <operator value="THEN" delay_units="ms" delay_min="0+" delay_max="500">
+      <event value="COMPUTE" event_id="3" 
+             description="Login incorrect 3"
+             boolean_expression="((ftp.packet_response_code == 530)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))"/>
+      <event value="COMPUTE" event_id="4" 
+             description="Login incorrect 4"
+             boolean_expression="((ftp.packet_response_code == 530)&amp;&amp;((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1)))"/>
+    </operator>
+</property>
+</beginning>

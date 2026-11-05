@@ -426,12 +426,12 @@ static uint16_t _get_len( int dpi_type ){
 
 static const char* _convert_execution_trace_to_json_string( const mmt_array_t *trace, const rule_info_t *rule ){
 	static __thread_scope char buffer[ MAX_STR_SIZE + 1 ];
-	char *str_ptr, *c_ptr;
+	char *str_ptr, *c_ptr, *event_start;
 	size_t size, i, j, index, n, e_len;
-	int total_len;
+	size_t remaining_len;
 	const message_t *msg;
 	const message_element_t *me;
-	bool is_first;
+	bool is_first, truncated;
 	struct timeval time, *ptime;
 	const mmt_array_t *proto_atts_event; //proto_att of an event
 	const proto_attribute_t *pro_ptr;
@@ -449,25 +449,37 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			"Impossible: elements_count > events_count (%zu > %d + 1)", trace->elements_count, rule->events_count);
 #endif
 
-	total_len = MAX_STR_SIZE;
-	str_ptr   = buffer+1;
+	str_ptr = buffer + 1;
 
 	for( index=0; index<trace->elements_count; index ++ ){
 		msg = trace->data[ index ];
 		if( msg == NULL ) continue;
 
 		mmt_sec_decode_timeval( msg->timestamp, &time );
+		event_start = str_ptr;
+		truncated   = NO;
 
-		//seperator of each event
-		if( total_len != MAX_STR_SIZE )
+		//separator of each event
+		remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+		if( unlikely( remaining_len == 0 ) ){
+			mmt_warn("Buffer size is not enough to contain all attributes");
+			break;
+		}
+		if( str_ptr > buffer + 1 )
 			*(str_ptr ++) = ',';
 
 		//event 's detail
-		size = snprintf( str_ptr, total_len, "\"event_%zu\":{\"timestamp\":%ld.%06ld,\"counter\":%"PRIu64",\"attributes\":[",
+		remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+		size = snprintf( str_ptr, remaining_len, "\"event_%zu\":{\"timestamp\":%ld.%06ld,\"counter\":%"PRIu64",\"attributes\":[",
 						index,
 						time.tv_sec, //timestamp: second
 						time.tv_usec, //timestamp: microsecond
 						msg->counter );
+		if( unlikely( size >= remaining_len ) ){
+			mmt_warn("Buffer size is not enough to contain all attributes");
+			str_ptr = event_start;
+			break;
+		}
 
 		is_first = YES;
 
@@ -491,21 +503,19 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 			if( j>= proto_atts_event->elements_count )
 				continue;
 
-			total_len -= size;
-			if( unlikely( total_len <= 0 )){
-				break;
-			}
-
 			str_ptr += size;
 
 			//do not forget ]
-			size = snprintf( str_ptr, total_len, "%s[\"%s.%s\",", //[key, value]
+			remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+			size = snprintf( str_ptr, remaining_len, "%s[\"%s.%s\",", //[key, value]
 					(is_first? "":","),
 					pro_ptr->proto,
 					pro_ptr->att);
-
-			str_ptr   += size;
-			total_len -= size;
+			if( unlikely( size >= remaining_len ) ){
+				truncated = YES;
+				break;
+			}
+			str_ptr += size;
 
 			//pro_ptr->data_type;
 			switch( me->data_type ){
@@ -513,112 +523,164 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 				double_val = *(double *)me->data;
 
 				//do not forget }
-				size = snprintf( str_ptr, total_len, "%.2f", double_val );
+				remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+				size = snprintf( str_ptr, remaining_len, "%.2f", double_val );
+				if( unlikely( size >= remaining_len ) ){
+					truncated = YES;
+					break;
+				}
 
-				c_ptr = str_ptr + size;
-				//remove zero at the end, e.g., 10.00 ==> 10
-				while( *c_ptr == '0' || *c_ptr == '\0' ){
-					c_ptr --;
-					size --;
+				if (size > 0) {
+					c_ptr = str_ptr + size;
+					//remove zero at the end, e.g., 10.00 ==> 10
+					while( *c_ptr == '0' || *c_ptr == '\0' ){
+						c_ptr --;
+						size --;
 
-					if( *c_ptr == '.'){
-						//size --;
-						break;
+						if( *c_ptr == '.'){
+							break;
+						}
 					}
 				}
 
 				break;
 
 			default:
-
-
 				u8_ptr = NULL;
-
+				remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
 				switch( pro_ptr->dpi_type ){
 				case MMT_DATA_TIMEVAL:
 					u8_ptr = (uint8_t *) me->data;
 					ptime  = (struct timeval *) me->data;
-					size   = snprintf(str_ptr, total_len, "%ld.%06ld",
-							ptime->tv_sec, ptime->tv_usec );
+					size   = snprintf(str_ptr, remaining_len, "%ld.%06ld",
+						ptime->tv_sec, ptime->tv_usec );
 					break;
 				case MMT_DATA_IP_NET: /**< ip network address constant value */
 				case MMT_DATA_IP_ADDR: /**< ip address constant value */
-						u8_ptr = (uint8_t *) me->data;
-						size   = snprintf(str_ptr, total_len, "\"%d.%d.%d.%d\"",
-											u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
+					u8_ptr = (uint8_t *) me->data;
+					size   = snprintf(str_ptr, remaining_len, "\"%d.%d.%d.%d\"",
+								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3] );
 					break;
 
 					//IPV6 address
-				case MMT_DATA_IP6_ADDR:
-					u8_ptr = (uint8_t *) me->data;
+				case MMT_DATA_IP6_ADDR: {
 					char ip_string[ INET6_ADDRSTRLEN ];
-					if( inet_ntop(AF_INET6, (void*) u8_ptr, ip_string, INET6_ADDRSTRLEN )){
-						size =  sprintf( str_ptr, "\"%s\"", ip_string );
+					u8_ptr = (uint8_t *) me->data;
+					if( inet_ntop(AF_INET6, (void*) u8_ptr, ip_string, INET6_ADDRSTRLEN ) )
+						size = snprintf( str_ptr, remaining_len, "\"%s\"", ip_string );
+					else {
+						truncated = YES;
+						break;
 					}
 					break;
+				}
 					//MAC address
 				case MMT_DATA_MAC_ADDR:
-						u8_ptr = (uint8_t *) me->data;
-						size   = snprintf(str_ptr, total_len, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
-								u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
+					u8_ptr = (uint8_t *) me->data;
+					size   = snprintf(str_ptr, remaining_len, "\"%02x:%02x:%02x:%02x:%02x:%02x\"",
+							u8_ptr[0], u8_ptr[1], u8_ptr[2], u8_ptr[3], u8_ptr[4], u8_ptr[5] );
 					break;
 				case MMT_U16_ARRAY:
 				case MMT_U32_ARRAY:
 				case MMT_U64_ARRAY:
 					u8_ptr = (uint8_t *) me->data;
-					//group the  numbers in [ and ]
+					remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+					if( unlikely( remaining_len < 2 ) ){
+						truncated = YES;
+						break;
+					}
+					//group the numbers in [ and ]
 					*str_ptr = '[';
-					str_ptr  ++;
+					str_ptr ++;
 					n     = _get_u( u8_ptr, 4 ); //first 4 bytes is length of the array
 					e_len = _get_len( pro_ptr->dpi_type ); //data length of each element in the array
-					total_len --;
-
 					for( j=0; j<n; j++ ){
-						if( total_len < 3 )
+						remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+						if( unlikely( remaining_len < 3 ) ){
+							truncated = YES;
 							break;
-						size = snprintf( str_ptr, total_len, (j == 0 ? "%zu": ",%zu"),
+						}
+						size = snprintf( str_ptr, remaining_len, (j == 0 ? "%zu": ",%zu"),
 								//+4 bytes for the array length
 								_get_u( &u8_ptr[j * e_len + 4], e_len) );
-						//exclude the last '\0' character
-						total_len -= size;
-						str_ptr   += size;
+						if( unlikely( size >= remaining_len ) ){
+							truncated = YES;
+							break;
+						}
+						str_ptr += size;
+					}
+					if( truncated )
+						break;
+					remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+					if( unlikely( remaining_len == 0 ) ){
+						truncated = YES;
+						break;
 					}
 					*str_ptr = ']';
 					str_ptr ++;
 
-					//whe reset size to zero so that str_ptr will not increase in line 603
+					//we reset size to zero so that str_ptr will not increase again below
 					size = 0;
 					break;
 				}// end of switch( pro_ptr->proto_id ){
 
+				if( truncated )
+					break;
+				if( unlikely( size >= remaining_len ) ){
+					truncated = YES;
+					break;
+				}
+
 				//if the attribute is not neither IP nor MAC
 				if( u8_ptr == NULL ){
+					remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+					if( unlikely( remaining_len < 1 ) ){
+						truncated = YES;
+						break;
+					}
 					//TODO: limit output length of one proto.att to 255 bytes
 					*str_ptr = '"';
 					str_ptr ++;
-					size = _copy_plein_text(  str_ptr, total_len - 20, (char *) me->data );
+					remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+					if( unlikely( remaining_len == 0 ) ){
+						truncated = YES;
+						break;
+					}
+					size = _copy_plein_text(  str_ptr, remaining_len > 20 ? remaining_len - 20 : 0, (char *) me->data );
+					if( unlikely( size >= remaining_len ) ){
+						truncated = YES;
+						break;
+					}
 					str_ptr[ size ] = '"';
 					size ++;
 				}
-				//
-
 			}//end of switch( me->data_type )
+			if( truncated )
+				break;
 
 			//close ] here
+			remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+			if( unlikely( remaining_len <= size ) ){
+				truncated = YES;
+				break;
+			}
 			str_ptr += size;
 			*str_ptr = ']';
-			*(str_ptr + 1 ) = '\0';
 
 			size = 1;
-
 			is_first = NO;
 		}
 
-		total_len -= size;
-		if( unlikely( total_len <= 0 )){
+		if( truncated ){
 			mmt_warn("Buffer size is not enough to contain all attributes");
-			//close
-			str_ptr += snprintf( str_ptr, total_len, "]}") ;
+			str_ptr = event_start;
+			break;
+		}
+
+		remaining_len = sizeof(buffer) - (str_ptr - buffer) - 1;
+		if( unlikely( remaining_len < 4 ) ){
+			mmt_warn("Buffer size is not enough to contain all attributes");
+			str_ptr = event_start;
 			break;
 		}
 
@@ -628,8 +690,11 @@ static const char* _convert_execution_trace_to_json_string( const mmt_array_t *t
 		*(str_ptr ++) = '}';
 	}
 
-	*(str_ptr++) = '}'; //end of all
-	*(str_ptr++) = '\0';
+	remaining_len = sizeof(buffer) - (str_ptr - buffer);
+	if( likely( remaining_len >= 2 ) ){
+		*(str_ptr++) = '}'; //end of all
+		*str_ptr = '\0';
+	}
 
 	return buffer;
 }

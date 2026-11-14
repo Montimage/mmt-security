@@ -385,12 +385,15 @@ _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 #get set of rules
 	$(QUIET) bash -c "cut -d, -f1 /tmp/mmt-security-expect.csv | sort | uniq > /tmp/mmt-security-expect-rule-id.csv"
 	$(QUIET) cat /tmp/mmt-security-expect-rule-id.csv
-#get only verdicts of the rules
-# the first -e "" is used to avoid hanging when mmt-security-res.csv is empty
-	$(QUIET) bash -c 'grep -e "" $$(while read ruleId; do echo "-e ^$$ruleId"; done < /tmp/mmt-security-expect-rule-id.csv) /tmp/mmt-security-res.csv > /tmp/mmt-security-result.csv || echo "" '
+#get only verdicts of the rules listed in the expected file (exact rule-id match, e.g. ^(4|5|56),)
+# an empty expected file keeps every alert, i.e. the test expects no alert at all
+# grep exits 1 when nothing matches (no alert of these rules): not an error
+	$(QUIET) bash -c 'ids=$$(grep -v "^$$" /tmp/mmt-security-expect-rule-id.csv | paste -sd "|"); \
+		if [ -z "$$ids" ]; then cp /tmp/mmt-security-res.csv /tmp/mmt-security-result.csv; \
+		else grep -E "^($$ids)," /tmp/mmt-security-res.csv > /tmp/mmt-security-result.csv; [ $$? -le 1 ]; fi'
 	$(QUIET) wc -l /tmp/mmt-security-expect.csv
 	$(QUIET) wc -l /tmp/mmt-security-result.csv
-	$(QUIET) bash -c "diff --ignore-all-space /tmp/mmt-security-expect.csv /tmp/mmt-security-result.csv || (echo \"====================execution log:\" && cat /tmp/$*.log)"
+	$(QUIET) bash -c 'diff --ignore-all-space /tmp/mmt-security-expect.csv /tmp/mmt-security-result.csv || { echo "  => FAILED: alerts of check/pcap/$*.pcap differ from check/expect/$*.csv (diff above)"; exit 1; }'
 	@echo '  => OK'
 	
 check: _prepare $(patsubst %,_check.%,$(NAMES))

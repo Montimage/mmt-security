@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 202: Detect non-success/non-pending DICOM status -->
+<property property_id="202" type_property="ATTACK"
+     description="Detect anomalous DICOM status (non-success, non-pending)">
+    <event description="DICOM command PDV with error/warning status"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.status != 0) &amp;&amp; (dicom.status != 65280))"/>
+</property>
+</beginning>

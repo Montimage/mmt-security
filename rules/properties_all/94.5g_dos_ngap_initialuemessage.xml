@@ -1,0 +1,23 @@
+<beginning>
+
+<!--
+This rule detects whether 5G traffic in control plane: one UE must not send two consecutive InitialUEMessage during 0.1 millisecond
+
+Note: in the boolean_expression below, we use: 
+- ngap.procedure_code == 15: indicate InitialUEMessage
+- sctp.dest_port == 38412  : focus on control plane (?)
+- ip.src != ip.dst         : this is mainly to print IP src and dest to alert reports
+- ngap.ran_ue_id == ngap.ran_ue_id.1: the two events have the same ngap.ran_ue_id
+-->
+
+<property value="THEN" delay_units="mms" delay_min="0" delay_max="100" property_id="94" type_property="ATTACK" 
+    description="5G DoS attack in the control plane: two consecutive InitialUEMessage from a single UE during 0.1 millisecond">
+    <event value="COMPUTE" event_id="1" 
+        description="NGAP InitialUEMessage"
+           boolean_expression="(( ngap.procedure_code == 15) &amp;&amp; ((sctp.dest_port == 38412) &amp;&amp;( ip.src != ip.dst )) )"/>
+
+   <event value="COMPUTE" event_id="2" 
+        description="Another NGAP InitialUEMessage"
+           boolean_expression="(( ngap.procedure_code == 15) &amp;&amp; ((sctp.dest_port == 38412) &amp;&amp;( ngap.ran_ue_id == ngap.ran_ue_id.1 )) )"/>
+</property>
+</beginning>

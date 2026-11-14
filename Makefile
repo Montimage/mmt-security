@@ -393,8 +393,17 @@ _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 	$(QUIET) bash -c "diff --ignore-all-space /tmp/mmt-security-expect.csv /tmp/mmt-security-result.csv || (echo \"====================execution log:\" && cat /tmp/$*.log)"
 	@echo '  => OK'
 	
-check: _prepare $(patsubst %,_check.%,$(NAMES))
+check: check-properties-all _prepare $(patsubst %,_check.%,$(NAMES))
 	@echo "All test passed!"
+
+# every rules/*.xml must have a copy in rules/properties_all/ (see readme.md)
+check-properties-all:
+	@missing=0; \
+	for f in rules/*.xml; do \
+		[ -f "rules/properties_all/$$(basename $$f)" ] || { echo "  => missing copy: rules/properties_all/$$(basename $$f)"; missing=1; }; \
+	done; \
+	[ $$missing -eq 0 ] || exit 1
+	@echo "All rules/*.xml have a copy in rules/properties_all/"
 	
 _csv.%: _prepare
 	$(QUIET) $(RM) /tmp/mmt-security*.csv

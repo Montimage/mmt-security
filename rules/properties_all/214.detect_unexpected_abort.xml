@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 214: Detect A-ABORT PDU (type 7) which may indicate abort injection attack -->
+<property property_id="214" type_property="ATTACK"
+     description="Detect unexpected DICOM A-ABORT PDU">
+    <event description="DICOM packet with A-ABORT PDU type (0x07)"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 7))"/>
+</property>
+</beginning>

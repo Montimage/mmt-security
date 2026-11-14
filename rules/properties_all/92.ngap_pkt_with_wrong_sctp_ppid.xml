@@ -1,0 +1,36 @@
+<beginning>
+
+<!--
+This rule detects whether SCTP packets contain payload other than NGAP.
+
+Signature: to check whether "data_ppid" field of SCTP is differed 
+  - from 60 which is used to indicate NGAP
+  - and from 46 which is used to indicate DIAMETER
+  
+
+We check only on SCTP targeted to port 38412
+https://www.etsi.org/deliver/etsi_ts/138400_138499/138412/15.00.00_60/ts_138412v150000p.pdf
+Section 7. Transport Layer
+"The SCTP Destination Port number value assigned by IANA to be used for NGAP is 38412"
+
+To generate attack traffic: 
+  https://github.com/Montimage/5Greplay/blob/main/rules/11.modify-sctp-params.xml
+  
+Note: 
+ - the condition (ip.src != ip.dst) is used just to collect the IP addresses to show on MMT-Operator 
+ -->
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="92" type_property="ATTACK" 
+    description="NGAP packet with wrong SCTP Protocol Identifier">
+    <event value="COMPUTE" event_id="1" 
+        description="SCTP payload is existing"
+           boolean_expression="((sctp.packet_count != 0) &amp;&amp; ((sctp.dest_port == 38412) &amp;&amp; (ip.src != ip.dst) ))"/>
+           
+   <event value="COMPUTE" event_id="2" 
+      description="SCTP Protocol Identifier different from NGAP (60) or DIAMETER (46)"
+         boolean_expression="((sctp_data.data_ppid != 60) &amp;&amp; (sctp_data.data_ppid != 46))"/>
+  
+</property>
+</beginning>
+
+

@@ -1,0 +1,37 @@
+<beginning>
+<!-- 
+Compression attack involve the use of the compression in order to put a great amount of data in a single packet, in order to use a huge amount of 
+computational resources by the server after the decompression. In this case the rule checks the length of the packet. 
+Since http2 tends to merge multiple packets, an upper limit is also set so as not to confuse the attack with the coalescing operated by the protocol
+-->
+<embedded_functions><![CDATA[
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "mmt_lib.h"
+#include "tcpip/mmt_tcpip_protocols.h"
+#include "pre_embedded_functions.h"
+
+
+static int em_check(
+	double header_length,double packet_id){	
+
+	//printf( " Rule 97:Recognized suspect packet. Length %f , packet id %d\n",header_length,(int)packet_id);
+	return 0;
+}
+
+
+]]></embedded_functions>
+
+<property value="THEN"  property_id="97" type_property="ATTACK" 
+    description="5G Http2 Compression Attack" if_satisfied="">
+    <event value="COMPUTE" event_id="1" 
+        description="Rule checks the dimension of the header length. If it is greater then a threshold an alert is launched"
+        boolean_expression="( ((http2.header_length>350) &amp;&amp; (16384>http2.header_length ) &amp;&amp; ( http2.header_method == 131)) &amp;&amp; ( ip.src != ip.dst ) )"/>
+
+ <event value="COMPUTE" event_id="2" 
+        description="Nothing"
+        boolean_expression="( http2.header_method != 0)"/>  
+</property>
+</beginning>

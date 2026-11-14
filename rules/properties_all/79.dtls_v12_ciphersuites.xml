@@ -1,0 +1,77 @@
+<beginning>
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="79" type_property="SECURITY" 
+    description="Ensure DTLS traffic is using v1.2 and strong ciphersuite which is set via 
+    MMT_SEC_DTLS_CIPHER_ALLOWLIST environment variable which contains a comma-separated list of cipher numbers.
+    Example MMT_SEC_DTLS_CIPHER_ALLOWLIST='0xc0a4,0xc0a5' will allow TLS_PSK_WITH_AES_128_CCM and TLS_PSK_WITH_AES_256_CCM ciphers">
+      <event value="COMPUTE" event_id="1" 
+             description="DTLS packet"
+             boolean_expression="( ( dtls.packet_count > 0 ) &amp;&amp; #em_print(ip.client_addr, ip.server_addr, ip.client_port, ip.server_port))"/>
+      <event value="COMPUTE" event_id="2" 
+             description="DTLS version and ciphersuites in client hello handshake messages"
+             boolean_expression="(( #em_is_strong_version( dtls.version )  
+                         &amp;&amp; #em_is_strong_ciphers( dtls.client_hello_cipher_suite ) )"/>
+</property>
+
+<embedded_functions><![CDATA[
+#include <stdlib.h>
+#include <mmt_core.h>
+#include <tcpip/mmt_tcpip.h>
+
+static inline bool em_print( const void * data, ...){
+	return true;
+}
+
+static inline bool em_is_strong_version( double version ){
+	return (version == DTLS_VERSION_1_2 ) || (version == DTLS_VERSION_1_3 );
+}
+
+
+static size_t    allow_ciphers_size = 0;
+static uint16_t *allow_ciphers_list = NULL;
+
+void on_load(){
+	const char *str = getenv("MMT_SEC_DTLS_CIPHER_ALLOWLIST");
+	if( str == NULL ){
+		mmt_info("Rule 79.dtls_v12_ciphersuites: no value of MMT_SEC_DTLS_CIPHER_ALLOWLIST" );
+		return;
+	}
+	char **str_ciphers = NULL;
+	allow_ciphers_size = str_split( str, ',', &str_ciphers );
+	if( allow_ciphers_size == 0 )
+		return;
+	
+	allow_ciphers_list = mmt_mem_alloc( sizeof( uint16_t ) * allow_ciphers_size );
+	size_t i;
+	for( i=0; i<allow_ciphers_size; i++ )
+		allow_ciphers_list[i] = strtol( str_ciphers[i], NULL, 0 );
+	
+	mmt_mem_force_free( str_ciphers );
+	
+	//print info
+	mmt_info("Rule 79.dtls_v12_ciphersuites: allow %zu ciphers", allow_ciphers_size );
+	for( i=0; i<allow_ciphers_size; i++ )
+		mmt_info("Rule 79.dtls_v12_ciphersuites: %zu: %hu", i, allow_ciphers_list[i] );
+}
+
+void on_unload(){
+	if( allow_ciphers_list )
+		mmt_mem_force_free( allow_ciphers_list );
+}
+
+static inline bool em_is_strong_ciphers( const void *data ){
+	const mmt_u16_array_t *ciphers = (mmt_u16_array_t *) data;
+	size_t i, j;
+	for( i=0; i<ciphers->len; i++ ){
+		for( j=0; j<allow_ciphers_size; j++ )
+			if( allow_ciphers_list[j] == ciphers->data[i] )
+				break;
+		
+		//when we visited all allow_ciphers_list but not found
+		if( j >= allow_ciphers_size )
+			return false;
+	}
+	return true;
+}
+]]></embedded_functions>
+</beginning>

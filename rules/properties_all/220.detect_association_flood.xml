@@ -1,0 +1,36 @@
+<beginning>
+<!-- Detection Rule 220: Detect DICOM association flooding (high rate of A-ASSOCIATE-RQ) -->
+<!-- Catches fuzz rule 56: association flooding with high nb-copies -->
+<embedded_functions><![CDATA[
+static int assoc_count = 0;
+static long last_window_start = 0;
+#define ASSOC_FLOOD_THRESHOLD 20
+#define ASSOC_FLOOD_WINDOW_SEC 5
+
+static int em_check_assoc_flood(const void *utime_ptr) {
+    long now;
+    if (utime_ptr == NULL) {
+        now = 0;
+    } else {
+        now = (long)(*(const uint64_t *)utime_ptr / 1000000);
+    }
+    if (last_window_start == 0)
+        last_window_start = now;
+    if (now - last_window_start > ASSOC_FLOOD_WINDOW_SEC) {
+        assoc_count = 1;
+        last_window_start = now;
+        return 0;
+    }
+    assoc_count++;
+    if (assoc_count > ASSOC_FLOOD_THRESHOLD)
+        return 1;
+    return 0;
+}
+]]></embedded_functions>
+
+<property property_id="220" type_property="ATTACK"
+     description="Detect DICOM association flooding (more than 20 A-ASSOCIATE-RQ in 5 seconds)">
+    <event description="High rate of DICOM A-ASSOCIATE-RQ packets"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 1) &amp;&amp; (#em_check_assoc_flood(meta.utime) == 1))"/>
+</property>
+</beginning>

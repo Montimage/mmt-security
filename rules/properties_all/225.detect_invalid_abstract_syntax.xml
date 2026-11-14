@@ -1,0 +1,26 @@
+<beginning>
+<!-- Detection Rule 225: Detect invalid DICOM Abstract/Transfer Syntax (non-OID values) -->
+<!-- Catches fuzz rules 51, 52, 55: syntax fuzzing with invalid strings and overflow entries -->
+<embedded_functions><![CDATA[
+static int em_check_invalid_syntax(const char *val) {
+    if (val == NULL || val[0] == '\0')
+        return 1; /* Empty syntax is invalid */
+    /* Valid DICOM UIDs contain only digits and dots, starting with a digit */
+    if (val[0] < '0' || val[0] > '9')
+        return 1; /* Must start with digit */
+    const char *p = val;
+    while (*p) {
+        if (*p != '.' && (*p < '0' || *p > '9'))
+            return 1; /* Contains non-OID character */
+        p++;
+    }
+    return 0;
+}
+]]></embedded_functions>
+
+<property property_id="225" type_property="ATTACK"
+     description="Detect invalid DICOM Abstract Syntax (non-OID value in presentation context)">
+    <event description="DICOM A-ASSOCIATE-RQ with non-OID Abstract Syntax"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 1) &amp;&amp; (#em_check_invalid_syntax(dicom.abstract_syntax) == 1))"/>
+</property>
+</beginning>

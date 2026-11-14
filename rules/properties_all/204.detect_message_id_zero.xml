@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 204: Detect DICOM message ID of zero -->
+<property property_id="204" type_property="ATTACK"
+     description="Detect DICOM message ID equal to zero">
+    <event description="DICOM command PDV with message_id = 0"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.message_id == 0))"/>
+</property>
+</beginning>

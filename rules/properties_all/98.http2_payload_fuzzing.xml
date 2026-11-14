@@ -1,0 +1,45 @@
+<beginning>
+<!--
+This rule analizes char by char in order to find unusual characters in the payload of the packet that can indicate a possible fuzzing attack.Note that the format of the payload is json, and only post requests have a body,so there is a check on the header method.
+
+-->
+
+<embedded_functions><![CDATA[
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "mmt_lib.h"
+
+static bool em_check_fuzzing(int payload_length, const char* payload, double packet_id){
+
+	//char*data;
+	//data=(char*)payload_data;
+	bool result=false;
+	for (int i = 9; i < payload_length; i++) {
+		//printf("  %02hhX ",payload[i]);
+		//printf("  %c",payload[i]);
+		if((payload[i]=='\\')|| payload[i]=='#' || (payload[i]=='%') || (payload[i]=='$')){
+			result=true;
+
+			// printf( " Rule 98:Recognized suspect fuzzing. Length %d  %f\n",payload_length,packet_id);
+			 break;
+			}
+	}
+	//printf("\n");
+	return result;
+}
+
+
+]]></embedded_functions>
+
+<property value="THEN"  property_id="98" type_property="ATTACK" 
+    description="5G Http2 fuzzing Payload Recognition">
+     <event value="COMPUTE" event_id="1" 
+        description="Nothing"
+        boolean_expression=" true"/>  
+    <event value="COMPUTE" event_id="2" 
+        description="HTTP2 fuzzing"
+        boolean_expression="(  (( http2.header_method == 131)  &amp;&amp; #em_check_fuzzing(http2.payload_length , http2.p_payload,meta.packet_index) )  &amp;&amp; (ip.src != ip.dst))"/>
+</property>
+</beginning>

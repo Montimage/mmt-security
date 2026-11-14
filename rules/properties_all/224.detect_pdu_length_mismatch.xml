@@ -1,0 +1,10 @@
+<beginning>
+<!-- Detection Rule 224: Detect DICOM PDU length in suspicious ranges -->
+<!-- Expands rule 207/208 to catch fuzz rule 32 (PDU length set to 10000) -->
+<!-- Valid DICOM A-ASSOCIATE PDU lengths are typically 200-800 bytes, P-DATA varies -->
+<property property_id="224" type_property="ATTACK"
+     description="Detect DICOM A-ASSOCIATE PDU with suspicious length (too small or atypical)">
+    <event description="DICOM A-ASSOCIATE-RQ/AC with PDU length less than 68 (minimum valid)"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type &gt; 0) &amp;&amp; (dicom.pdu_type &lt; 3) &amp;&amp; (dicom.pdu_len &lt; 68))"/>
+</property>
+</beginning>

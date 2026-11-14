@@ -1,0 +1,11 @@
+<beginning>
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="78" type_property="TEST" 
+    description="Ensure INT is valid">
+      <event value="COMPUTE" event_id="1" 
+             description="Having INT"
+             boolean_expression="( int.packet_count > 0 )"/>
+      <event value="COMPUTE" event_id="2" 
+             description="INT Data"
+             boolean_expression="(int.hop_switch_ids != '')"/>
+</property>
+</beginning>

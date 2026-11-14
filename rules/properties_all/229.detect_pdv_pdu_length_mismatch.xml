@@ -1,0 +1,23 @@
+<beginning>
+<!-- Detection Rule 229: Detect PDV length / PDU length mismatch in P-DATA-TF -->
+<!-- Catches fuzz rule 38: PDV length set to arbitrary value (e.g., 50) -->
+<!-- In a single-PDV P-DATA-TF: pdu_len must equal pdv_length + 4 -->
+<!-- (the 4 extra bytes are the PDV Item Length field itself) -->
+<embedded_functions><![CDATA[
+static int em_check_pdv_pdu_mismatch(double pdu_len_val, double pdv_len_val) {
+    uint32_t pdu_len = (uint32_t)pdu_len_val;
+    uint32_t pdv_len = (uint32_t)pdv_len_val;
+    /* For single-PDV P-DATA-TF: pdu_len = pdv_item_length_field(4) + pdv_content(pdv_len)
+       So pdu_len should equal pdv_len + 4 */
+    if (pdu_len != pdv_len + 4)
+        return 1;
+    return 0;
+}
+]]></embedded_functions>
+
+<property property_id="229" type_property="ATTACK"
+     description="Detect DICOM P-DATA-TF with PDV length inconsistent with PDU length">
+    <event description="DICOM P-DATA-TF where pdv_length + 4 != pdu_len (length tampering)"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (#em_check_pdv_pdu_mismatch(dicom.pdu_len, dicom.pdv_length) == 1))"/>
+</property>
+</beginning>

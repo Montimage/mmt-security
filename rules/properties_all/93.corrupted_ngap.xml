@@ -1,0 +1,29 @@
+<beginning>
+
+<!--
+This rule detects whether a malformed NGAP packet is present. The signature is:
+- IF: The upper protocol, SCTP, indicates that its payload is NGAP protocol
+- THEN: NGAP must be decoded correctly
+
+We check only on SCTP targeted to port 38412
+https://www.etsi.org/deliver/etsi_ts/138400_138499/138412/15.00.00_60/ts_138412v150000p.pdf
+Section 7. Transport Layer
+"The SCTP Destination Port number value assigned by IANA to be used for NGAP is 38412"
+
+Note: 
+ - the condition (ip.src != ip.dst) is used just to collect the IP addresses to show on MMT-Operator 
+-->
+
+<property value="THEN" delay_units="ms" delay_min="0" delay_max="0" property_id="93" type_property="SECURITY" 
+    description="SCTP Protocol Identifier indicates that its payload is NGAP but the payload is not effectually NGAP">
+    <event value="COMPUTE" event_id="1" 
+        description="SCTP Protocol Identifier is 60 to indicate its payload is NGAP"
+           boolean_expression="(( sctp_data.data_ppid == 60) &amp;&amp; ((sctp.dest_port == 38412) &amp;&amp;( ip.src != ip.dst )) )"/>
+           
+   <event value="COMPUTE" event_id="2" 
+      description="No NGAP is available or correctly decoded"
+         boolean_expression="(#is_exist(ngap.procedure_code))"/>
+</property>
+</beginning>
+
+

@@ -1,0 +1,9 @@
+<beginning>
+<!-- Detection Rule 219: Detect oversized DICOM AE Title (>16 bytes violates DICOM standard) -->
+<!-- Catches fuzz rule 61: CVE-2015-8979 stack overflow in AE Title -->
+<property property_id="219" type_property="ATTACK"
+     description="Detect oversized DICOM Called AE Title (CVE-2015-8979 stack overflow)">
+    <event description="DICOM A-ASSOCIATE-RQ with Called AE Title longer than 16 characters"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 1) &amp;&amp; (#strlen(dicom.called_ae_title) &gt; 16))"/>
+</property>
+</beginning>

@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 201: Detect unrecognized DICOM command field value -->
+<property property_id="201" type_property="ATTACK"
+     description="Detect unrecognized DICOM command field value">
+    <event description="DICOM command PDV with unrecognized command field"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (dicom.command_field != 1) &amp;&amp; (dicom.command_field != 16) &amp;&amp; (dicom.command_field != 32) &amp;&amp; (dicom.command_field != 33) &amp;&amp; (dicom.command_field != 48) &amp;&amp; (dicom.command_field != 256) &amp;&amp; (dicom.command_field != 272) &amp;&amp; (dicom.command_field != 288) &amp;&amp; (dicom.command_field != 304) &amp;&amp; (dicom.command_field != 320) &amp;&amp; (dicom.command_field != 336) &amp;&amp; (dicom.command_field != 4095) &amp;&amp; (dicom.command_field != 32769) &amp;&amp; (dicom.command_field != 32784) &amp;&amp; (dicom.command_field != 32800) &amp;&amp; (dicom.command_field != 32801) &amp;&amp; (dicom.command_field != 32816) &amp;&amp; (dicom.command_field != 33024) &amp;&amp; (dicom.command_field != 33040) &amp;&amp; (dicom.command_field != 33056) &amp;&amp; (dicom.command_field != 33072) &amp;&amp; (dicom.command_field != 33088) &amp;&amp; (dicom.command_field != 33104))"/>
+</property>
+</beginning>

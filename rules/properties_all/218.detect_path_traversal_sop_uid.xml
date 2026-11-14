@@ -1,0 +1,25 @@
+<beginning>
+<!-- Detection Rule 218: Detect path traversal payloads in DICOM Affected SOP Class UID -->
+<!-- Catches fuzz rule 60: CVE-2022-2119/2120 path traversal attack -->
+<embedded_functions><![CDATA[
+static int em_check_path_traversal(const char *val) {
+    if (val == NULL || val[0] == '\0')
+        return 0;
+    /* Detect directory traversal patterns */
+    if (strstr(val, "../") != NULL) return 1;
+    if (strstr(val, "..\\") != NULL) return 1;
+    if (strstr(val, "..%2f") != NULL) return 1;
+    if (strstr(val, "..%2F") != NULL) return 1;
+    if (strstr(val, "..%252f") != NULL) return 1;
+    if (strstr(val, "/etc/") != NULL) return 1;
+    if (strstr(val, "\\windows\\") != NULL) return 1;
+    return 0;
+}
+]]></embedded_functions>
+
+<property property_id="218" type_property="ATTACK"
+     description="Detect path traversal in DICOM Affected SOP Class UID (CVE-2022-2119/2120)">
+    <event description="DICOM command PDV with path traversal pattern in SOP Class UID"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type == 4) &amp;&amp; (#em_check_path_traversal(dicom.affected_sop_class_uid) == 1))"/>
+</property>
+</beginning>

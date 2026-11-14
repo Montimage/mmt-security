@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 208: Detect DICOM PDU length of zero -->
+<property property_id="208" type_property="ATTACK"
+     description="Detect DICOM PDU length of zero">
+    <event description="DICOM packet with PDU length = 0"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_len == 0))"/>
+</property>
+</beginning>

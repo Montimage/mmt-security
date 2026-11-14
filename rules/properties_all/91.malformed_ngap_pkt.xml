@@ -1,0 +1,19 @@
+<beginning>
+
+<property value="THEN" delay_units="s" delay_min="0" delay_max="1" property_id="91" type_property="ATTACK" 
+    description="5G UE authentication hijack: UE IDs in Authentication Response is different with the one of Authetication Request">
+    <event value="COMPUTE" event_id="1" 
+        description="Authentication request, Downlink NAS Transport"
+           boolean_expression="((ngap.procedure_code == 4) &amp;&amp;  (nas_5g.message_type == 86))"/>
+    
+    <event value="COMPUTE" event_id="2" 
+        description="In Authentication Response of the same SCTP stream, same AMF-UE-ID but different RAN-UE-ID"
+           boolean_expression="((sctp_data.data_stream == sctp_data.data_stream.1) 
+           &amp;&amp; ((((ngap.procedure_code == 46) 
+           &amp;&amp;  (((nas_5g.message_type == 87) 
+           &amp;&amp;  ((ngap.amf_ue_id == ngap.amf_ue_id.1)
+           &amp;&amp;   (ngap.ran_ue_id != ngap.ran_ue_id.1) )))))))"/>
+    
+</property>
+
+</beginning>

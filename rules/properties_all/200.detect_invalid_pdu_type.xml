@@ -1,0 +1,8 @@
+<beginning>
+<!-- Detection Rule 200: Detect PDU type outside valid range 1-7 -->
+<property property_id="200" type_property="ATTACK"
+     description="Detect invalid DICOM PDU type (outside 1-7)">
+    <event description="DICOM packet with PDU type greater than 7"
+        boolean_expression="((ip.src != 0) &amp;&amp; (dicom.pdu_type &gt; 7))"/>
+</property>
+</beginning>

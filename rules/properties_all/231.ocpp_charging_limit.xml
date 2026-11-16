@@ -1,0 +1,45 @@
+<beginning>
+<!-- Detection Rule 231: OCPP 1.6-J SetChargingProfile with a limit above the site maximum -->
+<!-- Needs the OCPP 1.6-J protocol plugin `ocpp_example` (id 993) of mmt-plugin-generator
+     (examples/ocpp, https://github.com/Montimage/mmt-plugin-generator) installed in the probe's
+     MMT-DPI plugin folder when mmt-security is built (`make gen_dpi` lists the protocols that
+     mmt-dpi loads), and in the probe at run time. The plugin registers its protocol under the
+     upper-cased label, OCPP_EXAMPLE, which mmt-security matches case-sensitively. `OCPP_EXAMPLE.charging_limit_x10` is the first chargingSchedulePeriod
+     limit of a SetChargingProfile CALL, in tenths of its `charging_rate_unit` (A or W).
+     A limit above MMT_SEC_OCPP_MAX_CURRENT_A (default 32 A, the usual AC maximum per phase) or
+     MMT_SEC_OCPP_MAX_POWER_W (default 22000 W, 22 kW AC) is reported. Catches false data injection
+     in charging profiles (Zenodo 14887131, attack 1: SetChargingProfile limits changed by a MiTM).
+     A retransmitted SetChargingProfile is reported again (the plugin does not skip retransmissions). -->
+<embedded_functions><![CDATA[
+static double ocpp_max_current_x10 = 320;    /* 32 A */
+static double ocpp_max_power_x10   = 220000; /* 22000 W */
+
+static void on_load(){
+	const char *str = getenv("MMT_SEC_OCPP_MAX_CURRENT_A");
+	if( str != NULL && atof( str ) > 0 )
+		ocpp_max_current_x10 = atof( str ) * 10;
+	str = getenv("MMT_SEC_OCPP_MAX_POWER_W");
+	if( str != NULL && atof( str ) > 0 )
+		ocpp_max_power_x10 = atof( str ) * 10;
+}
+
+static void on_unload(){
+}
+
+static inline int em_ocpp_limit_too_high( double limit_x10, const char *unit ){
+	if( unit == NULL )
+		return 0;
+	if( unit[0] == 'A' && unit[1] == '\0' )
+		return limit_x10 > ocpp_max_current_x10;
+	if( unit[0] == 'W' && unit[1] == '\0' )
+		return limit_x10 > ocpp_max_power_x10;
+	return 0;
+}
+]]></embedded_functions>
+
+<property property_id="231" type_property="ATTACK"
+     description="OCPP 1.6-J SetChargingProfile with a charging limit above the site maximum (MMT_SEC_OCPP_MAX_CURRENT_A, default 32 A; MMT_SEC_OCPP_MAX_POWER_W, default 22000 W)">
+    <event description="OCPP SetChargingProfile CALL with a limit above the maximum"
+        boolean_expression="((OCPP_EXAMPLE.message_type_id == 2) &amp;&amp; ((OCPP_EXAMPLE.action == 'SetChargingProfile') &amp;&amp; (#em_ocpp_limit_too_high(OCPP_EXAMPLE.charging_limit_x10, OCPP_EXAMPLE.charging_rate_unit) == 1)))"/>
+</property>
+</beginning>

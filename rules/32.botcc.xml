@@ -12880,7 +12880,7 @@ void on_load(){
    struct in_addr addr;
    
    //create a new hash table
-   table = mmt_hash_create( length );
+   table = mmt_hash_create();
    mmt_debug("Rule 32.botcc: Created a table for checking bootnet having %d IPs", length );
    
    //add items to the hash table

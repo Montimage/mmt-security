@@ -454,7 +454,7 @@ void on_load(){
 	const char* uri;
 	
 	//create a new hash table
-	table = mmt_hash_create( length );
+	table = mmt_hash_create();
 	mmt_debug("Rule 33.trojan: Created a table for checking trojat having %d URI", length );
 	
 	//add items to the hash table

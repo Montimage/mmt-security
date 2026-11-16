@@ -14,10 +14,10 @@
 
 #define MAX_STRING_LEN 500
 
-void init_redis();
+void init_redis( const char *hostname, int port );
 void send_message_to_redis(const char*);
 
-void init_file();
+void init_file( const char *filename, int period_sample );
 void send_message_to_file(const char*);
 void close_file();
 

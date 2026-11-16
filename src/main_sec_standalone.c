@@ -489,6 +489,13 @@ static inline void termination(){
 		verdict_printer_free();
 
 	mmt_sec_close();   // close mmt_security
+	// close our handler before close_extraction(): mmt-dpi 1.7.x closes the remaining
+	// handlers while iterating over its handler map and reads the erased node (crash
+	// at exit with GCC 15 / Ubuntu 26.04)
+	if( mmt_dpi_handler != NULL ){
+		mmt_close_handler( mmt_dpi_handler );
+		mmt_dpi_handler = NULL;
+	}
 	close_extraction();// close mmt_dpi
 }
 

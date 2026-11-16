@@ -39,10 +39,20 @@ cp .env.example .env          # then edit .env with your Kafka broker + SASL cre
    self-terminates after `--idle-timeout` seconds of no new reports).
 3. For each attack window, the scorer appends an alert to the alerts log and publishes a STIX
    bundle to Kafka. The bundle carries the exact feature vector under
-   `observed-data → extensions → x-mmt-features` (for a downstream xAI tool).
+   `observed-data → extensions → x-mmt-features-ext` (for a downstream xAI tool).
 
 Edit the three `#define` paths in `rules/500.5g_ml_scorer_launcher.xml` (SCORER_DIR,
 SCORER_WATCH_DIR, SCORER_ALERTS) to match your install before compiling the rules.
+
+## STIX format
+The bundles use the same format as mmt-probe's own STIX alerts (`STIX_FORMAT`, branch
+`intact-new-features`; spec in mmt-probe `docs/data-format.md`): `identity` (`MMT-Probe
+<probe-id>`) → `observed-data` → address SCOs → `x-attack-type`, deterministic ids, and
+`priority` / `verdict` / `rule_type` in `x-attack-type-ext`. They pass `stix2-validator`
+(STIX 2.1) with no errors. The probe id and input source are read from the event-report
+window, so ML alerts share the identity object of the probe's alerts. The only addition is
+`x-mmt-features-ext` on `observed-data`: the model's input datapoint (`feature_names`,
+`feature_values`, `predicted_class`, `model`).
 
 ## Alert output modes (choose any combination)
 The STIX bundle is the same regardless of destination (shared serializer), so a JSON file is a

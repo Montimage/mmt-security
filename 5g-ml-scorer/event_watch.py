@@ -25,6 +25,7 @@ Required mmt-probe.conf settings (live, so windows rotate with a semaphore per w
 """
 
 import argparse
+import csv
 import fcntl
 import glob
 import json
@@ -110,8 +111,38 @@ def process_file_multiclass(csv_path, art, min_nas, alert_sink, stix_sink=None):
         datapoint = {c: _num(feat.get(c, 0)) for c in cols}
         stix_sink(description, src_ip, dst_ip, os.path.basename(csv_path), attack_name,
                   features=datapoint, predicted_class=cls,
-                  model_name=art.get("model_name", "rf_event_multiclass"))
+                  model_name=art.get("model_name", "rf_event_multiclass"),
+                  **_window_meta(csv_path, cls, datapoint))
     return 1
+
+
+def _window_meta(csv_path, cls, datapoint):
+    """Producer identity, alert time and alert key for the STIX bundle, read from the window.
+
+    Event-report rows are `1000,<probe-id>,<input-source>,<time>,...`: the probe's own probe id
+    and input source (so the bundle's identity is the same object as in the probe's bundles),
+    and the alert time = the last event of the window (so re-scoring a window gives the same
+    deterministic ids, like the probe). The trace (alert key) is the window plus the predicted
+    class and the scored datapoint.
+    """
+    probe_id, source, last_ts = None, None, None
+    try:
+        with open(csv_path, newline="") as f:
+            for row in csv.reader(f):
+                if len(row) < 4 or row[0] != "1000":
+                    continue
+                probe_id = probe_id if probe_id is not None else row[1]
+                source = source if source is not None else row[2]
+                try:
+                    t = float(row[3])
+                    last_ts = t if last_ts is None or t > last_ts else last_ts
+                except ValueError:
+                    pass
+    except OSError:
+        pass
+    trace = json.dumps({"window": os.path.basename(csv_path), "class": cls,
+                        "features": datapoint}, sort_keys=True, separators=(",", ":"))
+    return {"probe_id": probe_id, "input_source": source, "ts": last_ts, "trace": trace}
 
 
 def _num(v):
@@ -180,7 +211,8 @@ def process_file(csv_path, art, min_mult, min_nas, require, alert_sink, stix_sin
     )
     if stix_sink:
         stix_sink(description, rep["src_ip"], rep["dst_ip"],
-                  os.path.basename(csv_path), attack_name)
+                  os.path.basename(csv_path), attack_name,
+                  **_window_meta(csv_path, "replay", None))
     return 1
 
 
@@ -308,10 +340,13 @@ def _make_stix_sink(args):
         print(f"STIX bundles -> {args.stix_dir}/ (one .json per alert)")
 
     def sink(description, src_ip, dst_ip, name="alert", attack_name=None,
-             features=None, predicted_class=None, model_name=None):
+             features=None, predicted_class=None, model_name=None,
+             probe_id=None, input_source=None, ts=None, trace=None):
         bundle = build_stix_bundle(description, src_ip, dst_ip, rule_id=STIX_RULE_ID,
                                    attack_name=attack_name, features=features,
-                                   predicted_class=predicted_class, model_name=model_name)
+                                   predicted_class=predicted_class, model_name=model_name,
+                                   probe_id=probe_id, input_source=input_source,
+                                   ts=ts, trace=trace)
         if args.stix_dir:
             # One pretty-printed bundle per alert, named after the window it came from.
             # The bundle-uuid tail keeps two alerts on the same window from colliding.

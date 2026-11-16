@@ -27,7 +27,7 @@ typedef struct mmt_hash_struct{
  * Create a hash table
  * @return
  */
-static inline mmt_hash_t *mmt_hash_create(){
+static inline mmt_hash_t *mmt_hash_create( void ){
 	int i;
 	mmt_hash_t *ret = mmt_mem_alloc( sizeof( mmt_hash_t) );
 	ret->data = NULL;

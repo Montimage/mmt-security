@@ -10,7 +10,10 @@
      (default 10) Heartbeat CALLs within MMT_SEC_OCPP_HEARTBEAT_WINDOW_S (default 10) seconds is
      reported once per window (or once per flow with mmt-probe's security.ignore-remain-flow = true,
      which also skips this rule on a flow where another rule has already raised an alert). Catches the OCPP 1.6 Heartbeat flooding DoS (Zenodo 14887131, attack 3:
-     100 fake charge points, one Heartbeat every 250 ms each). -->
+     100 fake charge points, one Heartbeat every 250 ms each).
+     Alerts carry the charge point and central system endpoints (ip.src, ip.dst, tcp.src_port,
+     tcp.dest_port): the event references them so that mmt-probe reports them with the alert, which
+     a SOAR needs to attribute or block (OCPP over IPv4/TCP, as the plugin). -->
 <embedded_functions><![CDATA[
 #include <sys/time.h>
 
@@ -94,6 +97,6 @@ static inline int em_ocpp_heartbeat_flood( const char *ip_src, double src_port, 
 <property property_id="230" type_property="ATTACK"
      description="OCPP 1.6-J Heartbeat flooding: a charge point session sends more Heartbeat CALLs than MMT_SEC_OCPP_HEARTBEAT_LIMIT (default 10) within MMT_SEC_OCPP_HEARTBEAT_WINDOW_S (default 10) seconds">
     <event description="OCPP Heartbeat CALL over the session's limit"
-        boolean_expression="((OCPP_EXAMPLE.message_type_id == 2) &amp;&amp; ((OCPP_EXAMPLE.action == 'Heartbeat') &amp;&amp; (#em_ocpp_heartbeat_flood(ip.src, tcp.src_port, meta.utime) == 1)))"/>
+        boolean_expression="((OCPP_EXAMPLE.message_type_id == 2) &amp;&amp; ((OCPP_EXAMPLE.action == 'Heartbeat') &amp;&amp; (((ip.src != ip.dst) &amp;&amp; (tcp.dest_port &gt; 0)) &amp;&amp; (#em_ocpp_heartbeat_flood(ip.src, tcp.src_port, meta.utime) == 1))))"/>
 </property>
 </beginning>

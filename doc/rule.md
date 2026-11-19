@@ -300,6 +300,8 @@ Example: rules 230 and 231 use the OCPP 1.6-J plugin `ocpp_example` (mmt-plugin-
 | `230.ocpp_heartbeat_flood.xml` | a charge point session (`ip.src`, `tcp.src_port`) sending more than LIMIT Heartbeat CALLs within WINDOW seconds; reported once per window | `MMT_SEC_OCPP_HEARTBEAT_LIMIT` (10), `MMT_SEC_OCPP_HEARTBEAT_WINDOW_S` (10) |
 | `231.ocpp_charging_limit.xml` | a SetChargingProfile CALL whose first limit is above the site maximum | `MMT_SEC_OCPP_MAX_CURRENT_A` (32), `MMT_SEC_OCPP_MAX_POWER_W` (22000) |
 
+Both rules also reference `ip.src`, `ip.dst`, `tcp.src_port` and `tcp.dest_port` in their event (`(ip.src != ip.dst)`, `(tcp.dest_port > 0)`, the usual idiom of the sample rules), so that each alert carries the two endpoints; an alert only contains the attributes its event uses, and a consumer such as a SOAR needs the addresses to attribute or block. The rules therefore match OCPP over IPv4/TCP.
+
 With mmt-probe, `security.ignore-remain-flow = true` (the default) skips every rule on the rest of a flow once any rule has raised an alert on it. On a flood where a TCP-level rule (for example 56, SYN flooding) fires first on each connection, rule 230 is then never evaluated; set it to `false`, or exclude those rules, where application-level alerts matter.
 
 Measured on the Federated OCPP 1.6 Intrusion Detection Dataset (Zenodo record 14887131, CC-BY-4.0) with mmt-dpi 1.10.2 (`8e6faf4`), this branch's base (`a78a4fd`), mmt-probe `fbf0c3d` and the plugin from mmt-plugin-generator `220adc1`:

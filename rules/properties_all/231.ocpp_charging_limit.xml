@@ -9,7 +9,10 @@
      A limit above MMT_SEC_OCPP_MAX_CURRENT_A (default 32 A, the usual AC maximum per phase) or
      MMT_SEC_OCPP_MAX_POWER_W (default 22000 W, 22 kW AC) is reported. Catches false data injection
      in charging profiles (Zenodo 14887131, attack 1: SetChargingProfile limits changed by a MiTM).
-     A retransmitted SetChargingProfile is reported again (the plugin does not skip retransmissions). -->
+     A retransmitted SetChargingProfile is reported again (the plugin does not skip retransmissions).
+     Alerts carry the charge point and central system endpoints (ip.src, ip.dst, tcp.src_port,
+     tcp.dest_port): the event references them so that mmt-probe reports them with the alert, which
+     a SOAR needs to attribute or block (OCPP over IPv4/TCP, as the plugin). -->
 <embedded_functions><![CDATA[
 static double ocpp_max_current_x10 = 320;    /* 32 A */
 static double ocpp_max_power_x10   = 220000; /* 22000 W */
@@ -40,6 +43,6 @@ static inline int em_ocpp_limit_too_high( double limit_x10, const char *unit ){
 <property property_id="231" type_property="ATTACK"
      description="OCPP 1.6-J SetChargingProfile with a charging limit above the site maximum (MMT_SEC_OCPP_MAX_CURRENT_A, default 32 A; MMT_SEC_OCPP_MAX_POWER_W, default 22000 W)">
     <event description="OCPP SetChargingProfile CALL with a limit above the maximum"
-        boolean_expression="((OCPP_EXAMPLE.message_type_id == 2) &amp;&amp; ((OCPP_EXAMPLE.action == 'SetChargingProfile') &amp;&amp; (#em_ocpp_limit_too_high(OCPP_EXAMPLE.charging_limit_x10, OCPP_EXAMPLE.charging_rate_unit) == 1)))"/>
+        boolean_expression="((OCPP_EXAMPLE.message_type_id == 2) &amp;&amp; ((OCPP_EXAMPLE.action == 'SetChargingProfile') &amp;&amp; ((#em_ocpp_limit_too_high(OCPP_EXAMPLE.charging_limit_x10, OCPP_EXAMPLE.charging_rate_unit) == 1) &amp;&amp; ((ip.src != ip.dst) &amp;&amp; ((tcp.src_port &gt; 0) &amp;&amp; (tcp.dest_port &gt; 0))))))"/>
 </property>
 </beginning>

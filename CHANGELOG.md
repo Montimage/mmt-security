@@ -1,5 +1,5 @@
 # Unreleased
-- rules 230 and 231 (in rules/properties_all) for OCPP 1.6-J: Heartbeat flooding and SetChargingProfile limit above the site maximum; they need the OCPP 1.6-J protocol plugin of mmt-plugin-generator (doc/rule.md, section 7)
+- rules 230 and 231 (in rules/properties_all) for OCPP 1.6-J: Heartbeat flooding and SetChargingProfile limit above the site maximum; they need the OCPP 1.6-J protocol plugin of mmt-plugin-generator (doc/rule.md, section 7); their alerts carry ip.src, ip.dst, tcp.src_port and tcp.dest_port
 
 # Version 1.2.20 (05 Nov 2026)
 - fixed bugs

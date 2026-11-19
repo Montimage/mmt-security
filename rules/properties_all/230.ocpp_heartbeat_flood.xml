@@ -1,0 +1,102 @@
+<beginning>
+<!-- Detection Rule 230: OCPP 1.6-J Heartbeat flooding from one charge point session -->
+<!-- Needs the OCPP 1.6-J protocol plugin `ocpp_example` (id 993) of mmt-plugin-generator
+     (examples/ocpp, https://github.com/Montimage/mmt-plugin-generator) installed in the probe's
+     MMT-DPI plugin folder when mmt-security is built (`make gen_dpi` lists the protocols that
+     mmt-dpi loads), and in the probe at run time. The plugin registers its protocol under the
+     upper-cased label, OCPP_EXAMPLE, which mmt-security matches case-sensitively. A charge point sends Heartbeat at the interval the central system gives
+     in its BootNotification answer (OCPP 1.6 section 4.6), usually 60 s or more.
+     A session (charge point IP and TCP port) sending more than MMT_SEC_OCPP_HEARTBEAT_LIMIT
+     (default 10) Heartbeat CALLs within MMT_SEC_OCPP_HEARTBEAT_WINDOW_S (default 10) seconds is
+     reported once per window (or once per flow with mmt-probe's security.ignore-remain-flow = true,
+     which also skips this rule on a flow where another rule has already raised an alert). Catches the OCPP 1.6 Heartbeat flooding DoS (Zenodo 14887131, attack 3:
+     100 fake charge points, one Heartbeat every 250 ms each).
+     Alerts carry the charge point and central system endpoints (ip.src, ip.dst, tcp.src_port,
+     tcp.dest_port): the event references them so that mmt-probe reports them with the alert, which
+     a SOAR needs to attribute or block (OCPP over IPv4/TCP, as the plugin). -->
+<embedded_functions><![CDATA[
+#include <sys/time.h>
+
+#define OCPP_HB_SLOTS 4096
+#define OCPP_HB_PROBES 8
+
+struct ocpp_hb_slot {
+	uint32_t ip;
+	uint16_t port;
+	uint8_t  used;
+	uint8_t  reported;
+	uint32_t count;
+	time_t   window_start;
+	time_t   last_seen;
+};
+
+/* one table per thread: mmt-probe hands all packets of a flow to the same thread */
+static __thread struct ocpp_hb_slot ocpp_hb_table[OCPP_HB_SLOTS];
+static uint32_t ocpp_hb_limit    = 10;
+static time_t   ocpp_hb_window_s = 10;
+
+static void on_load(){
+	const char *str = getenv("MMT_SEC_OCPP_HEARTBEAT_LIMIT");
+	if( str != NULL && atoi( str ) > 0 )
+		ocpp_hb_limit = atoi( str );
+	str = getenv("MMT_SEC_OCPP_HEARTBEAT_WINDOW_S");
+	if( str != NULL && atoi( str ) > 0 )
+		ocpp_hb_window_s = atoi( str );
+}
+
+static void on_unload(){
+}
+
+/* Returns 1 once per window, on the Heartbeat that makes the session exceed the limit. */
+static inline int em_ocpp_heartbeat_flood( const char *ip_src, double src_port, const void *utime ){
+	uint32_t ip, h, i;
+	uint16_t port = (uint16_t) src_port;
+	time_t now;
+	struct ocpp_hb_slot *s = NULL, *oldest = NULL;
+
+	if( ip_src == NULL || utime == NULL )
+		return 0;
+	memcpy( &ip, ip_src, sizeof( ip ) );
+	now = ((const struct timeval *) utime)->tv_sec;
+
+	h = (ip * 2654435761u) ^ (port * 40503u);
+	for( i = 0; i < OCPP_HB_PROBES; i++ ){
+		struct ocpp_hb_slot *c = &ocpp_hb_table[ (h + i) % OCPP_HB_SLOTS ];
+		if( c->used && c->ip == ip && c->port == port ){
+			s = c;
+			break;
+		}
+		if( oldest == NULL || !c->used || (oldest->used && c->last_seen < oldest->last_seen) )
+			oldest = c;
+	}
+	if( s == NULL ){
+		/* new session, or a session evicted earlier: take a free or the least recent slot */
+		s = oldest;
+		s->used = 1;
+		s->ip = ip;
+		s->port = port;
+		s->count = 0;
+		s->reported = 0;
+		s->window_start = now;
+	}
+	s->last_seen = now;
+	if( now - s->window_start >= ocpp_hb_window_s ){
+		s->window_start = now;
+		s->count = 0;
+		s->reported = 0;
+	}
+	s->count ++;
+	if( s->count > ocpp_hb_limit && !s->reported ){
+		s->reported = 1;
+		return 1;
+	}
+	return 0;
+}
+]]></embedded_functions>
+
+<property property_id="230" type_property="ATTACK"
+     description="OCPP 1.6-J Heartbeat flooding: a charge point session sends more Heartbeat CALLs than MMT_SEC_OCPP_HEARTBEAT_LIMIT (default 10) within MMT_SEC_OCPP_HEARTBEAT_WINDOW_S (default 10) seconds">
+    <event description="OCPP Heartbeat CALL over the session's limit"
+        boolean_expression="((OCPP_EXAMPLE.message_type_id == 2) &amp;&amp; ((OCPP_EXAMPLE.action == 'Heartbeat') &amp;&amp; (((ip.src != ip.dst) &amp;&amp; (tcp.dest_port &gt; 0)) &amp;&amp; (#em_ocpp_heartbeat_flood(ip.src, tcp.src_port, meta.utime) == 1))))"/>
+</property>
+</beginning>

@@ -1,0 +1,30 @@
+# summary: phpAfterShell (CVE-2026-126714) trigger request — multipart POST carrying
+# PHP_SESSION_UPLOAD_PROGRESS + PHPSESSID — in cleartext HTTP to a static nginx;
+# requests come from payloads/<mode>.jsonl
+# Run: cyberlab run <lab> attack ; cyberlab run <lab> benign
+# The victim answers 200 to everything and executes nothing: the payload is a detection
+# string (the upload-progress field name), not a working exploit.
+name: cyberlab-230-phpaftershell
+networks:
+  lab:   # internal: no route out; inhibit_ipv4: the host has no address on this bridge
+    driver: bridge
+    internal: true
+    driver_opts: { com.docker.network.bridge.inhibit_ipv4: "true" }
+services:
+  victim:
+    image: nginx:1.27-alpine
+    networks: [lab]
+    volumes: ["./nginx.conf:/etc/nginx/conf.d/default.conf:ro"]
+  capture:
+    image: ${CYBERLAB_TOOLS:-cyberlab/tools:local}
+    network_mode: "service:victim"
+    command: tcpdump -Z root -i eth0 -B 32768 --immediate-mode -U -w /cap/${PCAP:-attack}.pcap tcp port 80
+    healthcheck: { test: ["CMD", "sh", "-c", "test -s /cap/${PCAP:-attack}.pcap"], interval: 1s, retries: 30 }
+  generator:
+    image: python:3.12-slim
+    networks: [lab]
+    depends_on:
+      victim: { condition: service_started }
+      capture: { condition: service_healthy }
+    volumes: ["./client.py:/lab/client.py:ro", "./payloads:/lab/payloads:ro"]
+    command: python /lab/client.py victim /lab/payloads/${MODE:-attack}.jsonl

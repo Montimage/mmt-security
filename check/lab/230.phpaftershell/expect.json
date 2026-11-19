@@ -1,0 +1,18 @@
+{
+  "traces": {
+    "attack.pcap": [
+      {"filter": "http.request.method == \"POST\"", "min": 1, "claim": "the trigger is a POST"},
+      {"filter": "http.content_type contains \"multipart/form-data\"", "min": 1, "claim": "multipart body"},
+      {"filter": "http contains \"PHP_SESSION_UPLOAD_PROGRESS\"", "min": 1, "claim": "upload-progress field in the body"},
+      {"filter": "http.cookie contains \"PHPSESSID\"", "min": 1, "claim": "PHP session cookie"},
+      {"filter": "http", "min": 1, "endpoints": 2}
+    ],
+    "benign.pcap": [
+      {"filter": "http.request", "min": 2, "claim": "a GET and a POST"},
+      {"filter": "http.request.method == \"POST\" && http.content_type contains \"multipart/form-data\"", "min": 1, "claim": "a real multipart upload"},
+      {"filter": "http.cookie contains \"PHPSESSID\"", "min": 1, "claim": "session cookie present like normal PHP traffic"},
+      {"filter": "http contains \"PHP_SESSION_UPLOAD_PROGRESS\"", "max": 0, "claim": "the attack marker is absent"},
+      {"filter": "http", "min": 1, "endpoints": 2}
+    ]
+  }
+}

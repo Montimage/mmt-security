@@ -1,0 +1,74 @@
+{
+ "attack.pcap": {
+  "checks": [
+   {
+    "ok": true,
+    "check": "link type ether (Ethernet, Linux cooked or raw IP)"
+   },
+   {
+    "ok": true,
+    "check": "36 frames (1..10000)"
+   },
+   {
+    "ok": true,
+    "check": "'http.request.method == \"POST\"' matches 3 frame(s), expected 1..\u221e [claim: the trigger is a POST]"
+   },
+   {
+    "ok": true,
+    "check": "'http.content_type contains \"multipart/form-data\"' matches 3 frame(s), expected 1..\u221e [claim: multipart body]"
+   },
+   {
+    "ok": true,
+    "check": "'http contains \"PHP_SESSION_UPLOAD_PROGRESS\"' matches 3 frame(s), expected 1..\u221e [claim: upload-progress field in the body]"
+   },
+   {
+    "ok": true,
+    "check": "'http.cookie contains \"PHPSESSID\"' matches 3 frame(s), expected 1..\u221e [claim: PHP session cookie]"
+   },
+   {
+    "ok": true,
+    "check": "'http' matches 6 frame(s), expected 1..\u221e; 2 distinct source(s), expected >= 2"
+   }
+  ],
+  "frames": 36,
+  "linktype": "ether",
+  "duration": "0.403882 seconds",
+  "sha256": "e8e7ff37de143760131574278afeb981b8e64d61b17b7d8c22a507913dcaf1d8"
+ },
+ "benign.pcap": {
+  "checks": [
+   {
+    "ok": true,
+    "check": "link type ether (Ethernet, Linux cooked or raw IP)"
+   },
+   {
+    "ok": true,
+    "check": "32 frames (1..10000)"
+   },
+   {
+    "ok": true,
+    "check": "'http.request' matches 3 frame(s), expected 2..\u221e [claim: a GET and a POST]"
+   },
+   {
+    "ok": true,
+    "check": "'http.request.method == \"POST\" && http.content_type contains \"multipart/form-data\"' matches 1 frame(s), expected 1..\u221e [claim: a real multipart upload]"
+   },
+   {
+    "ok": true,
+    "check": "'http.cookie contains \"PHPSESSID\"' matches 3 frame(s), expected 1..\u221e [claim: session cookie present like normal PHP traffic]"
+   },
+   {
+    "ok": true,
+    "check": "'http contains \"PHP_SESSION_UPLOAD_PROGRESS\"' matches 0 frame(s), expected 0..0 [claim: the attack marker is absent]"
+   },
+   {
+    "ok": true,
+    "check": "'http' matches 6 frame(s), expected 1..\u221e; 2 distinct source(s), expected >= 2"
+   }
+  ],
+  "frames": 32,
+  "linktype": "ether",
+  "duration": "0.403838 seconds",
+  "sha256": "7480c1f1077b49ccbb9f6cb8eac796e3d654c1d241a115901ca875b819dc7bfb"
+ }
+}

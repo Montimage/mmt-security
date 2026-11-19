@@ -1,0 +1,34 @@
+<beginning>
+<!-- Property 230: detect phpAfterShell (CVE-2026-126714) trigger request.
+     Source: https://depthfirst.com/research/phpaftershell, https://www.cve.org/CVERecord?id=CVE-2026-126714
+     Evidence pcap: check/pcap/230.phpaftershell.pcap (lab capture, check/lab/230.phpaftershell/) -->
+<property value="THEN" delay_units="s" delay_min="0" delay_max="10" property_id="230" type_property="ATTACK"
+    description="phpAfterShell CVE-2026-126714: unauthenticated multipart POST carrying PHP_SESSION_UPLOAD_PROGRESS with a PHP session cookie forces a file-backed session rewrite, the precondition for session-deserialization RCE">
+      <event value="COMPUTE" event_id="1"
+             description="HTTP multipart POST request headers carrying a PHPSESSID cookie"
+             boolean_expression="((http.method == 'POST')&amp;&amp;((#strstr(http.content_type, 'multipart/form-data') != 0)&amp;&amp;(#strstr(http.cookie, 'PHPSESSID') != 0)))"/>
+      <event value="COMPUTE" event_id="2"
+             description="a packet of the same request whose payload holds the PHP_SESSION_UPLOAD_PROGRESS field"
+             boolean_expression="(((ip.src == ip.src.1)&amp;&amp;(ip.dst == ip.dst.1))&amp;&amp;((tcp.src_port == tcp.src_port.1)&amp;&amp;(#em_has_upload_progress(http.p_payload, http.p_data_len) == 1)))"/>
+</property>
+
+<embedded_functions><![CDATA[
+/**
+ * Bounded search for the RFC1867 upload-progress field name inside the HTTP
+ * payload. http.p_payload is not NUL-terminated: scan at most len bytes.
+ * The multipart body usually sits in a later TCP segment than the request
+ * headers, so event 2 scans the payload of a packet tied to event 1's flow.
+ * Returns 1 when "PHP_SESSION_UPLOAD_PROGRESS" is present, 0 otherwise.
+ */
+static inline int em_has_upload_progress( const void *payload, double len ){
+    const char *p = payload, needle[] = "PHP_SESSION_UPLOAD_PROGRESS";
+    size_t i, n = sizeof( needle ) - 1, l;
+    if( payload == NULL || len <= 0 ) return 0;
+    l = (size_t) len;
+    if( l < n ) return 0;
+    for( i = 0; i + n <= l; i++ )
+        if( memcmp( p + i, needle, n ) == 0 ) return 1;
+    return 0;
+}
+]]></embedded_functions>
+</beginning>

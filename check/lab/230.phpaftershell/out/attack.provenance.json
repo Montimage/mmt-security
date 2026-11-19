@@ -1,0 +1,110 @@
+{
+ "trace": "attack.pcap",
+ "origin": "lab capture",
+ "generator": "230.phpaftershell mode attack",
+ "lab": "230.phpaftershell",
+ "created_at": "2026-11-19T22:01:04Z",
+ "frames": 36,
+ "sha256": "e8e7ff37de143760131574278afeb981b8e64d61b17b7d8c22a507913dcaf1d8",
+ "project": "cyberlab-230-phpaftershell",
+ "generator_exit": 0,
+ "dropped": 0,
+ "images": [
+  "cyberlab/tools:local@sha256:b7342aefa7b5",
+  "nginx:1.27-alpine@sha256:65645c7bb6a0",
+  "python:3.12-slim@sha256:5e2bdb1b0d54"
+ ],
+ "cyberlab_version": "1.2.0",
+ "command": "cyberlab run <lab> attack",
+ "env": {
+  "MODE": "attack",
+  "PCAP": "attack",
+  "CYBERLAB_TIMEOUT": "300"
+ },
+ "inputs": {
+  "client.py": "01c108a66aea764563e5b0fb4d3b8b78e12dd891ca20fa95e5056fd1fcfc1fe4",
+  "docker-compose.yml": "340d6dc4cf438f441987095126b535de68258f9ea7fb53bf431d9312b6c32e3a",
+  "nginx.conf": "99e080523ec8d94a4fa97dd5afe59151b8f17b2e49801263edca504da0b8f164",
+  "payloads/attack.jsonl": "87d6bb03b98e8969c2fc3801289b8ca80a1a66cd132dfa8051537ed05ffc26b0",
+  "payloads/benign.jsonl": "b332cf826472e2129bca43423d91d0847b3efb58fe777ce3344447edba0c6dfd"
+ },
+ "inputs_recorded": "at generation",
+ "services": {
+  "capture": {
+   "image": "cyberlab/tools:local",
+   "command": [
+    "tcpdump",
+    "-Z",
+    "root",
+    "-i",
+    "eth0",
+    "-B",
+    "32768",
+    "--immediate-mode",
+    "-U",
+    "-w",
+    "/cap/attack.pcap",
+    "tcp",
+    "port",
+    "80"
+   ],
+   "network_mode": "service:victim"
+  },
+  "generator": {
+   "image": "python:3.12-slim",
+   "command": [
+    "python",
+    "/lab/client.py",
+    "victim",
+    "/lab/payloads/attack.jsonl"
+   ]
+  },
+  "victim": {
+   "image": "nginx:1.27-alpine"
+  }
+ },
+ "image_details": [
+  {
+   "id": "sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b",
+   "tags": [
+    "python:3.12-slim"
+   ],
+   "repo_digests": [
+    "python@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b"
+   ],
+   "platform": "linux/arm64/v8",
+   "created": "2026-11-05T08:09:10.899210333Z"
+  },
+  {
+   "id": "sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10",
+   "tags": [
+    "nginx:1.27-alpine"
+   ],
+   "repo_digests": [
+    "nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10"
+   ],
+   "platform": "linux/arm64/v8",
+   "created": "2025-04-16T14:50:31Z"
+  },
+  {
+   "id": "sha256:b7342aefa7b59c9f0b2b8b81a675523f93e0709dcef9b033681dcf4311d4a31c",
+   "tags": [
+    "cyberlab/tools:local"
+   ],
+   "repo_digests": [
+    "cyberlab/tools@sha256:b7342aefa7b59c9f0b2b8b81a675523f93e0709dcef9b033681dcf4311d4a31c"
+   ],
+   "platform": "linux/arm64",
+   "created": "2026-11-17T22:25:54.331111011Z"
+  }
+ ],
+ "tools": {
+  "image": "cyberlab/tools:local",
+  "id": "sha256:b7342aefa7b59c9f0b2b8b81a675523f93e0709dcef9b033681dcf4311d4a31c",
+  "versions": "TShark (Wireshark) 4.2.5 (Git commit 798e06a0f7be); tcpdump version 4.99.4; Python 3.12.13"
+ },
+ "host": {
+  "docker": "29.9.3",
+  "platform": "linux/aarch64"
+ }
+}

@@ -1,0 +1,5 @@
+# Normal HTTP use of the same shapes: a session cookie and a real multipart upload,
+# but no PHP_SESSION_UPLOAD_PROGRESS field.
+{"name": "benign-get", "method": "GET", "path": "/index.php", "headers": {"Cookie": "PHPSESSID=benignsid999"}}
+{"name": "benign-upload", "method": "POST", "path": "/upload.php", "headers": {"Content-Type": "multipart/form-data; boundary=----CLB230", "Cookie": "PHPSESSID=benignsid999"}, "body": "------CLB230\r\nContent-Disposition: form-data; name=\"file\"; filename=\"y.txt\"\r\nContent-Type: text/plain\r\n\r\nBBBB\r\n------CLB230--\r\n"}
+{"name": "benign-get-2", "method": "GET", "path": "/status", "headers": {"Cookie": "PHPSESSID=benignsid999"}}

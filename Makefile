@@ -393,8 +393,13 @@ _check.%: _print.% check/expect/%.csv check/pcap/%.pcap
 	$(QUIET) bash -c "diff --ignore-all-space /tmp/mmt-security-expect.csv /tmp/mmt-security-result.csv || (echo \"====================execution log:\" && cat /tmp/$*.log)"
 	@echo '  => OK'
 	
-check: _prepare $(patsubst %,_check.%,$(NAMES))
+check: check-attack _prepare $(patsubst %,_check.%,$(NAMES))
 	@echo "All test passed!"
+
+# every rules/*.xml must have exactly one valid row in rules/mitre-attack.csv,
+# checked offline against the pinned ATT&CK list in check/attack/ (see readme.md)
+check-attack:
+	$(QUIET) python3 check/attack/check-attack.py
 	
 _csv.%: _prepare
 	$(QUIET) $(RM) /tmp/mmt-security*.csv

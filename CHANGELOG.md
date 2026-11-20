@@ -1,3 +1,7 @@
+# Unreleased
+- Add `rules/mitre-attack.csv`: each rule mapped to a MITRE ATT&CK Enterprise 20.1 technique (or `none`), with tactic, confidence, CVE IDs and rationale
+- Add `make check-attack`, run by `make check` and in CI: an offline check of the mapping against `rules/*.xml` and the pinned ATT&CK list
+
 # Version 1.2.20 (05 Nov 2026)
 - fixed bugs
 - new rules for DICOM, RDP honepot

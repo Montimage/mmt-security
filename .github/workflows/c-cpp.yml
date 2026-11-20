@@ -28,6 +28,11 @@ jobs:
         EOF
 
     - uses: actions/checkout@v2
+    # offline check of rules/mitre-attack.csv; it needs no build, so it runs first
+    # (make check below runs it again)
+    - name: check MITRE ATT&CK mapping
+      run: make check-attack
+
     - name: build DPI from source
       run: |
          sudo apt update -y && sudo apt install -y libxml2-dev libpcap-dev
